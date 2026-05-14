@@ -3,7 +3,7 @@ from typing import Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
-from app.models import Agent, Message, Session, Workspace
+from app.models import Agent, Message, Session, Task, Workspace
 from app.models import utc_now
 
 
@@ -65,3 +65,11 @@ def create_session_message(
     db.commit()
     db.refresh(message)
     return message
+
+
+def list_session_tasks(db: DbSession, session_id: str) -> list[Task]:
+    return db.exec(
+        select(Task)
+        .where(Task.session_id == session_id)
+        .order_by(Task.priority, Task.created_at, Task.id)
+    ).all()

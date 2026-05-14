@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import json
 from typing import AsyncIterator, Iterator
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
@@ -9,15 +10,17 @@ from sqlmodel import Session as DbSession
 from app.config import get_settings
 from app.db import engine, init_database
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
-from app.models import Message
+from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.models import utc_now
+from app.planning import MentionParseError, plan_for_message
 from app.repositories import (
     create_session_message,
     get_demo_workspace,
     get_session,
     get_workspace,
     list_session_messages,
+    list_session_tasks,
     list_workspace_sessions,
     next_session_title,
     persist_session,
@@ -29,6 +32,7 @@ from app.schemas import (
     SessionCreateRequest,
     SessionResponse,
     SessionUpdateRequest,
+    TaskResponse,
     WorkspaceResponse,
 )
 from app.worktrees import WorktreeError, WorktreeService
@@ -189,7 +193,50 @@ def create_message(
         parent_message_id=request.parent_message_id,
         stream_state=request.stream_state,
     )
-    return create_session_message(db, session, message)
+    created = create_session_message(db, session, message)
+    if created.sender_type == "user":
+        try:
+            plan_for_message(db, created, created.content_md)
+        except MentionParseError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+    return created
+
+
+def task_response(db: DbSession, task: Task) -> TaskResponse:
+    assigned_role = None
+    if task.assigned_agent_id is not None:
+        agent = db.get(Agent, task.assigned_agent_id)
+        assigned_role = agent.role if agent is not None else None
+
+    return TaskResponse(
+        id=task.id,
+        sessionId=task.session_id,
+        createdByMessageId=task.created_by_message_id,
+        title=task.title,
+        intentType=task.intent_type,
+        status=task.status,
+        priority=task.priority,
+        planJson=json.loads(task.plan_json),
+        dependsOnTaskIds=json.loads(task.depends_on_task_ids),
+        assignedAgentId=task.assigned_agent_id,
+        assignedAgentRole=assigned_role,
+        createdAt=task.created_at,
+        updatedAt=task.updated_at,
+    )
+
+
+@app.get("/sessions/{session_id}/tasks", response_model=list[TaskResponse])
+def read_session_tasks(
+    session_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[TaskResponse]:
+    if get_session(db, session_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return [task_response(db, task) for task in list_session_tasks(db, session_id)]
 
 
 @app.get("/sessions/{session_id}/events")

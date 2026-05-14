@@ -5,12 +5,15 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { FormEvent, useEffect, useMemo, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
+import { TaskCardList } from "@/components/task-card-list"
 import {
   createSessionMessage,
   createWorkspaceSession,
   listSessionMessages,
+  listSessionTasks,
   sessionEventsUrl,
   type ChatMessage,
+  type SessionTask,
   type Workspace,
   type WorkspaceSession,
 } from "@/lib/api"
@@ -46,6 +49,7 @@ export function WorkspaceShell({
   const [isPending, startTransition] = useTransition()
   const [sessions, setSessions] = useState(initialSessions)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [tasks, setTasks] = useState<SessionTask[]>([])
   const [draft, setDraft] = useState("")
   const [lastEventSequence, setLastEventSequence] = useState(0)
 
@@ -65,6 +69,23 @@ export function WorkspaceShell({
     listSessionMessages(backendUrl, selectedSessionId).then((nextMessages) => {
       if (!cancelled) {
         setMessages(nextMessages)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [backendUrl, selectedSessionId])
+
+  useEffect(() => {
+    if (!selectedSessionId) {
+      return
+    }
+
+    let cancelled = false
+    listSessionTasks(backendUrl, selectedSessionId).then((nextTasks) => {
+      if (!cancelled) {
+        setTasks(nextTasks)
       }
     })
 
@@ -127,7 +148,9 @@ export function WorkspaceShell({
     setDraft("")
     startTransition(async () => {
       const created = await createSessionMessage(backendUrl, selectedSessionId, content)
+      const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
       setMessages((current) => [...current, created])
+      setTasks(nextTasks)
       setSessions((current) =>
         current.map((session) =>
           session.id === selectedSessionId
@@ -271,6 +294,10 @@ export function WorkspaceShell({
                   request.
                 </p>
               </div>
+            ) : null}
+
+            {selectedSession && tasks.length > 0 ? (
+              <TaskCardList tasks={tasks} />
             ) : null}
           </div>
 

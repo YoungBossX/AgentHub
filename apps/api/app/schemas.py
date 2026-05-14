@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -66,3 +66,19 @@ class MessageCreateRequest(BaseModel):
     stream_state: str = Field(default="complete", alias="streamState")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class TaskResponse(ApiModel):
+    id: str
+    session_id: str = Field(alias="sessionId")
+    created_by_message_id: Optional[str] = Field(alias="createdByMessageId")
+    title: str
+    intent_type: str = Field(alias="intentType")
+    status: str
+    priority: int
+    plan_json: dict[str, Any] = Field(alias="planJson")
+    depends_on_task_ids: list[str] = Field(alias="dependsOnTaskIds")
+    assigned_agent_id: Optional[str] = Field(alias="assignedAgentId")
+    assigned_agent_role: Optional[str] = Field(alias="assignedAgentRole")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")

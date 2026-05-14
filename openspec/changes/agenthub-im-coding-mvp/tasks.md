@@ -56,7 +56,7 @@
   - Test or validation method: Backend tests for message and TaskRunEvent persistence; manual UI validation by sending a message and reloading.
   - Explicit non-goals: No WebSocket, typing indicators, multiplayer presence, external chat integration, or event bus infrastructure.
 
-- [ ] 1.8 Implement @mention parsing and simple orchestrator planning.
+- [x] 1.8 Implement @mention parsing and simple orchestrator planning.
   - Objective: Route P0 mentions and create 2-4 visible tasks for the demo request.
   - Scope: Mention parser for `@orchestrator`, `@frontend`, `@backend`, `@qa`; deterministic planning template; role-agent assignment; task cards; simple serial dependencies and at most one parallel group.
   - Affected modules: backend chat command parser, orchestrator service, Agent/Task repositories, frontend task cards.

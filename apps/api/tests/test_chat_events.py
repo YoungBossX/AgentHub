@@ -27,6 +27,13 @@ def client() -> Iterator[TestClient]:
             root_path="apps/demo",
             default_branch="main",
         )
+        orchestrator = Agent(
+            name="Orchestrator",
+            role="orchestrator",
+            adapter_type="scripted_mock",
+            provider="local",
+            enabled=True,
+        )
         agent = Agent(
             name="Frontend Agent",
             role="frontend",
@@ -47,6 +54,7 @@ def client() -> Iterator[TestClient]:
             worktree_path=".worktrees/session-two",
         )
         db.add(workspace)
+        db.add(orchestrator)
         db.add(agent)
         db.add(session_one)
         db.add(session_two)

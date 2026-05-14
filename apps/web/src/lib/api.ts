@@ -38,6 +38,22 @@ export type ChatMessage = {
   createdAt: string
 }
 
+export type SessionTask = {
+  id: string
+  sessionId: string
+  createdByMessageId: string | null
+  title: string
+  intentType: string
+  status: string
+  priority: number
+  planJson: Record<string, unknown>
+  dependsOnTaskIds: string[]
+  assignedAgentId: string | null
+  assignedAgentRole: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 type Fetcher = typeof fetch
 
 function apiUrl(backendUrl: string, path: string) {
@@ -167,4 +183,20 @@ export function sessionEventsUrl(
     stream: "true",
   })
   return apiUrl(backendUrl, `/sessions/${sessionId}/events?${params.toString()}`)
+}
+
+export async function listSessionTasks(
+  backendUrl: string,
+  sessionId: string,
+  fetcher: Fetcher = fetch,
+): Promise<SessionTask[]> {
+  const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/tasks`), {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as SessionTask[]
 }

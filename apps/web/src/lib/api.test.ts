@@ -6,6 +6,7 @@ import {
   getBackendHealth,
   getDemoWorkspace,
   listSessionMessages,
+  listSessionTasks,
   listWorkspaceSessions,
   sessionEventsUrl,
 } from "./api"
@@ -195,5 +196,47 @@ describe("message and event API", () => {
     expect(sessionEventsUrl("http://127.0.0.1:8000", "session-1", 4)).toBe(
       "http://127.0.0.1:8000/sessions/session-1/events?after=4&stream=true",
     )
+  })
+})
+
+describe("task API", () => {
+  it("lists visible task cards for a selected session", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify([
+          {
+            id: "task-1",
+            sessionId: "session-1",
+            createdByMessageId: "message-1",
+            title: "Build the Vite React login page",
+            intentType: "frontend_change",
+            status: "pending",
+            priority: 1,
+            planJson: { target: "login_page" },
+            dependsOnTaskIds: ["task-0"],
+            assignedAgentId: "agent-frontend",
+            assignedAgentRole: "frontend",
+            createdAt: "2026-05-14T00:00:00Z",
+            updatedAt: "2026-05-14T00:00:00Z",
+          },
+        ]),
+        { status: 200 },
+      )
+    })
+
+    const tasks = await listSessionTasks(
+      "http://127.0.0.1:8000",
+      "session-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/sessions/session-1/tasks",
+      {
+        cache: "no-store",
+      },
+    )
+    expect(tasks[0].assignedAgentRole).toBe("frontend")
+    expect(tasks[0].dependsOnTaskIds).toEqual(["task-0"])
   })
 })
