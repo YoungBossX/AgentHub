@@ -66,7 +66,7 @@
 
 ## 2. Week 2 - Execution, Events, Diff, Controls, and Preview Skeleton
 
-- [ ] 2.1 Implement adapter interface, AdapterCapabilities, and event persistence.
+- [x] 2.1 Implement adapter interface, AdapterCapabilities, and event persistence.
   - Objective: Provide the shared adapter contract and guarantee events are persisted before SSE delivery.
   - Scope: `getCapabilities`, `createRun`, `streamEvents`, `interrupt`, `approve`, `collectArtifacts`, `cleanup`; AdapterCapabilities model; normalized event mapper; TaskRunEvent persistence before emit.
   - Affected modules: backend adapter layer, TaskRunEvent service, SSE event service, orchestrator service.
