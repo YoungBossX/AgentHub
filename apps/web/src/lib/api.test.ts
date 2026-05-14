@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  createSessionMessage,
   createWorkspaceSession,
   getBackendHealth,
   getDemoWorkspace,
+  listSessionMessages,
   listWorkspaceSessions,
+  sessionEventsUrl,
 } from "./api"
 
 describe("getBackendHealth", () => {
@@ -118,6 +121,79 @@ describe("workspace and session API", () => {
         headers: { "Content-Type": "application/json" },
         method: "POST",
       },
+    )
+  })
+})
+
+describe("message and event API", () => {
+  it("lists and creates messages for a selected session", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input.toString()
+      if (url.endsWith("/messages") && init?.method === "POST") {
+        return new Response(
+          JSON.stringify({
+            id: "message-2",
+            sessionId: "session-1",
+            senderType: "user",
+            senderId: null,
+            contentMd: "@orchestrator build a login page",
+            messageKind: "chat",
+            parentMessageId: null,
+            streamState: "complete",
+            createdAt: "2026-05-14T00:00:00Z",
+          }),
+          { status: 201 },
+        )
+      }
+
+      return new Response(
+        JSON.stringify([
+          {
+            id: "message-1",
+            sessionId: "session-1",
+            senderType: "system",
+            senderId: null,
+            contentMd: "Session ready",
+            messageKind: "chat",
+            parentMessageId: null,
+            streamState: "complete",
+            createdAt: "2026-05-14T00:00:00Z",
+          },
+        ]),
+        { status: 200 },
+      )
+    })
+
+    const messages = await listSessionMessages(
+      "http://127.0.0.1:8000",
+      "session-1",
+      fetchMock,
+    )
+    const created = await createSessionMessage(
+      "http://127.0.0.1:8000",
+      "session-1",
+      "@orchestrator build a login page",
+      fetchMock,
+    )
+
+    expect(messages[0].contentMd).toBe("Session ready")
+    expect(created.senderType).toBe("user")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/sessions/session-1/messages",
+      {
+        body: JSON.stringify({
+          contentMd: "@orchestrator build a login page",
+          senderType: "user",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    )
+  })
+
+  it("builds an SSE subscription URL for a selected session", () => {
+    expect(sessionEventsUrl("http://127.0.0.1:8000", "session-1", 4)).toBe(
+      "http://127.0.0.1:8000/sessions/session-1/events?after=4&stream=true",
     )
   })
 })

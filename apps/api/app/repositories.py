@@ -3,7 +3,7 @@ from typing import Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
-from app.models import Agent, Session, Workspace
+from app.models import Agent, Message, Session, Workspace
 from app.models import utc_now
 
 
@@ -42,3 +42,26 @@ def persist_session(db: DbSession, session: Session) -> Session:
     db.commit()
     db.refresh(session)
     return session
+
+
+def list_session_messages(db: DbSession, session_id: str) -> list[Message]:
+    return db.exec(
+        select(Message)
+        .where(Message.session_id == session_id)
+        .order_by(Message.created_at, Message.id)
+    ).all()
+
+
+def create_session_message(
+    db: DbSession,
+    session: Session,
+    message: Message,
+) -> Message:
+    message.created_at = utc_now()
+    session.last_message_at = message.created_at
+    session.updated_at = message.created_at
+    db.add(message)
+    db.add(session)
+    db.commit()
+    db.refresh(message)
+    return message

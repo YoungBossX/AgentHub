@@ -48,7 +48,7 @@
   - Test or validation method: API tests for session creation and unique worktree paths; manual UI validation with three sessions.
   - Explicit non-goals: No task-run-level worktree strategy in P0, no multi-user presence, no sharing, no external IM import.
 
-- [ ] 1.7 Build IM-style chat stream, persisted messages, and SSE replay foundation.
+- [x] 1.7 Build IM-style chat stream, persisted messages, and SSE replay foundation.
   - Objective: Render session chat and create the backend event path for recoverable state updates.
   - Scope: Message create/list APIs, markdown display, sender rendering, SSE endpoint, TaskRunEvent append/query APIs, sequence handling.
   - Affected modules: frontend chat view, backend message APIs, TaskRunEvent repository, SSE event service.

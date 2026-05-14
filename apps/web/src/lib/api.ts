@@ -26,6 +26,18 @@ export type WorkspaceSession = {
   updatedAt: string
 }
 
+export type ChatMessage = {
+  id: string
+  sessionId: string
+  senderType: "user" | "system" | "orchestrator" | "agent" | string
+  senderId: string | null
+  contentMd: string
+  messageKind: string
+  parentMessageId: string | null
+  streamState: string
+  createdAt: string
+}
+
 type Fetcher = typeof fetch
 
 function apiUrl(backendUrl: string, path: string) {
@@ -105,4 +117,54 @@ export async function createWorkspaceSession(
   }
 
   return (await response.json()) as WorkspaceSession
+}
+
+export async function listSessionMessages(
+  backendUrl: string,
+  sessionId: string,
+  fetcher: Fetcher = fetch,
+): Promise<ChatMessage[]> {
+  const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as ChatMessage[]
+}
+
+export async function createSessionMessage(
+  backendUrl: string,
+  sessionId: string,
+  contentMd: string,
+  fetcher: Fetcher = fetch,
+): Promise<ChatMessage> {
+  const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
+    body: JSON.stringify({
+      contentMd,
+      senderType: "user",
+    }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error("Could not create message")
+  }
+
+  return (await response.json()) as ChatMessage
+}
+
+export function sessionEventsUrl(
+  backendUrl: string,
+  sessionId: string,
+  afterSequence = 0,
+) {
+  const params = new URLSearchParams({
+    after: String(afterSequence),
+    stream: "true",
+  })
+  return apiUrl(backendUrl, `/sessions/${sessionId}/events?${params.toString()}`)
 }

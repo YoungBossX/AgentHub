@@ -2,11 +2,15 @@
 
 import { GitBranch, MessageSquare, Plus } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useMemo, useState, useTransition } from "react"
+import { FormEvent, useEffect, useMemo, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
+  createSessionMessage,
   createWorkspaceSession,
+  listSessionMessages,
+  sessionEventsUrl,
+  type ChatMessage,
   type Workspace,
   type WorkspaceSession,
 } from "@/lib/api"
@@ -41,12 +45,56 @@ export function WorkspaceShell({
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
   const [sessions, setSessions] = useState(initialSessions)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [draft, setDraft] = useState("")
+  const [lastEventSequence, setLastEventSequence] = useState(0)
 
   const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedSessionId) ?? null,
     [selectedSessionId, sessions],
   )
+  const visibleMessages = selectedSessionId ? messages : []
+
+  useEffect(() => {
+    if (!selectedSessionId) {
+      return
+    }
+
+    let cancelled = false
+    listSessionMessages(backendUrl, selectedSessionId).then((nextMessages) => {
+      if (!cancelled) {
+        setMessages(nextMessages)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [backendUrl, selectedSessionId])
+
+  useEffect(() => {
+    if (!selectedSessionId) {
+      return
+    }
+
+    const source = new EventSource(
+      sessionEventsUrl(backendUrl, selectedSessionId, lastEventSequence),
+    )
+    source.onmessage = (event) => {
+      const payload = JSON.parse(event.data) as { sequence?: number }
+      if (typeof payload.sequence === "number") {
+        setLastEventSequence((current) => Math.max(current, payload.sequence ?? 0))
+      }
+    }
+    source.onerror = () => {
+      source.close()
+    }
+
+    return () => {
+      source.close()
+    }
+  }, [backendUrl, lastEventSequence, selectedSessionId])
 
   function selectSession(sessionId: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -66,6 +114,27 @@ export function WorkspaceShell({
       const params = new URLSearchParams(searchParams.toString())
       params.set("session", created.id)
       router.replace(`${pathname}?${params.toString()}`)
+    })
+  }
+
+  function handleSendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selectedSessionId || draft.trim().length === 0) {
+      return
+    }
+
+    const content = draft.trim()
+    setDraft("")
+    startTransition(async () => {
+      const created = await createSessionMessage(backendUrl, selectedSessionId, content)
+      setMessages((current) => [...current, created])
+      setSessions((current) =>
+        current.map((session) =>
+          session.id === selectedSessionId
+            ? { ...session, lastMessageAt: created.createdAt }
+            : session,
+        ),
+      )
     })
   }
 
@@ -165,37 +234,80 @@ export function WorkspaceShell({
         </header>
 
         <div className="flex flex-1 flex-col justify-between gap-6 p-5">
-          <div className="grid gap-4">
-            <div className="rounded-md border border-[var(--border)] bg-slate-50 p-4">
-              <p className="text-sm font-medium text-[var(--muted-foreground)]">
-                @orchestrator
-              </p>
-              <p className="mt-2 text-base leading-7">
-                This session has its own worktree and is ready for the first
-                request.
-              </p>
-            </div>
+          <div className="grid max-h-[360px] gap-3 overflow-y-auto pr-1">
+            {visibleMessages.map((message) => (
+              <article
+                className={cn(
+                  "max-w-[82%] rounded-md border border-[var(--border)] p-3",
+                  message.senderType === "user"
+                    ? "ml-auto bg-blue-600 text-white"
+                    : "bg-slate-50 text-[var(--foreground)]",
+                )}
+                key={message.id}
+              >
+                <p
+                  className={cn(
+                    "text-xs font-medium uppercase tracking-normal",
+                    message.senderType === "user"
+                      ? "text-blue-100"
+                      : "text-[var(--muted-foreground)]",
+                  )}
+                >
+                  {message.senderType}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6">
+                  {message.contentMd}
+                </p>
+              </article>
+            ))}
+
+            {selectedSession && visibleMessages.length === 0 ? (
+              <div className="rounded-md border border-[var(--border)] bg-slate-50 p-4">
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                  system
+                </p>
+                <p className="mt-2 text-base leading-7">
+                  This session has its own worktree and is ready for the first
+                  request.
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {selectedSession ? (
-            <dl className="grid gap-3 rounded-md border border-[var(--border)] bg-white p-4 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-[var(--muted-foreground)]">Status</dt>
-                <dd className="mt-1 font-medium">{selectedSession.status}</dd>
-              </div>
-              <div>
-                <dt className="text-[var(--muted-foreground)]">Last message</dt>
-                <dd className="mt-1 font-medium">
-                  {formatSessionTime(selectedSession.lastMessageAt)}
-                </dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-[var(--muted-foreground)]">Worktree</dt>
-                <dd className="mt-1 truncate font-medium">
-                  {selectedSession.worktreePath}
-                </dd>
-              </div>
-            </dl>
+            <div className="grid gap-4">
+              <form className="flex gap-2" onSubmit={handleSendMessage}>
+                <input
+                  className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none focus:border-blue-600"
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="@orchestrator build a login page"
+                  type="text"
+                  value={draft}
+                />
+                <Button disabled={isPending || draft.trim().length === 0} type="submit">
+                  Send
+                </Button>
+              </form>
+
+              <dl className="grid gap-3 rounded-md border border-[var(--border)] bg-white p-4 text-sm sm:grid-cols-3">
+                <div>
+                  <dt className="text-[var(--muted-foreground)]">Status</dt>
+                  <dd className="mt-1 font-medium">{selectedSession.status}</dd>
+                </div>
+                <div>
+                  <dt className="text-[var(--muted-foreground)]">Last message</dt>
+                  <dd className="mt-1 font-medium">
+                    {formatSessionTime(selectedSession.lastMessageAt)}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-[var(--muted-foreground)]">Worktree</dt>
+                  <dd className="mt-1 truncate font-medium">
+                    {selectedSession.worktreePath}
+                  </dd>
+                </div>
+              </dl>
+            </div>
           ) : null}
         </div>
       </div>

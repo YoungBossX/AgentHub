@@ -1,24 +1,31 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Iterator
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session as DbSession
 
 from app.config import get_settings
 from app.db import engine, init_database
+from app.events import encode_sse_event, list_session_events, subscribe_session_events
+from app.models import Message
 from app.models import Session as AgentHubSession
 from app.models import utc_now
 from app.repositories import (
+    create_session_message,
     get_demo_workspace,
     get_session,
     get_workspace,
+    list_session_messages,
     list_workspace_sessions,
     next_session_title,
     persist_session,
 )
 from app.schemas import (
     HealthResponse,
+    MessageCreateRequest,
+    MessageResponse,
     SessionCreateRequest,
     SessionResponse,
     SessionUpdateRequest,
@@ -147,3 +154,65 @@ def update_session(
         session.status = request.status
 
     return persist_session(db, session)
+
+
+@app.get("/sessions/{session_id}/messages", response_model=list[MessageResponse])
+def read_session_messages(
+    session_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[Message]:
+    if get_session(db, session_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return list_session_messages(db, session_id)
+
+
+@app.post(
+    "/sessions/{session_id}/messages",
+    response_model=MessageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_message(
+    session_id: str,
+    request: MessageCreateRequest,
+    db: DbSession = Depends(get_db),
+) -> Message:
+    session = get_session(db, session_id)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    message = Message(
+        session_id=session.id,
+        sender_type=request.sender_type,
+        sender_id=request.sender_id,
+        content_md=request.content_md,
+        message_kind=request.message_kind,
+        parent_message_id=request.parent_message_id,
+        stream_state=request.stream_state,
+    )
+    return create_session_message(db, session, message)
+
+
+@app.get("/sessions/{session_id}/events")
+async def stream_session_events(
+    session_id: str,
+    after: int = Query(default=0, ge=0),
+    stream: bool = False,
+    db: DbSession = Depends(get_db),
+) -> StreamingResponse:
+    if get_session(db, session_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    async def event_generator() -> AsyncIterator[str]:
+        for event in list_session_events(db, session_id=session_id, after_sequence=after):
+            yield encode_sse_event(event)
+
+        if stream:
+            async for event in subscribe_session_events(session_id):
+                if event.sequence > after:
+                    yield encode_sse_event(event)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache"},
+    )

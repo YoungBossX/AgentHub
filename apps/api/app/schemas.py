@@ -43,3 +43,26 @@ class SessionCreateRequest(BaseModel):
 class SessionUpdateRequest(BaseModel):
     title: Optional[str] = None
     status: Optional[str] = None
+
+
+class MessageResponse(ApiModel):
+    id: str
+    session_id: str = Field(alias="sessionId")
+    sender_type: str = Field(alias="senderType")
+    sender_id: Optional[str] = Field(alias="senderId")
+    content_md: str = Field(alias="contentMd")
+    message_kind: str = Field(alias="messageKind")
+    parent_message_id: Optional[str] = Field(alias="parentMessageId")
+    stream_state: str = Field(alias="streamState")
+    created_at: datetime = Field(alias="createdAt")
+
+
+class MessageCreateRequest(BaseModel):
+    content_md: str = Field(alias="contentMd")
+    sender_type: str = Field(default="user", alias="senderType")
+    sender_id: Optional[str] = Field(default=None, alias="senderId")
+    message_kind: str = Field(default="chat", alias="messageKind")
+    parent_message_id: Optional[str] = Field(default=None, alias="parentMessageId")
+    stream_state: str = Field(default="complete", alias="streamState")
+
+    model_config = ConfigDict(populate_by_name=True)
