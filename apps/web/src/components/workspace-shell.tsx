@@ -1,0 +1,204 @@
+"use client"
+
+import { GitBranch, MessageSquare, Plus } from "lucide-react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useMemo, useState, useTransition } from "react"
+
+import { Button } from "@/components/ui/button"
+import {
+  createWorkspaceSession,
+  type Workspace,
+  type WorkspaceSession,
+} from "@/lib/api"
+import { cn } from "@/lib/utils"
+
+type WorkspaceShellProps = {
+  backendUrl: string
+  workspace: Workspace | null
+  initialSessions: WorkspaceSession[]
+}
+
+function formatSessionTime(value: string | null) {
+  if (!value) {
+    return "No messages"
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+  }).format(new Date(value))
+}
+
+export function WorkspaceShell({
+  backendUrl,
+  workspace,
+  initialSessions,
+}: WorkspaceShellProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
+  const [sessions, setSessions] = useState(initialSessions)
+
+  const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
+  const selectedSession = useMemo(
+    () => sessions.find((session) => session.id === selectedSessionId) ?? null,
+    [selectedSessionId, sessions],
+  )
+
+  function selectSession(sessionId: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("session", sessionId)
+    router.replace(`${pathname}?${params.toString()}`)
+  }
+
+  function handleCreateSession() {
+    if (!workspace) {
+      return
+    }
+
+    const title = `Session ${sessions.length + 1}`
+    startTransition(async () => {
+      const created = await createWorkspaceSession(backendUrl, workspace.id, title)
+      setSessions((current) => [created, ...current])
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("session", created.id)
+      router.replace(`${pathname}?${params.toString()}`)
+    })
+  }
+
+  if (!workspace) {
+    return (
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-5">
+        <h2 className="text-lg font-semibold">Workspace unavailable</h2>
+        <p className="mt-3 text-sm leading-6 text-[var(--muted-foreground)]">
+          Start the API and seed the SQLite database, then refresh AgentHub.
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="grid min-h-[560px] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] md:grid-cols-[320px_1fr]">
+      <aside className="border-b border-[var(--border)] bg-slate-50 md:border-b-0 md:border-r">
+        <div className="border-b border-[var(--border)] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
+                Workspace
+              </p>
+              <h2 className="mt-1 text-lg font-semibold">{workspace.name}</h2>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                {workspace.rootPath}
+              </p>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-600 text-white">
+              <GitBranch aria-hidden="true" size={18} />
+            </span>
+          </div>
+
+          <Button
+            className="mt-4 w-full"
+            disabled={isPending}
+            onClick={handleCreateSession}
+            type="button"
+          >
+            <Plus aria-hidden="true" size={16} />
+            New session
+          </Button>
+        </div>
+
+        <div className="grid gap-2 p-3">
+          {sessions.map((session) => {
+            const selected = session.id === selectedSessionId
+            return (
+              <button
+                className={cn(
+                  "grid min-h-24 w-full gap-2 rounded-md border p-3 text-left transition",
+                  selected
+                    ? "border-blue-600 bg-white shadow-sm"
+                    : "border-transparent bg-transparent hover:border-[var(--border)] hover:bg-white",
+                )}
+                key={session.id}
+                onClick={() => selectSession(session.id)}
+                type="button"
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span className="truncate text-sm font-semibold">{session.title}</span>
+                  <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
+                    {session.status}
+                  </span>
+                </span>
+                <span className="text-xs text-[var(--muted-foreground)]">
+                  {formatSessionTime(session.lastMessageAt)}
+                </span>
+                <span className="truncate text-xs text-[var(--muted-foreground)]">
+                  {session.worktreePath}
+                </span>
+              </button>
+            )
+          })}
+
+          {sessions.length === 0 ? (
+            <div className="rounded-md border border-dashed border-[var(--border)] bg-white p-4 text-sm text-[var(--muted-foreground)]">
+              No sessions yet.
+            </div>
+          ) : null}
+        </div>
+      </aside>
+
+      <div className="flex min-h-[560px] flex-col">
+        <header className="flex items-center justify-between gap-4 border-b border-[var(--border)] p-5">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
+              Selected session
+            </p>
+            <h2 className="mt-1 text-xl font-semibold">
+              {selectedSession?.title ?? "No session selected"}
+            </h2>
+          </div>
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-900 text-white">
+            <MessageSquare aria-hidden="true" size={19} />
+          </span>
+        </header>
+
+        <div className="flex flex-1 flex-col justify-between gap-6 p-5">
+          <div className="grid gap-4">
+            <div className="rounded-md border border-[var(--border)] bg-slate-50 p-4">
+              <p className="text-sm font-medium text-[var(--muted-foreground)]">
+                @orchestrator
+              </p>
+              <p className="mt-2 text-base leading-7">
+                This session has its own worktree and is ready for the first
+                request.
+              </p>
+            </div>
+          </div>
+
+          {selectedSession ? (
+            <dl className="grid gap-3 rounded-md border border-[var(--border)] bg-white p-4 text-sm sm:grid-cols-3">
+              <div>
+                <dt className="text-[var(--muted-foreground)]">Status</dt>
+                <dd className="mt-1 font-medium">{selectedSession.status}</dd>
+              </div>
+              <div>
+                <dt className="text-[var(--muted-foreground)]">Last message</dt>
+                <dd className="mt-1 font-medium">
+                  {formatSessionTime(selectedSession.lastMessageAt)}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-[var(--muted-foreground)]">Worktree</dt>
+                <dd className="mt-1 truncate font-medium">
+                  {selectedSession.worktreePath}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  )
+}

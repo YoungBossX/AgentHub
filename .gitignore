@@ -5,6 +5,7 @@ node_modules/
 # Python
 .venv/
 __pycache__/
+.pytest_cache/
 *.pyc
 
 # env
@@ -19,6 +20,7 @@ __pycache__/
 
 # build outputs
 .next/
+*.tsbuildinfo
 dist/
 build/
 out/

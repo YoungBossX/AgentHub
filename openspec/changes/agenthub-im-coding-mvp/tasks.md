@@ -1,6 +1,6 @@
 ## 1. Week 1 - Foundation, Demo Repo, and Feasibility
 
-- [ ] 1.1 Scaffold fixed-stack frontend and backend applications.
+- [x] 1.1 Scaffold fixed-stack frontend and backend applications.
   - Objective: Establish the Next.js App Router product UI and FastAPI backend baseline.
   - Scope: TypeScript, Tailwind CSS, shadcn/ui setup, Python FastAPI app, Pydantic schemas, SQLModel setup, SQLite local database configuration.
   - Affected modules: frontend app shell, backend app, database config, developer scripts.
@@ -8,7 +8,7 @@
   - Test or validation method: Run local dev commands and health check; verify database file and initial schema creation.
   - Explicit non-goals: No production deployment, no auth provider integration, no Postgres requirement, no Alembic requirement unless already available.
 
-- [ ] 1.2 Add AGENTS.md with P0 implementation guardrails.
+- [x] 1.2 Add AGENTS.md with P0 implementation guardrails.
   - Objective: Give future coding agents a local instruction file that preserves the MVP scope and safety rules.
   - Scope: Fixed stack, Vite React demo app boundary, session-level worktree rule, local Codex CLI rule, no P0 Docker/WebSocket/marketplaces/multi-user/external IM, protected paths, command allowlist, demo success criteria.
   - Affected modules: repo root documentation, future agent workflow.
@@ -16,7 +16,7 @@
   - Test or validation method: Manual review against this OpenSpec design and non-goals.
   - Explicit non-goals: No implementation code, no broad process handbook, no enterprise policy document.
 
-- [ ] 1.3 Implement P0 SQLModel schema and seed records.
+- [x] 1.3 Implement P0 SQLModel schema and seed records.
   - Objective: Persist only the required P0 entities plus TaskRunEvent as the sole support entity.
   - Scope: User, Workspace, Session, Message, Agent, Task, TaskRun, TaskRunEvent, Artifact, Diff, Preview, Deployment models; TaskRun `baseRef`/`headRef`; Preview command/process/status fields; seed one demo user, workspace, and enabled orchestrator/frontend/backend/qa agents.
   - Affected modules: backend models, schema init, seed script, repository layer.
@@ -24,7 +24,7 @@
   - Test or validation method: Run schema init and a model/repository smoke test that creates a session, message, task, task run, task run event, and artifact.
   - Explicit non-goals: No enterprise RBAC, multi-tenant admin, audit backend, billing, provider marketplace schema, or Alembic migration workflow unless already available.
 
-- [ ] 1.4 Add Vite React demo repo and setup-time dependency install path.
+- [x] 1.4 Add Vite React demo repo and setup-time dependency install path.
   - Objective: Provide the fixed agent-modified demo app for the 5-minute demo.
   - Scope: Vite React app, deterministic demo files for login page and button text changes, setup script that installs dependencies, workspace seed pointing at the demo root.
   - Affected modules: demo repo assets, setup scripts, seed config, README draft.
@@ -32,7 +32,7 @@
   - Test or validation method: Run setup command, run `pnpm dev --host 127.0.0.1 --port <port>` manually, verify baseline page loads.
   - Explicit non-goals: No Next.js demo app, no generic multi-framework preview runner, no dependency installation during agent execution.
 
-- [ ] 1.5 Run Codex CLI feasibility spike inside a session worktree.
+- [x] 1.5 Run Codex CLI feasibility spike inside a session worktree.
   - Objective: Confirm P0 CodexAdapter can use local CLI invocation inside a git worktree.
   - Scope: Manual or scripted spike for creating a session-level worktree, invoking Codex CLI with a small instruction, observing process behavior, authentication assumptions, stdout/stderr, exit codes, interruption feasibility, output shape, and failure modes.
   - Affected modules: adapter design notes, worktree service assumptions, AGENTS.md or docs/adapter-notes.md.
@@ -40,7 +40,7 @@
   - Test or validation method: Run a disposable worktree experiment and record command, cwd, expected output/events, and error mapping notes.
   - Explicit non-goals: No Codex API/cloud wrapper, no production adapter hardening, no second real adapter.
 
-- [ ] 1.6 Build workspace/session UI/API with session-level worktree creation.
+- [x] 1.6 Build workspace/session UI/API with session-level worktree creation.
   - Objective: Let the user create and switch between at least three sessions, each with a distinct worktree.
   - Scope: Workspace read endpoint, session CRUD endpoints, deterministic session worktree creation, session list UI, selected session state, `lastMessageAt` updates.
   - Affected modules: frontend session sidebar, backend workspace/session APIs, worktree service, persistence layer.

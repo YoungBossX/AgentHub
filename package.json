@@ -1,0 +1,24 @@
+{
+  "name": "agenthub",
+  "private": true,
+  "packageManager": "pnpm@10.33.4",
+  "scripts": {
+    "dev": "pnpm --parallel dev",
+    "dev:web": "pnpm --filter @agenthub/web dev",
+    "dev:api": "bash scripts/dev-api.sh",
+    "check": "pnpm check:web && pnpm check:api && pnpm check:demo",
+    "check:web": "pnpm --filter @agenthub/web check",
+    "check:api": "bash scripts/check-api.sh",
+    "check:demo": "pnpm --filter @agenthub/demo check",
+    "test": "pnpm test:web && pnpm test:api",
+    "test:web": "pnpm --filter @agenthub/web test",
+    "test:api": "bash scripts/test-api.sh",
+    "db:init": "bash scripts/init-db.sh",
+    "db:seed": "bash scripts/seed-db.sh",
+    "demo:setup": "pnpm --filter @agenthub/demo install",
+    "demo:dev": "pnpm --filter @agenthub/demo dev --host 127.0.0.1 --port ${AGENTHUB_DEMO_PORT:-5173}"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
