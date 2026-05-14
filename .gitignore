@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# env
+.env
+.env.*
+!.env.example
+
+# databases
+*.db
+*.sqlite
+*.sqlite3
+
+# build outputs
+.next/
+dist/
+build/
+out/
+
+# logs
+*.log
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# runtime
+tmp/
+.worktrees/
