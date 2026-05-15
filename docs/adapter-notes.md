@@ -150,3 +150,30 @@ of these conditions occur:
 
 Do not implement `CodexAdapter` or `ScriptedMockAdapter` in task 1.5. These
 notes only define the local process assumptions for later implementation.
+
+## Task 2.4 Manual CodexAdapter Smoke
+
+On 2026-05-14, a task 2.4 manual smoke used the same command shape against a
+disposable git worktree:
+
+```bash
+codex --ask-for-approval never exec --json --cd /Users/luotianhang/Desktop/agenthub/.worktrees/codex-smoke-2-4 --sandbox workspace-write "Inspect apps/demo/src/App.tsx and do not edit files. Reply with a short status line."
+```
+
+Observed behavior:
+
+- Running from the default sandbox failed before model execution because the
+  Codex app could not write its local state database and could not initialize
+  its in-process app-server client.
+- Running with normal local app permissions succeeded.
+- stdout emitted JSONL lifecycle events including `thread.started`,
+  `turn.started`, `item.started`, `item.completed`, an `agent_message`, and
+  `turn.completed`.
+- stderr remained noisy, including plugin sync warnings, Cloudflare/GitHub
+  network diagnostics, stream disconnected retry notices, telemetry warnings,
+  and shutdown MCP warnings.
+- The process exited with code `0`.
+- The disposable worktree had no file changes after the read-only smoke.
+
+This confirms the task 2.4 adapter command shape can execute locally when the
+Codex CLI is available and the process has access to the user's Codex app state.

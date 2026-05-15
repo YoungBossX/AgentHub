@@ -8,9 +8,13 @@ import { Button } from "@/components/ui/button"
 import { TaskCardList } from "@/components/task-card-list"
 import {
   createSessionMessage,
+  createTaskRun,
   createWorkspaceSession,
+  interruptTaskRun,
   listSessionMessages,
   listSessionTasks,
+  retryTaskRun,
+  retryTaskRunWithFallback,
   sessionEventsUrl,
   type ChatMessage,
   type SessionTask,
@@ -107,6 +111,7 @@ export function WorkspaceShell({
       if (typeof payload.sequence === "number") {
         setLastEventSequence((current) => Math.max(current, payload.sequence ?? 0))
       }
+      listSessionTasks(backendUrl, selectedSessionId).then(setTasks)
     }
     source.onerror = () => {
       source.close()
@@ -135,6 +140,42 @@ export function WorkspaceShell({
       const params = new URLSearchParams(searchParams.toString())
       params.set("session", created.id)
       router.replace(`${pathname}?${params.toString()}`)
+    })
+  }
+
+  async function refreshSelectedTasks() {
+    if (!selectedSessionId) {
+      return
+    }
+    const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
+    setTasks(nextTasks)
+  }
+
+  function handleCreateTaskRun(taskId: string) {
+    startTransition(async () => {
+      await createTaskRun(backendUrl, taskId)
+      await refreshSelectedTasks()
+    })
+  }
+
+  function handleInterruptTaskRun(taskRunId: string) {
+    startTransition(async () => {
+      await interruptTaskRun(backendUrl, taskRunId)
+      await refreshSelectedTasks()
+    })
+  }
+
+  function handleRetryTaskRun(taskRunId: string) {
+    startTransition(async () => {
+      await retryTaskRun(backendUrl, taskRunId)
+      await refreshSelectedTasks()
+    })
+  }
+
+  function handleRetryTaskRunWithFallback(taskRunId: string) {
+    startTransition(async () => {
+      await retryTaskRunWithFallback(backendUrl, taskRunId)
+      await refreshSelectedTasks()
     })
   }
 
@@ -297,7 +338,14 @@ export function WorkspaceShell({
             ) : null}
 
             {selectedSession && tasks.length > 0 ? (
-              <TaskCardList tasks={tasks} />
+              <TaskCardList
+                busy={isPending}
+                onCreateRun={handleCreateTaskRun}
+                onInterruptRun={handleInterruptTaskRun}
+                onRetryRun={handleRetryTaskRun}
+                onRetryWithFallback={handleRetryTaskRunWithFallback}
+                tasks={tasks}
+              />
             ) : null}
           </div>
 

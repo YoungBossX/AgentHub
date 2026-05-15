@@ -1,9 +1,11 @@
-import { render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { createElement } from "react"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { TaskCardList } from "./task-card-list"
 import type { SessionTask } from "@/lib/api"
+
+afterEach(() => cleanup())
 
 const baseTask: SessionTask = {
   id: "task-1",
@@ -17,6 +19,7 @@ const baseTask: SessionTask = {
   dependsOnTaskIds: ["task-0"],
   assignedAgentId: "agent-frontend",
   assignedAgentRole: "frontend",
+  taskRuns: [],
   createdAt: "2026-05-14T00:00:00Z",
   updatedAt: "2026-05-14T00:00:00Z",
 }
@@ -29,5 +32,74 @@ describe("TaskCardList", () => {
     expect(screen.getByText("Step 1 · frontend")).toBeTruthy()
     expect(screen.getByText("pending")).toBeTruthy()
     expect(screen.getByText("Depends on task-0")).toBeTruthy()
+  })
+
+  it("renders run history and P0 run controls", () => {
+    const onCreateRun = vi.fn()
+    const onInterruptRun = vi.fn()
+    const onRetryRun = vi.fn()
+    const onRetryWithFallback = vi.fn()
+    const failedTask: SessionTask = {
+      ...baseTask,
+      id: "task-failed",
+      status: "failed",
+      taskRuns: [
+        {
+          id: "run-1",
+          taskId: "task-failed",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "codex",
+          adapterRunId: null,
+          state: "failed",
+          startedAt: null,
+          endedAt: "2026-05-14T00:00:01Z",
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: null,
+          headRef: null,
+          errorCode: "CODEX_USAGE_LIMIT",
+          errorMessage: "Usage limit reached.",
+          metricsJson: { adapterType: "codex" },
+          createdAt: "2026-05-14T00:00:00Z",
+          updatedAt: "2026-05-14T00:00:01Z",
+        },
+      ],
+    }
+    const streamingTask: SessionTask = {
+      ...baseTask,
+      id: "task-2",
+      status: "running",
+      taskRuns: [
+        {
+          ...failedTask.taskRuns[0],
+          id: "run-2",
+          taskId: "task-2",
+          state: "streaming",
+          errorCode: null,
+          errorMessage: null,
+        },
+      ],
+    }
+
+    render(
+      createElement(TaskCardList, {
+        tasks: [baseTask, failedTask, streamingTask],
+        onCreateRun,
+        onInterruptRun,
+        onRetryRun,
+        onRetryWithFallback,
+      }),
+    )
+
+    expect(screen.getByText("Run 1 · codex · failed")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Start run" }))
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    fireEvent.click(screen.getByRole("button", { name: "Retry with fallback" }))
+    fireEvent.click(screen.getByRole("button", { name: "Interrupt" }))
+
+    expect(onCreateRun).toHaveBeenCalledWith("task-1")
+    expect(onRetryRun).toHaveBeenCalledWith("run-1")
+    expect(onRetryWithFallback).toHaveBeenCalledWith("run-1")
+    expect(onInterruptRun).toHaveBeenCalledWith("run-2")
   })
 })

@@ -6,6 +6,11 @@ export default defineConfig({
       runtime: "automatic",
     },
   },
+  resolve: {
+    alias: {
+      "@": new URL("./src", import.meta.url).pathname,
+    },
+  },
   test: {
     environment: "jsdom",
   },

@@ -74,7 +74,7 @@
   - Test or validation method: Unit tests with fake adapter events and sequence assertions.
   - Explicit non-goals: No ClaudeCodeAdapter, HumanAgentAdapter, WebSocket, provider marketplace, or external event bus.
 
-- [ ] 2.2 Implement permission guardrails and ApprovalRequestPayload.
+- [x] 2.2 Implement permission guardrails and ApprovalRequestPayload.
   - Objective: Enforce P0 command, path, network, and approval rules.
   - Scope: Command allowlist, protected paths including `node_modules`, network-off default, `ApprovalRequestPayload`, approval card event, Task/TaskRun `waiting_approval` state, approve/deny endpoints.
   - Affected modules: backend guardrail service, adapter service, approval UI, TaskRun state handling.
@@ -82,7 +82,7 @@
   - Test or validation method: Unit tests for command/path policy and approval payloads; manual approval continuation validation.
   - Explicit non-goals: No enterprise RBAC, policy admin console, arbitrary shell, full host access, unbounded background processes, or unreviewed deploy.
 
-- [ ] 2.3 Implement ScriptedMockAdapter real mutation fallback.
+- [x] 2.3 Implement ScriptedMockAdapter real mutation fallback.
   - Objective: Provide a stable fallback adapter that modifies the Vite React demo repo for real.
   - Scope: Controlled scripts for login page and button text changes, realistic progress events, success/failure/interruption/approval simulation, worktree-scoped file mutations, guardrail compliance.
   - Affected modules: backend adapter layer, demo scripts, SSE event service, guardrail service.
@@ -90,7 +90,7 @@
   - Test or validation method: Integration test running scripted fallback and verifying changed files through Git CLI; manual failure recovery demo.
   - Explicit non-goals: No fake-only message responses, no arbitrary shell, no external provider calls.
 
-- [ ] 2.4 Implement CodexAdapter local CLI happy path and normalized errors.
+- [x] 2.4 Implement CodexAdapter local CLI happy path and normalized errors.
   - Objective: Add the P0 real coding adapter using local CLI invocation.
   - Scope: Read the Codex CLI feasibility note from AGENTS.md or docs/adapter-notes.md, then implement Codex CLI process start inside Session worktree, instruction passing, event adaptation, interruption attempt, artifact collection hook, error mapping to TaskRun fields.
   - Affected modules: backend adapter layer, TaskRun service, TaskRunEvent service, guardrail integration.
@@ -98,7 +98,7 @@
   - Test or validation method: Local integration test or manual run against the Vite React demo repo; forced failure validates fallback path.
   - Explicit non-goals: No Codex API/cloud wrapper, no ClaudeCodeAdapter, no HumanAgentAdapter, no complex provider configuration.
 
-- [ ] 2.5 Implement TaskRun lifecycle, interrupt, retry, and retry-with-fallback.
+- [x] 2.5 Implement TaskRun lifecycle, interrupt, retry, and retry-with-fallback.
   - Objective: Make execution controllable from chat while preserving run history.
   - Scope: Updated TaskRun states, run creation, state transitions, interrupt endpoint/UI, retry endpoint/UI, retry-with-ScriptedMockAdapter path, prior run visibility.
   - Affected modules: backend task run service, orchestrator service, frontend task controls, SSE event stream.

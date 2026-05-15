@@ -10,7 +10,7 @@ from sqlmodel import Session as DbSession
 from app.config import get_settings
 from app.db import engine, init_database
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
-from app.models import Agent, Message, Task
+from app.models import Agent, Message, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
 from app.planning import MentionParseError, plan_for_message
@@ -33,7 +33,18 @@ from app.schemas import (
     SessionResponse,
     SessionUpdateRequest,
     TaskResponse,
+    TaskRunResponse,
     WorkspaceResponse,
+)
+from app.task_runs import (
+    TaskRunLifecycleError,
+    adapter_type_for_run,
+    create_task_run,
+    interrupt_task_run,
+    list_task_runs,
+    metrics_for_run,
+    retry_task_run,
+    retry_with_scripted_mock,
 )
 from app.worktrees import WorktreeError, WorktreeService
 
@@ -206,6 +217,29 @@ def create_message(
     return created
 
 
+def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
+    task = db.get(Task, task_run.task_id)
+    return TaskRunResponse(
+        id=task_run.id,
+        taskId=task_run.task_id,
+        sessionId=task.session_id if task is not None else "",
+        agentId=task_run.agent_id,
+        adapterType=adapter_type_for_run(db, task_run),
+        adapterRunId=task_run.adapter_run_id,
+        state=task_run.state,
+        startedAt=task_run.started_at,
+        endedAt=task_run.ended_at,
+        worktreePath=task_run.worktree_path,
+        baseRef=task_run.base_ref,
+        headRef=task_run.head_ref,
+        errorCode=task_run.error_code,
+        errorMessage=task_run.error_message,
+        metricsJson=metrics_for_run(task_run),
+        createdAt=task_run.created_at,
+        updatedAt=task_run.updated_at,
+    )
+
+
 def task_response(db: DbSession, task: Task) -> TaskResponse:
     assigned_role = None
     if task.assigned_agent_id is not None:
@@ -224,6 +258,7 @@ def task_response(db: DbSession, task: Task) -> TaskResponse:
         dependsOnTaskIds=json.loads(task.depends_on_task_ids),
         assignedAgentId=task.assigned_agent_id,
         assignedAgentRole=assigned_role,
+        taskRuns=[task_run_response(db, task_run) for task_run in list_task_runs(db, task.id)],
         createdAt=task.created_at,
         updatedAt=task.updated_at,
     )
@@ -237,6 +272,66 @@ def read_session_tasks(
     if get_session(db, session_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return [task_response(db, task) for task in list_session_tasks(db, session_id)]
+
+
+@app.post(
+    "/tasks/{task_id}/runs",
+    response_model=TaskRunResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_task_run_for_task(
+    task_id: str,
+    db: DbSession = Depends(get_db),
+) -> TaskRunResponse:
+    try:
+        task_run = create_task_run(db, task_id)
+    except TaskRunLifecycleError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return task_run_response(db, task_run)
+
+
+@app.post("/task-runs/{task_run_id}/interrupt", response_model=TaskRunResponse)
+def interrupt_existing_task_run(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> TaskRunResponse:
+    try:
+        task_run = interrupt_task_run(db, task_run_id)
+    except TaskRunLifecycleError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return task_run_response(db, task_run)
+
+
+@app.post(
+    "/task-runs/{task_run_id}/retry",
+    response_model=TaskRunResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def retry_existing_task_run(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> TaskRunResponse:
+    try:
+        task_run = retry_task_run(db, task_run_id)
+    except TaskRunLifecycleError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return task_run_response(db, task_run)
+
+
+@app.post(
+    "/task-runs/{task_run_id}/retry-with-fallback",
+    response_model=TaskRunResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def retry_existing_task_run_with_fallback(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> TaskRunResponse:
+    try:
+        task_run = retry_with_scripted_mock(db, task_run_id)
+    except TaskRunLifecycleError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return task_run_response(db, task_run)
 
 
 @app.get("/sessions/{session_id}/events")

@@ -2,12 +2,16 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   createSessionMessage,
+  createTaskRun,
   createWorkspaceSession,
   getBackendHealth,
   getDemoWorkspace,
+  interruptTaskRun,
   listSessionMessages,
   listSessionTasks,
   listWorkspaceSessions,
+  retryTaskRun,
+  retryTaskRunWithFallback,
   sessionEventsUrl,
 } from "./api"
 
@@ -216,6 +220,27 @@ describe("task API", () => {
             dependsOnTaskIds: ["task-0"],
             assignedAgentId: "agent-frontend",
             assignedAgentRole: "frontend",
+            taskRuns: [
+              {
+                id: "run-1",
+                taskId: "task-1",
+                sessionId: "session-1",
+                agentId: "agent-frontend",
+                adapterType: "codex",
+                adapterRunId: null,
+                state: "failed",
+                startedAt: null,
+                endedAt: "2026-05-14T00:00:01Z",
+                worktreePath: "/repo/.worktrees/session-1",
+                baseRef: null,
+                headRef: null,
+                errorCode: "CODEX_USAGE_LIMIT",
+                errorMessage: "Usage limit reached.",
+                metricsJson: { adapterType: "codex" },
+                createdAt: "2026-05-14T00:00:00Z",
+                updatedAt: "2026-05-14T00:00:01Z",
+              },
+            ],
             createdAt: "2026-05-14T00:00:00Z",
             updatedAt: "2026-05-14T00:00:00Z",
           },
@@ -238,5 +263,63 @@ describe("task API", () => {
     )
     expect(tasks[0].assignedAgentRole).toBe("frontend")
     expect(tasks[0].dependsOnTaskIds).toEqual(["task-0"])
+    expect(tasks[0].taskRuns[0].adapterType).toBe("codex")
+  })
+
+  it("creates, interrupts, retries, and falls back task runs", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = input.toString()
+      const payload = {
+        id: "run-2",
+        taskId: "task-1",
+        sessionId: "session-1",
+        agentId: "agent-frontend",
+        adapterType: url.endsWith("retry-with-fallback") ? "scripted_mock" : "codex",
+        adapterRunId: null,
+        state: "queued",
+        startedAt: null,
+        endedAt: null,
+        worktreePath: "/repo/.worktrees/session-1",
+        baseRef: null,
+        headRef: null,
+        errorCode: null,
+        errorMessage: null,
+        metricsJson: {},
+        createdAt: "2026-05-14T00:00:00Z",
+        updatedAt: "2026-05-14T00:00:00Z",
+      }
+      return new Response(JSON.stringify(payload), { status: 201 })
+    })
+
+    await createTaskRun("http://127.0.0.1:8000", "task-1", fetchMock)
+    await interruptTaskRun("http://127.0.0.1:8000", "run-1", fetchMock)
+    await retryTaskRun("http://127.0.0.1:8000", "run-1", fetchMock)
+    const fallback = await retryTaskRunWithFallback(
+      "http://127.0.0.1:8000",
+      "run-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://127.0.0.1:8000/tasks/task-1/runs",
+      { method: "POST" },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1:8000/task-runs/run-1/interrupt",
+      { method: "POST" },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "http://127.0.0.1:8000/task-runs/run-1/retry",
+      { method: "POST" },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      "http://127.0.0.1:8000/task-runs/run-1/retry-with-fallback",
+      { method: "POST" },
+    )
+    expect(fallback.adapterType).toBe("scripted_mock")
   })
 })

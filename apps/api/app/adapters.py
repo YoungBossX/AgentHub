@@ -158,8 +158,41 @@ async def run_adapter_event_stream(
         async for raw_event in adapter.streamEvents(run.adapter_run_id):
             event = normalize_agent_event(raw_event, request.task_run_id)
             persisted.append(persist_agent_event(db, event))
+            _apply_task_run_event_state(db, event)
     finally:
         if run is not None:
             await adapter.cleanup(run.adapter_run_id)
 
     return persisted
+
+
+def _apply_task_run_event_state(db: DbSession, event: AgentEvent) -> None:
+    task_run = db.get(TaskRun, event.task_run_id)
+    if task_run is None:
+        return
+
+    now = utc_now()
+    if event.type == "task.state":
+        state = event.payload.get("state")
+        if isinstance(state, str) and state:
+            task_run.state = state
+    elif event.type == "approval.requested":
+        task_run.state = "waiting_approval"
+    elif event.type == "completed":
+        task_run.state = "completed"
+        task_run.error_code = None
+        task_run.error_message = None
+        task_run.ended_at = now
+    elif event.type == "error":
+        code = str(event.payload.get("code") or "ADAPTER_ERROR")
+        message = str(event.payload.get("message") or "Adapter run failed.")
+        task_run.state = "interrupted" if code.endswith("_INTERRUPTED") else "failed"
+        task_run.error_code = code
+        task_run.error_message = message
+        task_run.ended_at = now
+    else:
+        return
+
+    task_run.updated_at = now
+    db.add(task_run)
+    db.commit()

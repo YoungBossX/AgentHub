@@ -50,6 +50,27 @@ export type SessionTask = {
   dependsOnTaskIds: string[]
   assignedAgentId: string | null
   assignedAgentRole: string | null
+  taskRuns: TaskRun[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type TaskRun = {
+  id: string
+  taskId: string
+  sessionId: string
+  agentId: string
+  adapterType: string
+  adapterRunId: string | null
+  state: string
+  startedAt: string | null
+  endedAt: string | null
+  worktreePath: string
+  baseRef: string | null
+  headRef: string | null
+  errorCode: string | null
+  errorMessage: string | null
+  metricsJson: Record<string, unknown>
   createdAt: string
   updatedAt: string
 }
@@ -199,4 +220,49 @@ export async function listSessionTasks(
   }
 
   return (await response.json()) as SessionTask[]
+}
+
+export async function createTaskRun(
+  backendUrl: string,
+  taskId: string,
+  fetcher: Fetcher = fetch,
+): Promise<TaskRun> {
+  return mutateTaskRun(apiUrl(backendUrl, `/tasks/${taskId}/runs`), fetcher)
+}
+
+export async function interruptTaskRun(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<TaskRun> {
+  return mutateTaskRun(apiUrl(backendUrl, `/task-runs/${taskRunId}/interrupt`), fetcher)
+}
+
+export async function retryTaskRun(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<TaskRun> {
+  return mutateTaskRun(apiUrl(backendUrl, `/task-runs/${taskRunId}/retry`), fetcher)
+}
+
+export async function retryTaskRunWithFallback(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<TaskRun> {
+  return mutateTaskRun(
+    apiUrl(backendUrl, `/task-runs/${taskRunId}/retry-with-fallback`),
+    fetcher,
+  )
+}
+
+async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {
+  const response = await fetcher(url, { method: "POST" })
+
+  if (!response.ok) {
+    throw new Error("Could not update task run")
+  }
+
+  return (await response.json()) as TaskRun
 }

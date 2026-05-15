@@ -80,5 +80,26 @@ class TaskResponse(ApiModel):
     depends_on_task_ids: list[str] = Field(alias="dependsOnTaskIds")
     assigned_agent_id: Optional[str] = Field(alias="assignedAgentId")
     assigned_agent_role: Optional[str] = Field(alias="assignedAgentRole")
+    task_runs: list["TaskRunResponse"] = Field(default_factory=list, alias="taskRuns")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class TaskRunResponse(ApiModel):
+    id: str
+    task_id: str = Field(alias="taskId")
+    session_id: str = Field(alias="sessionId")
+    agent_id: str = Field(alias="agentId")
+    adapter_type: str = Field(alias="adapterType")
+    adapter_run_id: Optional[str] = Field(alias="adapterRunId")
+    state: str
+    started_at: Optional[datetime] = Field(alias="startedAt")
+    ended_at: Optional[datetime] = Field(alias="endedAt")
+    worktree_path: str = Field(alias="worktreePath")
+    base_ref: Optional[str] = Field(alias="baseRef")
+    head_ref: Optional[str] = Field(alias="headRef")
+    error_code: Optional[str] = Field(alias="errorCode")
+    error_message: Optional[str] = Field(alias="errorMessage")
+    metrics_json: dict[str, Any] = Field(alias="metricsJson")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
