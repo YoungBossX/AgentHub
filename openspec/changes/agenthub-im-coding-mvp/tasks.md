@@ -122,7 +122,7 @@
   - Test or validation method: Component test with sample diff fixture; manual validation after ScriptedMockAdapter run.
   - Explicit non-goals: No full IDE editing, arbitrary file explorer, inline code editing workflow.
 
-- [ ] 2.8 Implement preview runner backend skeleton.
+- [x] 2.8 Implement preview runner backend skeleton.
   - Objective: Add the backend process and persistence foundation for Vite React preview.
   - Scope: Port allocation, fixed command construction, process start/stop skeleton, health check endpoint, Preview record fields, `artifact.preview.ready` event shape, no dependency install during execution.
   - Affected modules: backend preview service, Preview model/repository, guardrail service, TaskRunEvent service.

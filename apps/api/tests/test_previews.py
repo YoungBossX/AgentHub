@@ -1,0 +1,219 @@
+import json
+import shutil
+from collections.abc import Iterator
+from dataclasses import dataclass
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session as DbSession
+from sqlmodel import SQLModel, create_engine, select
+
+from app.main import app, get_db, get_preview_service
+from app.models import Agent, Artifact, Preview, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.previews import PreviewProcess, PreviewService
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+@pytest.fixture
+def demo_worktree(tmp_path: Path) -> Path:
+    worktree = tmp_path / "session-worktree"
+    shutil.copytree(
+        REPO_ROOT / "apps" / "demo",
+        worktree / "apps" / "demo",
+        ignore=shutil.ignore_patterns("node_modules"),
+    )
+    return worktree
+
+
+@pytest.fixture
+def db() -> Iterator[DbSession]:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with DbSession(engine) as session:
+        yield session
+
+
+@dataclass
+class StartedCommand:
+    command: list[str]
+    cwd: Path
+
+
+class RecordingRunner:
+    def __init__(self) -> None:
+        self.started: list[StartedCommand] = []
+        self.stopped: list[int] = []
+
+    def start(self, command: list[str], cwd: Path) -> PreviewProcess:
+        self.started.append(StartedCommand(command=command, cwd=cwd))
+        return PreviewProcess(pid=4242)
+
+    def stop(self, process_id: int) -> None:
+        self.stopped.append(process_id)
+
+
+class StaticHealthChecker:
+    def __init__(self, healthy: bool = True) -> None:
+        self.healthy = healthy
+        self.checked_urls: list[str] = []
+
+    def is_healthy(self, url: str) -> bool:
+        self.checked_urls.append(url)
+        return self.healthy
+
+
+def create_task_run_fixture(db: DbSession, worktree_path: Path) -> str:
+    workspace = Workspace(
+        name="AgentHub Demo",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="Preview session",
+        bound_branch="main",
+        worktree_path=str(worktree_path),
+    )
+    agent = Agent(
+        name="Frontend Agent",
+        role="frontend",
+        adapter_type="scripted_mock",
+        provider="local",
+    )
+    task = Task(
+        session_id=session.id,
+        title="Build login page",
+        intent_type="frontend_change",
+        assigned_agent_id=agent.id,
+    )
+    task_run = TaskRun(
+        task_id=task.id,
+        agent_id=agent.id,
+        state="completed",
+        worktree_path=session.worktree_path,
+    )
+    db.add(workspace)
+    db.add(session)
+    db.add(agent)
+    db.add(task)
+    db.add(task_run)
+    db.commit()
+    db.refresh(task_run)
+    return task_run.id
+
+
+def test_start_preview_persists_vite_command_health_and_ready_event(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_task_run_fixture(db, demo_worktree)
+    runner = RecordingRunner()
+    health = StaticHealthChecker(healthy=True)
+    service = PreviewService(
+        process_runner=runner,
+        health_checker=health,
+        port_allocator=lambda: 4317,
+    )
+
+    stored = service.start_task_run_preview(db, task_run_id)
+
+    preview = db.get(Preview, stored.id)
+    artifact = db.get(Artifact, stored.artifact_id)
+    event = db.exec(
+        select(TaskRunEvent).where(
+            TaskRunEvent.task_run_id == task_run_id,
+            TaskRunEvent.event_type == "artifact.preview.ready",
+        )
+    ).one()
+
+    assert preview is not None
+    assert artifact is not None
+    assert artifact.artifact_type == "preview"
+    assert artifact.status == "ready"
+    assert preview.port == 4317
+    assert preview.url == "http://127.0.0.1:4317"
+    assert preview.command == "pnpm dev --host 127.0.0.1 --port 4317"
+    assert preview.process_id == 4242
+    assert preview.health_status == "healthy"
+    assert preview.last_checked_at is not None
+    assert runner.started == [
+        StartedCommand(
+            command=["pnpm", "dev", "--host", "127.0.0.1", "--port", "4317"],
+            cwd=demo_worktree / "apps" / "demo",
+        )
+    ]
+    assert "install" not in runner.started[0].command
+    assert health.checked_urls == ["http://127.0.0.1:4317"]
+    assert json.loads(event.payload_json)["previewId"] == preview.id
+
+
+def test_preview_api_starts_lists_and_stops_preview(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_task_run_fixture(db, demo_worktree)
+    runner = RecordingRunner()
+    service = PreviewService(
+        process_runner=runner,
+        health_checker=StaticHealthChecker(healthy=True),
+        port_allocator=lambda: 4318,
+    )
+
+    def override_db() -> Iterator[DbSession]:
+        yield db
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_preview_service] = lambda: service
+    try:
+        client = TestClient(app)
+        create_response = client.post(f"/task-runs/{task_run_id}/preview")
+        list_response = client.get(f"/task-runs/{task_run_id}/previews")
+        preview_id = create_response.json()["id"]
+        stop_response = client.post(f"/previews/{preview_id}/stop")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert create_response.status_code == 201
+    assert list_response.status_code == 200
+    assert stop_response.status_code == 200
+    assert create_response.json()["healthStatus"] == "healthy"
+    assert list_response.json()[0]["url"] == "http://127.0.0.1:4318"
+    assert stop_response.json()["healthStatus"] == "stopped"
+    assert runner.stopped == [4242]
+
+
+def test_unhealthy_preview_persists_health_status_without_ready_event(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_task_run_fixture(db, demo_worktree)
+    service = PreviewService(
+        process_runner=RecordingRunner(),
+        health_checker=StaticHealthChecker(healthy=False),
+        port_allocator=lambda: 4319,
+    )
+
+    stored = service.start_task_run_preview(db, task_run_id)
+
+    preview = db.get(Preview, stored.id)
+    ready_events = db.exec(
+        select(TaskRunEvent).where(
+            TaskRunEvent.task_run_id == task_run_id,
+            TaskRunEvent.event_type == "artifact.preview.ready",
+        )
+    ).all()
+
+    assert preview is not None
+    assert preview.health_status == "unhealthy"
+    assert preview.status_reason == "Preview did not respond to the health check."
+    assert ready_events == []

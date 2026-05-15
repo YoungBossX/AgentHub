@@ -117,3 +117,20 @@ class DiffArtifactResponse(ApiModel):
     patch_text: str = Field(alias="patchText")
     changed_files: list[str] = Field(alias="changedFiles")
     stats: dict[str, Any]
+
+
+class PreviewResponse(ApiModel):
+    id: str
+    artifact_id: str = Field(alias="artifactId")
+    task_run_id: str = Field(alias="taskRunId")
+    artifact_type: str = Field(alias="artifactType")
+    title: str
+    status: str
+    port: int
+    url: str
+    command: str
+    process_id: Optional[int] = Field(alias="processId")
+    health_status: str = Field(alias="healthStatus")
+    status_reason: Optional[str] = Field(alias="statusReason")
+    expires_at: Optional[datetime] = Field(alias="expiresAt")
+    last_checked_at: Optional[datetime] = Field(alias="lastCheckedAt")

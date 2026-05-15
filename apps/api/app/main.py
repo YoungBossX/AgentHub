@@ -15,6 +15,7 @@ from app.models import Agent, Message, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
 from app.planning import MentionParseError, plan_for_message
+from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
 from app.repositories import (
     create_session_message,
     get_demo_workspace,
@@ -31,6 +32,7 @@ from app.schemas import (
     DiffArtifactResponse,
     MessageCreateRequest,
     MessageResponse,
+    PreviewResponse,
     SessionCreateRequest,
     SessionResponse,
     SessionUpdateRequest,
@@ -76,6 +78,14 @@ def get_db() -> Iterator[DbSession]:
 
 def get_worktree_service() -> WorktreeService:
     return WorktreeService()
+
+
+_preview_service = PreviewService()
+
+
+def get_preview_service() -> PreviewService:
+    return _preview_service
+
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -258,6 +268,25 @@ def diff_artifact_response(diff_artifact: StoredDiffArtifact) -> DiffArtifactRes
     )
 
 
+def preview_response(preview: StoredPreviewArtifact) -> PreviewResponse:
+    return PreviewResponse(
+        id=preview.id,
+        artifactId=preview.artifact_id,
+        taskRunId=preview.task_run_id,
+        artifactType=preview.artifact_type,
+        title=preview.title,
+        status=preview.status,
+        port=preview.port,
+        url=preview.url,
+        command=preview.command,
+        processId=preview.process_id,
+        healthStatus=preview.health_status,
+        statusReason=preview.status_reason,
+        expiresAt=preview.expires_at,
+        lastCheckedAt=preview.last_checked_at,
+    )
+
+
 def task_response(db: DbSession, task: Task) -> TaskResponse:
     assigned_role = None
     if task.assigned_agent_id is not None:
@@ -376,6 +405,50 @@ def read_task_run_diffs(
     if db.get(TaskRun, task_run_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
     return [diff_artifact_response(diff) for diff in list_task_run_diffs(db, task_run_id)]
+
+
+@app.post(
+    "/task-runs/{task_run_id}/preview",
+    response_model=PreviewResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def start_preview_for_task_run(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+    previews: PreviewService = Depends(get_preview_service),
+) -> PreviewResponse:
+    try:
+        preview = previews.start_task_run_preview(db, task_run_id)
+    except PreviewError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return preview_response(preview)
+
+
+@app.get("/task-runs/{task_run_id}/previews", response_model=list[PreviewResponse])
+def read_task_run_previews(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+    previews: PreviewService = Depends(get_preview_service),
+) -> list[PreviewResponse]:
+    if db.get(TaskRun, task_run_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    return [
+        preview_response(preview)
+        for preview in previews.list_task_run_previews(db, task_run_id)
+    ]
+
+
+@app.post("/previews/{preview_id}/stop", response_model=PreviewResponse)
+def stop_existing_preview(
+    preview_id: str,
+    db: DbSession = Depends(get_db),
+    previews: PreviewService = Depends(get_preview_service),
+) -> PreviewResponse:
+    try:
+        preview = previews.stop_preview(db, preview_id)
+    except PreviewError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return preview_response(preview)
 
 
 @app.get("/sessions/{session_id}/events")
