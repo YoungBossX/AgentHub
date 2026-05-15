@@ -3,7 +3,12 @@ import { createElement } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { TaskCardList } from "./task-card-list"
+import { sampleDiffArtifact } from "./__fixtures__/sample-diff"
 import type { SessionTask } from "@/lib/api"
+
+vi.mock("@monaco-editor/react", () => ({
+  DiffEditor: () => <div data-testid="monaco-diff-editor" />,
+}))
 
 afterEach(() => cleanup())
 
@@ -101,5 +106,54 @@ describe("TaskCardList", () => {
     expect(onRetryRun).toHaveBeenCalledWith("run-1")
     expect(onRetryWithFallback).toHaveBeenCalledWith("run-1")
     expect(onInterruptRun).toHaveBeenCalledWith("run-2")
+  })
+
+  it("loads and renders diff cards for task run history", async () => {
+    const fetcher = vi.fn(async () => {
+      return new Response(JSON.stringify([sampleDiffArtifact]), { status: 200 })
+    })
+    const completedTask: SessionTask = {
+      ...baseTask,
+      status: "completed",
+      taskRuns: [
+        {
+          id: "run-1",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "scripted_mock",
+          adapterRunId: null,
+          state: "completed",
+          startedAt: "2026-05-14T00:00:00Z",
+          endedAt: "2026-05-14T00:00:01Z",
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: "abc123",
+          headRef: "def456+worktree",
+          errorCode: null,
+          errorMessage: null,
+          metricsJson: { adapterType: "scripted_mock" },
+          createdAt: "2026-05-14T00:00:00Z",
+          updatedAt: "2026-05-14T00:00:01Z",
+        },
+      ],
+    }
+
+    render(
+      createElement(TaskCardList, {
+        artifactRefreshKey: 1,
+        backendUrl: "http://127.0.0.1:8000",
+        fetcher,
+        tasks: [completedTask],
+      }),
+    )
+
+    expect(await screen.findByText("Git diff")).toBeTruthy()
+    expect(screen.getByText("apps/demo/src/App.tsx")).toBeTruthy()
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/task-runs/run-1/diffs",
+      {
+        cache: "no-store",
+      },
+    )
   })
 })

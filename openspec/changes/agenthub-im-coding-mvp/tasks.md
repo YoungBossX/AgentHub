@@ -114,7 +114,7 @@
   - Test or validation method: Integration test modifies demo repo file and verifies stored diff matches Git CLI output.
   - Explicit non-goals: No PR creation, no patch export in P0, no full code review system.
 
-- [ ] 2.7 Build diff card with file summary and expandable Monaco inspection.
+- [x] 2.7 Build diff card with file summary and expandable Monaco inspection.
   - Objective: Let the user inspect real file changes from chat.
   - Scope: Diff card, changed files list, patch summary, expand/collapse behavior, Monaco Diff Editor detail view.
   - Affected modules: frontend artifact card components, backend artifact read APIs.

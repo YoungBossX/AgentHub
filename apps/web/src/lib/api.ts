@@ -75,6 +75,33 @@ export type TaskRun = {
   updatedAt: string
 }
 
+export type DiffFileStat = {
+  path: string
+  additions: number
+  deletions: number
+}
+
+export type DiffStats = {
+  filesChanged: number
+  additions: number
+  deletions: number
+  files: DiffFileStat[]
+}
+
+export type DiffArtifact = {
+  id: string
+  artifactId: string
+  taskRunId: string
+  artifactType: "diff" | string
+  title: string
+  status: string
+  baseRef: string
+  headRef: string
+  patchText: string
+  changedFiles: string[]
+  stats: DiffStats
+}
+
 type Fetcher = typeof fetch
 
 function apiUrl(backendUrl: string, path: string) {
@@ -255,6 +282,22 @@ export async function retryTaskRunWithFallback(
     apiUrl(backendUrl, `/task-runs/${taskRunId}/retry-with-fallback`),
     fetcher,
   )
+}
+
+export async function listTaskRunDiffs(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<DiffArtifact[]> {
+  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/diffs`), {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as DiffArtifact[]
 }
 
 async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {

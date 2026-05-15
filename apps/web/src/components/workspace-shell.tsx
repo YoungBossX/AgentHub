@@ -339,6 +339,8 @@ export function WorkspaceShell({
 
             {selectedSession && tasks.length > 0 ? (
               <TaskCardList
+                artifactRefreshKey={lastEventSequence}
+                backendUrl={backendUrl}
                 busy={isPending}
                 onCreateRun={handleCreateTaskRun}
                 onInterruptRun={handleInterruptTaskRun}

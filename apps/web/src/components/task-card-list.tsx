@@ -1,11 +1,18 @@
-import { Play, RotateCcw, Shuffle, Square } from "lucide-react"
+"use client"
 
+import { Play, RotateCcw, Shuffle, Square } from "lucide-react"
+import { Fragment, useEffect, useMemo, useState } from "react"
+
+import { DiffCard } from "./diff-card"
 import { Button } from "./ui/button"
-import type { SessionTask, TaskRun } from "../lib/api"
+import { listTaskRunDiffs, type DiffArtifact, type SessionTask, type TaskRun } from "../lib/api"
 
 type TaskCardListProps = {
   tasks: SessionTask[]
+  artifactRefreshKey?: number
+  backendUrl?: string
   busy?: boolean
+  fetcher?: typeof fetch
   onCreateRun?: (taskId: string) => void
   onInterruptRun?: (taskRunId: string) => void
   onRetryRun?: (taskRunId: string) => void
@@ -25,12 +32,43 @@ const retryableRunStates = new Set(["failed", "interrupted"])
 
 export function TaskCardList({
   tasks,
+  artifactRefreshKey = 0,
+  backendUrl,
   busy = false,
+  fetcher = fetch,
   onCreateRun,
   onInterruptRun,
   onRetryRun,
   onRetryWithFallback,
 }: TaskCardListProps) {
+  const [diffsByRunId, setDiffsByRunId] = useState<Record<string, DiffArtifact[]>>({})
+  const taskRunIds = useMemo(
+    () => tasks.flatMap((task) => task.taskRuns.map((taskRun) => taskRun.id)),
+    [tasks],
+  )
+
+  useEffect(() => {
+    if (!backendUrl || taskRunIds.length === 0) {
+      return
+    }
+
+    let cancelled = false
+    Promise.all(
+      taskRunIds.map(async (taskRunId) => {
+        const diffs = await listTaskRunDiffs(backendUrl, taskRunId, fetcher)
+        return [taskRunId, diffs] as const
+      }),
+    ).then((entries) => {
+      if (!cancelled) {
+        setDiffsByRunId(Object.fromEntries(entries))
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
+
   if (tasks.length === 0) {
     return null
   }
@@ -39,49 +77,52 @@ export function TaskCardList({
     <div className="grid gap-2">
       {tasks.map((task, index) => {
         const latestRun = task.taskRuns[task.taskRuns.length - 1] ?? null
+        const taskDiffs = task.taskRuns.flatMap((taskRun) => diffsByRunId[taskRun.id] ?? [])
         return (
-          <article
-            className="rounded-md border border-[var(--border)] bg-white p-3"
-            key={task.id}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
-                  Step {index + 1} · {task.assignedAgentRole ?? "unassigned"}
+          <Fragment key={task.id}>
+            <article className="rounded-md border border-[var(--border)] bg-white p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
+                    Step {index + 1} · {task.assignedAgentRole ?? "unassigned"}
+                  </p>
+                  <h3 className="mt-1 text-sm font-semibold">{task.title}</h3>
+                </div>
+                <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
+                  {task.status}
+                </span>
+              </div>
+              {task.dependsOnTaskIds.length > 0 ? (
+                <p className="mt-2 truncate text-xs text-[var(--muted-foreground)]">
+                  Depends on {task.dependsOnTaskIds.join(", ")}
                 </p>
-                <h3 className="mt-1 text-sm font-semibold">{task.title}</h3>
-              </div>
-              <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
-                {task.status}
-              </span>
-            </div>
-            {task.dependsOnTaskIds.length > 0 ? (
-              <p className="mt-2 truncate text-xs text-[var(--muted-foreground)]">
-                Depends on {task.dependsOnTaskIds.join(", ")}
-              </p>
-            ) : null}
-            {task.taskRuns.length > 0 ? (
-              <div className="mt-3 grid gap-1 rounded-md bg-slate-50 p-2">
-                {task.taskRuns.map((taskRun, runIndex) => (
-                  <RunSummary key={taskRun.id} run={taskRun} runIndex={runIndex} />
-                ))}
-              </div>
-            ) : null}
-            <RunControls
-              busy={busy}
-              latestRun={latestRun}
-              onCreateRun={onCreateRun ? () => onCreateRun(task.id) : undefined}
-              onInterruptRun={
-                latestRun && onInterruptRun ? () => onInterruptRun(latestRun.id) : undefined
-              }
-              onRetryRun={latestRun && onRetryRun ? () => onRetryRun(latestRun.id) : undefined}
-              onRetryWithFallback={
-                latestRun && onRetryWithFallback
-                  ? () => onRetryWithFallback(latestRun.id)
-                  : undefined
-              }
-            />
-          </article>
+              ) : null}
+              {task.taskRuns.length > 0 ? (
+                <div className="mt-3 grid gap-1 rounded-md bg-slate-50 p-2">
+                  {task.taskRuns.map((taskRun, runIndex) => (
+                    <RunSummary key={taskRun.id} run={taskRun} runIndex={runIndex} />
+                  ))}
+                </div>
+              ) : null}
+              <RunControls
+                busy={busy}
+                latestRun={latestRun}
+                onCreateRun={onCreateRun ? () => onCreateRun(task.id) : undefined}
+                onInterruptRun={
+                  latestRun && onInterruptRun ? () => onInterruptRun(latestRun.id) : undefined
+                }
+                onRetryRun={latestRun && onRetryRun ? () => onRetryRun(latestRun.id) : undefined}
+                onRetryWithFallback={
+                  latestRun && onRetryWithFallback
+                    ? () => onRetryWithFallback(latestRun.id)
+                    : undefined
+                }
+              />
+            </article>
+            {taskDiffs.map((diff) => (
+              <DiffCard diff={diff} key={diff.id} />
+            ))}
+          </Fragment>
         )
       })}
     </div>

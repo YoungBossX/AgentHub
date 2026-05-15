@@ -7,6 +7,7 @@ import {
   getBackendHealth,
   getDemoWorkspace,
   interruptTaskRun,
+  listTaskRunDiffs,
   listSessionMessages,
   listSessionTasks,
   listWorkspaceSessions,
@@ -321,5 +322,50 @@ describe("task API", () => {
       { method: "POST" },
     )
     expect(fallback.adapterType).toBe("scripted_mock")
+  })
+
+  it("lists diff artifacts for a task run", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify([
+          {
+            id: "diff-1",
+            artifactId: "artifact-1",
+            taskRunId: "run-1",
+            artifactType: "diff",
+            title: "Git diff",
+            status: "ready",
+            baseRef: "abc123",
+            headRef: "def456+worktree",
+            patchText: "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx",
+            changedFiles: ["apps/demo/src/App.tsx"],
+            stats: {
+              filesChanged: 1,
+              additions: 2,
+              deletions: 1,
+              files: [
+                {
+                  path: "apps/demo/src/App.tsx",
+                  additions: 2,
+                  deletions: 1,
+                },
+              ],
+            },
+          },
+        ]),
+        { status: 200 },
+      )
+    })
+
+    const diffs = await listTaskRunDiffs("http://127.0.0.1:8000", "run-1", fetchMock)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/task-runs/run-1/diffs",
+      {
+        cache: "no-store",
+      },
+    )
+    expect(diffs[0].changedFiles).toEqual(["apps/demo/src/App.tsx"])
+    expect(diffs[0].stats.additions).toBe(2)
   })
 })
