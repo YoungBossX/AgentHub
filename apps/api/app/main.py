@@ -9,6 +9,7 @@ from sqlmodel import Session as DbSession
 
 from app.config import get_settings
 from app.db import engine, init_database
+from app.diffs import DiffCollectionError, StoredDiffArtifact, collect_task_run_diff, list_task_run_diffs
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
 from app.models import Agent, Message, Task, TaskRun
 from app.models import Session as AgentHubSession
@@ -27,6 +28,7 @@ from app.repositories import (
 )
 from app.schemas import (
     HealthResponse,
+    DiffArtifactResponse,
     MessageCreateRequest,
     MessageResponse,
     SessionCreateRequest,
@@ -240,6 +242,22 @@ def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
     )
 
 
+def diff_artifact_response(diff_artifact: StoredDiffArtifact) -> DiffArtifactResponse:
+    return DiffArtifactResponse(
+        id=diff_artifact.id,
+        artifactId=diff_artifact.artifact_id,
+        taskRunId=diff_artifact.task_run_id,
+        artifactType=diff_artifact.artifact_type,
+        title=diff_artifact.title,
+        status=diff_artifact.status,
+        baseRef=diff_artifact.base_ref,
+        headRef=diff_artifact.head_ref,
+        patchText=diff_artifact.patch_text,
+        changedFiles=diff_artifact.changed_files,
+        stats=diff_artifact.stats,
+    )
+
+
 def task_response(db: DbSession, task: Task) -> TaskResponse:
     assigned_role = None
     if task.assigned_agent_id is not None:
@@ -332,6 +350,32 @@ def retry_existing_task_run_with_fallback(
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return task_run_response(db, task_run)
+
+
+@app.post(
+    "/task-runs/{task_run_id}/diff",
+    response_model=DiffArtifactResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def collect_diff_for_task_run(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> DiffArtifactResponse:
+    try:
+        diff_artifact = collect_task_run_diff(db, task_run_id)
+    except DiffCollectionError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return diff_artifact_response(diff_artifact)
+
+
+@app.get("/task-runs/{task_run_id}/diffs", response_model=list[DiffArtifactResponse])
+def read_task_run_diffs(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[DiffArtifactResponse]:
+    if db.get(TaskRun, task_run_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    return [diff_artifact_response(diff) for diff in list_task_run_diffs(db, task_run_id)]
 
 
 @app.get("/sessions/{session_id}/events")

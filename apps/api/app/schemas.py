@@ -103,3 +103,17 @@ class TaskRunResponse(ApiModel):
     metrics_json: dict[str, Any] = Field(alias="metricsJson")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
+
+
+class DiffArtifactResponse(ApiModel):
+    id: str
+    artifact_id: str = Field(alias="artifactId")
+    task_run_id: str = Field(alias="taskRunId")
+    artifact_type: str = Field(alias="artifactType")
+    title: str
+    status: str
+    base_ref: str = Field(alias="baseRef")
+    head_ref: str = Field(alias="headRef")
+    patch_text: str = Field(alias="patchText")
+    changed_files: list[str] = Field(alias="changedFiles")
+    stats: dict[str, Any]

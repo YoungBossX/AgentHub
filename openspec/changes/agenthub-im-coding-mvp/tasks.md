@@ -106,7 +106,7 @@
   - Test or validation method: Backend state transition tests; manual interrupt/retry/fallback validation in UI.
   - Explicit non-goals: No deep recursive team control, arbitrary DAG re-planning UI, long-running background agent scheduler.
 
-- [ ] 2.6 Implement real git diff collection and storage.
+- [x] 2.6 Implement real git diff collection and storage.
   - Objective: Turn real session worktree changes into Diff artifacts.
   - Scope: TaskRun `baseRef`/`headRef`, `git diff -p`, changed files, stats, optional `git apply --check`, `node_modules` exclusion, Artifact and Diff persistence, `artifact.diff.ready` events.
   - Affected modules: backend diff service, Artifact/Diff repositories, adapter artifact collection, worktree service.

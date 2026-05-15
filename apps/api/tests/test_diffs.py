@@ -1,0 +1,175 @@
+import json
+import shutil
+import subprocess
+from collections.abc import Iterator
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session as DbSession
+from sqlmodel import SQLModel, create_engine, select
+
+from app.diffs import collect_task_run_diff, git_diff_pathspec
+from app.main import app, get_db
+from app.models import Agent, Artifact, Diff, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.task_runs import create_task_run
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+@pytest.fixture
+def demo_worktree(tmp_path: Path) -> Path:
+    worktree = tmp_path / "session-worktree"
+    demo_root = worktree / "apps" / "demo"
+    shutil.copytree(REPO_ROOT / "apps" / "demo", demo_root, ignore=shutil.ignore_patterns("node_modules"))
+    subprocess.run(["git", "init"], cwd=worktree, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=worktree, check=True)
+    subprocess.run(["git", "config", "user.name", "AgentHub Test"], cwd=worktree, check=True)
+    subprocess.run(["git", "add", "apps/demo"], cwd=worktree, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=worktree, check=True, capture_output=True)
+    return worktree
+
+
+@pytest.fixture
+def db() -> Iterator[DbSession]:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    with DbSession(engine) as session:
+        yield session
+
+
+@pytest.fixture
+def client(db: DbSession) -> Iterator[TestClient]:
+    def override_db() -> Iterator[DbSession]:
+        yield db
+
+    app.dependency_overrides[get_db] = override_db
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def create_run_fixture(db: DbSession, worktree_path: Path) -> str:
+    workspace = Workspace(
+        name="AgentHub Demo",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="Diff session",
+        bound_branch="main",
+        worktree_path=str(worktree_path),
+    )
+    agent = Agent(
+        name="Frontend Agent",
+        role="frontend",
+        adapter_type="scripted_mock",
+        provider="local",
+    )
+    task = Task(
+        session_id=session.id,
+        title="Build login page",
+        intent_type="frontend_change",
+        assigned_agent_id=agent.id,
+    )
+    db.add(workspace)
+    db.add(session)
+    db.add(agent)
+    db.add(task)
+    db.commit()
+
+    task_run = create_task_run(db, task.id, adapter_type="scripted_mock")
+    assert task_run.base_ref is not None
+    return task_run.id
+
+
+def mutate_worktree(worktree_path: Path) -> None:
+    app_source = worktree_path / "apps/demo/src/App.tsx"
+    app_source.write_text(
+        app_source.read_text().replace(
+            "Launchpad for a visible coding-agent change",
+            "AgentHub Login Demo",
+        ),
+    )
+    node_modules_file = worktree_path / "apps/demo/node_modules/transient-cache.txt"
+    node_modules_file.parent.mkdir(parents=True, exist_ok=True)
+    node_modules_file.write_text("this must not appear in stored diffs\n")
+
+
+def expected_git_patch(worktree_path: Path, base_ref: str) -> str:
+    return subprocess.run(
+        ["git", "diff", "-p", base_ref, "--", *git_diff_pathspec()],
+        cwd=worktree_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+
+def test_collect_task_run_diff_stores_git_patch_and_excludes_node_modules(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_run_fixture(db, demo_worktree)
+    task_run = db.get(TaskRun, task_run_id)
+    assert task_run is not None
+    base_ref = task_run.base_ref
+    assert base_ref is not None
+    mutate_worktree(demo_worktree)
+
+    diff_artifact = collect_task_run_diff(db, task_run_id)
+
+    stored_run = db.get(TaskRun, task_run_id)
+    artifact = db.get(Artifact, diff_artifact.artifact_id)
+    stored_diff = db.get(Diff, diff_artifact.id)
+    event = db.exec(
+        select(TaskRunEvent).where(
+            TaskRunEvent.task_run_id == task_run_id,
+            TaskRunEvent.event_type == "artifact.diff.ready",
+        )
+    ).one()
+
+    assert artifact is not None
+    assert stored_diff is not None
+    assert stored_run is not None
+    assert artifact.artifact_type == "diff"
+    assert artifact.status == "ready"
+    assert stored_diff.base_ref == base_ref
+    assert stored_diff.head_ref == stored_run.head_ref
+    assert stored_diff.patch_text == expected_git_patch(demo_worktree, base_ref)
+    assert "AgentHub Login Demo" in stored_diff.patch_text
+    assert "node_modules" not in stored_diff.patch_text
+    assert json.loads(stored_diff.changed_files_json) == ["apps/demo/src/App.tsx"]
+    assert json.loads(stored_diff.stats_json)["filesChanged"] == 1
+    assert json.loads(event.payload_json)["artifactId"] == artifact.id
+
+
+def test_diff_api_returns_stored_diff_artifacts(
+    client: TestClient,
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_run_fixture(db, demo_worktree)
+    mutate_worktree(demo_worktree)
+
+    create_response = client.post(f"/task-runs/{task_run_id}/diff")
+    list_response = client.get(f"/task-runs/{task_run_id}/diffs")
+
+    assert create_response.status_code == 201
+    assert list_response.status_code == 200
+    created = create_response.json()
+    listed = list_response.json()
+    assert created["artifactType"] == "diff"
+    assert created["changedFiles"] == ["apps/demo/src/App.tsx"]
+    assert created["patchText"] == listed[0]["patchText"]
+    assert "node_modules" not in created["patchText"]

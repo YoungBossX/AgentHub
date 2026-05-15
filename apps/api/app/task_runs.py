@@ -5,6 +5,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
+from app.diffs import capture_base_ref_for_worktree
 from app.models import Agent, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
@@ -66,6 +67,7 @@ def create_task_run(
         agent_id=agent.id,
         state="queued",
         worktree_path=session.worktree_path,
+        base_ref=capture_base_ref_for_worktree(session.worktree_path),
         metrics_json=json.dumps(metrics, separators=(",", ":")),
         created_at=now,
         updated_at=now,
