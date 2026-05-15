@@ -1,14 +1,17 @@
 from contextlib import asynccontextmanager
 import json
-from typing import AsyncIterator, Iterator
+from typing import Any, AsyncIterator, Iterator, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session as DbSession
 
+from app.adapters import AgentRunRequest, run_adapter_event_stream
 from app.config import get_settings
+from app.codex_adapter import CodexAdapter
 from app.db import engine, init_database
+from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
 from app.diffs import DiffCollectionError, StoredDiffArtifact, collect_task_run_diff, list_task_run_diffs
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
 from app.models import Agent, Message, Task, TaskRun
@@ -29,6 +32,7 @@ from app.repositories import (
 )
 from app.schemas import (
     HealthResponse,
+    DeploymentResponse,
     DiffArtifactResponse,
     MessageCreateRequest,
     MessageResponse,
@@ -50,6 +54,7 @@ from app.task_runs import (
     retry_task_run,
     retry_with_scripted_mock,
 )
+from app.scripted_mock import ScriptedMockAdapter
 from app.worktrees import WorktreeError, WorktreeService
 
 
@@ -81,10 +86,15 @@ def get_worktree_service() -> WorktreeService:
 
 
 _preview_service = PreviewService()
+_deploy_service = DeployService()
 
 
 def get_preview_service() -> PreviewService:
     return _preview_service
+
+
+def get_deploy_service() -> DeployService:
+    return _deploy_service
 
 
 
@@ -252,6 +262,34 @@ def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
     )
 
 
+def agent_run_request_for(
+    db: DbSession,
+    task_run: TaskRun,
+    *,
+    adapter_type: str,
+    plan_context: Optional[dict[str, Any]] = None,
+) -> AgentRunRequest:
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        raise TaskRunLifecycleError(f"Task not found: {task_run.task_id}")
+    session = db.get(AgentHubSession, task.session_id)
+    if session is None:
+        raise TaskRunLifecycleError(f"Session not found: {task.session_id}")
+    return AgentRunRequest(
+        taskRunId=task_run.id,
+        sessionId=session.id,
+        workspaceId=session.workspace_id,
+        worktreePath=session.worktree_path,
+        agentId=task_run.agent_id,
+        adapterType=adapter_type,
+        instruction=task.title,
+        planContext=plan_context or {},
+        permissionProfile={"network": "off"},
+        demoMode=True,
+        fallbackPolicy="scripted_mock" if adapter_type == "scripted_mock" else "none",
+    )
+
+
 def diff_artifact_response(diff_artifact: StoredDiffArtifact) -> DiffArtifactResponse:
     return DiffArtifactResponse(
         id=diff_artifact.id,
@@ -284,6 +322,24 @@ def preview_response(preview: StoredPreviewArtifact) -> PreviewResponse:
         statusReason=preview.status_reason,
         expiresAt=preview.expires_at,
         lastCheckedAt=preview.last_checked_at,
+    )
+
+
+def deployment_response(deployment: StoredDeploymentArtifact) -> DeploymentResponse:
+    return DeploymentResponse(
+        id=deployment.id,
+        artifactId=deployment.artifact_id,
+        taskRunId=deployment.task_run_id,
+        artifactType=deployment.artifact_type,
+        title=deployment.title,
+        status=deployment.status,
+        provider=deployment.provider,
+        environment=deployment.environment,
+        commitSha=deployment.commit_sha,
+        url=deployment.url,
+        deployLogUri=deployment.deploy_log_uri,
+        createdAt=deployment.created_at,
+        updatedAt=deployment.updated_at,
     )
 
 
@@ -337,6 +393,30 @@ def create_task_run_for_task(
     return task_run_response(db, task_run)
 
 
+@app.post(
+    "/tasks/{task_id}/runs/force-codex-failure",
+    response_model=TaskRunResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def force_codex_failure_for_task(
+    task_id: str,
+    db: DbSession = Depends(get_db),
+) -> TaskRunResponse:
+    try:
+        task_run = create_task_run(db, task_id, adapter_type="codex")
+        request = agent_run_request_for(
+            db,
+            task_run,
+            adapter_type="codex",
+            plan_context={"forceFailure": True},
+        )
+        await run_adapter_event_stream(db, CodexAdapter(), request)
+        db.refresh(task_run)
+    except TaskRunLifecycleError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return task_run_response(db, task_run)
+
+
 @app.post("/task-runs/{task_run_id}/interrupt", response_model=TaskRunResponse)
 def interrupt_existing_task_run(
     task_run_id: str,
@@ -370,13 +450,21 @@ def retry_existing_task_run(
     response_model=TaskRunResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def retry_existing_task_run_with_fallback(
+async def retry_existing_task_run_with_fallback(
     task_run_id: str,
     db: DbSession = Depends(get_db),
 ) -> TaskRunResponse:
     try:
         task_run = retry_with_scripted_mock(db, task_run_id)
+        request = agent_run_request_for(db, task_run, adapter_type="scripted_mock")
+        await run_adapter_event_stream(db, ScriptedMockAdapter(), request)
+        db.refresh(task_run)
+        if task_run.state == "completed":
+            collect_task_run_diff(db, task_run.id)
+            db.refresh(task_run)
     except TaskRunLifecycleError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except DiffCollectionError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return task_run_response(db, task_run)
 
@@ -449,6 +537,37 @@ def stop_existing_preview(
     except PreviewError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return preview_response(preview)
+
+
+@app.post(
+    "/previews/{preview_id}/deploy",
+    response_model=DeploymentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_mock_deployment_for_preview(
+    preview_id: str,
+    db: DbSession = Depends(get_db),
+    deployments: DeployService = Depends(get_deploy_service),
+) -> DeploymentResponse:
+    try:
+        deployment = deployments.create_mock_deployment(db, preview_id)
+    except DeployError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return deployment_response(deployment)
+
+
+@app.get("/task-runs/{task_run_id}/deployments", response_model=list[DeploymentResponse])
+def read_task_run_deployments(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+    deployments: DeployService = Depends(get_deploy_service),
+) -> list[DeploymentResponse]:
+    if db.get(TaskRun, task_run_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    return [
+        deployment_response(deployment)
+        for deployment in deployments.list_task_run_deployments(db, task_run_id)
+    ]
 
 
 @app.get("/sessions/{session_id}/events")

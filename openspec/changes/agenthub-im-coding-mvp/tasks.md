@@ -132,7 +132,7 @@
 
 ## 3. Week 3 - Preview Polish, Deploy Card, Recovery, and Demo QA
 
-- [ ] 3.1 Polish preview card and right-side panel.
+- [x] 3.1 Polish preview card and right-side panel.
   - Objective: Make preview usable and demo-ready in the product UI.
   - Scope: Preview card status, URL, open action, refresh action, last checked time, right-side panel or iframe, second-change refresh behavior.
   - Affected modules: frontend preview card/panel, backend preview read/refresh APIs.
@@ -140,7 +140,7 @@
   - Test or validation method: Manual run through login page change and button text change; verify preview health and iframe display.
   - Explicit non-goals: No new preview framework support, no dependency install during agent execution, no external preview sharing.
 
-- [ ] 3.2 Implement basic deploy card with mock fallback.
+- [x] 3.2 Implement basic deploy card with mock fallback.
   - Objective: Complete the demo loop after preview succeeds.
   - Scope: Deployment record creation, deploy card UI, mock deploy mode, optional single Vercel demo deploy if stable, approval gate before real deploy.
   - Affected modules: backend deploy service, frontend deploy card, approval controls.
@@ -148,7 +148,7 @@
   - Test or validation method: Manual preview-to-deploy-card validation; forced real-deploy-unavailable validation.
   - Explicit non-goals: No provider matrix, production deploy platform, full deploy matrix, unreviewed deploy, git push requirement.
 
-- [ ] 3.3 Implement and rehearse failure recovery demo flow.
+- [x] 3.3 Implement and rehearse failure recovery demo flow.
   - Objective: Prove the demo survives CodexAdapter failure or interruption.
   - Scope: Forced CodexAdapter failure mode, retry UI, retry with ScriptedMockAdapter, real file changes, diff collection, preview, deploy card.
   - Affected modules: adapter layer, retry controls, TaskRun error handling, ScriptedMockAdapter, diff/preview/deploy services.

@@ -1,11 +1,22 @@
 "use client"
 
-import { Play, RotateCcw, Shuffle, Square } from "lucide-react"
+import { CircleAlert, Play, RotateCcw, Shuffle, Square } from "lucide-react"
 import { Fragment, useEffect, useMemo, useState } from "react"
 
+import { DeployCard } from "./deploy-card"
 import { DiffCard } from "./diff-card"
+import { PreviewCard } from "./preview-card"
 import { Button } from "./ui/button"
-import { listTaskRunDiffs, type DiffArtifact, type SessionTask, type TaskRun } from "../lib/api"
+import {
+  listTaskRunDeployments,
+  listTaskRunDiffs,
+  listTaskRunPreviews,
+  type DeploymentArtifact,
+  type DiffArtifact,
+  type PreviewArtifact,
+  type SessionTask,
+  type TaskRun,
+} from "../lib/api"
 
 type TaskCardListProps = {
   tasks: SessionTask[]
@@ -13,10 +24,16 @@ type TaskCardListProps = {
   backendUrl?: string
   busy?: boolean
   fetcher?: typeof fetch
+  onCreateDeploy?: (previewId: string) => void
   onCreateRun?: (taskId: string) => void
+  onForceCodexFailure?: (taskId: string) => void
   onInterruptRun?: (taskRunId: string) => void
+  onOpenPreview?: (preview: PreviewArtifact) => void
+  onRefreshPreviews?: (taskRunId: string) => void
   onRetryRun?: (taskRunId: string) => void
   onRetryWithFallback?: (taskRunId: string) => void
+  onStartPreview?: (taskRunId: string) => void
+  onStopPreview?: (previewId: string) => void
 }
 
 const activeRunStates = new Set([
@@ -36,12 +53,22 @@ export function TaskCardList({
   backendUrl,
   busy = false,
   fetcher = fetch,
+  onCreateDeploy,
   onCreateRun,
+  onForceCodexFailure,
   onInterruptRun,
+  onOpenPreview,
+  onRefreshPreviews,
   onRetryRun,
   onRetryWithFallback,
+  onStartPreview,
+  onStopPreview,
 }: TaskCardListProps) {
+  const [deploymentsByRunId, setDeploymentsByRunId] = useState<
+    Record<string, DeploymentArtifact[]>
+  >({})
   const [diffsByRunId, setDiffsByRunId] = useState<Record<string, DiffArtifact[]>>({})
+  const [previewsByRunId, setPreviewsByRunId] = useState<Record<string, PreviewArtifact[]>>({})
   const taskRunIds = useMemo(
     () => tasks.flatMap((task) => task.taskRuns.map((taskRun) => taskRun.id)),
     [tasks],
@@ -69,6 +96,50 @@ export function TaskCardList({
     }
   }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
 
+  useEffect(() => {
+    if (!backendUrl || taskRunIds.length === 0) {
+      return
+    }
+
+    let cancelled = false
+    Promise.all(
+      taskRunIds.map(async (taskRunId) => {
+        const deployments = await listTaskRunDeployments(backendUrl, taskRunId, fetcher)
+        return [taskRunId, deployments] as const
+      }),
+    ).then((entries) => {
+      if (!cancelled) {
+        setDeploymentsByRunId(Object.fromEntries(entries))
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
+
+  useEffect(() => {
+    if (!backendUrl || taskRunIds.length === 0) {
+      return
+    }
+
+    let cancelled = false
+    Promise.all(
+      taskRunIds.map(async (taskRunId) => {
+        const previews = await listTaskRunPreviews(backendUrl, taskRunId, fetcher)
+        return [taskRunId, previews] as const
+      }),
+    ).then((entries) => {
+      if (!cancelled) {
+        setPreviewsByRunId(Object.fromEntries(entries))
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
+
   if (tasks.length === 0) {
     return null
   }
@@ -78,6 +149,12 @@ export function TaskCardList({
       {tasks.map((task, index) => {
         const latestRun = task.taskRuns[task.taskRuns.length - 1] ?? null
         const taskDiffs = task.taskRuns.flatMap((taskRun) => diffsByRunId[taskRun.id] ?? [])
+        const taskDeployments = task.taskRuns.flatMap(
+          (taskRun) => deploymentsByRunId[taskRun.id] ?? [],
+        )
+        const taskPreviews = task.taskRuns.flatMap(
+          (taskRun) => previewsByRunId[taskRun.id] ?? [],
+        )
         return (
           <Fragment key={task.id}>
             <article className="rounded-md border border-[var(--border)] bg-white p-3">
@@ -108,6 +185,11 @@ export function TaskCardList({
                 busy={busy}
                 latestRun={latestRun}
                 onCreateRun={onCreateRun ? () => onCreateRun(task.id) : undefined}
+                onForceCodexFailure={
+                  !latestRun && onForceCodexFailure
+                    ? () => onForceCodexFailure(task.id)
+                    : undefined
+                }
                 onInterruptRun={
                   latestRun && onInterruptRun ? () => onInterruptRun(latestRun.id) : undefined
                 }
@@ -117,10 +199,27 @@ export function TaskCardList({
                     ? () => onRetryWithFallback(latestRun.id)
                     : undefined
                 }
+                onStartPreview={
+                  latestRun && onStartPreview ? () => onStartPreview(latestRun.id) : undefined
+                }
               />
             </article>
             {taskDiffs.map((diff) => (
               <DiffCard diff={diff} key={diff.id} />
+            ))}
+            {taskPreviews.map((preview) => (
+              <PreviewCard
+                busy={busy}
+                key={preview.id}
+                onCreateDeploy={onCreateDeploy}
+                onOpen={onOpenPreview}
+                onRefresh={onRefreshPreviews}
+                onStop={onStopPreview}
+                preview={preview}
+              />
+            ))}
+            {taskDeployments.map((deployment) => (
+              <DeployCard deployment={deployment} key={deployment.id} />
             ))}
           </Fragment>
         )
@@ -144,20 +243,24 @@ function RunControls({
   busy,
   latestRun,
   onCreateRun,
+  onForceCodexFailure,
   onInterruptRun,
   onRetryRun,
   onRetryWithFallback,
+  onStartPreview,
 }: {
   busy: boolean
   latestRun: TaskRun | null
   onCreateRun?: () => void
+  onForceCodexFailure?: () => void
   onInterruptRun?: () => void
   onRetryRun?: () => void
   onRetryWithFallback?: () => void
+  onStartPreview?: () => void
 }) {
   if (!latestRun) {
     return (
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
         <Button
           className="h-8 px-3 text-xs"
           disabled={busy || !onCreateRun}
@@ -167,6 +270,18 @@ function RunControls({
           <Play aria-hidden="true" size={14} />
           Start run
         </Button>
+        {onForceCodexFailure ? (
+          <Button
+            className="h-8 px-3 text-xs"
+            disabled={busy}
+            onClick={onForceCodexFailure}
+            type="button"
+            variant="secondary"
+          >
+            <CircleAlert aria-hidden="true" size={14} />
+            Force Codex failure
+          </Button>
+        ) : null}
       </div>
     )
   }
@@ -209,9 +324,26 @@ function RunControls({
             variant="secondary"
           >
             <Shuffle aria-hidden="true" size={14} />
-            Retry with fallback
+            Retry with ScriptedMockAdapter
           </Button>
         ) : null}
+      </div>
+    )
+  }
+
+  if (latestRun.state === "completed") {
+    return (
+      <div className="mt-3">
+        <Button
+          className="h-8 px-3 text-xs"
+          disabled={busy || !onStartPreview}
+          onClick={onStartPreview}
+          type="button"
+          variant="secondary"
+        >
+          <Play aria-hidden="true" size={14} />
+          Start preview
+        </Button>
       </div>
     )
   }

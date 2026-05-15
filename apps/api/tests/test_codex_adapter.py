@@ -255,6 +255,30 @@ async def test_codex_cli_unavailable_is_normalized_without_raising(
 
 
 @pytest.mark.anyio
+async def test_codex_forced_demo_failure_does_not_start_process(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    session, task_run = create_task_run(db, str(tmp_path))
+    runner = FakeCodexRunner(FakeCodexProcess(stdout='{"type":"turn.completed"}\n'))
+    adapter = CodexAdapter(process_runner=runner, codex_binary="codex")
+    request = request_for(task_run, session)
+    request.plan_context["forceFailure"] = True
+
+    persisted = await run_adapter_event_stream(db, adapter, request)
+
+    payload = json.loads(persisted[0].payload_json)
+    assert runner.command is None
+    assert persisted[0].event_type == "error"
+    assert payload["code"] == "CODEX_DEMO_FORCED_FAILURE"
+    assert "forced" in payload["message"].lower()
+
+    db.refresh(task_run)
+    assert task_run.state == "failed"
+    assert task_run.error_code == "CODEX_DEMO_FORCED_FAILURE"
+
+
+@pytest.mark.anyio
 async def test_codex_malformed_jsonl_is_normalized_as_parse_error(
     db: DbSession,
     tmp_path: Path,

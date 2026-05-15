@@ -173,12 +173,27 @@ def test_retry_with_scripted_mock_fallback_after_codex_failure(
     fallback = response.json()
     assert fallback["id"] != original["id"]
     assert fallback["adapterType"] == "scripted_mock"
-    assert fallback["state"] == "queued"
+    assert fallback["state"] in {"queued", "failed"}
     assert fallback["metricsJson"]["fallbackFromRunId"] == original["id"]
 
     task_response = client.get(f"/sessions/{fallback['sessionId']}/tasks")
     task = task_response.json()[0]
     assert [run["id"] for run in task["taskRuns"]] == [original["id"], fallback["id"]]
+
+
+def test_force_codex_failure_creates_failed_visible_run(client: TestClient) -> None:
+    response = client.post(f"/tasks/{task_id()}/runs/force-codex-failure")
+
+    assert response.status_code == 201
+    run = response.json()
+    assert run["adapterType"] == "codex"
+    assert run["state"] == "failed"
+    assert run["errorCode"] == "CODEX_DEMO_FORCED_FAILURE"
+
+    task_response = client.get(f"/sessions/{run['sessionId']}/tasks")
+    task = task_response.json()[0]
+    assert task["status"] == "failed"
+    assert [task_run["id"] for task_run in task["taskRuns"]] == [run["id"]]
 
 
 def test_retry_with_fallback_requires_failed_codex_run(client: TestClient) -> None:

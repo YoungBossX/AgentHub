@@ -74,6 +74,10 @@ class CodexRunState:
     interrupted: bool = False
 
 
+class CodexForcedFailure(RuntimeError):
+    pass
+
+
 class CodexAdapter(AgentAdapter):
     def __init__(
         self,
@@ -105,6 +109,13 @@ class CodexAdapter(AgentAdapter):
         cwd = Path(request.worktree_path).expanduser().resolve(strict=False)
         command = self._build_command(request, cwd)
         state = CodexRunState(request=request, command=command, cwd=cwd)
+
+        if request.plan_context.get("forceFailure"):
+            state.start_error = CodexForcedFailure(
+                "Forced Codex failure requested for demo recovery."
+            )
+            self._runs[run_id] = state
+            return AdapterRun(adapterRunId=run_id)
 
         guardrail_decision = evaluate_command(command)
         if not guardrail_decision.allowed:
@@ -367,6 +378,8 @@ def _stderr_excerpt(stderr: str) -> str:
 
 
 def _error_code_for_exception(exc: Exception) -> str:
+    if isinstance(exc, CodexForcedFailure):
+        return "CODEX_DEMO_FORCED_FAILURE"
     if isinstance(exc, FileNotFoundError):
         return "CODEX_NOT_FOUND"
     if isinstance(exc, PermissionError):

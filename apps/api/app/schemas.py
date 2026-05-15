@@ -134,3 +134,19 @@ class PreviewResponse(ApiModel):
     status_reason: Optional[str] = Field(alias="statusReason")
     expires_at: Optional[datetime] = Field(alias="expiresAt")
     last_checked_at: Optional[datetime] = Field(alias="lastCheckedAt")
+
+
+class DeploymentResponse(ApiModel):
+    id: str
+    artifact_id: str = Field(alias="artifactId")
+    task_run_id: str = Field(alias="taskRunId")
+    artifact_type: str = Field(alias="artifactType")
+    title: str
+    status: str
+    provider: str
+    environment: str
+    commit_sha: Optional[str] = Field(alias="commitSha")
+    url: Optional[str]
+    deploy_log_uri: Optional[str] = Field(alias="deployLogUri")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")

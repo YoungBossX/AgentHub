@@ -5,18 +5,25 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { FormEvent, useEffect, useMemo, useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
+import { PreviewPanel } from "@/components/preview-card"
 import { TaskCardList } from "@/components/task-card-list"
 import {
+  createPreviewDeployment,
   createSessionMessage,
   createTaskRun,
   createWorkspaceSession,
+  forceCodexFailure,
   interruptTaskRun,
+  listTaskRunPreviews,
   listSessionMessages,
   listSessionTasks,
   retryTaskRun,
   retryTaskRunWithFallback,
   sessionEventsUrl,
+  startTaskRunPreview,
+  stopPreview,
   type ChatMessage,
+  type PreviewArtifact,
   type SessionTask,
   type Workspace,
   type WorkspaceSession,
@@ -56,6 +63,9 @@ export function WorkspaceShell({
   const [tasks, setTasks] = useState<SessionTask[]>([])
   const [draft, setDraft] = useState("")
   const [lastEventSequence, setLastEventSequence] = useState(0)
+  const [artifactRefreshVersion, setArtifactRefreshVersion] = useState(0)
+  const [selectedPreview, setSelectedPreview] = useState<PreviewArtifact | null>(null)
+  const [previewFrameKey, setPreviewFrameKey] = useState(0)
 
   const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
   const selectedSession = useMemo(
@@ -151,10 +161,22 @@ export function WorkspaceShell({
     setTasks(nextTasks)
   }
 
+  function refreshArtifacts() {
+    setArtifactRefreshVersion((current) => current + 1)
+  }
+
   function handleCreateTaskRun(taskId: string) {
     startTransition(async () => {
       await createTaskRun(backendUrl, taskId)
       await refreshSelectedTasks()
+    })
+  }
+
+  function handleForceCodexFailure(taskId: string) {
+    startTransition(async () => {
+      await forceCodexFailure(backendUrl, taskId)
+      await refreshSelectedTasks()
+      refreshArtifacts()
     })
   }
 
@@ -176,6 +198,50 @@ export function WorkspaceShell({
     startTransition(async () => {
       await retryTaskRunWithFallback(backendUrl, taskRunId)
       await refreshSelectedTasks()
+    })
+  }
+
+  function handleOpenPreview(preview: PreviewArtifact) {
+    setSelectedPreview(preview)
+    setPreviewFrameKey((current) => current + 1)
+  }
+
+  function handleRefreshPreviews(taskRunId: string) {
+    startTransition(async () => {
+      const previews = await listTaskRunPreviews(backendUrl, taskRunId)
+      const latestPreview = previews[previews.length - 1] ?? null
+      if (latestPreview && selectedPreview?.taskRunId === taskRunId) {
+        setSelectedPreview(latestPreview)
+        setPreviewFrameKey((current) => current + 1)
+      }
+      refreshArtifacts()
+    })
+  }
+
+  function handleStartPreview(taskRunId: string) {
+    startTransition(async () => {
+      const preview = await startTaskRunPreview(backendUrl, taskRunId)
+      setSelectedPreview(preview)
+      setPreviewFrameKey((current) => current + 1)
+      refreshArtifacts()
+    })
+  }
+
+  function handleCreateDeployment(previewId: string) {
+    startTransition(async () => {
+      await createPreviewDeployment(backendUrl, previewId)
+      refreshArtifacts()
+    })
+  }
+
+  function handleStopPreview(previewId: string) {
+    startTransition(async () => {
+      const stoppedPreview = await stopPreview(backendUrl, previewId)
+      if (selectedPreview?.id === previewId) {
+        setSelectedPreview(stoppedPreview)
+        setPreviewFrameKey((current) => current + 1)
+      }
+      refreshArtifacts()
     })
   }
 
@@ -214,7 +280,7 @@ export function WorkspaceShell({
   }
 
   return (
-    <section className="grid min-h-[560px] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] md:grid-cols-[320px_1fr]">
+    <section className="grid min-h-[560px] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)] md:grid-cols-[320px_1fr] xl:grid-cols-[320px_minmax(0,1fr)_420px]">
       <aside className="border-b border-[var(--border)] bg-slate-50 md:border-b-0 md:border-r">
         <div className="border-b border-[var(--border)] p-4">
           <div className="flex items-start justify-between gap-3">
@@ -339,13 +405,19 @@ export function WorkspaceShell({
 
             {selectedSession && tasks.length > 0 ? (
               <TaskCardList
-                artifactRefreshKey={lastEventSequence}
+                artifactRefreshKey={lastEventSequence + artifactRefreshVersion}
                 backendUrl={backendUrl}
                 busy={isPending}
+                onCreateDeploy={handleCreateDeployment}
                 onCreateRun={handleCreateTaskRun}
+                onForceCodexFailure={handleForceCodexFailure}
                 onInterruptRun={handleInterruptTaskRun}
+                onOpenPreview={handleOpenPreview}
+                onRefreshPreviews={handleRefreshPreviews}
                 onRetryRun={handleRetryTaskRun}
                 onRetryWithFallback={handleRetryTaskRunWithFallback}
+                onStartPreview={handleStartPreview}
+                onStopPreview={handleStopPreview}
                 tasks={tasks}
               />
             ) : null}
@@ -388,6 +460,12 @@ export function WorkspaceShell({
           ) : null}
         </div>
       </div>
+      <PreviewPanel
+        frameKey={previewFrameKey}
+        onClose={() => setSelectedPreview(null)}
+        onRefresh={handleRefreshPreviews}
+        preview={selectedPreview}
+      />
     </section>
   )
 }

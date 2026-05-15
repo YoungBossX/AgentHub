@@ -102,6 +102,39 @@ export type DiffArtifact = {
   stats: DiffStats
 }
 
+export type PreviewArtifact = {
+  id: string
+  artifactId: string
+  taskRunId: string
+  artifactType: "preview" | string
+  title: string
+  status: string
+  port: number
+  url: string
+  command: string
+  processId: number | null
+  healthStatus: string
+  statusReason: string | null
+  expiresAt: string | null
+  lastCheckedAt: string | null
+}
+
+export type DeploymentArtifact = {
+  id: string
+  artifactId: string
+  taskRunId: string
+  artifactType: "deployment" | string
+  title: string
+  status: string
+  provider: string
+  environment: string
+  commitSha: string | null
+  url: string | null
+  deployLogUri: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 type Fetcher = typeof fetch
 
 function apiUrl(backendUrl: string, path: string) {
@@ -257,6 +290,17 @@ export async function createTaskRun(
   return mutateTaskRun(apiUrl(backendUrl, `/tasks/${taskId}/runs`), fetcher)
 }
 
+export async function forceCodexFailure(
+  backendUrl: string,
+  taskId: string,
+  fetcher: Fetcher = fetch,
+): Promise<TaskRun> {
+  return mutateTaskRun(
+    apiUrl(backendUrl, `/tasks/${taskId}/runs/force-codex-failure`),
+    fetcher,
+  )
+}
+
 export async function interruptTaskRun(
   backendUrl: string,
   taskRunId: string,
@@ -298,6 +342,89 @@ export async function listTaskRunDiffs(
   }
 
   return (await response.json()) as DiffArtifact[]
+}
+
+export async function startTaskRunPreview(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<PreviewArtifact> {
+  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/preview`), {
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error("Could not start preview")
+  }
+
+  return (await response.json()) as PreviewArtifact
+}
+
+export async function listTaskRunPreviews(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<PreviewArtifact[]> {
+  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/previews`), {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as PreviewArtifact[]
+}
+
+export async function stopPreview(
+  backendUrl: string,
+  previewId: string,
+  fetcher: Fetcher = fetch,
+): Promise<PreviewArtifact> {
+  const response = await fetcher(apiUrl(backendUrl, `/previews/${previewId}/stop`), {
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error("Could not stop preview")
+  }
+
+  return (await response.json()) as PreviewArtifact
+}
+
+export async function createPreviewDeployment(
+  backendUrl: string,
+  previewId: string,
+  fetcher: Fetcher = fetch,
+): Promise<DeploymentArtifact> {
+  const response = await fetcher(apiUrl(backendUrl, `/previews/${previewId}/deploy`), {
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error("Could not create deployment")
+  }
+
+  return (await response.json()) as DeploymentArtifact
+}
+
+export async function listTaskRunDeployments(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<DeploymentArtifact[]> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/task-runs/${taskRunId}/deployments`),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as DeploymentArtifact[]
 }
 
 async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {

@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlmodel import Session as DbSession
 
 from app.events import append_task_run_event
-from app.models import TaskRun, TaskRunEvent
+from app.models import Task, TaskRun, TaskRunEvent
 from app.models import utc_now
 
 AgentEventType = Literal[
@@ -194,5 +194,22 @@ def _apply_task_run_event_state(db: DbSession, event: AgentEvent) -> None:
         return
 
     task_run.updated_at = now
+    task = db.get(Task, task_run.task_id)
+    if task is not None:
+        task.status = _task_status_for_run_state(task_run.state)
+        task.updated_at = now
+        db.add(task)
     db.add(task_run)
     db.commit()
+
+
+def _task_status_for_run_state(state: str) -> str:
+    if state == "waiting_approval":
+        return "waiting_approval"
+    if state == "completed":
+        return "completed"
+    if state == "failed":
+        return "failed"
+    if state == "interrupted":
+        return "interrupted"
+    return "running"

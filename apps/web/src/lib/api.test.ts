@@ -3,17 +3,23 @@ import { describe, expect, it, vi } from "vitest"
 import {
   createSessionMessage,
   createTaskRun,
+  createPreviewDeployment,
   createWorkspaceSession,
+  forceCodexFailure,
   getBackendHealth,
   getDemoWorkspace,
   interruptTaskRun,
+  listTaskRunDeployments,
   listTaskRunDiffs,
+  listTaskRunPreviews,
   listSessionMessages,
   listSessionTasks,
   listWorkspaceSessions,
   retryTaskRun,
   retryTaskRunWithFallback,
   sessionEventsUrl,
+  startTaskRunPreview,
+  stopPreview,
 } from "./api"
 
 describe("getBackendHealth", () => {
@@ -324,6 +330,41 @@ describe("task API", () => {
     expect(fallback.adapterType).toBe("scripted_mock")
   })
 
+  it("creates a forced Codex failure run for demo recovery", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          id: "run-failed",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "codex",
+          adapterRunId: null,
+          state: "failed",
+          startedAt: null,
+          endedAt: "2026-05-15T10:31:00Z",
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: "abc123",
+          headRef: null,
+          errorCode: "CODEX_DEMO_FORCED_FAILURE",
+          errorMessage: "Forced Codex failure requested for demo recovery.",
+          metricsJson: { adapterType: "codex", forcedFailure: true },
+          createdAt: "2026-05-15T10:30:00Z",
+          updatedAt: "2026-05-15T10:31:00Z",
+        }),
+        { status: 201 },
+      )
+    })
+
+    const run = await forceCodexFailure("http://127.0.0.1:8000", "task-1", fetchMock)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/tasks/task-1/runs/force-codex-failure",
+      { method: "POST" },
+    )
+    expect(run.errorCode).toBe("CODEX_DEMO_FORCED_FAILURE")
+  })
+
   it("lists diff artifacts for a task run", async () => {
     const fetchMock = vi.fn(async () => {
       return new Response(
@@ -367,5 +408,107 @@ describe("task API", () => {
     )
     expect(diffs[0].changedFiles).toEqual(["apps/demo/src/App.tsx"])
     expect(diffs[0].stats.additions).toBe(2)
+  })
+
+  it("starts, lists, and stops preview artifacts for a task run", async () => {
+    const previewPayload = {
+      id: "preview-1",
+      artifactId: "artifact-preview-1",
+      taskRunId: "run-1",
+      artifactType: "preview",
+      title: "Vite React preview",
+      status: "ready",
+      port: 5173,
+      url: "http://127.0.0.1:5173",
+      command: "pnpm dev --host 127.0.0.1 --port 5173",
+      processId: 4242,
+      healthStatus: "healthy",
+      statusReason: null,
+      expiresAt: "2026-05-15T12:00:00Z",
+      lastCheckedAt: "2026-05-15T10:30:00Z",
+    }
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input.toString()
+      if (url.endsWith("/previews")) {
+        return new Response(JSON.stringify([previewPayload]), { status: 200 })
+      }
+      return new Response(JSON.stringify(previewPayload), {
+        status: init?.method === "POST" ? 201 : 200,
+      })
+    })
+
+    const created = await startTaskRunPreview("http://127.0.0.1:8000", "run-1", fetchMock)
+    const previews = await listTaskRunPreviews("http://127.0.0.1:8000", "run-1", fetchMock)
+    const stopped = await stopPreview("http://127.0.0.1:8000", "preview-1", fetchMock)
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://127.0.0.1:8000/task-runs/run-1/preview",
+      { method: "POST" },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1:8000/task-runs/run-1/previews",
+      { cache: "no-store" },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "http://127.0.0.1:8000/previews/preview-1/stop",
+      { method: "POST" },
+    )
+    expect(created.url).toBe("http://127.0.0.1:5173")
+    expect(previews[0].healthStatus).toBe("healthy")
+    expect(stopped.port).toBe(5173)
+  })
+
+  it("creates and lists mock deployment artifacts", async () => {
+    const deploymentPayload = {
+      id: "deployment-1",
+      artifactId: "artifact-deploy-1",
+      taskRunId: "run-1",
+      artifactType: "deployment",
+      title: "Mock deploy",
+      status: "ready",
+      provider: "mock",
+      environment: "preview",
+      commitSha: "def456+worktree",
+      url: "https://mock.agenthub.local/deployments/deployment-1",
+      deployLogUri: "mock://deployments/deployment-1/logs",
+      createdAt: "2026-05-15T10:30:00Z",
+      updatedAt: "2026-05-15T10:30:00Z",
+    }
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input.toString()
+      if (url.endsWith("/deployments")) {
+        return new Response(JSON.stringify([deploymentPayload]), { status: 200 })
+      }
+      return new Response(JSON.stringify(deploymentPayload), {
+        status: init?.method === "POST" ? 201 : 200,
+      })
+    })
+
+    const created = await createPreviewDeployment(
+      "http://127.0.0.1:8000",
+      "preview-1",
+      fetchMock,
+    )
+    const deployments = await listTaskRunDeployments(
+      "http://127.0.0.1:8000",
+      "run-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://127.0.0.1:8000/previews/preview-1/deploy",
+      { method: "POST" },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1:8000/task-runs/run-1/deployments",
+      { cache: "no-store" },
+    )
+    expect(created.provider).toBe("mock")
+    expect(deployments[0].deployLogUri).toBe("mock://deployments/deployment-1/logs")
   })
 })
