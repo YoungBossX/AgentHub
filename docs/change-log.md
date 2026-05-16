@@ -410,3 +410,86 @@ The fallback path was also exercised in the same session after Codex failed:
 - Preview/deploy through a real Codex success path remains unverified until
   Codex quota permits a successful HTTP Direct Start mutation.
 - The existing fallback-based P0 demo path remains intact and verified.
+
+---
+
+## P1-6: HTTP Direct Start Real Codex End-to-End Rehearsal
+
+**Date:** 2026-05-16
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/change-log.md` | Added this P1-6 rehearsal result. |
+
+### What Changed
+
+No product code was changed for P1-6. This was a focused rehearsal after the
+P1-5 reconnect/error-handling fixes and after Codex usage limits reset.
+
+### Manual Verification Result
+
+HTTP Direct Start with real Codex was rehearsed through the backend API path
+used by the UI:
+
+- Session: `a0b51d27-0473-44f3-b079-bbb02fdf00bb`
+- User request:
+  `@orchestrator build a login page for the demo app`
+- Codex-backed task: `f9e982c3-df76-4740-b38c-e14e8cb3497c`
+- TaskRun: `fa23fb4a-6506-4b0e-a608-3197356d0628`
+- Initial state: `queued`
+- Observed state during execution: `streaming`
+- Final state: `completed`
+- Error code/message: none
+- Persisted event replay lines: 84
+- Health checks during execution: `ok` in 1-5ms
+- Worktree:
+  `.worktrees/98449267-914c-4f26-82b5-e1d176d64f91/a0b51d27-0473-44f3-b079-bbb02fdf00bb`
+
+Real Codex changed:
+
+```text
+apps/demo/src/App.tsx
+```
+
+The collected diff artifact was persisted:
+
+- Artifact ID: `782e16f4-36b5-46f3-86cf-42c3fb6119e9`
+- Diff ID: `5df0273d-f9fc-46b3-bbfa-242d5d185667`
+- Changed files: `["apps/demo/src/App.tsx"]`
+- Stats: 1 file changed, 20 additions, 4 deletions
+
+The file diff replaced the deterministic login-page slot copy with a compact
+login form containing email and password fields. This verifies:
+
+```text
+HTTP Direct Start -> real Codex file mutation -> diff artifact
+```
+
+### Fallback Verification
+
+The P1-6 direct Codex run completed, so fallback was not needed in this
+rehearsal. P1-5 verified the fallback path immediately before this run:
+
+- Retry with ScriptedMockAdapter completed.
+- Diff artifact was produced for `apps/demo/src/App.tsx`.
+- Preview became healthy.
+- Mock deployment card was created.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (89 tests: 21 web + 68 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- Preview and mock deploy were not triggered from the real Codex success run in
+  this rehearsal. The verified P1-6 scope was real Codex mutation plus diff
+  artifact.
+- The Codex run took about 163 seconds and emitted reconnect progress before
+  completion, so demos should still keep the ScriptedMockAdapter fallback
+  available.
