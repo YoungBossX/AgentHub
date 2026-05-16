@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import subprocess
@@ -157,7 +158,7 @@ class CodexAdapter(AgentAdapter):
             )
             return
 
-        stdout, stderr = state.process.communicate()
+        stdout, stderr = await asyncio.to_thread(state.process.communicate)
         stderr_excerpt = _stderr_excerpt(stderr)
         terminal_event_seen = False
 

@@ -1,4 +1,6 @@
+import asyncio
 import json
+import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Optional
@@ -297,6 +299,36 @@ async def test_codex_malformed_jsonl_is_normalized_as_parse_error(
     assert "line 1" in payload["message"]
 
 
+def test_codex_adapter_default_binary_is_macos_codex_app_path() -> None:
+    from app.codex_adapter import DEFAULT_CODEX_BINARY
+
+    assert DEFAULT_CODEX_BINARY == "/Applications/Codex.app/Contents/Resources/codex"
+
+
+def test_codex_adapter_respects_codex_cli_path_env_var(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CODEX_CLI_PATH", "/usr/local/bin/custom-codex")
+    adapter = CodexAdapter()
+    assert adapter._codex_binary == "/usr/local/bin/custom-codex"
+
+
+def test_codex_adapter_falls_back_to_default_when_env_var_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CODEX_CLI_PATH", raising=False)
+    adapter = CodexAdapter()
+    assert adapter._codex_binary == "/Applications/Codex.app/Contents/Resources/codex"
+
+
+def test_codex_adapter_constructor_binary_override_takes_precedence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CODEX_CLI_PATH", "/should/ignore/this")
+    adapter = CodexAdapter(codex_binary="/explicit/path/codex")
+    assert adapter._codex_binary == "/explicit/path/codex"
+
+
 @pytest.mark.anyio
 async def test_codex_interrupt_terminates_process_and_marks_run_interrupted(
     tmp_path: Path,
@@ -326,3 +358,78 @@ async def test_codex_interrupt_terminates_process_and_marks_run_interrupted(
     assert process.terminated is True
     assert events[-1].type == "error"
     assert events[-1].payload["code"] == "CODEX_INTERRUPTED"
+
+
+class DelayedFakeCodexProcess(FakeCodexProcess):
+    def __init__(
+        self,
+        delay_sec: float = 0.2,
+        stdout: str = '{"type":"turn.completed"}\n',
+        stderr: str = "",
+        returncode: int = 0,
+    ) -> None:
+        super().__init__(stdout=stdout, stderr=stderr, returncode=returncode)
+        self.delay_sec = delay_sec
+
+    def communicate(self) -> tuple[str, str]:
+        time.sleep(self.delay_sec)
+        return super().communicate()
+
+
+@pytest.mark.anyio
+async def test_codex_adapter_does_not_block_event_loop_during_communicate(
+    tmp_path: Path,
+) -> None:
+    """Prove a long Codex process does not block other async tasks."""
+    process = DelayedFakeCodexProcess(
+        delay_sec=0.3,
+        stdout='{"type":"thread.started","thread_id":"thread-1"}\n'
+               '{"type":"turn.completed"}\n',
+        returncode=0,
+    )
+    adapter = CodexAdapter(
+        process_runner=FakeCodexRunner(process),
+        codex_binary="codex",
+    )
+    request = AgentRunRequest(
+        taskRunId="task-run-nb",
+        sessionId="session-1",
+        workspaceId="workspace-1",
+        worktreePath=str(tmp_path),
+        agentId="agent-1",
+        adapterType="codex",
+        instruction="Non-blocking test instruction.",
+    )
+
+    run = await adapter.createRun(request)
+
+    # Start adapter stream as a concurrent task
+    stream_task = asyncio.ensure_future(
+        _drain_events(adapter, run.adapter_run_id)
+    )
+
+    # A concurrent task should complete BEFORE the adapter finishes
+    t0 = time.monotonic()
+    await asyncio.sleep(0.05)
+    t1 = time.monotonic()
+    concurrent_elapsed = t1 - t0
+
+    events = await stream_task
+    t2 = time.monotonic()
+    total_elapsed = t2 - t0
+
+    # Concurrent sleep completed promptly (not blocked by communicate)
+    assert concurrent_elapsed < 0.2, (
+        f"Event loop was blocked for {concurrent_elapsed:.2f}s"
+    )
+    # Total time confirms the adapter ran (delay was 0.3s)
+    assert total_elapsed >= 0.25, (
+        f"Adapter completed too quickly: {total_elapsed:.2f}s"
+    )
+    assert len(events) >= 1
+
+
+async def _drain_events(
+    adapter: CodexAdapter, run_id: str
+) -> list[object]:
+    return [event async for event in adapter.streamEvents(run_id)]

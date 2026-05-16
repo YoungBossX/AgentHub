@@ -252,14 +252,29 @@ def test_direct_ui_start_background_execution_persists_events(
         stored = db.get(TaskRun, run["id"])
 
     # The endpoint creates a "queued" event (sequence 1).
-    # The background task invokes CodexAdapter, which fails (no CLI installed)
-    # and the exception handler transitions to "failed" (sequence >= 2).
+    # The background task invokes CodexAdapter:
+    #   - If Codex CLI is installed and worktree exists: streaming/completed events
+    #   - If Codex CLI is not installed or worktree missing: failed with CODEX_* error
     assert len(events) >= 2, (
         f"Background execution did not persist events beyond queued: {len(events)} events"
     )
     assert stored.state in {"failed", "streaming", "completed"}, (
         f"Background execution did not transition state past queued: {stored.state}"
     )
+
+    # At least one event after queued must be from CodexAdapter execution
+    later_events = events[1:]
+    adapter_event_types = {e.event_type for e in later_events}
+    assert adapter_event_types & {"error", "task.state", "completed", "message.delta"}, (
+        f"No adapter lifecycle events found after queued: {adapter_event_types}"
+    )
+
+    if stored.state == "failed":
+        assert stored.error_code is not None, "Failed TaskRun must have error_code"
+        assert "CODEX_" in (stored.error_code or ""), (
+            f"Expected CODEX_* error code, got: {stored.error_code}"
+        )
+        assert stored.error_message is not None, "Failed TaskRun must have error_message"
 
 
 def test_direct_ui_start_scripted_mock_background_execution_persists_events(
