@@ -123,6 +123,7 @@ def test_start_preview_persists_vite_command_health_and_ready_event(
         process_runner=runner,
         health_checker=health,
         port_allocator=lambda: 4317,
+        health_attempts=1,
     )
 
     stored = service.start_task_run_preview(db, task_run_id)
@@ -167,6 +168,7 @@ def test_preview_api_starts_lists_and_stops_preview(
         process_runner=runner,
         health_checker=StaticHealthChecker(healthy=True),
         port_allocator=lambda: 4318,
+        health_attempts=1,
     )
 
     def override_db() -> Iterator[DbSession]:
@@ -201,6 +203,7 @@ def test_unhealthy_preview_persists_health_status_without_ready_event(
         process_runner=RecordingRunner(),
         health_checker=StaticHealthChecker(healthy=False),
         port_allocator=lambda: 4319,
+        health_attempts=1,
     )
 
     stored = service.start_task_run_preview(db, task_run_id)
@@ -217,3 +220,36 @@ def test_unhealthy_preview_persists_health_status_without_ready_event(
     assert preview.health_status == "unhealthy"
     assert preview.status_reason == "Preview did not respond to the health check."
     assert ready_events == []
+
+
+def test_listing_preview_refreshes_health_and_emits_ready_event(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_task_run_fixture(db, demo_worktree)
+    health = StaticHealthChecker(healthy=False)
+    service = PreviewService(
+        process_runner=RecordingRunner(),
+        health_checker=health,
+        port_allocator=lambda: 4320,
+        health_attempts=1,
+    )
+    created = service.start_task_run_preview(db, task_run_id)
+
+    health.healthy = True
+    listed = service.list_task_run_previews(db, task_run_id)
+
+    preview = db.get(Preview, created.id)
+    artifact = db.get(Artifact, created.artifact_id)
+    ready_events = db.exec(
+        select(TaskRunEvent).where(
+            TaskRunEvent.task_run_id == task_run_id,
+            TaskRunEvent.event_type == "artifact.preview.ready",
+        )
+    ).all()
+    assert listed[0].health_status == "healthy"
+    assert preview is not None
+    assert preview.health_status == "healthy"
+    assert artifact is not None
+    assert artifact.status == "ready"
+    assert len(ready_events) == 1

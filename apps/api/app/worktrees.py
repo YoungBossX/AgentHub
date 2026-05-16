@@ -38,6 +38,7 @@ class WorktreeService:
         path = self.session_path(workspace.id, session_id)
         if path.exists():
             if self._is_git_worktree(path):
+                self._link_setup_dependency_dirs(path)
                 return path.resolve()
             raise WorktreeError(f"Session worktree path already exists: {path}")
 
@@ -58,7 +59,22 @@ class WorktreeService:
         )
         if result.returncode != 0:
             raise WorktreeError(result.stderr.strip() or result.stdout.strip())
+        self._link_setup_dependency_dirs(path)
         return path.resolve()
+
+    def _link_setup_dependency_dirs(self, path: Path) -> None:
+        for relative_path in ("node_modules", "apps/demo/node_modules"):
+            source = self.repo_root / relative_path
+            target = path / relative_path
+            if not source.exists() or target.exists() or target.is_symlink():
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                target.symlink_to(source, target_is_directory=True)
+            except OSError as exc:
+                raise WorktreeError(
+                    f"Could not link setup dependency directory {relative_path}: {exc}"
+                ) from exc
 
     def _is_git_worktree(self, path: Path) -> bool:
         result = subprocess.run(

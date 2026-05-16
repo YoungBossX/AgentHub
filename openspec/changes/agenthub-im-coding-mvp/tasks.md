@@ -156,7 +156,7 @@
   - Test or validation method: Manual failure recovery rehearsal and integration test for fallback run.
   - Explicit non-goals: No generic provider failover marketplace, no complex autonomous recovery planner.
 
-- [ ] 3.4 Add README and demo script.
+- [x] 3.4 Add README and demo script.
   - Objective: Make the MVP runnable and judge-demoable.
   - Scope: Local setup, setup-time dependency install, frontend/backend start commands, database seed, Vite React demo repo setup, success path script, failure recovery script, known P0/P1/P2 boundaries.
   - Affected modules: README, demo script docs, developer scripts.
@@ -164,7 +164,7 @@
   - Test or validation method: Fresh local run-through following only the README and demo script.
   - Explicit non-goals: No full production deployment guide, enterprise operations manual, marketplace documentation.
 
-- [ ] 3.5 Final P0 acceptance checklist and scope guard.
+- [x] 3.5 Final P0 acceptance checklist and scope guard.
   - Objective: Verify all P0 acceptance criteria and prevent late scope expansion.
   - Scope: P0 Acceptance Checklist, demo definition of done, P1/P2 deferrals, visual sanity check for chat/diff/preview/deploy surfaces, event replay sanity check.
   - Affected modules: all P0 modules, README, demo script.

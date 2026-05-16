@@ -115,6 +115,30 @@ def test_create_three_sessions_persists_unique_worktree_paths(
     assert {session["worktreePath"] for session in listed} == worktree_paths
 
 
+def test_session_worktree_reuses_setup_time_dependency_links(temp_repo: Path) -> None:
+    (temp_repo / "node_modules").mkdir()
+    (temp_repo / "apps/demo/node_modules").mkdir()
+    workspace = Workspace(
+        name="AgentHub Demo",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    service = WorktreeService(
+        repo_root=temp_repo,
+        worktrees_root=temp_repo / ".worktrees",
+    )
+
+    worktree = service.create_session_worktree(workspace, "dependency-links")
+
+    assert (worktree / "node_modules").is_symlink()
+    assert (worktree / "apps/demo/node_modules").is_symlink()
+    assert (worktree / "node_modules").resolve() == (temp_repo / "node_modules")
+    assert (worktree / "apps/demo/node_modules").resolve() == (
+        temp_repo / "apps/demo/node_modules"
+    )
+
+
 def test_task_run_can_reuse_session_worktree_path(client: TestClient) -> None:
     workspace = client.get("/workspaces/demo").json()
     created_session = client.post(

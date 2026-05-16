@@ -1,8 +1,9 @@
+import http.client
 import json
 import socket
 import subprocess
-import urllib.error
-import urllib.request
+import time
+import urllib.parse
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -88,11 +89,22 @@ class UrlPreviewHealthChecker:
         self.timeout_seconds = timeout_seconds
 
     def is_healthy(self, url: str) -> bool:
-        try:
-            with urllib.request.urlopen(url, timeout=self.timeout_seconds) as response:
-                return 200 <= response.status < 500
-        except (OSError, urllib.error.URLError):
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme != "http" or parsed.hostname is None or parsed.port is None:
             return False
+        connection = http.client.HTTPConnection(
+            parsed.hostname,
+            parsed.port,
+            timeout=self.timeout_seconds,
+        )
+        try:
+            connection.request("HEAD", parsed.path or "/")
+            response = connection.getresponse()
+            return 200 <= response.status < 500
+        except OSError:
+            return False
+        finally:
+            connection.close()
 
 
 class PreviewService:
@@ -101,10 +113,14 @@ class PreviewService:
         process_runner: Optional[PreviewProcessRunner] = None,
         health_checker: Optional[PreviewHealthChecker] = None,
         port_allocator=None,
+        health_attempts: int = 60,
+        health_interval_seconds: float = 0.25,
     ) -> None:
         self.process_runner = process_runner or SubprocessPreviewRunner()
         self.health_checker = health_checker or UrlPreviewHealthChecker()
         self.port_allocator = port_allocator or reserve_preview_port
+        self.health_attempts = health_attempts
+        self.health_interval_seconds = health_interval_seconds
 
     def start_task_run_preview(self, db: DbSession, task_run_id: str) -> StoredPreviewArtifact:
         task_run = db.get(TaskRun, task_run_id)
@@ -120,7 +136,7 @@ class PreviewService:
         url = f"http://127.0.0.1:{port}"
         process = self.process_runner.start(command, demo_root)
         checked_at = utc_now()
-        healthy = self.health_checker.is_healthy(url)
+        healthy = self._wait_until_healthy(url)
         health_status = "healthy" if healthy else "unhealthy"
         status_reason = None if healthy else "Preview did not respond to the health check."
         artifact_status = "ready" if healthy else "unhealthy"
@@ -183,6 +199,15 @@ class PreviewService:
 
         return _to_stored_preview(artifact, preview)
 
+    def _wait_until_healthy(self, url: str) -> bool:
+        attempts = max(1, self.health_attempts)
+        for index in range(attempts):
+            if self.health_checker.is_healthy(url):
+                return True
+            if index < attempts - 1:
+                time.sleep(self.health_interval_seconds)
+        return False
+
     def list_task_run_previews(
         self,
         db: DbSession,
@@ -197,6 +222,7 @@ class PreviewService:
         for artifact in artifacts:
             preview = db.exec(select(Preview).where(Preview.artifact_id == artifact.id)).first()
             if preview is not None:
+                self._refresh_preview_health(db, artifact, preview)
                 previews.append(_to_stored_preview(artifact, preview))
         return previews
 
@@ -225,6 +251,52 @@ class PreviewService:
         db.refresh(preview)
         db.refresh(artifact)
         return _to_stored_preview(artifact, preview)
+
+    def _refresh_preview_health(
+        self,
+        db: DbSession,
+        artifact: Artifact,
+        preview: Preview,
+    ) -> None:
+        if preview.health_status == "stopped" or preview.process_id is None:
+            return
+
+        checked_at = utc_now()
+        healthy = self.health_checker.is_healthy(preview.url)
+        if healthy and preview.health_status != "healthy":
+            preview.health_status = "healthy"
+            preview.status_reason = None
+            preview.last_checked_at = checked_at
+            preview.updated_at = checked_at
+            artifact.status = "ready"
+            artifact.updated_at = checked_at
+            db.add(preview)
+            db.add(artifact)
+            db.commit()
+            db.refresh(preview)
+            db.refresh(artifact)
+            append_task_run_event(
+                db,
+                task_run_id=artifact.task_run_id,
+                event_type="artifact.preview.ready",
+                payload_json=json.dumps(
+                    {
+                        "artifactId": artifact.id,
+                        "previewId": preview.id,
+                        "url": preview.url,
+                        "port": preview.port,
+                        "healthStatus": preview.health_status,
+                    },
+                    separators=(",", ":"),
+                ),
+            )
+            return
+
+        if not healthy and preview.health_status != "healthy":
+            preview.last_checked_at = checked_at
+            db.add(preview)
+            db.commit()
+            db.refresh(preview)
 
 
 def preview_command(port: int) -> list[str]:
