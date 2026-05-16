@@ -7,9 +7,9 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.main import app, get_db
+from app.main import agent_run_request_for, app, get_db
 from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
-from app.task_runs import transition_task_run
+from app.task_runs import create_task_run, transition_task_run
 
 
 @pytest.fixture
@@ -100,6 +100,31 @@ def test_create_task_run_persists_queued_state_before_event(client: TestClient) 
         assert event.sequence == 1
         assert event.event_type == "task.state"
         assert json.loads(event.payload_json)["state"] == "queued"
+
+
+def test_agent_run_request_bounds_frontend_login_demo_instruction(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "target": "login_page",
+                "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert 'data-agenthub-target="login-page-slot"' in request.instruction
+    assert "apps/demo/src/App.tsx" in request.instruction
+    assert "do not read the OpenSpec change" in request.instruction
+    assert "dependency install" in request.instruction
+    assert request.instruction != "Build login page"
 
 
 def test_transition_helper_rejects_unknown_states(client: TestClient) -> None:

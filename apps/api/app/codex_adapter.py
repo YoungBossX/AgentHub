@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import subprocess
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ from app.guardrails import evaluate_command
 
 DEFAULT_CODEX_BINARY = "/Applications/Codex.app/Contents/Resources/codex"
 STDERR_LIMIT = 1200
+RECONNECTING_ERROR_RE = re.compile(r"^Reconnecting\.\.\.\s+(\d+)/(\d+)\b")
 
 
 class CodexProcess(Protocol):
@@ -182,6 +184,7 @@ class CodexAdapter(AgentAdapter):
         stderr_task = asyncio.create_task(state.process.stderr_text())
         stderr_excerpt = ""
         terminal_event_seen = False
+        specific_error_seen = False
 
         index = 0
         async for line in state.process.stdout_lines():
@@ -214,6 +217,10 @@ class CodexAdapter(AgentAdapter):
             if event is None:
                 continue
 
+            if event.type == "error":
+                if _is_generic_failure_event(event) and specific_error_seen:
+                    continue
+                specific_error_seen = not _is_generic_failure_event(event)
             if event.type in {"completed", "error"}:
                 terminal_event_seen = True
             yield event
@@ -355,6 +362,17 @@ def _map_codex_json_event(
 
     if event_type in {"turn.failed", "error"}:
         message = _codex_error_message(raw_event)
+        if _is_reconnecting_error(message):
+            return _event(
+                "message.delta",
+                task_run_id,
+                {
+                    "text": message,
+                    "adapter": "codex",
+                    "codexEventType": event_type,
+                    "transient": True,
+                },
+            )
         code = _error_code_for_text(message)
         return _error_event(
             task_run_id,
@@ -400,12 +418,24 @@ def _error_event(
     return _event("error", task_run_id, normalized_payload)
 
 
+def _is_generic_failure_event(event: AgentEvent) -> bool:
+    return (
+        event.type == "error"
+        and event.payload.get("code") == "CODEX_EXIT_ERROR"
+        and event.payload.get("message") == "Codex run failed."
+    )
+
+
 def _codex_error_message(raw_event: dict[str, Any]) -> str:
     for key in ("message", "error", "reason"):
         value = raw_event.get(key)
         if isinstance(value, str) and value:
             return value
     return "Codex run failed."
+
+
+def _is_reconnecting_error(message: str) -> bool:
+    return RECONNECTING_ERROR_RE.match(message) is not None
 
 
 def _stderr_excerpt(stderr: str) -> str:

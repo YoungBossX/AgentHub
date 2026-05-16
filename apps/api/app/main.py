@@ -283,12 +283,36 @@ def agent_run_request_for(
         worktreePath=session.worktree_path,
         agentId=task_run.agent_id,
         adapterType=adapter_type,
-        instruction=task.title,
+        instruction=instruction_for_task(task),
         planContext=plan_context or {},
         permissionProfile={"network": "off"},
         demoMode=True,
         fallbackPolicy="scripted_mock" if adapter_type == "scripted_mock" else "none",
     )
+
+
+def instruction_for_task(task: Task) -> str:
+    try:
+        plan = json.loads(task.plan_json)
+    except json.JSONDecodeError:
+        plan = {}
+
+    if (
+        task.intent_type == "frontend_change"
+        and isinstance(plan, dict)
+        and plan.get("target") == "login_page"
+    ):
+        return (
+            "In apps/demo/src/App.tsx, find the element with "
+            'data-agenthub-target="login-page-slot" and replace only that slot '
+            "content with a compact login form containing email and password "
+            "fields. Keep the existing deterministic data-agenthub-target "
+            "attributes intact, do not edit unrelated files, do not read the "
+            "OpenSpec change, and do not run setup or dependency install "
+            "commands."
+        )
+
+    return task.title
 
 
 def adapter_for_type(

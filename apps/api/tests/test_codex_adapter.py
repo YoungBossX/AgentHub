@@ -242,6 +242,155 @@ async def test_codex_nonzero_exit_maps_to_task_run_error_and_captures_stderr(
 
 
 @pytest.mark.anyio
+async def test_codex_transient_reconnecting_error_does_not_fail_completed_run(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    session, task_run = create_task_run(db, str(tmp_path))
+    stdout = "\n".join(
+        [
+            json.dumps({"type": "thread.started", "thread_id": "codex-thread"}),
+            json.dumps(
+                {
+                    "type": "error",
+                    "message": "Reconnecting... 2/5 (timeout waiting for child process to exit)",
+                }
+            ),
+            json.dumps({"type": "turn.completed"}),
+            "",
+        ]
+    )
+    adapter = CodexAdapter(
+        process_runner=FakeCodexRunner(FakeCodexProcess(stdout=stdout)),
+        codex_binary="codex",
+    )
+
+    persisted = await run_adapter_event_stream(db, adapter, request_for(task_run, session))
+
+    assert [event.event_type for event in persisted] == [
+        "task.state",
+        "message.delta",
+        "completed",
+    ]
+    reconnect_payload = json.loads(persisted[1].payload_json)
+    assert reconnect_payload["transient"] is True
+    assert reconnect_payload["text"].startswith("Reconnecting... 2/5")
+
+    db.refresh(task_run)
+    assert task_run.state == "completed"
+    assert task_run.error_code is None
+    assert task_run.error_message is None
+
+
+@pytest.mark.anyio
+async def test_codex_final_reconnecting_error_is_not_terminal_by_itself(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    session, task_run = create_task_run(db, str(tmp_path))
+    stdout = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "error",
+                    "message": "Reconnecting... 5/5 (timeout waiting for child process to exit)",
+                }
+            ),
+            json.dumps({"type": "turn.completed"}),
+            "",
+        ]
+    )
+    adapter = CodexAdapter(
+        process_runner=FakeCodexRunner(FakeCodexProcess(stdout=stdout)),
+        codex_binary="codex",
+    )
+
+    persisted = await run_adapter_event_stream(db, adapter, request_for(task_run, session))
+
+    assert [event.event_type for event in persisted] == ["message.delta", "completed"]
+    payload = json.loads(persisted[0].payload_json)
+    assert payload["transient"] is True
+    assert payload["text"].startswith("Reconnecting... 5/5")
+
+    db.refresh(task_run)
+    assert task_run.state == "completed"
+    assert task_run.error_code is None
+
+
+@pytest.mark.anyio
+async def test_codex_reconnecting_then_nonzero_exit_maps_to_exit_failure(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    session, task_run = create_task_run(db, str(tmp_path))
+    stdout = json.dumps(
+        {
+            "type": "error",
+            "message": "Reconnecting... 5/5 (timeout waiting for child process to exit)",
+        }
+    )
+    adapter = CodexAdapter(
+        process_runner=FakeCodexRunner(
+            FakeCodexProcess(
+                stdout=f"{stdout}\n",
+                stderr="usage limit reached after reconnect\n",
+                returncode=1,
+            )
+        ),
+        codex_binary="codex",
+    )
+
+    persisted = await run_adapter_event_stream(db, adapter, request_for(task_run, session))
+
+    assert [event.event_type for event in persisted] == ["message.delta", "error"]
+    payload = json.loads(persisted[1].payload_json)
+    assert payload["code"] == "CODEX_USAGE_LIMIT"
+    assert payload["exitCode"] == 1
+
+    db.refresh(task_run)
+    assert task_run.state == "failed"
+    assert task_run.error_code == "CODEX_USAGE_LIMIT"
+
+
+@pytest.mark.anyio
+async def test_codex_specific_error_is_not_overwritten_by_generic_turn_failed(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    session, task_run = create_task_run(db, str(tmp_path))
+    stdout = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "error",
+                    "message": (
+                        "You've hit your usage limit. To get more access now, "
+                        "send a request to your admin."
+                    ),
+                }
+            ),
+            json.dumps({"type": "turn.failed"}),
+            "",
+        ]
+    )
+    adapter = CodexAdapter(
+        process_runner=FakeCodexRunner(FakeCodexProcess(stdout=stdout)),
+        codex_binary="codex",
+    )
+
+    persisted = await run_adapter_event_stream(db, adapter, request_for(task_run, session))
+
+    assert [event.event_type for event in persisted] == ["error"]
+    payload = json.loads(persisted[0].payload_json)
+    assert payload["code"] == "CODEX_USAGE_LIMIT"
+
+    db.refresh(task_run)
+    assert task_run.state == "failed"
+    assert task_run.error_code == "CODEX_USAGE_LIMIT"
+    assert "usage limit" in task_run.error_message
+
+
+@pytest.mark.anyio
 async def test_codex_cli_unavailable_is_normalized_without_raising(
     db: DbSession,
     tmp_path: Path,

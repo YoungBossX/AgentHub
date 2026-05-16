@@ -294,3 +294,119 @@ Codex process failed before producing a successful file change.
 - Stderr is captured concurrently and attached to final fallback/error handling, but mapped intermediate events may not include final stderr because they are emitted before process completion.
 - Preview/deploy through a real Codex success path remains unverified unless the manual HTTP run reaches a successful file mutation and diff artifact.
 - The existing fallback-based P0 demo path remains intact and must stay available.
+
+---
+
+## P1-5: Codex Reconnect Handling and HTTP Direct Start Diagnosis
+
+**Date:** 2026-05-16
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/codex_adapter.py` | Treat Codex reconnect JSON events as informational progress, preserve specific Codex error codes when a later generic `turn.failed` arrives. |
+| `apps/api/app/main.py` | Generate a bounded demo-file instruction for planned frontend login-page tasks instead of sending the broad task title to Codex. |
+| `apps/api/tests/test_codex_adapter.py` | Added reconnect and specific-error preservation tests. |
+| `apps/api/tests/test_task_runs.py` | Added a test for bounded frontend login-page run instructions. |
+| `docs/change-log.md` | Added this P1-5 entry. |
+
+### Modified Functions / Areas
+
+- `apps/api/app/codex_adapter.py`
+  - `_map_codex_json_event` — maps `Reconnecting... N/5 (timeout waiting for child process to exit)` JSON events to `message.delta` progress events instead of terminal errors.
+  - `_is_reconnecting_error` (new) — detects reconnect progress messages from Codex JSON stdout.
+  - `_is_generic_failure_event` (new) — detects generic `CODEX_EXIT_ERROR` / `Codex run failed.` events.
+  - `CodexAdapter.streamEvents` — skips a later generic `turn.failed` error when a more specific Codex error was already emitted, so actionable errors such as `CODEX_USAGE_LIMIT` are not overwritten.
+
+- `apps/api/app/main.py`
+  - `instruction_for_task` (new) — converts the planned frontend login-page task into a small, explicit instruction targeting `apps/demo/src/App.tsx` and `data-agenthub-target="login-page-slot"`.
+  - `agent_run_request_for` — now uses `instruction_for_task(task)` instead of the broad task title.
+
+### What Changed
+
+P1-4 showed HTTP Direct Start failed with:
+
+```text
+CODEX_EXIT_ERROR: Reconnecting... 2/5 (timeout waiting for child process to exit)
+```
+
+P1-5 found that this was an adapter mapping bug. Running the same Codex CLI
+command manually showed that Codex can emit `Reconnecting... 5/5`, then log
+`falling back to HTTP`, continue emitting normal item events, modify files, and
+finish with `turn.completed`. The reconnect JSON event is therefore not
+necessarily terminal.
+
+The adapter now treats reconnect JSON events as progress messages. Real failure
+comes from the process exit code, a non-reconnect Codex error, or a specific
+Codex failure such as usage limit or authentication failure.
+
+P1-5 also narrowed the HTTP Direct Start instruction. Previously the backend
+sent only the task title, `Build the Vite React login page`, so Codex treated
+the request like a broad OpenSpec implementation task and read large OpenSpec
+files before touching the demo app. The backend now sends a bounded,
+file-targeted instruction for the deterministic demo login-page task.
+
+### Why
+
+The direct Python write-and-diff smoke succeeded because it used a narrow file
+edit instruction. HTTP Direct Start used a broad task title and also treated
+Codex reconnect progress as terminal. Those differences made the HTTP path fail
+before mutation/diff despite the CLI being capable of real file edits in the
+same session worktree.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_codex_adapter.py tests/test_task_runs.py` | Pass (29 tests) |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (89 tests: 21 web + 68 API) |
+| `git diff --check` | Pass |
+
+### Manual Verification Result
+
+HTTP Direct Start with real Codex was attempted after the reconnect-mapping and
+bounded-instruction fixes:
+
+- Session: `1eac3075-ac06-4504-94f9-76dd4b17ad9d`
+- TaskRun: `dac99e3d-2bb5-4f93-a31d-da9480c04ae6`
+- Initial state: `queued`
+- Observed state during execution: `streaming`
+- Health checks during execution: `ok` in 1-5ms
+- Persisted event replay lines: 27
+- Final state: `failed`
+- Final normalized error code: `CODEX_EXIT_ERROR`
+- Final normalized error message: `Codex run failed.`
+- Diff artifact: not produced
+
+Inspecting persisted events showed the useful underlying error before the final
+generic failure:
+
+```text
+CODEX_USAGE_LIMIT: You've hit your usage limit. To get more access now, send a request to your admin or try again at 10:02 PM.
+```
+
+After P1-5, tests ensure this specific `CODEX_USAGE_LIMIT` error is preserved
+instead of being overwritten by a later generic `turn.failed` event.
+
+The fallback path was also exercised in the same session after Codex failed:
+
+- Retry with ScriptedMockAdapter: completed
+- Diff artifact: produced
+- Changed file: `apps/demo/src/App.tsx`
+- Diff stats: 1 file changed, 11 additions, 4 deletions
+- Preview: healthy at `http://127.0.0.1:64508`
+- Deployment: mock provider, status `ready`
+
+### Known Limitations
+
+- HTTP Direct Start with real Codex file mutation and diff collection was not
+  verified because the local Codex account hit a usage limit during the HTTP
+  run.
+- Manual CLI verification confirmed reconnect events can be followed by
+  fallback-to-HTTP, file mutation, `git diff`, and `turn.completed`; the adapter
+  now handles that event shape.
+- Preview/deploy through a real Codex success path remains unverified until
+  Codex quota permits a successful HTTP Direct Start mutation.
+- The existing fallback-based P0 demo path remains intact and verified.
