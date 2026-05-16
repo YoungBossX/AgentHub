@@ -197,3 +197,100 @@ CodexAdapter ran via direct `_background_execute_task_run` invocation:
 - Real Codex hit a usage limit during P1-3 verification, so real Codex success through HTTP was not verified. The normalized failure path (CODEX_USAGE_LIMIT) was verified.
 - `asyncio.to_thread` is Python 3.9+; the project requires Python 3.9+.
 - The existing fallback-based P0 demo path remains intact and unchanged.
+
+---
+
+## P1-4: Incremental Codex JSONL Streaming
+
+**Date:** 2026-05-16
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/codex_adapter.py` | Replaced whole-process stdout collection with incremental stdout JSONL line streaming and concurrent stderr capture. |
+| `apps/api/tests/test_codex_adapter.py` | Added streaming process fakes and tests for incremental event yield, pre-completion persistence, and event-loop responsiveness. |
+| `docs/change-log.md` | Added this P1-4 entry. |
+
+### Modified Functions / Areas
+
+- `apps/api/app/codex_adapter.py`
+  - `CodexProcess` — now exposes `stdout_lines()`, `wait()`, and `stderr_text()` instead of a whole-process `communicate()` contract.
+  - `SubprocessCodexProcess.stdout_lines` — reads stdout one line at a time with `asyncio.to_thread(stdout.readline)`.
+  - `SubprocessCodexProcess.stderr_text` — drains stderr concurrently while stdout is streamed.
+  - `CodexAdapter.streamEvents` — parses each complete JSONL stdout line as soon as it is available, yields mapped `AgentEvent`s immediately, then handles stderr and exit status after the process completes.
+  - `_finish_process` — waits for process completion and returns the normalized stderr excerpt.
+
+- `apps/api/tests/test_codex_adapter.py`
+  - `StepwiseFakeCodexProcess` — fake process that pauses after the first JSONL line so tests can prove events are yielded before process completion.
+  - `test_codex_adapter_streams_jsonl_before_process_completion` — verifies the first mapped event is yielded before the fake process has waited/exited.
+  - `test_codex_streamed_events_persist_before_process_completion` — verifies `run_adapter_event_stream` persists the first TaskRunEvent before process completion.
+  - `test_codex_adapter_does_not_block_event_loop_while_waiting_for_jsonl` — verifies unrelated async tasks can run while Codex stdout is waiting.
+
+### What Changed
+
+Before P1-4, `CodexAdapter.streamEvents()` used:
+
+```python
+stdout, stderr = await asyncio.to_thread(state.process.communicate)
+```
+
+That kept the FastAPI event loop responsive, but it still collected all stdout
+after Codex exited. TaskRunEvents were parsed and persisted in a batch at the
+end of the subprocess run.
+
+After P1-4, the adapter streams stdout incrementally:
+
+1. Start stderr capture concurrently.
+2. Await each stdout JSONL line as it becomes available.
+3. Parse the line immediately.
+4. Map it to an `AgentEvent`.
+5. Yield the event immediately to `run_adapter_event_stream`.
+6. Let `run_adapter_event_stream` persist the event before SSE delivery.
+7. After stdout closes, wait for process completion and handle stderr/exit code.
+
+### Why
+
+P1-3 solved event-loop blocking, but not realtime visibility. The UI/SSE path
+could remain responsive, but it could not observe Codex progress until the
+process finished. P1-4 makes Codex JSONL stdout a true stream so persisted
+TaskRunEvents can appear while Codex is still running.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_codex_adapter.py` | Pass (14 tests) |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (84 tests: 21 web + 63 API) |
+| `git diff --check` | Pass |
+
+### Manual Verification Result
+
+HTTP Direct Start with real Codex was attempted against a new planned frontend
+task:
+
+- Session: `62919139-e820-47d0-9557-ae7653740082`
+- TaskRun: `360e7781-a3cf-4692-bf7f-67f5447c0f36`
+- Initial state: `queued`
+- Observed state during execution: `streaming`
+- Health checks during execution: `ok` in 1-9ms
+- Persisted event replay lines: 12
+- Final state: `failed`
+- Normalized error code: `CODEX_EXIT_ERROR`
+- Normalized error message:
+  `Reconnecting... 2/5 (timeout waiting for child process to exit)`
+- Diff artifact: not produced
+
+This verifies that HTTP Direct Start no longer remains stuck at `queued`, that
+real Codex execution is attempted, that events/state become visible while Codex
+is running, and that the API remains responsive. It does **not** verify HTTP
+Direct Start -> real Codex file mutation -> diff artifact, because the real
+Codex process failed before producing a successful file change.
+
+### Known Limitations
+
+- The adapter now streams Codex stdout incrementally, but real HTTP write-and-diff verification still depends on local Codex quota/auth/process stability.
+- Stderr is captured concurrently and attached to final fallback/error handling, but mapped intermediate events may not include final stderr because they are emitted before process completion.
+- Preview/deploy through a real Codex success path remains unverified unless the manual HTTP run reaches a successful file mutation and diff artifact.
+- The existing fallback-based P0 demo path remains intact and must stay available.

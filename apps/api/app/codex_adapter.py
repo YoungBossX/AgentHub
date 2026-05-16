@@ -26,7 +26,13 @@ STDERR_LIMIT = 1200
 class CodexProcess(Protocol):
     returncode: int
 
-    def communicate(self) -> tuple[str, str]:
+    def stdout_lines(self) -> AsyncIterator[str]:
+        ...
+
+    async def wait(self) -> int:
+        ...
+
+    async def stderr_text(self) -> str:
         ...
 
     def terminate(self) -> None:
@@ -46,8 +52,23 @@ class SubprocessCodexProcess:
     def returncode(self) -> int:
         return int(self._process.returncode or 0)
 
-    def communicate(self) -> tuple[str, str]:
-        return self._process.communicate()
+    async def stdout_lines(self) -> AsyncIterator[str]:
+        if self._process.stdout is None:
+            return
+
+        while True:
+            line = await asyncio.to_thread(self._process.stdout.readline)
+            if line == "":
+                break
+            yield line
+
+    async def wait(self) -> int:
+        return int(await asyncio.to_thread(self._process.wait))
+
+    async def stderr_text(self) -> str:
+        if self._process.stderr is None:
+            return ""
+        return await asyncio.to_thread(self._process.stderr.read)
 
     def terminate(self) -> None:
         self._process.terminate()
@@ -158,17 +179,21 @@ class CodexAdapter(AgentAdapter):
             )
             return
 
-        stdout, stderr = await asyncio.to_thread(state.process.communicate)
-        stderr_excerpt = _stderr_excerpt(stderr)
+        stderr_task = asyncio.create_task(state.process.stderr_text())
+        stderr_excerpt = ""
         terminal_event_seen = False
 
-        for index, line in enumerate(stdout.splitlines(), start=1):
+        index = 0
+        async for line in state.process.stdout_lines():
             if not line.strip():
                 continue
 
+            index += 1
             try:
                 raw_event = json.loads(line)
             except json.JSONDecodeError:
+                state.process.terminate()
+                stderr_excerpt = await _finish_process(state.process, stderr_task)
                 terminal_event_seen = True
                 yield _error_event(
                     request.task_run_id,
@@ -192,6 +217,8 @@ class CodexAdapter(AgentAdapter):
             if event.type in {"completed", "error"}:
                 terminal_event_seen = True
             yield event
+
+        stderr_excerpt = await _finish_process(state.process, stderr_task)
 
         if state.interrupted:
             yield _error_event(
@@ -261,6 +288,15 @@ class CodexAdapter(AgentAdapter):
         if state is None:
             raise ValueError(f"Unknown Codex run: {run_id}")
         return state
+
+
+async def _finish_process(
+    process: CodexProcess,
+    stderr_task: "asyncio.Task[str]",
+) -> str:
+    await process.wait()
+    stderr = await stderr_task
+    return _stderr_excerpt(stderr)
 
 
 def _map_codex_json_event(

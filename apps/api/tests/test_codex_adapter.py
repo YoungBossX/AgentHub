@@ -8,11 +8,11 @@ from typing import Optional
 import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine, select
 
 from app.adapters import AgentRunRequest, run_adapter_event_stream
 from app.codex_adapter import CodexAdapter
-from app.models import Agent, Session, Task, TaskRun, Workspace
+from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
 
 
 class FakeCodexProcess:
@@ -27,10 +27,18 @@ class FakeCodexProcess:
         self.returncode = returncode
         self.communicated = False
         self.terminated = False
+        self.waited = False
 
-    def communicate(self) -> tuple[str, str]:
-        self.communicated = True
-        return self.stdout, self.stderr
+    async def stdout_lines(self) -> AsyncIterator[str]:
+        for line in self.stdout.splitlines(keepends=True):
+            yield line
+
+    async def wait(self) -> int:
+        self.waited = True
+        return self.returncode
+
+    async def stderr_text(self) -> str:
+        return self.stderr
 
     def terminate(self) -> None:
         self.terminated = True
@@ -371,13 +379,115 @@ class DelayedFakeCodexProcess(FakeCodexProcess):
         super().__init__(stdout=stdout, stderr=stderr, returncode=returncode)
         self.delay_sec = delay_sec
 
-    def communicate(self) -> tuple[str, str]:
-        time.sleep(self.delay_sec)
-        return super().communicate()
+    async def stdout_lines(self) -> AsyncIterator[str]:
+        for line in self.stdout.splitlines(keepends=True):
+            await asyncio.sleep(self.delay_sec)
+            yield line
+
+
+class StepwiseFakeCodexProcess(FakeCodexProcess):
+    def __init__(self) -> None:
+        super().__init__(
+            stdout="\n".join(
+                [
+                    json.dumps({"type": "thread.started", "thread_id": "thread-1"}),
+                    json.dumps({"type": "message.delta", "delta": "still working"}),
+                    json.dumps({"type": "turn.completed"}),
+                    "",
+                ]
+            ),
+        )
+        self.first_line_yielded = asyncio.Event()
+        self.resume_after_first_line = asyncio.Event()
+
+    async def stdout_lines(self) -> AsyncIterator[str]:
+        lines = self.stdout.splitlines(keepends=True)
+        for index, line in enumerate(lines):
+            if index == 0:
+                self.first_line_yielded.set()
+                yield line
+                await self.resume_after_first_line.wait()
+            else:
+                yield line
 
 
 @pytest.mark.anyio
-async def test_codex_adapter_does_not_block_event_loop_during_communicate(
+async def test_codex_adapter_streams_jsonl_before_process_completion(
+    tmp_path: Path,
+) -> None:
+    process = StepwiseFakeCodexProcess()
+    adapter = CodexAdapter(
+        process_runner=FakeCodexRunner(process),
+        codex_binary="codex",
+    )
+    request = AgentRunRequest(
+        taskRunId="task-run-stream",
+        sessionId="session-1",
+        workspaceId="workspace-1",
+        worktreePath=str(tmp_path),
+        agentId="agent-1",
+        adapterType="codex",
+        instruction="Stream test instruction.",
+    )
+
+    run = await adapter.createRun(request)
+    stream = adapter.streamEvents(run.adapter_run_id)
+
+    first_event = await asyncio.wait_for(stream.__anext__(), timeout=0.2)
+
+    assert first_event.type == "task.state"
+    assert first_event.payload["codexEventType"] == "thread.started"
+    assert process.first_line_yielded.is_set()
+    assert process.waited is False
+
+    process.resume_after_first_line.set()
+    remaining_events = [event async for event in stream]
+
+    assert [event.type for event in remaining_events] == ["message.delta", "completed"]
+    assert process.waited is True
+
+
+@pytest.mark.anyio
+async def test_codex_streamed_events_persist_before_process_completion(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    session, task_run = create_task_run(db, str(tmp_path))
+    process = StepwiseFakeCodexProcess()
+    adapter = CodexAdapter(
+        process_runner=FakeCodexRunner(process),
+        codex_binary="codex",
+    )
+
+    stream_task = asyncio.ensure_future(
+        run_adapter_event_stream(db, adapter, request_for(task_run, session))
+    )
+    await asyncio.wait_for(process.first_line_yielded.wait(), timeout=0.2)
+    await asyncio.sleep(0)
+
+    early_events = db.exec(
+        select(TaskRunEvent)
+        .where(TaskRunEvent.task_run_id == task_run.id)
+        .order_by(TaskRunEvent.sequence)
+    ).all()
+
+    assert process.waited is False
+    assert [event.event_type for event in early_events] == ["task.state"]
+    assert json.loads(early_events[0].payload_json)["codexEventType"] == "thread.started"
+
+    process.resume_after_first_line.set()
+    persisted = await stream_task
+
+    assert [event.event_type for event in persisted] == [
+        "task.state",
+        "message.delta",
+        "completed",
+    ]
+    assert process.waited is True
+
+
+@pytest.mark.anyio
+async def test_codex_adapter_does_not_block_event_loop_while_waiting_for_jsonl(
     tmp_path: Path,
 ) -> None:
     """Prove a long Codex process does not block other async tasks."""
@@ -403,12 +513,9 @@ async def test_codex_adapter_does_not_block_event_loop_during_communicate(
 
     run = await adapter.createRun(request)
 
-    # Start adapter stream as a concurrent task
-    stream_task = asyncio.ensure_future(
-        _drain_events(adapter, run.adapter_run_id)
-    )
+    stream_task = asyncio.ensure_future(_drain_events(adapter, run.adapter_run_id))
 
-    # A concurrent task should complete BEFORE the adapter finishes
+    # A concurrent task should complete BEFORE the delayed first line arrives.
     t0 = time.monotonic()
     await asyncio.sleep(0.05)
     t1 = time.monotonic()
@@ -418,7 +525,7 @@ async def test_codex_adapter_does_not_block_event_loop_during_communicate(
     t2 = time.monotonic()
     total_elapsed = t2 - t0
 
-    # Concurrent sleep completed promptly (not blocked by communicate)
+    # Concurrent sleep completed promptly (not blocked by stdout.readline)
     assert concurrent_elapsed < 0.2, (
         f"Event loop was blocked for {concurrent_elapsed:.2f}s"
     )
