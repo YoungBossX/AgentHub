@@ -493,3 +493,127 @@ rehearsal. P1-5 verified the fallback path immediately before this run:
 - The Codex run took about 163 seconds and emitted reconnect progress before
   completion, so demos should still keep the ScriptedMockAdapter fallback
   available.
+
+---
+
+## P1-7: Real Codex Preview and Mock Deploy Rehearsal
+
+**Date:** 2026-05-16
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/change-log.md` | Added this P1-7 rehearsal result. |
+
+### Modified Functions or Areas
+
+No product code changed. This rehearsal used the existing preview and deploy
+APIs after the successful real Codex Direct Start run from P1-6.
+
+### What Changed
+
+No backend, frontend, adapter, preview, or deploy implementation was changed.
+The only change was documenting the focused verification result for continuing
+from a real Codex diff artifact to preview and mock deployment.
+
+### Why
+
+P1-6 verified:
+
+```text
+HTTP Direct Start -> real Codex file mutation -> diff artifact
+```
+
+P1-7 verifies whether the existing artifact path can continue from that same
+real Codex TaskRun to:
+
+```text
+healthy Vite preview -> mock deploy card
+```
+
+### Manual Verification Result
+
+The rehearsal reused the successful real Codex Direct Start run from P1-6:
+
+- Session: `a0b51d27-0473-44f3-b079-bbb02fdf00bb`
+- Codex-backed task: `f9e982c3-df76-4740-b38c-e14e8cb3497c`
+- TaskRun: `fa23fb4a-6506-4b0e-a608-3197356d0628`
+- Changed file from real Codex: `apps/demo/src/App.tsx`
+- Diff artifact ID: `782e16f4-36b5-46f3-86cf-42c3fb6119e9`
+- Diff ID: `5df0273d-f9fc-46b3-bbfa-242d5d185667`
+
+The existing preview API was called for that TaskRun:
+
+```text
+POST /task-runs/fa23fb4a-6506-4b0e-a608-3197356d0628/preview
+```
+
+Preview result:
+
+- Preview ID: `877daf34-cabe-4ddf-8726-94677ba18831`
+- Preview artifact ID: `a14d9194-b198-4d17-a152-79e71cc0590a`
+- URL: `http://127.0.0.1:53089`
+- Port: `53089`
+- Command: `pnpm dev --host 127.0.0.1 --port 53089`
+- Process ID: `32754`
+- Health status: `healthy`
+- Artifact status: `ready`
+
+The preview URL served the Vite React HTML shell successfully.
+
+The existing mock deploy API was called for the healthy preview:
+
+```text
+POST /previews/877daf34-cabe-4ddf-8726-94677ba18831/deploy
+```
+
+Deployment result:
+
+- Deployment ID: `9ba427d9-1ea8-454a-8890-e243075fcec7`
+- Deployment artifact ID: `a623f388-8891-4282-9f7d-6b0074a9152c`
+- Provider: `mock`
+- Environment: `preview`
+- Status: `ready`
+- Commit SHA/worktree ref:
+  `9777b992c46ebb52150c19131410c3dfea54c268+worktree`
+- URL:
+  `https://mock.agenthub.local/deployments/9ba427d9-1ea8-454a-8890-e243075fcec7`
+- Deploy log URI:
+  `mock://deployments/9ba427d9-1ea8-454a-8890-e243075fcec7/logs`
+
+This verifies:
+
+```text
+HTTP Direct Start -> real Codex file mutation -> diff artifact -> healthy Vite preview -> mock deploy
+```
+
+The preview and deployment records are backend-created and persisted. The
+frontend already reads these persisted preview/deployment APIs, but this
+P1-7 rehearsal used the backend API path directly rather than clicking through
+the browser UI.
+
+### Fallback Verification
+
+The fallback path was not needed for this rehearsal because the real Codex run
+from P1-6 had already completed and produced a diff. The fallback-based P0 demo
+path remains covered by the existing tests and prior P1-5/P1-6 verification:
+
+```text
+forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock deploy
+```
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (89 tests: 21 web + 68 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- This P1-7 rehearsal triggered preview and deploy through the existing backend
+  APIs, not by clicking the browser UI.
+- Real Codex execution remains dependent on local Codex quota and CLI stability;
+  keep the ScriptedMockAdapter fallback available for demos.
