@@ -203,3 +203,110 @@ def test_retry_with_fallback_requires_failed_codex_run(client: TestClient) -> No
 
     assert response.status_code == 400
     assert "failed or interrupted Codex run" in response.json()["detail"]
+
+
+def test_direct_ui_start_dispatch_creates_queued_run_with_adapter_type(
+    client: TestClient,
+) -> None:
+    response = client.post(f"/tasks/{task_id()}/runs")
+
+    assert response.status_code == 201
+    run = response.json()
+    assert run["state"] == "queued"
+    assert run["adapterType"] == "codex"
+    assert run.get("id")
+
+    with db_from_override() as db:
+        task = db.get(Task, run["taskId"])
+        assert task is not None
+        assert task.status == "running"
+
+
+def test_direct_ui_start_background_execution_persists_events(
+    client: TestClient,
+) -> None:
+    """Prove background adapter dispatch runs and persists TaskRunEvents after Start."""
+    import app.db as db_module
+
+    with db_from_override() as db:
+        test_engine = db.get_bind()
+
+    original_engine = db_module.engine
+    db_module.engine = test_engine
+    try:
+        response = client.post(f"/tasks/{task_id()}/runs")
+    finally:
+        db_module.engine = original_engine
+
+    assert response.status_code == 201
+    run = response.json()
+    assert run["state"] == "queued"
+    assert run["adapterType"] == "codex"
+
+    with db_from_override() as db:
+        events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == run["id"])
+            .order_by(TaskRunEvent.sequence)
+        ).all()
+        stored = db.get(TaskRun, run["id"])
+
+    # The endpoint creates a "queued" event (sequence 1).
+    # The background task invokes CodexAdapter, which fails (no CLI installed)
+    # and the exception handler transitions to "failed" (sequence >= 2).
+    assert len(events) >= 2, (
+        f"Background execution did not persist events beyond queued: {len(events)} events"
+    )
+    assert stored.state in {"failed", "streaming", "completed"}, (
+        f"Background execution did not transition state past queued: {stored.state}"
+    )
+
+
+def test_direct_ui_start_scripted_mock_background_execution_persists_events(
+    client: TestClient,
+) -> None:
+    """Prove ScriptedMockAdapter background dispatch persists events after Start."""
+    import app.db as db_module
+
+    with db_from_override() as db:
+        test_engine = db.get_bind()
+        qa_agent_id = db.exec(select(Agent).where(Agent.role == "qa")).one().id
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+
+    qa_task = Task(
+        session_id=session_id,
+        title="Review login page",
+        intent_type="review",
+        status="pending",
+        assigned_agent_id=qa_agent_id,
+    )
+    with db_from_override() as db:
+        db.add(qa_task)
+        db.commit()
+        qa_task_id = qa_task.id
+
+    original_engine = db_module.engine
+    db_module.engine = test_engine
+    try:
+        response = client.post(f"/tasks/{qa_task_id}/runs")
+    finally:
+        db_module.engine = original_engine
+
+    assert response.status_code == 201
+    run = response.json()
+    assert run["adapterType"] == "scripted_mock"
+
+    with db_from_override() as db:
+        events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == run["id"])
+            .order_by(TaskRunEvent.sequence)
+        ).all()
+        stored = db.get(TaskRun, run["id"])
+
+    assert len(events) >= 2, (
+        f"Background execution did not persist events: {len(events)} events"
+    )
+    assert stored.state != "queued", (
+        f"Background execution did not transition past queued: {stored.state}"
+    )

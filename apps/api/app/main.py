@@ -2,12 +2,12 @@ from contextlib import asynccontextmanager
 import json
 from typing import Any, AsyncIterator, Iterator, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session as DbSession
 
-from app.adapters import AgentRunRequest, run_adapter_event_stream
+from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
 from app.config import get_settings
 from app.codex_adapter import CodexAdapter
 from app.db import engine, init_database
@@ -53,6 +53,7 @@ from app.task_runs import (
     metrics_for_run,
     retry_task_run,
     retry_with_scripted_mock,
+    transition_task_run,
 )
 from app.scripted_mock import ScriptedMockAdapter
 from app.worktrees import WorktreeError, WorktreeService
@@ -290,6 +291,78 @@ def agent_run_request_for(
     )
 
 
+def adapter_for_type(
+    adapter_type: str,
+    *,
+    codex_adapter: AgentAdapter,
+    scripted_mock_adapter: AgentAdapter,
+) -> AgentAdapter:
+    if adapter_type == "codex":
+        return codex_adapter
+    if adapter_type == "scripted_mock":
+        return scripted_mock_adapter
+    raise TaskRunLifecycleError(f"Unsupported adapter type: {adapter_type}")
+
+
+async def execute_task_run(
+    db: DbSession,
+    task_run: TaskRun,
+    *,
+    adapter_type: str,
+    adapter: AgentAdapter,
+    plan_context: Optional[dict[str, Any]] = None,
+) -> TaskRun:
+    request = agent_run_request_for(
+        db,
+        task_run,
+        adapter_type=adapter_type,
+        plan_context=plan_context,
+    )
+    await run_adapter_event_stream(db, adapter, request)
+    db.refresh(task_run)
+    if task_run.state == "completed":
+        collect_task_run_diff(db, task_run.id)
+        db.refresh(task_run)
+    return task_run
+
+
+async def _background_execute_task_run(
+    task_run_id: str,
+    adapter_type: str,
+) -> None:
+    from app.db import engine as db_engine
+
+    adapter = adapter_for_type(
+        adapter_type,
+        codex_adapter=CodexAdapter(),
+        scripted_mock_adapter=ScriptedMockAdapter(),
+    )
+    with DbSession(db_engine) as db:
+        task_run = db.get(TaskRun, task_run_id)
+        if task_run is None:
+            return
+        try:
+            await execute_task_run(
+                db,
+                task_run,
+                adapter_type=adapter_type,
+                adapter=adapter,
+            )
+        except Exception:
+            db.refresh(task_run)
+            if task_run.state not in {"completed", "failed", "interrupted"}:
+                try:
+                    transition_task_run(
+                        db,
+                        task_run_id,
+                        "failed",
+                        error_code="ADAPTER_EXECUTION_ERROR",
+                        error_message="Adapter execution failed unexpectedly.",
+                    )
+                except Exception:
+                    pass
+
+
 def diff_artifact_response(diff_artifact: StoredDiffArtifact) -> DiffArtifactResponse:
     return DiffArtifactResponse(
         id=diff_artifact.id,
@@ -382,14 +455,21 @@ def read_session_tasks(
     response_model=TaskRunResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_task_run_for_task(
+async def create_task_run_for_task(
     task_id: str,
+    background_tasks: BackgroundTasks,
     db: DbSession = Depends(get_db),
 ) -> TaskRunResponse:
     try:
         task_run = create_task_run(db, task_id)
+        adapter_type = adapter_type_for_run(db, task_run)
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    background_tasks.add_task(
+        _background_execute_task_run,
+        task_run.id,
+        adapter_type,
+    )
     return task_run_response(db, task_run)
 
 
