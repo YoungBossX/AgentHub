@@ -10,7 +10,13 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.diffs import collect_task_run_diff, git_diff_pathspec
+from app.diffs import (
+    _head_ref,
+    _parse_numstat_value,
+    capture_base_ref_for_worktree,
+    collect_task_run_diff,
+    git_diff_pathspec,
+)
 from app.main import app, get_db
 from app.models import Agent, Artifact, Diff, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.task_runs import create_task_run
@@ -173,3 +179,40 @@ def test_diff_api_returns_stored_diff_artifacts(
     assert created["changedFiles"] == ["apps/demo/src/App.tsx"]
     assert created["patchText"] == listed[0]["patchText"]
     assert "node_modules" not in created["patchText"]
+
+
+def test_parse_numstat_value_handles_binary_and_normal() -> None:
+    assert _parse_numstat_value("0") == 0
+    assert _parse_numstat_value("42") == 42
+    assert _parse_numstat_value("-") == 0
+    with pytest.raises(ValueError):
+        _parse_numstat_value("")
+    with pytest.raises(ValueError):
+        _parse_numstat_value("not-a-number")
+
+
+def test_head_ref_appends_worktree_suffix_when_changes_present(
+    demo_worktree: Path,
+) -> None:
+    head = _head_ref(demo_worktree, has_worktree_changes=False)
+    assert "+worktree" not in head
+    assert len(head) == 40
+
+    head_with_changes = _head_ref(demo_worktree, has_worktree_changes=True)
+    assert head_with_changes.endswith("+worktree")
+    assert head_with_changes.startswith(head)
+
+
+def test_capture_base_ref_for_worktree_succeeds_in_git_repo(
+    demo_worktree: Path,
+) -> None:
+    ref = capture_base_ref_for_worktree(str(demo_worktree))
+    assert ref is not None
+    assert len(ref) == 40
+
+
+def test_capture_base_ref_for_worktree_returns_none_for_non_git_dir(
+    tmp_path: Path,
+) -> None:
+    ref = capture_base_ref_for_worktree(str(tmp_path))
+    assert ref is None

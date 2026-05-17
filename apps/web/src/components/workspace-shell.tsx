@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button"
 import { PreviewPanel } from "@/components/preview-card"
 import { TaskCardList } from "@/components/task-card-list"
 import {
+  approveTaskRun,
   createPreviewDeployment,
   createSessionMessage,
   createTaskRun,
   createWorkspaceSession,
+  denyTaskRun,
   forceCodexFailure,
   interruptTaskRun,
   listTaskRunPreviews,
@@ -193,6 +195,24 @@ export function WorkspaceShell({
   function handleRetryTaskRunWithFallback(taskRunId: string) {
     startTransition(async () => {
       await retryTaskRunWithFallback(backendUrl, taskRunId)
+      await refreshSelectedTasks()
+    })
+  }
+
+  function handleApproveTaskRun(taskRunId: string) {
+    startTransition(async () => {
+      await approveTaskRun(backendUrl, taskRunId)
+      await refreshSelectedTasks()
+    })
+  }
+
+  function handleDenyTaskRun(taskRunId: string) {
+    startTransition(async () => {
+      await denyTaskRun(
+        backendUrl,
+        taskRunId,
+        "User denied approval request from AgentHub UI.",
+      )
       await refreshSelectedTasks()
     })
   }
@@ -404,8 +424,10 @@ export function WorkspaceShell({
                 artifactRefreshKey={lastEventSequence + artifactRefreshVersion}
                 backendUrl={backendUrl}
                 busy={isPending}
+                onApproveRun={handleApproveTaskRun}
                 onCreateDeploy={handleCreateDeployment}
                 onCreateRun={handleCreateTaskRun}
+                onDenyRun={handleDenyTaskRun}
                 onForceCodexFailure={handleForceCodexFailure}
                 onInterruptRun={handleInterruptTaskRun}
                 onOpenPreview={handleOpenPreview}

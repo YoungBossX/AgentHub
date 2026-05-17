@@ -114,6 +114,62 @@ describe("TaskCardList", () => {
     expect(onInterruptRun).toHaveBeenCalledWith("run-2")
   })
 
+  it("renders an approval card for waiting approval runs", () => {
+    const onApproveRun = vi.fn()
+    const onDenyRun = vi.fn()
+    const approvalTask: SessionTask = {
+      ...baseTask,
+      status: "waiting_approval",
+      taskRuns: [
+        {
+          id: "run-approval",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "scripted_mock",
+          adapterRunId: "scripted-mock-approval",
+          state: "waiting_approval",
+          startedAt: "2026-05-15T10:30:00Z",
+          endedAt: null,
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: "abc123",
+          headRef: null,
+          errorCode: null,
+          errorMessage: null,
+          metricsJson: { adapterType: "scripted_mock" },
+          approvalRequest: {
+            approvalType: "product_confirmation",
+            reason: "Scripted mock approval simulation requested.",
+            requestedAction: "continue scripted mock run",
+            riskLevel: "medium",
+            command: null,
+            path: null,
+            expiresAt: null,
+          },
+          createdAt: "2026-05-15T10:30:00Z",
+          updatedAt: "2026-05-15T10:31:00Z",
+        },
+      ],
+    }
+
+    render(
+      createElement(TaskCardList, {
+        tasks: [approvalTask],
+        onApproveRun,
+        onDenyRun,
+      }),
+    )
+
+    expect(screen.getByText("Approval required")).toBeTruthy()
+    expect(screen.getByText("continue scripted mock run")).toBeTruthy()
+    expect(screen.getByText("product_confirmation")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }))
+    fireEvent.click(screen.getByRole("button", { name: "Deny" }))
+
+    expect(onApproveRun).toHaveBeenCalledWith("run-approval")
+    expect(onDenyRun).toHaveBeenCalledWith("run-approval")
+  })
+
   it("keeps a failed Codex run and successful fallback run visible", () => {
     const recoveredTask: SessionTask = {
       ...baseTask,

@@ -10,7 +10,8 @@ from sqlmodel import SQLModel, create_engine, select
 
 from app.main import app, get_db, get_worktree_service
 from app.models import Agent, Session, Task, TaskRun, Workspace
-from app.worktrees import WorktreeService
+from app.repositories import next_session_title
+from app.worktrees import WorktreeService, safe_path_segment
 
 
 def run_git(repo: Path, *args: str) -> None:
@@ -176,5 +177,47 @@ def test_task_run_can_reuse_session_worktree_path(client: TestClient) -> None:
 
         assert task_run.worktree_path == session.worktree_path
         assert task_run.worktree_path == created_session["worktreePath"]
+    finally:
+        db_generator.close()
+
+
+def test_safe_path_segment_preserves_valid_characters() -> None:
+    assert safe_path_segment("abc123") == "abc123"
+    assert safe_path_segment("session-1_test.v2") == "session-1_test.v2"
+    assert safe_path_segment("ABCDEF") == "ABCDEF"
+
+
+def test_safe_path_segment_replaces_special_characters() -> None:
+    assert safe_path_segment("hello world") == "hello-world"
+    assert safe_path_segment("path/to/file") == "path-to-file"
+    assert safe_path_segment("a@b#c$d") == "a-b-c-d"
+    assert safe_path_segment("  spaces  ") == "spaces"
+
+
+def test_safe_path_segment_returns_fallback_for_all_special_input() -> None:
+    assert safe_path_segment("") == "session"
+    assert safe_path_segment("@@@") == "session"
+    assert safe_path_segment("---") == "session"
+
+
+def test_next_session_title_counts_existing_sessions(client: TestClient) -> None:
+    db_override = app.dependency_overrides[get_db]
+    db_generator = db_override()
+    db = next(db_generator)
+    try:
+        workspace_response = client.get("/workspaces/demo").json()
+        workspace_id = workspace_response["id"]
+
+        # With zero sessions, next title should be "Session 1"
+        title = next_session_title(db, workspace_id)
+        assert title == "Session 1"
+
+        # Create a session and verify increment
+        client.post(
+            f"/workspaces/{workspace_id}/sessions",
+            json={"title": "Demo session"},
+        )
+        title2 = next_session_title(db, workspace_id)
+        assert title2 == "Session 2"
     finally:
         db_generator.close()

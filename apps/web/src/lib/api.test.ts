@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  approveTaskRun,
   createSessionMessage,
   createTaskRun,
   createPreviewDeployment,
   createWorkspaceSession,
+  denyTaskRun,
   forceCodexFailure,
   getBackendHealth,
   getDemoWorkspace,
@@ -273,7 +275,7 @@ describe("task API", () => {
     expect(tasks[0].taskRuns[0].adapterType).toBe("codex")
   })
 
-  it("creates, interrupts, retries, and falls back task runs", async () => {
+  it("creates, interrupts, retries, approves, denies, and falls back task runs", async () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = input.toString()
       const payload = {
@@ -301,6 +303,8 @@ describe("task API", () => {
     await createTaskRun("http://127.0.0.1:8000", "task-1", fetchMock)
     await interruptTaskRun("http://127.0.0.1:8000", "run-1", fetchMock)
     await retryTaskRun("http://127.0.0.1:8000", "run-1", fetchMock)
+    await approveTaskRun("http://127.0.0.1:8000", "run-1", fetchMock)
+    await denyTaskRun("http://127.0.0.1:8000", "run-1", "No thanks.", fetchMock)
     const fallback = await retryTaskRunWithFallback(
       "http://127.0.0.1:8000",
       "run-1",
@@ -324,6 +328,20 @@ describe("task API", () => {
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       4,
+      "http://127.0.0.1:8000/task-runs/run-1/approve",
+      { method: "POST" },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      5,
+      "http://127.0.0.1:8000/task-runs/run-1/deny",
+      {
+        body: JSON.stringify({ reason: "No thanks." }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      6,
       "http://127.0.0.1:8000/task-runs/run-1/retry-with-fallback",
       { method: "POST" },
     )

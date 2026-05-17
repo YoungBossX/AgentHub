@@ -1,6 +1,6 @@
 "use client"
 
-import { CircleAlert, Play, RotateCcw, Shuffle, Square } from "lucide-react"
+import { Check, CircleAlert, Play, RotateCcw, Shuffle, Square, X } from "lucide-react"
 import { Fragment, useEffect, useMemo, useState } from "react"
 
 import { DeployCard } from "./deploy-card"
@@ -24,8 +24,10 @@ type TaskCardListProps = {
   backendUrl?: string
   busy?: boolean
   fetcher?: typeof fetch
+  onApproveRun?: (taskRunId: string) => void
   onCreateDeploy?: (previewId: string) => void
   onCreateRun?: (taskId: string) => void
+  onDenyRun?: (taskRunId: string) => void
   onForceCodexFailure?: (taskId: string) => void
   onInterruptRun?: (taskRunId: string) => void
   onOpenPreview?: (preview: PreviewArtifact) => void
@@ -53,8 +55,10 @@ export function TaskCardList({
   backendUrl,
   busy = false,
   fetcher = fetch,
+  onApproveRun,
   onCreateDeploy,
   onCreateRun,
+  onDenyRun,
   onForceCodexFailure,
   onInterruptRun,
   onOpenPreview,
@@ -184,7 +188,13 @@ export function TaskCardList({
               <RunControls
                 busy={busy}
                 latestRun={latestRun}
+                onApproveRun={
+                  latestRun && onApproveRun ? () => onApproveRun(latestRun.id) : undefined
+                }
                 onCreateRun={onCreateRun ? () => onCreateRun(task.id) : undefined}
+                onDenyRun={
+                  latestRun && onDenyRun ? () => onDenyRun(latestRun.id) : undefined
+                }
                 onForceCodexFailure={
                   !latestRun && onForceCodexFailure
                     ? () => onForceCodexFailure(task.id)
@@ -242,7 +252,9 @@ function RunSummary({ run, runIndex }: { run: TaskRun; runIndex: number }) {
 function RunControls({
   busy,
   latestRun,
+  onApproveRun,
   onCreateRun,
+  onDenyRun,
   onForceCodexFailure,
   onInterruptRun,
   onRetryRun,
@@ -251,7 +263,9 @@ function RunControls({
 }: {
   busy: boolean
   latestRun: TaskRun | null
+  onApproveRun?: () => void
   onCreateRun?: () => void
+  onDenyRun?: () => void
   onForceCodexFailure?: () => void
   onInterruptRun?: () => void
   onRetryRun?: () => void
@@ -283,6 +297,17 @@ function RunControls({
           </Button>
         ) : null}
       </div>
+    )
+  }
+
+  if (latestRun.state === "waiting_approval") {
+    return (
+      <ApprovalRequestCard
+        busy={busy}
+        onApproveRun={onApproveRun}
+        onDenyRun={onDenyRun}
+        run={latestRun}
+      />
     )
   }
 
@@ -349,4 +374,75 @@ function RunControls({
   }
 
   return null
+}
+
+function ApprovalRequestCard({
+  busy,
+  onApproveRun,
+  onDenyRun,
+  run,
+}: {
+  busy: boolean
+  onApproveRun?: () => void
+  onDenyRun?: () => void
+  run: TaskRun
+}) {
+  const request = run.approvalRequest
+  return (
+    <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-normal text-amber-800">
+            Approval required
+          </p>
+          <p className="mt-1 text-sm font-medium text-amber-950">
+            {request?.requestedAction ?? "Review requested action"}
+          </p>
+        </div>
+        <span className="rounded-sm border border-amber-300 bg-white px-2 py-0.5 text-xs text-amber-800">
+          {request?.approvalType ?? "approval"}
+        </span>
+      </div>
+      <p className="mt-2 text-sm leading-6 text-amber-950">
+        {request?.reason ?? "This run is waiting for a user decision before it can continue."}
+      </p>
+      {request?.command || request?.path ? (
+        <dl className="mt-2 grid gap-1 text-xs text-amber-900">
+          {request.command ? (
+            <div className="grid gap-1">
+              <dt className="font-semibold">Command</dt>
+              <dd className="truncate font-mono">{request.command}</dd>
+            </div>
+          ) : null}
+          {request.path ? (
+            <div className="grid gap-1">
+              <dt className="font-semibold">Path</dt>
+              <dd className="truncate font-mono">{request.path}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          className="h-8 px-3 text-xs"
+          disabled={busy || !onApproveRun}
+          onClick={onApproveRun}
+          type="button"
+        >
+          <Check aria-hidden="true" size={14} />
+          Approve
+        </Button>
+        <Button
+          className="h-8 px-3 text-xs"
+          disabled={busy || !onDenyRun}
+          onClick={onDenyRun}
+          type="button"
+          variant="secondary"
+        >
+          <X aria-hidden="true" size={14} />
+          Deny
+        </Button>
+      </div>
+    </div>
+  )
 }

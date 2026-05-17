@@ -6,6 +6,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, sta
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session as DbSession
+from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
 from app.config import get_settings
@@ -14,8 +15,10 @@ from app.db import engine, init_database
 from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
 from app.diffs import DiffCollectionError, StoredDiffArtifact, collect_task_run_diff, list_task_run_diffs
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
+from app.guardrails import approve_task_run, deny_task_run
 from app.models import Agent, Message, Task, TaskRun
 from app.models import Session as AgentHubSession
+from app.models import TaskRunEvent
 from app.models import utc_now
 from app.planning import MentionParseError, plan_for_message
 from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
@@ -31,6 +34,8 @@ from app.repositories import (
     persist_session,
 )
 from app.schemas import (
+    ApprovalDecisionRequest,
+    ApprovalRequestResponse,
     HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
@@ -258,9 +263,32 @@ def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
         errorCode=task_run.error_code,
         errorMessage=task_run.error_message,
         metricsJson=metrics_for_run(task_run),
+        approvalRequest=latest_approval_request(db, task_run),
         createdAt=task_run.created_at,
         updatedAt=task_run.updated_at,
     )
+
+
+def latest_approval_request(
+    db: DbSession,
+    task_run: TaskRun,
+) -> Optional[ApprovalRequestResponse]:
+    if task_run.state != "waiting_approval":
+        return None
+
+    event = db.exec(
+        select(TaskRunEvent)
+        .where(TaskRunEvent.task_run_id == task_run.id)
+        .where(TaskRunEvent.event_type == "approval.requested")
+        .order_by(TaskRunEvent.sequence.desc())
+    ).first()
+    if event is None:
+        return None
+
+    try:
+        return ApprovalRequestResponse.model_validate(json.loads(event.payload_json))
+    except (json.JSONDecodeError, ValueError):
+        return None
 
 
 def agent_run_request_for(
@@ -570,6 +598,43 @@ async def retry_existing_task_run_with_fallback(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except DiffCollectionError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return task_run_response(db, task_run)
+
+
+@app.post("/task-runs/{task_run_id}/approve", response_model=TaskRunResponse)
+def approve_existing_task_run(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> TaskRunResponse:
+    try:
+        approve_task_run(db, task_run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    return task_run_response(db, task_run)
+
+
+@app.post("/task-runs/{task_run_id}/deny", response_model=TaskRunResponse)
+def deny_existing_task_run(
+    task_run_id: str,
+    request: ApprovalDecisionRequest,
+    db: DbSession = Depends(get_db),
+) -> TaskRunResponse:
+    try:
+        deny_task_run(
+            db,
+            task_run_id,
+            reason=request.reason or "User denied approval request.",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
     return task_run_response(db, task_run)
 
 

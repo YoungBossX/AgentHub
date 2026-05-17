@@ -931,6 +931,80 @@ rendered as deterministic compact text such as `May 17, 02:06`.
 - The formatter is intentionally compact and English-labeled for deterministic
   local demo rendering. This is not a full internationalization system.
 
+---
+
+## P2-2: Verify and Minimally Complete Approval Card UI/Rehearsal
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/schemas.py` | Added approval request/decision API schemas and exposed optional approval payloads on TaskRun responses. |
+| `apps/api/app/main.py` | Added latest approval request mapping plus approve/deny TaskRun endpoints. |
+| `apps/api/app/guardrails.py` | Fixed `git -C <path>` parsing for commands that contain no following subcommand, preserving allowlist behavior. |
+| `apps/api/tests/test_task_runs.py` | Added API coverage for visible approval payloads and approve/deny endpoints. |
+| `apps/api/tests/test_events.py` | Kept the new SSE event tests deterministic with real datetime values. |
+| `apps/api/tests/test_guardrails.py` | Existing local guardrail edge-case tests now pass against the parser fix. |
+| `apps/web/src/lib/api.ts` | Added approval request types and approve/deny API client helpers. |
+| `apps/web/src/lib/api.test.ts` | Added API client coverage for approve/deny calls. |
+| `apps/web/src/components/task-card-list.tsx` | Added a compact approval card for `waiting_approval` runs. |
+| `apps/web/src/components/task-card-list.test.tsx` | Added approval card rendering and action coverage. |
+| `apps/web/src/components/workspace-shell.tsx` | Wired approval actions through the existing task refresh flow. |
+| `docs/project-state.md` | Recorded P2-2 verified state and rehearsal evidence. |
+| `docs/change-log.md` | Recorded this P2-2 implementation. |
+
+### Diagnosis
+
+The backend already had the core P0 approval primitives:
+`ApprovalRequestPayload`, `request_task_run_approval`, `approve_task_run`, and
+`deny_task_run`. Adapter events could also transition a run to
+`waiting_approval`. The product API did not expose the latest approval payload,
+there were no public approve/deny endpoints, and the frontend treated
+`waiting_approval` like a generic active run with only an interrupt control.
+
+### What Changed
+
+TaskRun API responses now include `approvalRequest` only while the run is in
+`waiting_approval`. The frontend renders that payload as a small approval card
+showing approval type, requested action, risk/reason, and command/path details
+when present. Approve and Deny reuse the existing guardrail service methods and
+refresh the selected task list.
+
+No enterprise RBAC, policy admin, provider marketplace, production deploy
+approval, frontend redesign, or new approval persistence entity was added.
+
+### Manual Verification
+
+Used an isolated local rehearsal session:
+
+- Session: `67421999-3b16-44c4-ade3-98cb31331549`
+- Approved TaskRun: `5653e8f9-0057-478f-913c-ac25b4484216`
+- Denial rehearsal TaskRun: `54bde1de-b9f7-4f2b-9357-98d51b3675c7`
+
+The browser UI rendered a `product_confirmation` approval card and the Approve
+button moved that run from `waiting_approval` to `queued`. A
+`security_approval` approval card rendered for the second run; backend/API tests
+cover the denial transition and frontend tests cover the Deny button wiring.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (116 tests: 25 web + 91 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- Approval resolution only updates the TaskRun state; it does not resume adapter
+  execution automatically. This is sufficient for the current approval-card
+  rehearsal and keeps scheduler/orchestrator behavior out of scope.
+- The browser automation Deny click was not reliable during manual rehearsal,
+  so denial is verified through backend/API tests and frontend button wiring
+  tests rather than a full browser click.
+
 ### Known Limitations
 
 - P1-8 reused the successful real Codex TaskRun from P1-6 instead of spending

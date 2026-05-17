@@ -85,6 +85,20 @@ class TaskResponse(ApiModel):
     updated_at: datetime = Field(alias="updatedAt")
 
 
+class ApprovalRequestResponse(ApiModel):
+    approval_type: str = Field(alias="approvalType")
+    reason: str
+    requested_action: str = Field(alias="requestedAction")
+    risk_level: str = Field(alias="riskLevel")
+    command: Optional[str] = None
+    path: Optional[str] = None
+    expires_at: Optional[str] = Field(default=None, alias="expiresAt")
+
+
+class ApprovalDecisionRequest(BaseModel):
+    reason: Optional[str] = None
+
+
 class TaskRunResponse(ApiModel):
     id: str
     task_id: str = Field(alias="taskId")
@@ -101,6 +115,10 @@ class TaskRunResponse(ApiModel):
     error_code: Optional[str] = Field(alias="errorCode")
     error_message: Optional[str] = Field(alias="errorMessage")
     metrics_json: dict[str, Any] = Field(alias="metricsJson")
+    approval_request: Optional[ApprovalRequestResponse] = Field(
+        default=None,
+        alias="approvalRequest",
+    )
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
 

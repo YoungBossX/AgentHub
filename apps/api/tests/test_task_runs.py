@@ -8,6 +8,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
 from app.main import agent_run_request_for, app, get_db
+from app.guardrails import ApprovalRequestPayload, request_task_run_approval
 from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.task_runs import create_task_run, transition_task_run
 
@@ -228,6 +229,70 @@ def test_retry_with_fallback_requires_failed_codex_run(client: TestClient) -> No
 
     assert response.status_code == 400
     assert "failed or interrupted Codex run" in response.json()["detail"]
+
+
+def test_approval_request_is_visible_and_approve_deny_endpoints_work(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        approved_run = create_task_run(db, task.id)
+        request_task_run_approval(
+            db,
+            approved_run.id,
+            ApprovalRequestPayload(
+                approvalType="product_confirmation",
+                reason="Deploy requires confirmation.",
+                requestedAction="deploy preview",
+                riskLevel="medium",
+            ),
+        )
+        denied_run = create_task_run(db, task.id)
+        request_task_run_approval(
+            db,
+            denied_run.id,
+            ApprovalRequestPayload(
+                approvalType="security_approval",
+                reason="Network access is disabled.",
+                requestedAction="network access",
+                riskLevel="high",
+            ),
+        )
+        session_id = task.session_id
+        approved_run_id = approved_run.id
+        denied_run_id = denied_run.id
+
+    task_response = client.get(f"/sessions/{session_id}/tasks")
+    assert task_response.status_code == 200
+    runs = {
+        run["id"]: run
+        for task_payload in task_response.json()
+        for run in task_payload["taskRuns"]
+    }
+    assert runs[approved_run_id]["state"] == "waiting_approval"
+    assert runs[approved_run_id]["approvalRequest"] == {
+        "approvalType": "product_confirmation",
+        "reason": "Deploy requires confirmation.",
+        "requestedAction": "deploy preview",
+        "riskLevel": "medium",
+        "command": None,
+        "path": None,
+        "expiresAt": None,
+    }
+
+    approved_response = client.post(f"/task-runs/{approved_run_id}/approve")
+    denied_response = client.post(
+        f"/task-runs/{denied_run_id}/deny",
+        json={"reason": "User denied network access."},
+    )
+
+    assert approved_response.status_code == 200
+    assert approved_response.json()["state"] == "queued"
+    assert approved_response.json()["approvalRequest"] is None
+    assert denied_response.status_code == 200
+    assert denied_response.json()["state"] == "failed"
+    assert denied_response.json()["errorCode"] == "APPROVAL_DENIED"
+    assert denied_response.json()["errorMessage"] == "User denied network access."
 
 
 def test_direct_ui_start_dispatch_creates_queued_run_with_adapter_type(

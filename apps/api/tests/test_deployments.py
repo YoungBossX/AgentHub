@@ -7,7 +7,8 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.deployments import DeployService
+import pytest
+from app.deployments import DeployError, DeployService
 from app.main import app, get_db
 from app.models import (
     Agent,
@@ -144,3 +145,24 @@ def test_deploy_api_creates_and_lists_mock_deployments(tmp_path: Path) -> None:
         assert create_response.json()["environment"] == "preview"
         assert create_response.json()["commitSha"] == "def456+worktree"
         assert list_response.json()[0]["url"].startswith("https://mock.agenthub.local/")
+
+
+def test_mock_deploy_rejects_nonexistent_preview(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        service = DeployService()
+        with pytest.raises(DeployError, match="Preview not found"):
+            service.create_mock_deployment(db, "nonexistent-preview-id")
+
+
+def test_mock_deploy_rejects_unhealthy_preview(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
+        preview = db.get(Preview, preview_id)
+        assert preview is not None
+        preview.health_status = "unhealthy"
+        db.add(preview)
+        db.commit()
+
+        service = DeployService()
+        with pytest.raises(DeployError, match="healthy preview"):
+            service.create_mock_deployment(db, preview_id)

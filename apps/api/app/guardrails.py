@@ -199,7 +199,7 @@ def _git_subcommand(parts: list[str]) -> Optional[str]:
 
     index = 1
     while index < len(parts):
-        if parts[index] == "-C" and index + 2 < len(parts):
+        if parts[index] == "-C" and index + 1 < len(parts):
             index += 2
             continue
         if parts[index].startswith("-"):

@@ -242,3 +242,29 @@ The final freeze review confirmed:
 - A locale-specific development hydration warning around session date formatting
   was observed during P1-11, but did not block the clean-state or fallback
   rehearsal.
+
+## P2 Status
+
+### P2-1 Locale Hydration Warning Fixed
+
+P2-1 replaced runtime-locale timestamp rendering in the workspace shell and
+preview card with deterministic compact formatting. Manual reload verification
+confirmed the previous locale-specific hydration overlay did not appear.
+
+### P2-2 Approval Card UI/Rehearsal Verified
+
+P2-2 exposed the existing P0 approval request payload on waiting TaskRuns,
+added approve/deny endpoints, and rendered a compact approval card in the task
+card run controls.
+
+Verified approval rehearsal state:
+
+- Session: `67421999-3b16-44c4-ade3-98cb31331549`
+- Approved TaskRun: `5653e8f9-0057-478f-913c-ac25b4484216`
+- Denial rehearsal TaskRun: `54bde1de-b9f7-4f2b-9357-98d51b3675c7`
+- Approval types rendered: `product_confirmation`, `security_approval`
+
+Manual browser verification confirmed the `product_confirmation` approval card
+rendered and the Approve action moved the run from `waiting_approval` to
+`queued`. The `security_approval` card rendered as well; denial behavior is
+covered by backend/API tests and frontend button wiring tests.

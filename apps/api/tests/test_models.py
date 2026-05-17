@@ -261,3 +261,71 @@ def test_repository_smoke_creates_p0_run_chain() -> None:
 
         assert event.task_run_id == task_run.id
         assert artifact.task_run_id == task_run.id
+
+
+def test_workspace_response_aliases_serialize_correctly() -> None:
+    from datetime import datetime, timezone
+    from app.schemas import WorkspaceResponse
+
+    now = datetime(2026, 5, 17, 0, 0, 0, tzinfo=timezone.utc)
+    ws = WorkspaceResponse(
+        id="ws-1",
+        name="Demo",
+        repoUrl="local://demo",
+        rootPath="apps/demo",
+        defaultBranch="main",
+        createdAt=now,
+    )
+    data = ws.model_dump(by_alias=True, mode="json")
+    assert data["repoUrl"] == "local://demo"
+    assert data["rootPath"] == "apps/demo"
+    assert data["defaultBranch"] == "main"
+    assert data["createdAt"] == "2026-05-17T00:00:00Z"
+    assert "repo_url" not in data
+    assert "root_path" not in data
+
+
+def test_message_create_request_populates_by_alias() -> None:
+    from app.schemas import MessageCreateRequest
+
+    req = MessageCreateRequest(contentMd="@orchestrator build a login page")
+    assert req.content_md == "@orchestrator build a login page"
+
+    data = req.model_dump(by_alias=True)
+    assert data["contentMd"] == "@orchestrator build a login page"
+    assert data["senderType"] == "user"
+
+
+def test_message_create_request_defaults_are_preserved() -> None:
+    from app.schemas import MessageCreateRequest
+
+    req = MessageCreateRequest(contentMd="hello")
+    assert req.sender_type == "user"
+    assert req.message_kind == "chat"
+    assert req.stream_state == "complete"
+
+
+def test_task_run_response_uses_camelcase_aliases() -> None:
+    from datetime import datetime, timezone
+    from app.schemas import TaskRunResponse
+
+    now = datetime(2026, 5, 17, 0, 0, 0, tzinfo=timezone.utc)
+    tr = TaskRunResponse.model_construct(
+        id="run-1",
+        taskId="task-1",
+        sessionId="session-1",
+        agentId="agent-1",
+        adapterType="codex",
+        state="queued",
+        worktreePath="/tmp/wt",
+        metricsJson={},
+        createdAt=now,
+        updatedAt=now,
+    )
+    data = tr.model_dump(by_alias=True, mode="json")
+    assert data["taskId"] == "task-1"
+    assert data["adapterType"] == "codex"
+    assert data["worktreePath"] == "/tmp/wt"
+    assert data["createdAt"] == "2026-05-17T00:00:00Z"
+    assert "task_id" not in data
+    assert "created_at" not in data

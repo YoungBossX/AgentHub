@@ -55,6 +55,16 @@ export type SessionTask = {
   updatedAt: string
 }
 
+export type ApprovalRequest = {
+  approvalType: "product_confirmation" | "security_approval" | string
+  reason: string
+  requestedAction: string
+  riskLevel: "low" | "medium" | "high" | string
+  command: string | null
+  path: string | null
+  expiresAt: string | null
+}
+
 export type TaskRun = {
   id: string
   taskId: string
@@ -71,6 +81,7 @@ export type TaskRun = {
   errorCode: string | null
   errorMessage: string | null
   metricsJson: Record<string, unknown>
+  approvalRequest?: ApprovalRequest | null
   createdAt: string
   updatedAt: string
 }
@@ -326,6 +337,33 @@ export async function retryTaskRunWithFallback(
     apiUrl(backendUrl, `/task-runs/${taskRunId}/retry-with-fallback`),
     fetcher,
   )
+}
+
+export async function approveTaskRun(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<TaskRun> {
+  return mutateTaskRun(apiUrl(backendUrl, `/task-runs/${taskRunId}/approve`), fetcher)
+}
+
+export async function denyTaskRun(
+  backendUrl: string,
+  taskRunId: string,
+  reason: string,
+  fetcher: Fetcher = fetch,
+): Promise<TaskRun> {
+  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/deny`), {
+    body: JSON.stringify({ reason }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error("Could not deny task run")
+  }
+
+  return (await response.json()) as TaskRun
 }
 
 export async function listTaskRunDiffs(

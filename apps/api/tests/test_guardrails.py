@@ -7,6 +7,8 @@ from sqlmodel import SQLModel, create_engine
 
 from app.guardrails import (
     ApprovalRequestPayload,
+    _git_subcommand,
+    _is_system_path,
     approve_task_run,
     deny_task_run,
     evaluate_command,
@@ -224,3 +226,39 @@ def test_approve_and_deny_service_methods_update_waiting_task_run() -> None:
         assert denied_run.state == "failed"
         assert denied_run.error_code == "APPROVAL_DENIED"
         assert denied_run.error_message == "User denied network access."
+
+
+def test_git_subcommand_extracts_subcommand_skipping_flags_and_cwd() -> None:
+    assert _git_subcommand(["git", "status"]) == "status"
+    assert _git_subcommand(["git", "-C", "/tmp", "diff"]) == "diff"
+    assert _git_subcommand(["git", "--no-pager", "rev-parse", "HEAD"]) == "rev-parse"
+    assert _git_subcommand(["git", "-C", "/tmp", "--no-pager", "log"]) == "log"
+
+
+def test_git_subcommand_rejects_push_and_non_git_commands() -> None:
+    assert _git_subcommand(["git", "push", "origin", "main"]) == "push"
+    assert _git_subcommand(["git", "-C", "/tmp/secret", "clone"]) == "clone"
+    assert _git_subcommand(["pnpm", "test"]) is None
+    assert _git_subcommand(["bash", "-lc", "echo hi"]) is None
+    assert _git_subcommand([]) is None
+    assert _git_subcommand(["git"]) is None
+
+
+def test_git_subcommand_with_only_flags_returns_none() -> None:
+    assert _git_subcommand(["git", "-C", "/tmp"]) is None
+    assert _git_subcommand(["git", "--no-pager"]) is None
+
+
+def test_is_system_path_blocks_system_prefixes() -> None:
+    assert _is_system_path(Path("/etc/passwd")) is True
+    assert _is_system_path(Path("/etc")) is True
+    assert _is_system_path(Path("/usr/local/bin/codex")) is True
+    assert _is_system_path(Path("/bin/bash")) is True
+    assert _is_system_path(Path("/var/log/system.log")) is True
+    assert _is_system_path(Path("/private/tmp/session")) is True
+
+
+def test_is_system_path_allows_worktree_and_home_paths() -> None:
+    assert _is_system_path(Path("/Users/luotianhang/Desktop/agenthub/.worktrees/session")) is False
+    assert _is_system_path(Path("/tmp/agenthub-session")) is False
+    assert _is_system_path(Path("/opt/homebrew/bin/codex")) is False
