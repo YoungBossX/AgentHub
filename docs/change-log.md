@@ -829,6 +829,48 @@ forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock 
 | `pnpm test` | Pass (90 tests: 22 web + 68 API) |
 | `git diff --check` | Pass |
 
+---
+
+## P2 Roadmap Planning
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p2-roadmap.md` | Added the P2 stabilization roadmap. |
+| `docs/change-log.md` | Recorded this documentation-only planning change. |
+
+No app code, backend code, frontend code, adapter code, tests, or dependencies
+changed.
+
+### What Changed
+
+Created a P2 scope plan focused on stabilization, known caveats, and demo
+reliability after the P1 freeze. The roadmap captures:
+
+- the current P1 final verified state
+- remaining P1 caveats
+- immediate P2 task order
+- objective, scope, affected modules, acceptance criteria, validation method,
+  and non-goals for each proposed task
+- frontend redesign as explicitly deferred
+
+### Proposed P2 Task Order
+
+1. P2-1 fix locale hydration warning.
+2. P2-2 approval card UI/rehearsal.
+3. P2-3 natural-language second-change orchestration.
+4. P2-4 GitHub Actions CI.
+5. P2-5 demo reset / clean-state helper.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `git diff --check` | Pass |
+
 ### Known Limitations
 
 - P1-8 reused the successful real Codex TaskRun from P1-6 instead of spending
