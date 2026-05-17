@@ -65,6 +65,14 @@ Latest P1-11 validation:
 | `pnpm test` | Pass (90 tests: 22 web + 68 API) |
 | `git diff --check` | Pass |
 
+P1 final freeze review validation:
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
+| `git diff --check` | Pass |
+
 Latest P1-10 validation:
 
 | Command | Result |
@@ -90,6 +98,9 @@ Prior P1-9 validation:
 - Natural-language second-change orchestration remains a documented caveat.
 - Approval card UI was not part of the frozen P1 judge path.
 - Production deploy was not implemented or verified.
+- A locale-specific development hydration warning around session date formatting
+  was observed during P1-11; it did not block the clean-state or fallback
+  rehearsal.
 
 ## Known Risks
 

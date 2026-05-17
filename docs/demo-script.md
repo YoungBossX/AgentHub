@@ -226,6 +226,13 @@ calls these backend APIs:
 - Runtime API database files live under `apps/api/data/`.
 - Do not delete `.git/`, `.env*`, `node_modules/`, or unrelated user files
   during a demo reset.
+- For the P1-11 clean-state rehearsal, the previous SQLite database was moved
+  to `/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`
+  before running `pnpm db:init`; existing `.worktrees` checkouts were left in
+  place.
+- To restore that pre-P1-11 database, stop the dev servers first, back up the
+  current `apps/api/data/agenthub.sqlite3` if needed, then move the backup file
+  back to `apps/api/data/agenthub.sqlite3`.
 
 ## Troubleshooting During The Demo
 
@@ -242,3 +249,7 @@ calls these backend APIs:
   with `pnpm demo:setup` and that the allocated port is available.
 - Deploy card missing: create or refresh a healthy preview first, then click
   `Create deploy card`.
+- Locale-specific hydration warning: during P1-11, a non-blocking development
+  hydration warning around session date formatting was observed. It did not
+  block the clean-state rehearsal, fallback rehearsal, preview iframe, or mock
+  deploy card.

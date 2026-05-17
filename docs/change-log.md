@@ -1087,3 +1087,56 @@ and deploy card after reload.
   session-level worktrees from the clean DB.
 - Real Codex execution still depends on local CLI availability, authentication,
   quota, and CLI stability.
+
+---
+
+## P1 Final Freeze Review
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `README.md` | Updated the stale P0 direct-start caveat to the verified P1 direct Codex state and added P1 reset/restore notes. |
+| `docs/demo-script.md` | Added P1-11 restore details and the non-blocking locale hydration warning caveat. |
+| `docs/project-state.md` | Added restore note and final freeze review summary. |
+| `docs/p1-acceptance-checklist.md` | Added final freeze review validation slot and locale hydration warning caveat. |
+| `docs/change-log.md` | Recorded this freeze review. |
+
+No app code, backend code, frontend code, adapter code, tests, or dependencies
+changed for the final freeze review.
+
+### What Changed
+
+The review found one stale README caveat from the P0 freeze era: it still said
+the `Start run` UI only creates a queued TaskRun and that the complete artifact
+path is fallback-only. That is no longer true after P1. The README now matches
+the P1 verified state:
+
+```text
+Start run -> real Codex Direct Start -> real diff -> healthy Vite preview -> mock deploy card
+```
+
+The docs now also explicitly state the P1-11 SQLite restore method and the
+non-blocking locale-specific hydration warning observed during P1-11.
+
+### Freeze Review Result
+
+- P1-11 is committed at `faca556`.
+- No tag currently points at P1-11 HEAD.
+- P1 is ready to freeze once the validation below remains green.
+- Remaining caveats are visible:
+  - natural-language second-change orchestration remains a caveat
+  - approval card UI is outside the frozen P1 judge path
+  - production deploy is out of scope
+  - locale-specific development hydration warning was observed but did not
+    block rehearsal
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
+| `git diff --check` | Pass |

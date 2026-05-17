@@ -161,6 +161,11 @@ Backup/reset method:
 - Reinitialized a clean SQLite database with `pnpm db:init`.
 - Created fresh session-level worktrees from the clean DB during the rehearsal.
 
+Restore note: stop the dev servers first, back up the current
+`apps/api/data/agenthub.sqlite3` if it needs to be preserved, then move
+`/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`
+back to `apps/api/data/agenthub.sqlite3`.
+
 Clean-state direct Codex rehearsal passed:
 
 ```text
@@ -222,3 +227,18 @@ Fallback evidence:
 
 After reload, the failed Codex run, fallback run, diff, preview, and deploy
 card all remained visible in the browser UI.
+
+### P1 Final Freeze Review
+
+The final freeze review confirmed:
+
+- P1-11 is committed at `faca556`.
+- No tag currently points at P1-11 HEAD.
+- README, demo script, project state, change log, and P1 checklist align on the
+  P1 direct Codex path and the fallback-based P0 path.
+- Natural-language second-change orchestration remains a caveat.
+- Approval card UI is outside the frozen P1 judge path.
+- Production deploy remains out of scope.
+- A locale-specific development hydration warning around session date formatting
+  was observed during P1-11, but did not block the clean-state or fallback
+  rehearsal.

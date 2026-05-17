@@ -175,17 +175,16 @@ The deterministic demo mutation targets are in `apps/demo/src/App.tsx`:
 
 Use `docs/demo-script.md` for the narrated demo. It includes:
 
-- a main demo path through session creation, planning, task cards, fallback
-  execution, diff, preview, and mock deploy
+- a main demo path through session creation, planning, task cards, real Codex
+  Direct Start execution, diff, preview, and mock deploy
 - a failure recovery path showing a failed Codex run preserved in history and a
   successful `ScriptedMockAdapter` retry
 
-Current implementation caveat: the general `Start run` UI creates a queued
-TaskRun, but this checkout's complete UI-driven artifact path is the
-demo-recovery path that uses `Force Codex failure` followed by
-`Retry with ScriptedMockAdapter`. The `CodexAdapter` itself exists and has
-process-runner tests, but a full UI happy path that executes Codex from
-`Start run` is not documented as complete here.
+Current P1 freeze status: the `Start run` UI dispatches real Codex Direct Start
+execution. P1-11 verified a clean SQLite rehearsal through real Codex file
+mutation, diff, healthy Vite preview, and mock deploy card. The forced-failure
+`ScriptedMockAdapter` path remains the reliability fallback if Codex is
+unavailable, unauthenticated, usage-limited, or too slow for the demo window.
 
 ## P0 Boundaries
 
@@ -213,6 +212,21 @@ Deferred P1/P2 items include:
 - multiplayer collaboration
 - enterprise RBAC, billing, or admin policy console
 - production deployment matrix or one-click production deploy guide
+
+## P1 Reset Notes
+
+- `pnpm db:init` initializes and seeds the SQLite database.
+- Runtime worktrees live under `.worktrees/`.
+- Runtime API database files live under `apps/api/data/`.
+- Do not delete `.git/`, `.env*`, `node_modules/`, or unrelated user files
+  during a demo reset.
+- For the P1-11 clean-state rehearsal, the previous SQLite database was moved
+  to `/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`
+  before running `pnpm db:init`. Existing `.worktrees` checkouts were left in
+  place to avoid disturbing Git's registered worktree metadata.
+- To restore that pre-P1-11 database, stop the dev servers first, back up the
+  current `apps/api/data/agenthub.sqlite3` if you need to keep it, then move the
+  P1-11 backup file back to `apps/api/data/agenthub.sqlite3`.
 
 ## Troubleshooting
 
@@ -279,3 +293,9 @@ session worktree and uses the deterministic targets listed above.
 Create or refresh a healthy preview first. The mock deploy card is created from
 the preview card with `Create deploy card`; it is persisted by the backend and
 is not a frontend-only placeholder.
+
+### Locale-Specific Hydration Warning In Dev Console
+
+During P1-11, a non-blocking development hydration warning was observed around
+locale-specific session date formatting. It did not block the clean-state
+rehearsal, fallback rehearsal, diff cards, preview iframe, or mock deploy card.
