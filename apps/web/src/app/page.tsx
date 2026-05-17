@@ -26,7 +26,7 @@ export default async function Home() {
           <Button disabled>Task 1.6 sessions</Button>
         </header>
 
-        <div className="grid gap-4 md:grid-cols-[1fr_360px]">
+        <div className="grid gap-4">
           <WorkspaceShell
             backendUrl={backendUrl}
             initialSessions={sessions}

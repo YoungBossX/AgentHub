@@ -617,3 +617,176 @@ forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock 
   APIs, not by clicking the browser UI.
 - Real Codex execution remains dependent on local Codex quota and CLI stability;
   keep the ScriptedMockAdapter fallback available for demos.
+
+---
+
+## Codex Workflow Documentation
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `AGENTS.md` | Added project-wide mandatory Codex rules. |
+| `docs/codex-task-template.md` | Added a reusable short-prompt workflow template. |
+| `docs/project-state.md` | Added stable P0/P1 state, P1-6/P1-7 evidence, and the P1-8 UI gap. |
+| `docs/change-log.md` | Recorded this documentation-only workflow change. |
+
+### What Changed
+
+Moved repeated long-prompt context into stable project documents:
+
+- `AGENTS.md` now names mandatory rules for future Codex work, including
+  minimal task scope, honest verification claims, preserving the fallback-based
+  P0 demo, avoiding forbidden non-P0/P1 features unless explicitly requested,
+  updating the change log when engineering files change, and not committing or
+  pushing unless explicitly instructed.
+- `docs/codex-task-template.md` defines the standard read/check/diagnose/edit
+  workflow and final-response checklist.
+- `docs/project-state.md` records current P0/P1 state, including P1-6 real
+  Codex direct-start diff verification, P1-7 backend API preview/deploy
+  verification, and the concrete P1-7 evidence IDs.
+
+### Why
+
+Future Codex prompts can now reference these documents instead of repeating the
+same long context, constraints, and wrap-up requirements each time.
+
+### Scope
+
+Documentation only. No app code, backend code, tests, dependencies, or runtime
+behavior were changed.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Not run; documentation-only change. |
+| `pnpm test` | Not run; documentation-only change. |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- This change does not verify any app behavior.
+
+---
+
+## P1-8: Browser UI Preview and Mock Deploy Rehearsal
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/app/page.tsx` | Let `WorkspaceShell` use the full page width so its own right-side preview panel does not compete with the health card. |
+| `apps/web/src/app/page.test.tsx` | Added a focused page layout contract test. |
+| `docs/project-state.md` | Updated P1-8 from a known gap to verified browser UI state. |
+| `docs/change-log.md` | Recorded this P1-8 continuation. |
+
+### Modified Functions or Areas
+
+- `apps/web/src/app/page.tsx`
+  - Changed the page content wrapper from `grid gap-4 md:grid-cols-[1fr_360px]`
+    to `grid gap-4`.
+  - `WorkspaceShell` already owns its internal workspace/session/task/preview
+    columns, so the health card now stacks below the full-width workspace shell.
+
+### What Changed
+
+The browser UI rehearsal showed that the outer page constrained
+`WorkspaceShell` beside the health card while `WorkspaceShell` also rendered an
+internal right-side preview panel. That made the task column cramped and made
+the preview/deploy controls difficult to operate at desktop width.
+
+The fix is intentionally small: it changes only the outer page layout. Existing
+task cards, diff cards, preview cards, deploy cards, API clients, backend
+preview/deploy APIs, adapters, and artifact persistence are unchanged.
+
+### Why
+
+P1-7 verified the post-diff path through backend APIs. P1-8 verifies that a user
+can operate the same post-diff path through the browser UI after a real Codex
+Direct Start run has produced a real diff artifact.
+
+### Manual Browser Verification Result
+
+The browser UI was opened at:
+
+```text
+http://127.0.0.1:3000/?session=a0b51d27-0473-44f3-b079-bbb02fdf00bb
+```
+
+The selected session reused the successful real Codex Direct Start run from
+P1-6/P1-7:
+
+- Session: `a0b51d27-0473-44f3-b079-bbb02fdf00bb`
+- Codex-backed task: `f9e982c3-df76-4740-b38c-e14e8cb3497c`
+- TaskRun: `fa23fb4a-6506-4b0e-a608-3197356d0628`
+- Changed file from real Codex: `apps/demo/src/App.tsx`
+- Diff artifact ID: `782e16f4-36b5-46f3-86cf-42c3fb6119e9`
+- Diff ID: `5df0273d-f9fc-46b3-bbfa-242d5d185667`
+
+Browser UI checks:
+
+- The persisted diff card appeared for the real Codex TaskRun.
+- The diff card expanded and changed-file details remained visible.
+- The UI `Start preview` button created a new healthy Vite preview.
+- The UI `Open preview` button opened the right-side iframe panel.
+- The iframe loaded the Vite React demo from the session worktree.
+- The UI `Create deploy card` button created a new persisted mock deploy card.
+- After page reload, the diff, preview cards, and mock deploy cards remained
+  visible.
+
+Fresh UI-created preview:
+
+- Preview ID: `810324d7-2ba9-47e6-b676-7391e87cb131`
+- Preview artifact ID: `927f3b23-2bea-43a4-a420-13432ae39064`
+- URL: `http://127.0.0.1:64067`
+- Port: `64067`
+- Health status: `healthy`
+- Artifact status: `ready`
+
+Fresh UI-created deployment:
+
+- Deployment ID: `58c7812c-31f8-49ee-8b08-28d38264cd87`
+- Deployment artifact ID: `da95fe77-167e-4df2-9ef4-e2d450fa3bb1`
+- Provider: `mock`
+- Environment: `preview`
+- Status: `ready`
+- URL:
+  `https://mock.agenthub.local/deployments/58c7812c-31f8-49ee-8b08-28d38264cd87`
+
+This verifies through the browser UI:
+
+```text
+real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
+```
+
+### Fallback Verification
+
+No fallback was needed during P1-8 because it reused the successful real Codex
+TaskRun from P1-6. The fallback-based P0 demo remains covered by existing tests
+and prior verification:
+
+```text
+forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock deploy
+```
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- P1-8 reused the successful real Codex TaskRun from P1-6 instead of spending
+  another Codex run.
+- Browser UI verification covered the post-diff artifact controls. It did not
+  re-run Codex from the browser during P1-8.
+- Real Codex execution remains dependent on local Codex quota and CLI stability;
+  keep the ScriptedMockAdapter fallback available for demos.

@@ -6,6 +6,20 @@ This repo is implementing the OpenSpec change at
 file conflicts with those artifacts, stop and resolve the conflict before
 coding.
 
+## Project-Wide Mandatory Rules
+
+- Keep changes minimal and task-scoped.
+- Do not implement unrelated features.
+- Do not fake real Codex success.
+- Do not claim unverified behavior.
+- Preserve the fallback-based P0 demo path.
+- Do not implement `ClaudeCodeAdapter`, `HumanAgentAdapter`, Docker sandbox,
+  WebSocket, provider marketplace, PR creation, or production deployment unless
+  explicitly asked.
+- Do not silently install dependencies.
+- If code or engineering files change, update `docs/change-log.md`.
+- Do not commit or push unless explicitly instructed.
+
 ## Current P0 Stack
 
 - Product UI: Next.js App Router, TypeScript, Tailwind CSS, and shadcn/ui-style
