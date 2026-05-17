@@ -4,6 +4,7 @@ import { ExternalLink, Monitor, RefreshCw, Rocket, Square, X } from "lucide-reac
 
 import { Button } from "@/components/ui/button"
 import type { PreviewArtifact } from "@/lib/api"
+import { formatCompactDateTime } from "@/lib/date-format"
 
 type PreviewCardProps = {
   busy?: boolean
@@ -26,12 +27,7 @@ function formatPreviewTime(value: string | null) {
     return "Last checked: pending"
   }
 
-  return `Last checked: ${new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-  }).format(new Date(value))}`
+  return `Last checked: ${formatCompactDateTime(value)}`
 }
 
 function previewHost(url: string) {

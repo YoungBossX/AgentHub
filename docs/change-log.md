@@ -871,6 +871,66 @@ reliability after the P1 freeze. The roadmap captures:
 |---|---|
 | `git diff --check` | Pass |
 
+---
+
+## P2-1: Fix Locale-Specific Hydration Warning
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/lib/date-format.ts` | Added deterministic compact timestamp formatting from ISO-like timestamp text. |
+| `apps/web/src/lib/date-format.test.ts` | Added unit coverage for locale-independent formatting. |
+| `apps/web/src/components/workspace-shell.tsx` | Replaced runtime-locale session timestamp formatting with deterministic formatting. |
+| `apps/web/src/components/preview-card.tsx` | Replaced runtime-locale preview checked-time formatting with deterministic formatting. |
+| `apps/web/src/components/preview-card.test.tsx` | Updated preview timestamp assertion to the deterministic text. |
+| `docs/change-log.md` | Recorded this P2-1 implementation. |
+
+### Root Cause
+
+`workspace-shell.tsx` and `preview-card.tsx` used
+`new Intl.DateTimeFormat(undefined, ...)`, which selects the current runtime
+locale. During development SSR/hydration, the server rendered session dates in
+one locale while the browser hydrated in another, producing a text mismatch such
+as `May 17, 02:06 AM` versus `5月17日 02:06`.
+
+### What Changed
+
+P2-1 adds `formatCompactDateTime`, which formats ISO-like timestamps from their
+source components instead of relying on runtime locale defaults. Session list,
+selected-session metadata, and preview checked timestamps now render stable text
+such as:
+
+```text
+May 17, 02:06
+```
+
+No backend APIs, task-run lifecycle behavior, preview/deploy logic, or frontend
+layout were changed.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (92 tests: 24 web + 68 API) |
+| `git diff --check` | Pass |
+
+### Manual Verification
+
+Opened and reloaded the AgentHub UI at `http://127.0.0.1:3000` against the
+local API at `http://127.0.0.1:8000`. The session list, selected-session
+metadata, backend health card, and preview panel rendered successfully, and the
+previous locale-specific hydration overlay did not appear. Session timestamps
+rendered as deterministic compact text such as `May 17, 02:06`.
+
+### Known Limitations
+
+- The formatter is intentionally compact and English-labeled for deterministic
+  local demo rendering. This is not a full internationalization system.
+
 ### Known Limitations
 
 - P1-8 reused the successful real Codex TaskRun from P1-6 instead of spending

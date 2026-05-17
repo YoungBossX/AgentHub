@@ -28,7 +28,7 @@ describe("PreviewCard", () => {
     expect(screen.getByText("healthy")).toBeTruthy()
     expect(screen.getByText("http://127.0.0.1:5173")).toBeTruthy()
     expect(screen.getByText("5173")).toBeTruthy()
-    expect(screen.getByText(/Last checked/)).toBeTruthy()
+    expect(screen.getByText("Last checked: May 15, 10:30")).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Open preview" }))
     fireEvent.click(screen.getByRole("button", { name: "Refresh preview" }))

@@ -28,6 +28,7 @@ import {
   type Workspace,
   type WorkspaceSession,
 } from "@/lib/api"
+import { formatCompactDateTime } from "@/lib/date-format"
 import { cn } from "@/lib/utils"
 
 type WorkspaceShellProps = {
@@ -41,12 +42,7 @@ function formatSessionTime(value: string | null) {
     return "No messages"
   }
 
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short",
-  }).format(new Date(value))
+  return formatCompactDateTime(value)
 }
 
 export function WorkspaceShell({
