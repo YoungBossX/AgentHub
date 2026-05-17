@@ -997,3 +997,93 @@ forced Codex failure -> ScriptedMockAdapter fallback -> real diff -> healthy Vit
 - Codex run duration can vary, so the ScriptedMockAdapter fallback should
   remain ready for demos.
 - Preview health depends on setup-time demo dependencies.
+
+---
+
+## P1-11: Clean-State and Fallback Rehearsal
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/project-state.md` | Recorded the clean SQLite rehearsal, fresh session worktree evidence, and fallback rehearsal evidence. |
+| `docs/p1-acceptance-checklist.md` | Marked the clean-state and manual fallback readiness items verified. |
+| `docs/change-log.md` | Recorded this P1-11 rehearsal result. |
+
+No app code, backend code, frontend code, adapter code, tests, or dependencies
+changed for P1-11.
+
+### Backup / Reset Method
+
+- Moved the active SQLite database to
+  `/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`.
+- Recorded the pre-rehearsal Git worktree registry and directory inventory at:
+  - `/tmp/agenthub-p1-11-backup-20260517-095901/worktree-list-before.txt`
+  - `/tmp/agenthub-p1-11-backup-20260517-095901/worktree-dirs-before.txt`
+- Left existing `.worktrees` checkouts in place to avoid disturbing Git's
+  registered worktree metadata.
+- Reinitialized a clean SQLite database with `pnpm db:init`.
+- Created fresh session-level worktrees through the UI during rehearsal.
+
+### Clean-State Rehearsal
+
+Verified path:
+
+```text
+clean SQLite -> fresh session worktree -> real Codex Direct Start -> real diff -> healthy Vite preview -> mock deploy card
+```
+
+Evidence:
+
+- Session: `72668a90-74a0-45c6-a0c4-98e8cfa54c27`
+- Task: `7e0a4e97-1b80-404d-bcab-4616418627e3`
+- TaskRun: `4c92132f-3c89-47cc-b8a4-3f1395825c39`
+- Diff: `bb45131e-42f8-47d7-88eb-c8126d694b0a`
+- Diff artifact: `243ce682-748b-42ad-9354-dd8eed1f3e67`
+- Preview: `a30d07e2-470c-4614-a864-c21ac0b52363`
+- Preview URL: `http://127.0.0.1:58634`
+- Deployment: `448b7d91-5064-43c2-a849-3e89634e14bd`
+- Provider/status: `mock`, `ready`
+
+### Fallback Rehearsal
+
+Verified path:
+
+```text
+forced Codex failure -> ScriptedMockAdapter fallback -> real diff -> healthy Vite preview -> mock deploy card
+```
+
+Evidence:
+
+- Session: `695287ed-2967-4360-8520-a5fdc1be46e3`
+- Task: `1a790664-c817-42eb-a953-d7c0f11cccb0`
+- Failed Codex TaskRun: `1b50d047-0c08-4ff2-a4d7-12412b36f786`
+- Failed run error code: `CODEX_DEMO_FORCED_FAILURE`
+- Fallback TaskRun: `c35d52f5-bf27-4656-aee1-b0321eb2bd96`
+- Diff: `8a8f05bf-6559-44f4-bafc-fb87881c4750`
+- Diff artifact: `91b6c898-bf2b-4c0c-b44b-f6a236a72ef0`
+- Preview: `e1be7c11-1cc7-42f9-8441-62c7eb0a1b92`
+- Preview URL: `http://127.0.0.1:59152`
+- Deployment: `cb8c7f95-42f7-4213-8273-4201500bf8b3`
+- Provider/status: `mock`, `ready`
+
+The browser UI still showed the failed Codex run, fallback run, diff, preview,
+and deploy card after reload.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- Existing registered `.worktrees` checkouts were not moved or deleted. P1-11
+  verified clean app state by backing up the SQLite database and creating new
+  session-level worktrees from the clean DB.
+- Real Codex execution still depends on local CLI availability, authentication,
+  quota, and CLI stability.

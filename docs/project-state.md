@@ -143,3 +143,82 @@ P1-9 evidence:
 - Deployment: `d97e447a-c8d0-41b7-95f8-e40008d83eb0`
 - Deployment artifact: `d85e9bcf-9b92-4c3c-958a-352f855e59a9`
 - Provider/status: `mock`, `ready`
+
+### P1-11 Clean-State and Fallback Rehearsal
+
+P1-11 closed the main P1 demo-readiness gaps from a non-destructive clean
+state rehearsal.
+
+Backup/reset method:
+
+- Moved the active SQLite database to
+  `/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`.
+- Recorded the pre-rehearsal Git worktree registry and directory inventory at:
+  - `/tmp/agenthub-p1-11-backup-20260517-095901/worktree-list-before.txt`
+  - `/tmp/agenthub-p1-11-backup-20260517-095901/worktree-dirs-before.txt`
+- Left existing `.worktrees` checkouts in place to avoid disturbing Git's
+  registered worktree metadata.
+- Reinitialized a clean SQLite database with `pnpm db:init`.
+- Created fresh session-level worktrees from the clean DB during the rehearsal.
+
+Clean-state direct Codex rehearsal passed:
+
+```text
+clean SQLite -> fresh session worktree -> real Codex Direct Start -> real diff -> healthy Vite preview -> mock deploy card
+```
+
+Clean-state evidence:
+
+- Session: `72668a90-74a0-45c6-a0c4-98e8cfa54c27`
+- Session worktree:
+  `/Users/luotianhang/Desktop/agenthub/.worktrees/0474f8b8-499e-4117-afab-c780bd562446/72668a90-74a0-45c6-a0c4-98e8cfa54c27`
+- Task: `7e0a4e97-1b80-404d-bcab-4616418627e3`
+- TaskRun: `4c92132f-3c89-47cc-b8a4-3f1395825c39`
+- Adapter: `codex`
+- Final TaskRun state: `completed`
+- Error code/message: none
+- Base ref: `abdcd88e200ce8c39f50ed38f244d40cb52295bb`
+- Head ref: `abdcd88e200ce8c39f50ed38f244d40cb52295bb+worktree`
+- Diff: `bb45131e-42f8-47d7-88eb-c8126d694b0a`
+- Diff artifact: `243ce682-748b-42ad-9354-dd8eed1f3e67`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff stats: 1 file changed, 15 additions, 4 deletions
+- Preview: `a30d07e2-470c-4614-a864-c21ac0b52363`
+- Preview artifact: `4b3475ad-0d1f-4980-ab80-18abb50492fd`
+- Preview URL: `http://127.0.0.1:58634`
+- Preview health/status: `healthy`, `ready`
+- Deployment: `448b7d91-5064-43c2-a849-3e89634e14bd`
+- Deployment artifact: `717d28cc-eb3e-47cb-9950-cee1985ea798`
+- Provider/environment/status: `mock`, `preview`, `ready`
+
+Manual forced-failure fallback rehearsal passed:
+
+```text
+forced Codex failure -> ScriptedMockAdapter fallback -> real diff -> healthy Vite preview -> mock deploy card
+```
+
+Fallback evidence:
+
+- Session: `695287ed-2967-4360-8520-a5fdc1be46e3`
+- Session worktree:
+  `/Users/luotianhang/Desktop/agenthub/.worktrees/0474f8b8-499e-4117-afab-c780bd562446/695287ed-2967-4360-8520-a5fdc1be46e3`
+- Task: `1a790664-c817-42eb-a953-d7c0f11cccb0`
+- Failed Codex TaskRun: `1b50d047-0c08-4ff2-a4d7-12412b36f786`
+- Failed run error code: `CODEX_DEMO_FORCED_FAILURE`
+- Fallback TaskRun: `c35d52f5-bf27-4656-aee1-b0321eb2bd96`
+- Fallback adapter: `scripted_mock`
+- Final fallback TaskRun state: `completed`
+- Diff: `8a8f05bf-6559-44f4-bafc-fb87881c4750`
+- Diff artifact: `91b6c898-bf2b-4c0c-b44b-f6a236a72ef0`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff stats: 1 file changed, 11 additions, 4 deletions
+- Preview: `e1be7c11-1cc7-42f9-8441-62c7eb0a1b92`
+- Preview artifact: `4ed1465f-f887-4680-b9a1-6893e593468d`
+- Preview URL: `http://127.0.0.1:59152`
+- Preview health/status: `healthy`, `ready`
+- Deployment: `cb8c7f95-42f7-4213-8273-4201500bf8b3`
+- Deployment artifact: `43e15df7-5fb4-4711-85b6-94c485b0b4cb`
+- Provider/environment/status: `mock`, `preview`, `ready`
+
+After reload, the failed Codex run, fallback run, diff, preview, and deploy
+card all remained visible in the browser UI.
