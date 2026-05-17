@@ -790,3 +790,128 @@ forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock 
   re-run Codex from the browser during P1-8.
 - Real Codex execution remains dependent on local Codex quota and CLI stability;
   keep the ScriptedMockAdapter fallback available for demos.
+
+---
+
+## P1-9: Demo Readiness and Reproducibility Check
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/demo-script.md` | Updated the main demo path to reflect the real browser UI Codex flow and moved the forced-failure path to a fallback demo path. |
+| `docs/project-state.md` | Added P1-9 clean-start rehearsal status and evidence. |
+| `docs/change-log.md` | Recorded this P1-9 result. |
+
+### What Changed
+
+Documentation was updated to match the current browser UI demo behavior:
+
+- The main demo path now uses `Start run` on the frontend implementation task
+  when local Codex is available.
+- The forced Codex failure plus ScriptedMockAdapter path is still documented as
+  the reliable fallback path.
+- `docs/project-state.md` now records clean-start P1-9 evidence.
+
+No product code, backend code, adapter code, preview/deploy services, or
+dependencies changed for P1-9.
+
+### Why
+
+P1-8 proved the browser UI post-diff controls using an existing successful
+Codex run. P1-9 verifies whether a fresh browser demo can reproduce the full
+path from a clean backend/frontend start.
+
+### Clean-Start Manual Verification Result
+
+The backend and frontend were restarted using the documented commands:
+
+```bash
+pnpm dev:api
+pnpm dev:web
+```
+
+The browser UI was opened at:
+
+```text
+http://127.0.0.1:3000
+```
+
+Clean-start flow:
+
+1. Created a new session from the UI.
+2. Sent `@orchestrator build a login page for the demo app`.
+3. Clicked `Start run` on the frontend implementation task.
+4. Observed the Codex run progress through active state.
+5. Confirmed the run completed.
+6. Confirmed the diff card appeared.
+7. Clicked `Start preview`.
+8. Confirmed a healthy Vite preview opened in the right-side iframe panel.
+9. Clicked `Create deploy card`.
+10. Reloaded the page and confirmed diff, preview, and deploy cards remained
+    visible.
+
+Evidence:
+
+- Session: `666fa20b-6f54-4342-b844-39594b903da3`
+- Task: `c90396af-1b9f-42f4-a6dd-9daa4f3913f6`
+- TaskRun: `b1882cda-47f6-4035-b12d-ba3d72d67939`
+- Adapter: `codex`
+- Final TaskRun state: `completed`
+- Error code/message: none
+- Base ref: `ad9136f91fe9776c33e839359a2203d64fbbf322`
+- Head ref: `ad9136f91fe9776c33e839359a2203d64fbbf322+worktree`
+- Diff: `8a0155a6-b865-4cee-987e-82d773b9f20e`
+- Diff artifact: `c832b249-c2c3-444c-ac97-6b3e811e5c70`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff stats: 1 file changed, 14 additions, 4 deletions
+- Preview: `b363eb09-7251-4b8e-a5b4-3c59775b58b7`
+- Preview artifact: `f93ebc25-b8c7-47e9-ac11-aeee777c604e`
+- Preview URL: `http://127.0.0.1:51763`
+- Preview health/status: `healthy`, `ready`
+- Deployment: `d97e447a-c8d0-41b7-95f8-e40008d83eb0`
+- Deployment artifact: `d85e9bcf-9b92-4c3c-958a-352f855e59a9`
+- Provider/environment/status: `mock`, `preview`, `ready`
+- Deployment URL:
+  `https://mock.agenthub.local/deployments/d97e447a-c8d0-41b7-95f8-e40008d83eb0`
+
+This verifies:
+
+```text
+clean start -> real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
+```
+
+### UI Readiness Notes
+
+- Core labels are clear enough for a judge/demo scenario: `Start run`, run
+  history, `Start preview`, `Open preview`, and `Create deploy card`.
+- The visible active state is simple but adequate: the run appears as
+  `queued`/`streaming` with an `Interrupt` control while Codex runs.
+- If Codex is unavailable, unauthenticated, usage-limited, or too slow, the
+  fallback-based P0 demo remains the safe path.
+
+### Fallback Verification
+
+The fallback path was not used during P1-9 because real Codex completed. The
+fallback-based P0 demo remains covered by existing tests and prior
+verification:
+
+```text
+forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock deploy
+```
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- Real Codex execution remains dependent on local Codex quota and CLI stability.
+- P1-9 did not reset the SQLite database or delete existing worktrees; it
+  restarted backend/frontend processes and created a fresh session from the UI.

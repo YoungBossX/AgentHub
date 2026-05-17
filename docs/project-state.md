@@ -78,3 +78,41 @@ P1-8 evidence:
 - UI-created preview URL: `http://127.0.0.1:64067`
 - UI-created deployment: `58c7812c-31f8-49ee-8b08-28d38264cd87`
 - Provider/status: `mock`, `ready`
+
+### P1-9 Clean-Start Demo Rehearsal
+
+P1-9 verified the browser UI demo path from a clean server start:
+
+- Backend started with `pnpm dev:api`.
+- Frontend started with `pnpm dev:web`.
+- A new session was created from the UI.
+- The fixed demo request was sent from the UI.
+- Direct UI Start invoked a real Codex TaskRun.
+- Real Codex completed and produced a real diff artifact.
+- Preview was started from the UI and opened in the right-side iframe panel.
+- Mock deploy card was created from the UI.
+- Diff, preview, and deploy cards remained visible after reload.
+
+Verified path:
+
+```text
+clean start -> real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
+```
+
+P1-9 evidence:
+
+- Session: `666fa20b-6f54-4342-b844-39594b903da3`
+- Task: `c90396af-1b9f-42f4-a6dd-9daa4f3913f6`
+- TaskRun: `b1882cda-47f6-4035-b12d-ba3d72d67939`
+- Base ref: `ad9136f91fe9776c33e839359a2203d64fbbf322`
+- Head ref: `ad9136f91fe9776c33e839359a2203d64fbbf322+worktree`
+- Diff: `8a0155a6-b865-4cee-987e-82d773b9f20e`
+- Diff artifact: `c832b249-c2c3-444c-ac97-6b3e811e5c70`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff stats: 1 file changed, 14 additions, 4 deletions
+- Preview: `b363eb09-7251-4b8e-a5b4-3c59775b58b7`
+- Preview artifact: `f93ebc25-b8c7-47e9-ac11-aeee777c604e`
+- Preview URL: `http://127.0.0.1:51763`
+- Deployment: `d97e447a-c8d0-41b7-95f8-e40008d83eb0`
+- Deployment artifact: `d85e9bcf-9b92-4c3c-958a-352f855e59a9`
+- Provider/status: `mock`, `ready`

@@ -1,8 +1,9 @@
 # AgentHub Demo Script
 
 This script is for the OpenSpec change
-`openspec/changes/agenthub-im-coding-mvp`. It describes the local P0 demo as
-implemented in this repo through task 3.4.
+`openspec/changes/agenthub-im-coding-mvp`. It describes the local AgentHub demo
+as implemented through the completed P0 scope and the P1 direct-Codex
+rehearsals.
 
 ## Setup Before The Demo
 
@@ -54,10 +55,10 @@ P0 constraints:
   changes
 - dependency installation happens during setup, not during agent execution
 
-## Main Demo Path
+## Main Demo Path With Local Codex
 
-This is the reliable path to show the complete local artifact loop in the
-current checkout.
+Use this path when the local Codex CLI is available, authenticated, and not
+usage-limited.
 
 1. Confirm the health card shows the backend URL and a reachable API.
 2. In the workspace sidebar, click `New session`.
@@ -79,39 +80,59 @@ current checkout.
    - `Plan the login page change`
    - `Build the Vite React login page`
    - `Review the login page demo path`
-8. On the frontend implementation task, use the recovery-safe execution path:
-   click `Force Codex failure`.
-9. Point out that a failed Codex run remains visible in run history with
-   `CODEX_DEMO_FORCED_FAILURE`.
-10. Click `Retry with ScriptedMockAdapter`.
-11. Wait for the new fallback run to complete.
-12. Point out that the successful fallback run is a separate TaskRun and did
-    not overwrite the failed Codex run.
-13. Verify the diff card appears.
-14. Expand the diff card and show:
+8. On the frontend implementation task, click `Start run`.
+9. Point out that run history shows a Codex TaskRun and that the task moves
+   through active states.
+10. Wait for the Codex run to reach `completed`.
+11. Verify the diff card appears.
+12. Expand the diff card and show:
     - changed file list
     - additions/deletions summary
     - file-level diff inspection through Monaco
-15. Click `Start preview`.
-16. When the preview card appears, show:
+13. Click `Start preview`.
+14. When the preview card appears, show:
     - status
     - URL
     - port
     - last checked time
-17. Click `Open preview`.
-18. Point out that the right-side panel or iframe opens the Vite React demo
+15. Click `Open preview`.
+16. Point out that the right-side panel or iframe opens the Vite React demo
     from the session worktree.
-19. Click `Create deploy card`.
-20. Point out the persisted mock deploy card:
+17. Click `Create deploy card`.
+18. Point out the persisted mock deploy card:
     - provider
     - environment
     - status
     - worktree ref or commit field
     - mock URL
     - mock deploy log URI
+19. Refresh the page and confirm the diff, preview, and deploy cards remain
+    visible.
 
 Expected result: the demo reaches real file changes, Git diff, preview, and a
 backend-created mock deploy card.
+
+## Reliable Fallback Demo Path
+
+Use this path if local Codex is unavailable, unauthenticated, usage-limited, or
+too slow for the demo window.
+
+1. Follow steps 1-7 from the main demo path.
+2. On the frontend implementation task, click `Force Codex failure`.
+3. Point out that a failed Codex run remains visible in run history with
+   `CODEX_DEMO_FORCED_FAILURE`.
+4. Click `Retry with ScriptedMockAdapter`.
+5. Wait for the new fallback run to complete.
+6. Point out that the successful fallback run is a separate TaskRun and did not
+   overwrite the failed Codex run.
+7. Continue with the same artifact loop:
+   - expand the diff card
+   - click `Start preview`
+   - click `Open preview`
+   - click `Create deploy card`
+
+Expected result: the fallback run still creates real demo-app file changes and
+the same diff, preview, and mock deploy cards.
 
 ## Success Path With Local Codex
 
@@ -123,19 +144,15 @@ codex --ask-for-approval never exec --json --cd <session_worktree_path> --sandbo
 ```
 
 The adapter has tests for command construction, JSONL stdout parsing, noisy
-stderr capture, error mapping, and interruption behavior. The CLI feasibility
-note documents a successful read-only smoke when the local Codex app state is
-available.
+stderr capture, error mapping, and interruption behavior. P1 rehearsals verified
+the browser UI path:
 
-Current UI caveat: in this checkout, the general `Start run` control creates a
-queued TaskRun but is not the documented complete UI path for running Codex all
-the way through diff, preview, and deploy. Do not present `Start run` as a
-fully rehearsed Codex happy path unless that wiring has been completed in a
-later task or commit.
+```text
+Start run -> real Codex file mutation -> diff card -> preview iframe -> mock deploy card
+```
 
-For a judge demo today, use the main path above. It deliberately exercises the
-failure recovery path while still proving the artifact loop with real file
-changes.
+If a real Codex run fails, do not claim success. Show the normalized failure in
+run history and switch to the reliable fallback path.
 
 ## Failure Recovery Demo Path
 
