@@ -985,6 +985,140 @@ top-level preview URL.
 
 ---
 
+## P2-5: Add GitHub Actions CI
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `.github/workflows/ci.yml` | Added the pull request and push CI workflow. |
+| `docs/project-state.md` | Recorded the P2-5 CI state. |
+| `docs/change-log.md` | Recorded this P2-5 implementation. |
+
+No app code, backend code, frontend code, adapter code, test behavior,
+deployment, Docker, or production release workflow changed for P2-5.
+
+### Diagnosis
+
+Manual validation repeatedly uses:
+
+```text
+pnpm check
+pnpm test
+git diff --check
+```
+
+The API check and test scripts expect a repository-local Python virtualenv at
+`.venv/bin/python`, so CI needs to create that virtualenv before invoking the
+existing pnpm scripts.
+
+### What Changed
+
+Added one minimal GitHub Actions workflow that runs on `pull_request` and
+`push`. It checks out the repo, installs pnpm 10.33.4, sets up Node.js 22 and
+Python 3.11, installs JavaScript dependencies with `pnpm install
+--frozen-lockfile`, installs API dependencies into `.venv`, then runs:
+
+```text
+pnpm check
+pnpm test
+git diff --check
+```
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (123 tests: 25 web + 98 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- The workflow has been validated locally by syntax inspection and the local
+  validation commands below; it has not yet run on GitHub Actions.
+
+---
+
+## Claude Code Adapter Feasibility Notes
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/claude-code-adapter-notes.md` | Added local Claude Code CLI feasibility findings and future adapter design notes. |
+| `docs/change-log.md` | Recorded this documentation-only investigation. |
+
+No app code, backend behavior, frontend behavior, adapter implementation, test
+behavior, or runtime configuration changed.
+
+### What Was Inspected
+
+Adapter architecture:
+
+- `apps/api/app/adapters.py`
+- `apps/api/app/codex_adapter.py`
+- `apps/api/app/scripted_mock.py`
+- `apps/api/app/main.py`
+
+Safe Claude CLI commands:
+
+```bash
+which claude
+claude --version
+claude --help
+claude -p --help
+claude auth --help
+claude auth status
+```
+
+No real prompt execution or file mutation was run.
+
+### Result
+
+Claude Code CLI is installed and authenticated on this machine:
+
+- Binary: `/Users/luotianhang/.npm-global/bin/claude`
+- Version: `2.1.143 (Claude Code)`
+- Auth status: `loggedIn: true`, `authMethod: api_key_helper`
+
+Help output indicates non-interactive execution is available with
+`--print`/`-p`, machine-readable output is available with
+`--output-format json` or `--output-format stream-json`, and instructions can
+be passed as a positional prompt. No direct `--cd` option was observed, so a
+future adapter should set subprocess `cwd` to `Session.worktreePath`.
+
+Tentative future command shape:
+
+```bash
+claude --print --output-format stream-json --include-partial-messages \
+  --permission-mode dontAsk --allowedTools "Read,Edit,MultiEdit" \
+  --no-session-persistence --max-budget-usd <small-budget> "<instruction>"
+```
+
+Run with subprocess `cwd=<session_worktree_path>`.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- Real `stream-json` output was not captured.
+- No quota-consuming command was run.
+- Usage-limit and unauthenticated failure patterns still need real/fake-process
+  test coverage before implementation.
+- Permission mode and tool allowlist behavior need a bounded smoke before any
+  write-capable adapter claim.
+
+---
+
 ## P2 Roadmap Planning
 
 **Date:** 2026-05-17

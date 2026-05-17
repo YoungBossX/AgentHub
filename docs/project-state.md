@@ -361,3 +361,23 @@ Known P2-4 limits:
 - Browser verification confirmed the iframe URL and visible panel refresh, but
   direct DOM inspection inside the cross-origin iframe is not supported by the
   current in-app browser runtime.
+
+### P2-5 GitHub Actions CI Added
+
+P2-5 added a minimal GitHub Actions workflow for pull requests and pushes. The
+workflow mirrors the repeated local validation path:
+
+```text
+pnpm install --frozen-lockfile -> Python .venv API dependency install -> pnpm check -> pnpm test -> git diff --check
+```
+
+CI uses:
+
+- Node.js 22
+- pnpm 10.33.4, matching `package.json`
+- Python 3.11
+- the existing repo scripts, including the `.venv/bin/python`-based API check
+  and test wrappers
+
+No app code, test behavior, deployment, Docker, or production release workflow
+was added.
