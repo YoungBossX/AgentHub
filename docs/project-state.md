@@ -15,6 +15,33 @@ Preserve this path when making P1 changes.
 
 ## P1 Status
 
+### P1-10 Frozen Demo Baseline
+
+P1 is frozen as a stable local demo baseline.
+
+Frozen path:
+
+```text
+real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
+```
+
+The acceptance checklist lives in `docs/p1-acceptance-checklist.md`.
+
+Frozen baseline evidence is the P1-9 clean-start rehearsal:
+
+- Session: `666fa20b-6f54-4342-b844-39594b903da3`
+- TaskRun: `b1882cda-47f6-4035-b12d-ba3d72d67939`
+- Diff artifact: `c832b249-c2c3-444c-ac97-6b3e811e5c70`
+- Preview: `b363eb09-7251-4b8e-a5b4-3c59775b58b7`
+- Deployment: `d97e447a-c8d0-41b7-95f8-e40008d83eb0`
+- Provider/status: `mock`, `ready`
+
+Fallback path remains available:
+
+```text
+forced Codex failure -> ScriptedMockAdapter fallback -> real diff -> healthy Vite preview -> mock deploy card
+```
+
 ### P1-6 Verified
 
 P1-6 verified:

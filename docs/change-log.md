@@ -915,3 +915,85 @@ forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock 
 - Real Codex execution remains dependent on local Codex quota and CLI stability.
 - P1-9 did not reset the SQLite database or delete existing worktrees; it
   restarted backend/frontend processes and created a fresh session from the UI.
+
+---
+
+## P1-10: Demo Freeze and Final Acceptance Checklist
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p1-acceptance-checklist.md` | Added the final frozen P1 acceptance checklist. |
+| `docs/project-state.md` | Marked the P1 demo baseline as frozen and linked the checklist. |
+| `docs/change-log.md` | Recorded this P1-10 freeze result. |
+
+### What Changed
+
+P1 is now documented as a frozen local demo baseline for:
+
+```text
+real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
+```
+
+The new acceptance checklist captures completed capabilities, concrete evidence,
+validation status, known unverified items, known risks, fallback-based P0
+status, explicitly out-of-scope items, and recommended next phase.
+
+No app code, backend code, adapter code, tests, preview/deploy services, or
+dependencies changed for P1-10.
+
+### Why
+
+P1-9 proved the demo is reproducible from a clean backend/frontend start. P1-10
+freezes that state so future work has a stable demo baseline and a clear record
+of what is verified, what remains risky, and what stays out of scope.
+
+### Frozen Baseline
+
+Frozen P1 path:
+
+```text
+real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
+```
+
+Frozen evidence comes from the P1-9 clean-start rehearsal:
+
+- Session: `666fa20b-6f54-4342-b844-39594b903da3`
+- TaskRun: `b1882cda-47f6-4035-b12d-ba3d72d67939`
+- Diff artifact: `c832b249-c2c3-444c-ac97-6b3e811e5c70`
+- Preview: `b363eb09-7251-4b8e-a5b4-3c59775b58b7`
+- Deployment: `d97e447a-c8d0-41b7-95f8-e40008d83eb0`
+- Provider/status: `mock`, `ready`
+
+Fallback-based P0 path remains preserved:
+
+```text
+forced Codex failure -> ScriptedMockAdapter fallback -> real diff -> healthy Vite preview -> mock deploy card
+```
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
+| `git diff --check` | Pass |
+
+### Known Unverified Items
+
+- P1-9 did not reset the SQLite database or delete existing worktrees.
+- Fallback-based P0 was not manually re-run during P1-9 because real Codex
+  completed; it remains covered by tests and prior verification.
+- Natural-language second-change orchestration remains a documented caveat.
+- Approval card UI was not part of the frozen P1 judge path.
+
+### Known Risks
+
+- Real Codex execution depends on local CLI availability, authentication,
+  quota, and CLI stability.
+- Codex run duration can vary, so the ScriptedMockAdapter fallback should
+  remain ready for demos.
+- Preview health depends on setup-time demo dependencies.
