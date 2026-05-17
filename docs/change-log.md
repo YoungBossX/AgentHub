@@ -910,6 +910,81 @@ quota dependency during this task.
 
 ---
 
+## P2-4: Verify Browser Preview Iframe Refresh After Second Change
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/project-state.md` | Recorded P2-4 browser rehearsal evidence and current limitations. |
+| `docs/demo-script.md` | Replaced the stale second-change caveat with the verified narrow follow-up flow. |
+| `docs/change-log.md` | Recorded this P2-4 verification result. |
+
+No app code, backend code, frontend code, adapter code, tests, or dependencies
+changed for P2-4.
+
+### Diagnosis
+
+The preview refresh path already had the needed UI behavior:
+
+- `Start preview` creates a new backend preview for the selected TaskRun and
+  sets that preview as the right-side panel iframe.
+- `Open preview` selects a persisted preview card for the right-side panel.
+- `Refresh preview` re-reads persisted preview state for the selected TaskRun
+  and bumps the iframe key when the selected preview belongs to that run.
+
+The remaining P2-3 gap was verification, not missing product code. Persisted
+preview cards from earlier sessions can outlive their local Vite processes, so
+P2-4 used fresh `Start preview` actions during the browser rehearsal.
+
+### Manual Verification
+
+Verified through browser UI interaction:
+
+```text
+initial task -> ScriptedMockAdapter fallback -> first diff -> Start preview -> iframe at first preview URL -> follow-up text change -> ScriptedMockAdapter fallback -> second diff -> Start preview -> iframe refreshed to second preview URL
+```
+
+Evidence:
+
+- Session: `cb653482-c31a-48da-a8ee-31ed8cd367e3`
+- Initial frontend task: `5f2c26c2-6511-4b8f-b359-b9de5c9e5a50`
+- Initial fallback TaskRun: `cfeff131-8cbf-4bcc-95b9-1aa84dbf5130`
+- Initial diff artifact: `737085ee-7b73-4715-8303-df64b3a14132`
+- Initial preview: `c077ba2d-7bd4-4c49-8e0c-313e2ecd641c`
+- Initial preview URL: `http://127.0.0.1:61087`
+- Follow-up request: `把按钮文案改成 Sign in`
+- Follow-up task: `0f9ff26c-8216-4489-b71a-3628c1a7ab7a`
+- Follow-up fallback TaskRun: `f8d78651-5347-43de-8553-12b29c8c3647`
+- Follow-up diff artifact: `b48b3b33-feb2-4313-805d-89811a5cb51c`
+- Follow-up preview: `44ea9495-04b5-419a-ba64-0701eaa83ec8`
+- Follow-up preview URL: `http://127.0.0.1:61292`
+
+The right-side preview panel iframe changed from `http://127.0.0.1:61087` to
+`http://127.0.0.1:61292`. The follow-up preview was healthy, and the same URL
+opened as a top-level page showed the updated `Sign in` button. Direct DOM
+inspection inside the cross-origin iframe is not supported by the current
+in-app browser runtime, so iframe content was verified visually and through the
+top-level preview URL.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (123 tests: 25 web + 98 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- Real Codex was not used for P2-4 execution; the browser rehearsal used the
+  reliable forced-failure plus `ScriptedMockAdapter` fallback path.
+- Broad arbitrary natural-language editing remains out of scope.
+
+---
+
 ## P2 Roadmap Planning
 
 **Date:** 2026-05-17

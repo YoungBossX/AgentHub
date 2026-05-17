@@ -316,3 +316,48 @@ Known P2-3 limits:
 - Browser iframe refresh after the second change was not separately rehearsed.
 - Broad arbitrary natural-language code editing remains out of scope; P2-3 is
   intentionally limited to deterministic button/title text changes.
+
+### P2-4 Browser Preview Iframe Refresh Verified
+
+P2-4 verified the remaining second-change preview gap through browser UI
+interaction. No product code changes were required.
+
+Verified path:
+
+```text
+browser UI initial task -> ScriptedMockAdapter fallback -> first diff -> Start preview -> iframe at first preview URL -> natural-language follow-up -> ScriptedMockAdapter fallback -> second diff -> Start preview -> iframe refreshed to second preview URL
+```
+
+P2-4 browser rehearsal evidence:
+
+- Session: `cb653482-c31a-48da-a8ee-31ed8cd367e3`
+- Session worktree:
+  `/Users/luotianhang/Desktop/agenthub/.worktrees/0474f8b8-499e-4117-afab-c780bd562446/cb653482-c31a-48da-a8ee-31ed8cd367e3`
+- Initial frontend task: `5f2c26c2-6511-4b8f-b359-b9de5c9e5a50`
+- Initial fallback TaskRun: `cfeff131-8cbf-4bcc-95b9-1aa84dbf5130`
+- Initial diff artifact: `737085ee-7b73-4715-8303-df64b3a14132`
+- Initial preview: `c077ba2d-7bd4-4c49-8e0c-313e2ecd641c`
+- Initial preview URL: `http://127.0.0.1:61087`
+- Initial preview health: `healthy`
+- Follow-up request: `把按钮文案改成 Sign in`
+- Follow-up task: `0f9ff26c-8216-4489-b71a-3628c1a7ab7a`
+- Follow-up fallback TaskRun: `f8d78651-5347-43de-8553-12b29c8c3647`
+- Follow-up diff artifact: `b48b3b33-feb2-4313-805d-89811a5cb51c`
+- Follow-up preview: `44ea9495-04b5-419a-ba64-0701eaa83ec8`
+- Follow-up preview URL: `http://127.0.0.1:61292`
+- Follow-up preview health: `healthy`
+
+The right-side preview panel changed from the initial iframe URL
+`http://127.0.0.1:61087` to the follow-up iframe URL
+`http://127.0.0.1:61292`. The in-app browser cannot inspect cross-origin iframe
+DOM directly, so the visible panel refresh was verified by screenshot and the
+follow-up preview content was verified by opening `http://127.0.0.1:61292` as a
+top-level page, where the DOM and screenshot showed the `Sign in` button.
+
+Known P2-4 limits:
+
+- Real Codex was not used for the P2-4 execution portion; the rehearsal used
+  the reliable forced-failure plus `ScriptedMockAdapter` fallback path.
+- Browser verification confirmed the iframe URL and visible panel refresh, but
+  direct DOM inspection inside the cross-origin iframe is not supported by the
+  current in-app browser runtime.

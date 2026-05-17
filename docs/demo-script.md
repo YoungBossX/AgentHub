@@ -184,17 +184,35 @@ The demo app has a deterministic button target:
 data-agenthub-target="primary-action-button"
 ```
 
-The intended follow-up request is:
+After the initial task has produced a diff and preview, send a narrow follow-up
+request in the same session, for example:
 
 ```text
-make the button text more friendly
+把按钮文案改成 Sign in
 ```
 
-Current caveat: a polished natural-language follow-up orchestration path is not
-documented as complete in this checkout. If a later task wires this into the UI,
-use the same session so the TaskRun records a new `baseRef`, the session
-worktree keeps prior changes, and the preview can be refreshed from the preview
-card.
+Supported demo-safe follow-up examples include:
+
+```text
+change the primary button text to Sign in
+把标题改成 Welcome back
+@orchestrator change the primary button text to Sign in
+```
+
+Expected result:
+
+1. The orchestrator creates one focused frontend follow-up task.
+2. The task reuses the same session worktree.
+3. Run it with local Codex when available, or use the reliable forced-failure
+   plus `ScriptedMockAdapter` fallback path.
+4. A second diff card appears for `apps/demo/src/App.tsx`.
+5. Click `Start preview` on the follow-up task.
+6. The right-side iframe refreshes to the new preview URL and the demo app shows
+   the updated button or heading text.
+
+Current caveat: broad arbitrary natural-language code editing remains out of
+scope. The supported follow-up path is intentionally limited to deterministic
+button and heading text changes.
 
 ## Manual API References
 
