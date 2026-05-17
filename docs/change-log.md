@@ -1,5 +1,52 @@
 # AgentHub Change Log
 
+## Frontend Design Handoff Brief
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/frontend-design-brief.md` | Added a Gemini handoff brief documenting current frontend capabilities, UI surfaces, flows, architecture, API constraints, design problems, and implementation constraints. |
+| `docs/change-log.md` | Recorded this documentation-only handoff task. |
+
+No app code, backend code, frontend code, adapter code, tests, or dependencies
+changed.
+
+### What Changed
+
+Created a documentation-only frontend design brief so Gemini can propose a
+better AgentHub UI while staying inside verified P1 capabilities and current API
+constraints.
+
+The brief records:
+
+- AgentHub's IM-style coding-agent product positioning.
+- Verified P1 direct Codex and fallback capabilities.
+- Current session, chat, task, run, diff, preview, panel, deploy, and health UI
+  surfaces.
+- Main success, fallback, and reload/recovery flows.
+- Current Next.js frontend architecture, API client functions, data types, state
+  fetching, and SSE usage.
+- Backend/API constraints Gemini must not exceed.
+- Objective current UI weaknesses and design requirements for Gemini.
+- Implementation constraints for a future Codex frontend pass.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- This task did not redesign or implement UI changes.
+- Approval card UI remains outside the frozen P1 judge path and is documented
+  as not present in the current frontend.
+
+---
+
 ## P1-1: Direct UI Start TaskRun Dispatch Fix
 
 **Date:** 2026-05-16
