@@ -268,3 +268,51 @@ Manual browser verification confirmed the `product_confirmation` approval card
 rendered and the Approve action moved the run from `waiting_approval` to
 `queued`. The `security_approval` card rendered as well; denial behavior is
 covered by backend/API tests and frontend button wiring tests.
+
+### P2-3 Natural-Language Second-Change Orchestration Verified
+
+P2-3 added deterministic follow-up planning for simple UI text-change requests
+inside an existing session. Supported demo-safe examples include:
+
+- `change the primary button text to Sign in`
+- `把按钮文案改成 Sign in`
+- `把标题改成 Welcome back`
+
+Verified path:
+
+```text
+initial plan -> fallback run -> first diff/preview -> natural-language follow-up -> follow-up frontend task -> fallback run -> second diff/preview
+```
+
+P2-3 rehearsal evidence:
+
+- Session: `d65fc331-39f2-432b-9828-89723b9f3c32`
+- Session worktree:
+  `/Users/luotianhang/Desktop/agenthub/.worktrees/0474f8b8-499e-4117-afab-c780bd562446/d65fc331-39f2-432b-9828-89723b9f3c32`
+- Initial frontend task: `3f7f6f65-9f72-4add-ab0a-c9a944dc3b23`
+- Initial fallback TaskRun: `607ad185-8eb2-4158-8219-e124880e68a7`
+- Initial diff artifact: `c83c21d5-dad8-4d56-b0b8-cf1bc9de2bc3`
+- Initial preview: `511ee0ca-e0dc-4054-8775-e487e81f7303`
+- Initial preview health: `healthy`
+- Follow-up request: `把按钮文案改成 Sign in`
+- Follow-up task: `3ce6aa3d-97bf-4e16-b85a-33676e62bef2`
+- Follow-up task title: `Change primary button text to Sign in`
+- Follow-up task target: `primary_action_button_text`
+- Follow-up task target text: `Sign in`
+- Follow-up fallback TaskRun: `7a4f5763-ebbe-4d51-a207-b36b1fff7091`
+- Follow-up diff artifact: `f1ca4318-0b41-48a8-9b27-acb957448734`
+- Follow-up preview: `551aa58f-ab73-49f3-96c2-e6db8994bdd6`
+- Follow-up preview health: `healthy`
+- Total tasks after follow-up: 4
+
+The follow-up run reused the same session worktree and produced a second diff
+artifact for `apps/demo/src/App.tsx`. The preview refresh after the second
+change was verified through the backend preview API returning a healthy preview.
+
+Known P2-3 limits:
+
+- Execution rehearsal used the `ScriptedMockAdapter` fallback path, not real
+  Codex, to avoid quota dependency during this task.
+- Browser iframe refresh after the second change was not separately rehearsed.
+- Broad arbitrary natural-language code editing remains out of scope; P2-3 is
+  intentionally limited to deterministic button/title text changes.

@@ -10,8 +10,10 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
 
 from app.adapters import AgentRunRequest, run_adapter_event_stream
+from app.diffs import collect_task_run_diff
 from app.models import Agent, Session, Task, TaskRun, Workspace
 from app.scripted_mock import ScriptedMockAdapter
+from app.task_runs import create_task_run as create_lifecycle_task_run
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -151,14 +153,74 @@ async def test_scripted_mock_followup_updates_primary_button_text(
 ) -> None:
     task_run = create_task_run(db, demo_worktree)
     adapter = ScriptedMockAdapter()
-    request = run_request(task_run, "Make the button text more friendly.")
+    request = run_request(task_run, 'Change the primary button text to "Sign in".')
 
     await run_adapter_event_stream(db, adapter, request)
 
     app_source = (demo_worktree / "apps/demo/src/App.tsx").read_text()
     assert "data-agenthub-target=\"primary-action-button\"" in app_source
-    assert "Let's get started" in app_source
+    assert "Sign in" in app_source
     assert ">Continue<" not in app_source
+
+
+@pytest.mark.anyio
+async def test_scripted_mock_followup_updates_demo_heading_text(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run = create_task_run(db, demo_worktree)
+    adapter = ScriptedMockAdapter()
+    request = run_request(task_run, 'Change the demo heading text to "Welcome back".')
+
+    await run_adapter_event_stream(db, adapter, request)
+
+    app_source = (demo_worktree / "apps/demo/src/App.tsx").read_text()
+    assert '<h1 id="demo-heading">Welcome back</h1>' in app_source
+    assert "Launchpad for a visible coding-agent change" not in app_source
+
+
+@pytest.mark.anyio
+async def test_scripted_mock_followup_run_collects_second_diff_in_same_worktree(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    first_run = create_task_run(db, demo_worktree)
+    adapter = ScriptedMockAdapter()
+    await run_adapter_event_stream(
+        db,
+        adapter,
+        run_request(first_run, "Build a login page for the demo app."),
+    )
+    first_diff = collect_task_run_diff(db, first_run.id)
+
+    first_task = db.get(Task, first_run.task_id)
+    followup_task = Task(
+        session_id=first_task.session_id,
+        title="Change primary button text to Sign in",
+        intent_type="frontend_change",
+        assigned_agent_id=first_run.agent_id,
+    )
+    db.add(followup_task)
+    db.commit()
+    db.refresh(followup_task)
+    followup_run = create_lifecycle_task_run(
+        db,
+        followup_task.id,
+        adapter_type="scripted_mock",
+    )
+
+    await run_adapter_event_stream(
+        db,
+        adapter,
+        run_request(followup_run, 'Change the primary button text to "Sign in".'),
+    )
+    followup_diff = collect_task_run_diff(db, followup_run.id)
+
+    assert first_run.worktree_path == followup_run.worktree_path
+    assert first_diff.task_run_id == first_run.id
+    assert followup_diff.task_run_id == followup_run.id
+    assert "apps/demo/src/App.tsx" in followup_diff.changed_files
+    assert "Sign in" in followup_diff.patch_text
 
 
 @pytest.mark.anyio

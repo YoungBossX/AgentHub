@@ -128,6 +128,58 @@ def test_agent_run_request_bounds_frontend_login_demo_instruction(
     assert request.instruction != "Build login page"
 
 
+def test_agent_run_request_bounds_followup_button_instruction(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.title = "Change primary button text to Sign in"
+        task.plan_json = json.dumps(
+            {
+                "target": "primary_action_button_text",
+                "targetText": "Sign in",
+                "files": ["apps/demo/src/App.tsx"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert 'data-agenthub-target="primary-action-button"' in request.instruction
+    assert '"Sign in"' in request.instruction
+    assert "do not read the OpenSpec change" in request.instruction
+    assert "dependency install" in request.instruction
+
+
+def test_agent_run_request_bounds_followup_heading_instruction(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.title = "Change demo heading text to Welcome back"
+        task.plan_json = json.dumps(
+            {
+                "target": "demo_heading_text",
+                "targetText": "Welcome back",
+                "files": ["apps/demo/src/App.tsx"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert 'id="demo-heading"' in request.instruction
+    assert '"Welcome back"' in request.instruction
+    assert "do not read the OpenSpec change" in request.instruction
+    assert "dependency install" in request.instruction
+
+
 def test_transition_helper_rejects_unknown_states(client: TestClient) -> None:
     run = client.post(f"/tasks/{task_id()}/runs").json()
 

@@ -9,7 +9,7 @@ from sqlmodel import SQLModel, create_engine, select
 
 from app.main import app, get_db
 from app.models import Agent, Message, Session, Task, Workspace
-from app.planning import MentionParseError, parse_mentions
+from app.planning import MentionParseError, parse_followup_change, parse_mentions
 
 
 @pytest.fixture
@@ -143,3 +143,78 @@ def test_disabled_mention_returns_user_facing_parse_error(client: TestClient) ->
 
     assert response.status_code == 400
     assert "disabled" in response.json()["detail"]
+
+
+def test_parse_followup_change_supports_english_and_chinese_copy_requests() -> None:
+    button = parse_followup_change("change the primary button text to Sign in")
+    chinese_button = parse_followup_change("把按钮文案改成 Continue")
+    title = parse_followup_change("把标题改成 Welcome back")
+
+    assert button is not None
+    assert button.target == "primary_action_button_text"
+    assert button.target_text == "Sign in"
+    assert chinese_button is not None
+    assert chinese_button.target == "primary_action_button_text"
+    assert chinese_button.target_text == "Continue"
+    assert title is not None
+    assert title.target == "demo_heading_text"
+    assert title.target_text == "Welcome back"
+
+
+def test_followup_message_creates_single_frontend_task_in_same_session(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    first_response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@orchestrator build a login page for the demo app"},
+    )
+    followup_response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "把按钮文案改成 Sign in"},
+    )
+
+    assert first_response.status_code == 201
+    assert followup_response.status_code == 201
+
+    task_response = client.get(f"/sessions/{session_id}/tasks")
+    assert task_response.status_code == 200
+    tasks = task_response.json()
+    followup = tasks[-1]
+
+    assert len(tasks) == 4
+    assert followup["sessionId"] == session_id
+    assert followup["assignedAgentRole"] == "frontend"
+    assert followup["intentType"] == "frontend_change"
+    assert followup["title"] == "Change primary button text to Sign in"
+    assert followup["planJson"]["target"] == "primary_action_button_text"
+    assert followup["planJson"]["targetText"] == "Sign in"
+    assert followup["dependsOnTaskIds"] == [tasks[-2]["id"]]
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message).where(
+                Message.session_id == session_id,
+                Message.sender_type == "orchestrator",
+            )
+        ).all()
+
+    assert len(messages) == 2
+    assert "focused follow-up task" in messages[-1].content_md
+
+
+def test_followup_message_without_existing_plan_is_ignored(client: TestClient) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "change the primary button text to Sign in"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []

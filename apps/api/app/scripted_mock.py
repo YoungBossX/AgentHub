@@ -188,8 +188,12 @@ class ScriptedMockAdapter(AgentAdapter):
         instruction = request.instruction.lower()
         script = str(request.plan_context.get("script") or "").lower()
 
-        if "button" in instruction or "button" in script:
-            updated = _replace_primary_button_text(source)
+        target_text = _target_text_from(request)
+        if "heading" in instruction or "title" in instruction or "heading" in script:
+            updated = _replace_demo_heading_text(source, target_text or "Welcome back")
+            mutation = "demo_heading_copy"
+        elif "button" in instruction or "button" in script:
+            updated = _replace_primary_button_text(source, target_text or "Let's get started")
             mutation = "primary_button_copy"
         else:
             updated = _replace_login_slot(source)
@@ -235,7 +239,7 @@ def _replace_login_slot(source: str) -> str:
     return updated
 
 
-def _replace_primary_button_text(source: str) -> str:
+def _replace_primary_button_text(source: str, target_text: str) -> str:
     if PRIMARY_BUTTON_TARGET not in source:
         raise ValueError("Missing primary action deterministic target.")
 
@@ -247,10 +251,42 @@ def _replace_primary_button_text(source: str) -> str:
         r"(\n\s*</button>)",
         re.DOTALL,
     )
-    updated, count = pattern.subn(r"\1            Let's get started\2", source, count=1)
+    updated, count = pattern.subn(
+        rf"\1            {_escape_replacement(target_text)}\2",
+        source,
+        count=1,
+    )
     if count != 1:
         raise ValueError("Could not replace primary action deterministic target.")
     return updated
+
+
+def _replace_demo_heading_text(source: str, target_text: str) -> str:
+    pattern = re.compile(r'(<h1\s+id="demo-heading"\s*>).*?(</h1>)', re.DOTALL)
+    updated, count = pattern.subn(
+        rf"\1{_escape_replacement(target_text)}\2",
+        source,
+        count=1,
+    )
+    if count != 1:
+        raise ValueError("Could not replace demo heading.")
+    return updated
+
+
+def _target_text_from(request: AgentRunRequest) -> Optional[str]:
+    target_text = request.plan_context.get("targetText")
+    if isinstance(target_text, str) and target_text.strip():
+        return target_text.strip()
+
+    match = re.search(r'to\s+"([^"]+)"', request.instruction)
+    if match:
+        return match.group(1).strip()
+
+    return None
+
+
+def _escape_replacement(value: str) -> str:
+    return value.replace("\\", r"\\")
 
 
 def _event(event_type: str, task_run_id: str, payload: dict) -> AgentEvent:

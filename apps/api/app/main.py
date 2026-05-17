@@ -340,6 +340,35 @@ def instruction_for_task(task: Task) -> str:
             "commands."
         )
 
+    if (
+        task.intent_type == "frontend_change"
+        and isinstance(plan, dict)
+        and plan.get("target") == "primary_action_button_text"
+    ):
+        target_text = str(plan.get("targetText") or "").strip()
+        return (
+            "In apps/demo/src/App.tsx, find the element with "
+            'data-agenthub-target="primary-action-button" and change only its '
+            f'visible button text to "{target_text}". Keep all deterministic '
+            "data-agenthub-target attributes intact, do not edit unrelated "
+            "files, do not read the OpenSpec change, and do not run setup or "
+            "dependency install commands."
+        )
+
+    if (
+        task.intent_type == "frontend_change"
+        and isinstance(plan, dict)
+        and plan.get("target") == "demo_heading_text"
+    ):
+        target_text = str(plan.get("targetText") or "").strip()
+        return (
+            "In apps/demo/src/App.tsx, find the h1 with id=\"demo-heading\" "
+            f'and change only its visible heading text to "{target_text}". '
+            "Keep deterministic data-agenthub-target attributes intact, do "
+            "not edit unrelated files, do not read the OpenSpec change, and "
+            "do not run setup or dependency install commands."
+        )
+
     return task.title
 
 

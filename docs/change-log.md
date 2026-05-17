@@ -831,6 +831,85 @@ forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock 
 
 ---
 
+## P2-3: Natural-Language Second-Change Orchestration
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Added deterministic follow-up intent parsing and one-task frontend follow-up planning. |
+| `apps/api/app/main.py` | Added bounded follow-up task instructions for primary button and demo heading text changes. |
+| `apps/api/app/scripted_mock.py` | Extended the fallback adapter to apply deterministic button and heading text updates. |
+| `apps/api/tests/test_planning.py` | Added follow-up parsing and planning coverage. |
+| `apps/api/tests/test_task_runs.py` | Added task-run instruction coverage for follow-up button and heading changes. |
+| `apps/api/tests/test_scripted_mock_adapter.py` | Added fallback mutation and second-diff continuity coverage. |
+| `docs/project-state.md` | Recorded P2-3 verified state and rehearsal evidence. |
+| `docs/change-log.md` | Recorded this P2-3 implementation. |
+
+### Root Cause
+
+Before P2-3, planning only recognized the initial
+`@orchestrator build a login page for the demo app` flow. Later messages in the
+same session, such as `把按钮文案改成 Sign in`, did not create a focused
+follow-up task. The fallback adapter also used fixed copy for its button-update
+path, so it could not deterministically apply the requested second-change text.
+
+### What Changed
+
+P2-3 adds a small rule/template layer for demo-safe follow-up text changes:
+
+- primary button text changes, including English and Chinese phrasing
+- demo heading/title text changes, including English and Chinese phrasing
+
+When an existing session already has tasks, a supported follow-up request
+creates one frontend task assigned to the seeded frontend agent. The task
+depends on the latest existing task, keeps `planJson` bounded to
+`apps/demo/src/App.tsx`, and reuses the existing session worktree through the
+normal TaskRun lifecycle.
+
+No general autonomous planner, arbitrary natural-language editing, new adapter,
+preview/deploy redesign, frontend redesign, or provider work was added.
+
+### Manual Verification
+
+Used the local API with an isolated rehearsal session:
+
+- Session: `d65fc331-39f2-432b-9828-89723b9f3c32`
+- Initial frontend task: `3f7f6f65-9f72-4add-ab0a-c9a944dc3b23`
+- Initial fallback TaskRun: `607ad185-8eb2-4158-8219-e124880e68a7`
+- Initial diff artifact: `c83c21d5-dad8-4d56-b0b8-cf1bc9de2bc3`
+- Initial preview: `511ee0ca-e0dc-4054-8775-e487e81f7303`
+- Follow-up request: `把按钮文案改成 Sign in`
+- Follow-up task: `3ce6aa3d-97bf-4e16-b85a-33676e62bef2`
+- Follow-up fallback TaskRun: `7a4f5763-ebbe-4d51-a207-b36b1fff7091`
+- Follow-up diff artifact: `f1ca4318-0b41-48a8-9b27-acb957448734`
+- Follow-up preview: `551aa58f-ab73-49f3-96c2-e6db8994bdd6`
+- Follow-up preview health: `healthy`
+
+The follow-up task reused the same session worktree, produced a second diff for
+`apps/demo/src/App.tsx`, and the refreshed preview became healthy. Execution was
+verified with `ScriptedMockAdapter` fallback rather than real Codex to avoid
+quota dependency during this task.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (123 tests: 25 web + 98 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- P2-3 intentionally supports only narrow button/title text-change requests.
+- Real Codex execution of the follow-up task was not rehearsed in this task.
+- Browser iframe refresh after the second change was not separately rehearsed;
+  preview refresh was verified through the backend preview API.
+
+---
+
 ## P2 Roadmap Planning
 
 **Date:** 2026-05-17
