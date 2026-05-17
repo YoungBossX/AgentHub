@@ -831,6 +831,166 @@ forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock 
 
 ---
 
+## Minimal Claude Code Adapter
+
+**Date:** 2026-05-17
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/claude_code_adapter.py` | Added a minimal Claude Code adapter using subprocess cwd isolation and stream-json parsing. |
+| `apps/api/app/main.py` | Added `claude_code` adapter dispatch support. |
+| `apps/api/app/guardrails.py` | Allowed bounded Claude CLI commands through the existing command guardrail path. |
+| `apps/api/tests/test_claude_code_adapter.py` | Added fake-runner tests for command shape, event streaming, persistence, and normalized failures. |
+| `apps/api/tests/test_guardrails.py` | Added command-policy coverage for the Claude Code CLI shape. |
+| `docs/project-state.md` | Recorded the current Claude Code adapter status and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Diagnosis
+
+The existing adapter contract and `run_adapter_event_stream` persistence flow
+already support another local CLI adapter. The missing pieces were a
+Claude-specific subprocess runner, stream-json event mapper, error-code
+normalization, command guardrail allowance, and dispatch support for
+`adapterType: claude_code`.
+
+### What Changed
+
+Added `ClaudeCodeAdapter` as a sibling of `CodexAdapter`. It builds the
+documented command shape:
+
+```bash
+claude --print --verbose --output-format stream-json --include-partial-messages \
+  --permission-mode dontAsk --allowedTools Read,Edit,MultiEdit \
+  --no-session-persistence --max-budget-usd 1.00 "<instruction>"
+```
+
+The process is started with `cwd=<session_worktree_path>`. The adapter parses
+stdout incrementally and maps Claude Code events to normalized `task.state`,
+`message.delta`, `completed`, and `error` events. It normalizes missing CLI,
+auth required, usage limit, interruption, timeout, parse error, guardrail
+blocking, and non-zero exit failures.
+
+No frontend UI, provider marketplace, deployment behavior, Codex behavior, or
+ScriptedMockAdapter fallback behavior changed.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (133 tests: 25 web + 108 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- Tests use fake process runners only; CI and local tests do not call real
+  Claude Code.
+- No real Claude mutation was run or claimed.
+- Real Claude `stream-json` output, permission behavior, auth failure text, and
+  usage-limit text still need an explicitly approved smoke before demo use.
+
+---
+
+## P2-7: Explicit ClaudeCodeAdapter Smoke Rehearsal
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/claude_code_adapter.py` | Added the required `--verbose` flag for real Claude `--output-format stream-json` execution and mapped real `stream_event` text deltas. |
+| `apps/api/app/guardrails.py` | Required `--verbose` in the bounded Claude Code command allowlist shape. |
+| `apps/api/tests/test_claude_code_adapter.py` | Updated command-shape coverage for `--verbose` and added stream-event text/thinking delta coverage. |
+| `apps/api/tests/test_guardrails.py` | Updated command-policy coverage for `--verbose`. |
+| `docs/project-state.md` | Recorded the real Claude smoke evidence and limitations. |
+| `docs/change-log.md` | Recorded this P2-7 rehearsal. |
+
+### Diagnosis
+
+The fake-runner adapter implementation was structurally correct, but the first
+real Claude Code smoke revealed one concrete CLI requirement:
+
+```text
+Error: When using --print, --output-format=stream-json requires --verbose
+```
+
+That failure happened before any file mutation. The adapter and guardrail
+command shape were updated with the smallest possible fix: add `--verbose`.
+The successful smoke also showed that verbose output includes low-level
+`stream_event` records, including thinking deltas, so the adapter now maps text
+deltas and filters thinking deltas instead of preserving them as raw messages.
+
+### Smoke Method
+
+Created a detached disposable worktree:
+
+```text
+/Users/luotianhang/Desktop/agenthub/.worktrees/claude-smoke-96d46af7-dc74-4d71-a062-c9be42cd1332
+```
+
+Then ran one tiny real `ClaudeCodeAdapter` instruction through the backend
+adapter flow:
+
+```text
+change only the primary action button text in apps/demo/src/App.tsx to "Claude smoke"
+```
+
+No broad prompt, dependency install, browser UI flow, or repeated mutation
+loop was run.
+
+### Result
+
+First attempt:
+
+- TaskRun: `c66f1f86-2407-487a-b18f-cf01abd3a7f3`
+- Final state: `failed`
+- Error code: `CLAUDE_CODE_EXIT_ERROR`
+- Error message:
+  `Error: When using --print, --output-format=stream-json requires --verbose`
+- File mutation: none
+
+Second attempt after the `--verbose` fix:
+
+- Session: `4cf32311-1a9b-4eda-9ec3-ab0d010691fc`
+- Task: `a5557a9a-99de-4962-9d25-86ed548ea7ca`
+- TaskRun: `095ae634-c188-4ffc-a502-53a500d20e14`
+- AdapterRun: `claude-code-94cc6074-f15d-4290-b050-c2383363f44d`
+- Final state: `completed`
+- Persisted adapter events: 337
+- Diff artifact: `95bb1d0b-12a3-4a0e-be3e-c07cf1bf79d4`
+- Diff: `9f69bc39-6b32-42ca-8a86-cf9fbfa62343`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff stats: 1 file changed, 1 addition, 1 deletion
+
+Direct git diff in the disposable worktree showed only:
+
+```diff
+-            Continue
++            Claude smoke
+```
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (134 tests: 25 web + 109 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- This was a direct backend smoke, not full browser UI execution.
+- Only one tiny real Claude mutation was verified.
+- Claude `stream-json` emits verbose low-level `stream_event` records; text
+  deltas and thinking-delta filtering are covered, but broader stream event
+  shapes remain unverified.
+- Real auth-failure and usage-limit outputs remain unverified.
+
+---
+
 ## P2-3: Natural-Language Second-Change Orchestration
 
 **Date:** 2026-05-17

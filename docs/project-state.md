@@ -381,3 +381,79 @@ CI uses:
 
 No app code, test behavior, deployment, Docker, or production release workflow
 was added.
+
+### Minimal Claude Code Adapter Added
+
+The backend now includes a minimal `ClaudeCodeAdapter` runtime option behind the
+existing adapter contract. It is a sibling of `CodexAdapter`, uses subprocess
+`cwd` for session worktree isolation, and maps Claude Code `stream-json` stdout
+into normalized AgentHub events.
+
+Current verified state:
+
+- Fake-runner tests cover command construction, incremental stream-json event
+  parsing, persisted `TaskRunEvent` sequence ordering, missing CLI, auth
+  required, usage limit, parse error, startup timeout, and interruption
+  normalization. P2-7 added coverage for real Claude `stream_event` text-delta
+  mapping and thinking-delta filtering.
+- `adapterType: claude_code` is supported by backend adapter dispatch.
+- Guardrails allow the bounded `claude --print --output-format stream-json`
+  command family so it can be evaluated through the same command policy path as
+  the Codex CLI.
+
+Current limitations:
+
+- P2-7 has run one explicitly approved real Claude Code mutation smoke. Broader
+  prompts, browser UI wiring, auth failure text, and usage-limit text remain
+  unverified.
+- `ScriptedMockAdapter` remains the reliability fallback, and the P1 real Codex
+  path remains unchanged.
+
+### P2-7 Real Claude Code Smoke Verified
+
+P2-7 ran a bounded real Claude Code adapter smoke in a detached disposable
+session worktree:
+
+```text
+ClaudeCodeAdapter -> real Claude CLI -> stream-json events -> file mutation -> completed TaskRun -> diff artifact
+```
+
+Disposable worktree:
+
+```text
+/Users/luotianhang/Desktop/agenthub/.worktrees/claude-smoke-96d46af7-dc74-4d71-a062-c9be42cd1332
+```
+
+The first attempt found a local adapter bug before mutation:
+
+- Failed TaskRun: `c66f1f86-2407-487a-b18f-cf01abd3a7f3`
+- Error code: `CLAUDE_CODE_EXIT_ERROR`
+- Error message:
+  `Error: When using --print, --output-format=stream-json requires --verbose`
+
+The adapter command was updated to include `--verbose`, and the second bounded
+smoke succeeded:
+
+- Session: `4cf32311-1a9b-4eda-9ec3-ab0d010691fc`
+- Task: `a5557a9a-99de-4962-9d25-86ed548ea7ca`
+- TaskRun: `095ae634-c188-4ffc-a502-53a500d20e14`
+- AdapterRun: `claude-code-94cc6074-f15d-4290-b050-c2383363f44d`
+- Final state: `completed`
+- Base ref: `0066dea6c7f6a235cb2c2e0361624a1116d66dad`
+- Head ref: `0066dea6c7f6a235cb2c2e0361624a1116d66dad+worktree`
+- Diff artifact: `95bb1d0b-12a3-4a0e-be3e-c07cf1bf79d4`
+- Diff: `9f69bc39-6b32-42ca-8a86-cf9fbfa62343`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff stats: 1 file changed, 1 addition, 1 deletion
+
+The direct git diff in the disposable worktree shows only the primary button
+text changed from `Continue` to `Claude smoke`.
+
+Known P2-7 limits:
+
+- This was a direct backend smoke, not a full browser UI flow.
+- Only one tiny mutation instruction was verified.
+- Claude `stream-json` includes verbose low-level `stream_event` records; the
+  adapter now maps text deltas and filters thinking deltas, but broader stream
+  event shapes remain unverified.
+- Auth failure and usage-limit real outputs are still unverified.

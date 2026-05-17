@@ -10,6 +10,7 @@ from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
 from app.config import get_settings
+from app.claude_code_adapter import ClaudeCodeAdapter
 from app.codex_adapter import CodexAdapter
 from app.db import engine, init_database
 from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
@@ -376,10 +377,13 @@ def adapter_for_type(
     adapter_type: str,
     *,
     codex_adapter: AgentAdapter,
+    claude_code_adapter: AgentAdapter,
     scripted_mock_adapter: AgentAdapter,
 ) -> AgentAdapter:
     if adapter_type == "codex":
         return codex_adapter
+    if adapter_type == "claude_code":
+        return claude_code_adapter
     if adapter_type == "scripted_mock":
         return scripted_mock_adapter
     raise TaskRunLifecycleError(f"Unsupported adapter type: {adapter_type}")
@@ -416,6 +420,7 @@ async def _background_execute_task_run(
     adapter = adapter_for_type(
         adapter_type,
         codex_adapter=CodexAdapter(),
+        claude_code_adapter=ClaudeCodeAdapter(),
         scripted_mock_adapter=ScriptedMockAdapter(),
     )
     with DbSession(db_engine) as db:

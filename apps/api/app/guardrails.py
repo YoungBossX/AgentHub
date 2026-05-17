@@ -190,6 +190,9 @@ def _is_allowed_runtime_command(parts: list[str]) -> bool:
     if Path(parts[0]).name == "codex":
         return True
 
+    if _is_claude_code_command(parts):
+        return True
+
     return False
 
 
@@ -216,6 +219,31 @@ def _is_vite_preview_command(parts: list[str]) -> bool:
         and parts[4] == "--port"
         and parts[5].isdigit()
     )
+
+
+def _is_claude_code_command(parts: list[str]) -> bool:
+    return (
+        len(parts) >= 13
+        and Path(parts[0]).name == "claude"
+        and "--print" in parts
+        and "--verbose" in parts
+        and _option_value(parts, "--output-format") == "stream-json"
+        and "--include-partial-messages" in parts
+        and _option_value(parts, "--permission-mode") == "dontAsk"
+        and _option_value(parts, "--allowedTools") == "Read,Edit,MultiEdit"
+        and "--no-session-persistence" in parts
+        and _option_value(parts, "--max-budget-usd") is not None
+    )
+
+
+def _option_value(parts: list[str], option: str) -> Optional[str]:
+    try:
+        index = parts.index(option)
+    except ValueError:
+        return None
+    if index + 1 >= len(parts):
+        return None
+    return parts[index + 1]
 
 
 def _is_system_path(path: Path) -> bool:

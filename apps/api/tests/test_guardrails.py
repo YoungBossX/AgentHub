@@ -89,6 +89,24 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
             "Make the button text more friendly.",
         ]
     )
+    claude_code = evaluate_command(
+        [
+            "/Users/demo/.npm-global/bin/claude",
+            "--print",
+            "--verbose",
+            "--output-format",
+            "stream-json",
+            "--include-partial-messages",
+            "--permission-mode",
+            "dontAsk",
+            "--allowedTools",
+            "Read,Edit,MultiEdit",
+            "--no-session-persistence",
+            "--max-budget-usd",
+            "1.00",
+            "Change the primary button text.",
+        ]
+    )
     blocked = evaluate_command(["bash", "-lc", "rm -rf apps/demo"])
     push = evaluate_command(["git", "push", "origin", "main"])
 
@@ -96,6 +114,7 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
     assert allowed.approval is None
     assert git_with_cwd.allowed is True
     assert codex_app_path.allowed is True
+    assert claude_code.allowed is True
 
     assert blocked.allowed is False
     assert blocked.approval is not None
@@ -106,6 +125,10 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
     assert push.allowed is False
     assert push.approval is not None
     assert push.approval.requested_action == "git push origin main"
+
+    arbitrary_claude = evaluate_command(["claude", "auth", "status"])
+    assert arbitrary_claude.allowed is False
+    assert arbitrary_claude.approval is not None
 
 
 def test_path_policy_protects_sensitive_and_out_of_worktree_paths() -> None:
