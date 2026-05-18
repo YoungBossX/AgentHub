@@ -10,7 +10,7 @@ from sqlmodel import SQLModel, create_engine, select
 from app.main import agent_run_request_for, app, get_db
 from app.guardrails import ApprovalRequestPayload, request_task_run_approval
 from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
-from app.task_runs import create_task_run, transition_task_run
+from app.task_runs import TaskRunLifecycleError, create_task_run, transition_task_run
 
 
 @pytest.fixture
@@ -101,6 +101,58 @@ def test_create_task_run_persists_queued_state_before_event(client: TestClient) 
         assert event.sequence == 1
         assert event.event_type == "task.state"
         assert json.loads(event.payload_json)["state"] == "queued"
+
+
+def test_default_code_adapter_env_selects_claude_code_for_frontend_task(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENTHUB_DEFAULT_CODE_ADAPTER", "claude_code")
+
+    with db_from_override() as db:
+        task_run = create_task_run(db, task_id())
+        event = db.exec(
+            select(TaskRunEvent).where(TaskRunEvent.task_run_id == task_run.id)
+        ).one()
+
+        assert json.loads(task_run.metrics_json)["adapterType"] == "claude_code"
+        assert json.loads(event.payload_json)["adapterType"] == "claude_code"
+
+
+def test_default_code_adapter_env_preserves_explicit_and_non_code_adapters(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENTHUB_DEFAULT_CODE_ADAPTER", "claude_code")
+
+    with db_from_override() as db:
+        explicit = create_task_run(db, task_id(), adapter_type="codex")
+        qa_agent_id = db.exec(select(Agent).where(Agent.role == "qa")).one().id
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        qa_task = Task(
+            session_id=session_id,
+            title="Review login page",
+            intent_type="review",
+            status="pending",
+            assigned_agent_id=qa_agent_id,
+        )
+        db.add(qa_task)
+        db.commit()
+        scripted = create_task_run(db, qa_task.id)
+
+        assert json.loads(explicit.metrics_json)["adapterType"] == "codex"
+        assert json.loads(scripted.metrics_json)["adapterType"] == "scripted_mock"
+
+
+def test_default_code_adapter_env_rejects_unknown_adapter(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENTHUB_DEFAULT_CODE_ADAPTER", "unknown")
+
+    with db_from_override() as db:
+        with pytest.raises(TaskRunLifecycleError, match="Unsupported"):
+            create_task_run(db, task_id())
 
 
 def test_agent_run_request_bounds_frontend_login_demo_instruction(

@@ -457,3 +457,32 @@ Known P2-7 limits:
   adapter now maps text deltas and filters thinking deltas, but broader stream
   event shapes remain unverified.
 - Auth failure and usage-limit real outputs are still unverified.
+
+### P2-8 Claude Code Direct-Start Selection Added
+
+P2-8 added a minimal environment-based adapter selection path for normal demo
+execution. Direct Start still uses the assigned agent's configured adapter by
+default, but setting:
+
+```bash
+AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code
+```
+
+causes frontend/backend coding tasks whose seeded adapter is `codex` to create
+new TaskRuns with `adapterType: claude_code`. Explicit adapter selections still
+win, so forced Codex failure, retry history, and retry-with-ScriptedMockAdapter
+fallback keep their existing behavior. Non-code agents, including the
+`scripted_mock` QA path, are not changed by the env var.
+
+Verified state:
+
+- Service tests cover default Claude selection for frontend tasks.
+- Service tests cover explicit Codex preserving its requested adapter.
+- Service tests cover ScriptedMockAdapter preserving non-code fallback behavior.
+- Service tests cover invalid env values failing loudly.
+
+Known P2-8 limits:
+
+- No new real Claude mutation was run for P2-8; P2-7 remains the real Claude
+  smoke evidence.
+- This is an env/config switch, not a provider marketplace or UI selector.

@@ -991,6 +991,61 @@ Direct git diff in the disposable worktree showed only:
 
 ---
 
+## P2-8: Claude Code Direct-Start Selection
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/task_runs.py` | Added `AGENTHUB_DEFAULT_CODE_ADAPTER` selection for codex-backed frontend/backend coding agents. |
+| `apps/api/tests/test_task_runs.py` | Added coverage for Claude default selection, explicit adapter preservation, non-code adapter preservation, and invalid env values. |
+| `docs/project-state.md` | Recorded the P2-8 selection behavior and current limits. |
+| `docs/change-log.md` | Recorded this P2-8 implementation. |
+
+### Diagnosis
+
+Normal Direct Start creates a TaskRun through `create_task_run()`, which used
+the assigned agent's stored `adapter_type` unless an endpoint passed an
+explicit adapter. The seeded frontend and backend agents use `codex`, so normal
+demo execution continued to default to Codex even after the minimal
+`ClaudeCodeAdapter` was available.
+
+### What Changed
+
+Added an environment/config switch:
+
+```bash
+AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code
+```
+
+When set, frontend/backend coding agents whose stored adapter is `codex` create
+new TaskRuns with `adapterType: claude_code`. When unset, behavior is unchanged.
+Explicit adapter choices still win, so forced Codex failure and
+retry-with-ScriptedMockAdapter fallback keep working as before. Non-code
+adapters, including `scripted_mock`, are not changed by the env var.
+
+No frontend UI selector, provider marketplace, seed rewrite, Codex removal, or
+ScriptedMockAdapter behavior change was added.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (137 tests: 25 web + 112 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- P2-8 did not run another real Claude mutation; P2-7 remains the real Claude
+  smoke evidence.
+- The selection method is environment-based. A browser-visible provider picker
+  remains out of scope.
+
+---
+
 ## P2-3: Natural-Language Second-Change Orchestration
 
 **Date:** 2026-05-17

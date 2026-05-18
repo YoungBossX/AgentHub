@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Any, Optional
 
 from sqlmodel import Session as DbSession
@@ -33,6 +34,9 @@ ACTIVE_STATES = {
 }
 RETRYABLE_STATES = {"failed", "interrupted"}
 TERMINAL_STATES = {"completed", "failed", "interrupted"}
+DEFAULT_CODE_ADAPTER_ENV = "AGENTHUB_DEFAULT_CODE_ADAPTER"
+CODE_AGENT_ROLES = {"frontend", "backend"}
+SUPPORTED_CODE_ADAPTERS = {"codex", "claude_code"}
 
 
 class TaskRunLifecycleError(ValueError):
@@ -49,7 +53,7 @@ def create_task_run(
     task = _task_or_raise(db, task_id)
     session = _session_or_raise(db, task.session_id)
     agent = _agent_or_raise(db, task.assigned_agent_id)
-    selected_adapter = adapter_type or agent.adapter_type
+    selected_adapter = adapter_type or _default_adapter_for_agent(agent)
 
     now = utc_now()
     metrics = {
@@ -184,6 +188,22 @@ def adapter_type_for_run(db: DbSession, task_run: TaskRun) -> str:
 
 def metrics_for_run(task_run: TaskRun) -> dict[str, Any]:
     return _metrics(task_run)
+
+
+def _default_adapter_for_agent(agent: Agent) -> str:
+    configured = os.environ.get(DEFAULT_CODE_ADAPTER_ENV, "").strip()
+    if not configured:
+        return agent.adapter_type
+
+    if configured not in SUPPORTED_CODE_ADAPTERS:
+        raise TaskRunLifecycleError(
+            f"Unsupported {DEFAULT_CODE_ADAPTER_ENV}: {configured}"
+        )
+
+    if agent.adapter_type == "codex" and agent.role in CODE_AGENT_ROLES:
+        return configured
+
+    return agent.adapter_type
 
 
 def _retryable_run_or_raise(db: DbSession, task_run_id: str) -> TaskRun:
