@@ -486,3 +486,32 @@ Known P2-8 limits:
 - No new real Claude mutation was run for P2-8; P2-7 remains the real Claude
   smoke evidence.
 - This is an env/config switch, not a provider marketplace or UI selector.
+
+### P2-9 Claude Default Adapter Mode Documented
+
+P2-9 documented how to start the API with Claude Code as the default coding
+adapter:
+
+```bash
+AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api
+```
+
+Minimal Direct Start verification used an in-memory API rehearsal, not a real
+Claude execution. With the env var set, `POST /tasks/{task_id}/runs` created a
+queued TaskRun with `adapterType: claude_code`.
+
+Evidence:
+
+- Session: `1c662ede-d0be-4349-8c86-20f49be6fb53`
+- Task: `c28cda5b-67c7-44a8-bd2b-e43ebbc64217`
+- TaskRun: `a1c191ea-1414-4746-95ca-d6c51b36b4f8`
+- Adapter type: `claude_code`
+- State: `queued`
+- Queued event payload: `{"adapterType":"claude_code","state":"queued"}`
+
+Known P2-9 limits:
+
+- No real Claude mutation was run for P2-9.
+- Full browser UI Claude-default execution through diff/preview/deploy remains
+  unrehearsed.
+- P2-7 remains the real Claude mutation and diff artifact evidence.

@@ -1046,6 +1046,79 @@ ScriptedMockAdapter behavior change was added.
 
 ---
 
+## P2-9: Claude Default Adapter Mode Documentation
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/demo-script.md` | Documented how to start the API with Claude Code as the default coding adapter and how to present the mode during demos. |
+| `docs/project-state.md` | Recorded P2-9 Direct Start selection evidence and remaining limits. |
+| `docs/change-log.md` | Recorded this P2-9 documentation and rehearsal result. |
+
+No app code, adapter code, backend API behavior, frontend UI, provider
+marketplace, or test behavior changed for P2-9.
+
+### Diagnosis
+
+P2-8 added the selection mechanism, but the demo script did not yet tell future
+operators how to start AgentHub in Claude-default mode. Browser Direct Start
+with `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` also had not been manually
+rehearsed.
+
+### What Changed
+
+The demo script now documents:
+
+```bash
+AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api
+```
+
+It also distinguishes the verified levels:
+
+- P2-7 verified a direct backend real Claude mutation and diff artifact.
+- P2-8 verified env-based selection in tests.
+- P2-9 verified Direct Start creates a `claude_code` TaskRun when the env var
+  is set.
+- Full browser UI Claude-default execution through diff/preview/deploy remains
+  unrehearsed.
+
+### Minimal Rehearsal
+
+Ran an in-memory API Direct Start check with
+`AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`. The request did not launch real
+Claude; it verified the selection layer only.
+
+Evidence:
+
+- Endpoint: `POST /tasks/{task_id}/runs`
+- Response status: `201`
+- Session: `1c662ede-d0be-4349-8c86-20f49be6fb53`
+- Task: `c28cda5b-67c7-44a8-bd2b-e43ebbc64217`
+- TaskRun: `a1c191ea-1414-4746-95ca-d6c51b36b4f8`
+- Adapter type: `claude_code`
+- State: `queued`
+- Queued event payload: `{"adapterType":"claude_code","state":"queued"}`
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (137 tests: 25 web + 112 API) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- No real Claude execution was run for P2-9.
+- Full browser UI Claude-default execution through diff/preview/deploy remains
+  unrehearsed.
+- P2-7 remains the real Claude mutation and diff artifact evidence.
+
+---
+
 ## P2-3: Natural-Language Second-Change Orchestration
 
 **Date:** 2026-05-17

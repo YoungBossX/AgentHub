@@ -38,6 +38,30 @@ http://127.0.0.1:3000
 Keep `docs/adapter-notes.md` handy if you plan to demonstrate real local
 Codex CLI behavior.
 
+### Optional: Use Claude Code as the Default Coding Adapter
+
+To reduce Codex CLI quota usage during local demo/testing, start the backend
+with:
+
+```bash
+AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api
+```
+
+With this environment variable set, normal `Start run` actions for seeded
+frontend/backend coding tasks create TaskRuns with `adapterType: claude_code`
+instead of `codex`. Explicit Codex actions, such as `Force Codex failure`, and
+the `Retry with ScriptedMockAdapter` fallback path keep their existing behavior.
+
+P2-7 verified one tiny real Claude Code backend smoke:
+
+```text
+ClaudeCodeAdapter -> real Claude CLI -> apps/demo/src/App.tsx mutation -> diff artifact
+```
+
+P2-9 verified the normal Direct Start selection layer creates a
+`claude_code` TaskRun when the environment variable is set. It did not run
+another real Claude mutation.
+
 ## What To Say Up Front
 
 AgentHub is an IM coding workspace. The point of the demo is not a chatbot
@@ -154,6 +178,29 @@ Start run -> real Codex file mutation -> diff card -> preview iframe -> mock dep
 If a real Codex run fails, do not claim success. Show the normalized failure in
 run history and switch to the reliable fallback path.
 
+## Main Demo Path With Claude Code Default
+
+Use this path when you want normal Direct Start to avoid Codex quota and use
+Claude Code instead:
+
+```bash
+AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api
+```
+
+Then follow the same UI steps as the main demo path. The run history should show
+`claude_code` for newly started frontend/backend coding TaskRuns. If Claude Code
+fails, show the normalized failure in run history and switch to the reliable
+fallback path.
+
+Current verification level:
+
+- P2-7 verified a direct backend real Claude mutation and diff artifact.
+- P2-8 verified the environment-based selection behavior with tests.
+- P2-9 verified a Direct Start API request creates a queued TaskRun with
+  `adapterType: claude_code` when the environment variable is set.
+- A full browser UI Claude-default run through diff/preview/deploy has not yet
+  been rehearsed.
+
 ## Failure Recovery Demo Path
 
 Use this path when you want to focus on resilience.
@@ -261,6 +308,8 @@ calls these backend APIs:
   `@orchestrator build a login page for the demo app` in a selected session.
 - Codex unavailable or usage-limited: use `Force Codex failure`, then
   `Retry with ScriptedMockAdapter`.
+- To use Claude Code by default for coding tasks, restart the backend with
+  `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api`.
 - No diff after fallback: confirm the fallback run completed and that the
   session worktree contains `apps/demo/src/App.tsx`.
 - Preview does not become healthy: confirm demo dependencies were installed
