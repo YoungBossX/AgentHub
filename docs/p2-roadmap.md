@@ -32,24 +32,66 @@ Verified P1 state includes:
 - P1-11 manually reverified the forced-failure fallback path through
   ScriptedMockAdapter, diff, preview, and mock deploy.
 
-## Remaining P1 Caveats
+## Original P1 Caveats and P2 Resolution
 
-- Natural-language second-change orchestration remains a caveat.
-- Approval card UI is outside the frozen P1 judge path.
-- Production deploy is out of scope.
-- A locale-specific development hydration warning around session date formatting
-  was observed during P1-11; it did not block rehearsal.
+P2 has addressed the original stabilization caveats that were safe to close
+without expanding into broader product scope:
+
+- Locale-specific hydration warning: fixed in P2-1 with deterministic timestamp
+  formatting.
+- Approval card UI outside the P1 judge path: minimally completed and rehearsed
+  in P2-2.
+- Natural-language second-change orchestration: implemented narrowly for
+  deterministic button/title text changes in P2-3, with browser preview iframe
+  refresh verified in P2-4.
+- GitHub Actions CI: added in P2-5.
+- Claude Code runtime option: added and smoke-verified in P2-7, made
+  selectable for Direct Start through `AGENTHUB_DEFAULT_CODE_ADAPTER` in P2-8,
+  and documented in P2-9.
+
+The following remain caveats after P2:
+
+- Full browser UI Claude-default execution through diff/preview/deploy is
+  unrehearsed.
+- Real Claude auth-failure and usage-limit outputs remain partially
+  unverified.
+- Broad arbitrary natural-language editing remains out of scope.
+- Production deploy remains out of scope.
 
 ## Immediate P2 Priorities
 
-P2 should make the existing demo more deterministic before adding broader
-capabilities. The immediate task order is:
+P2 was scoped to make the existing demo more deterministic before adding
+broader capabilities. The original immediate task order was:
 
 1. P2-1 fix locale hydration warning.
 2. P2-2 approval card UI/rehearsal.
 3. P2-3 natural-language second-change orchestration.
 4. P2-4 GitHub Actions CI.
 5. P2-5 demo reset / clean-state helper.
+
+Actual P2 execution added the CI workflow, then continued with a documented
+Claude Code runtime option to reduce Codex CLI quota usage during demos. The
+demo reset helper remains a useful future stabilization task; it was not
+implemented during the completed P2 work.
+
+## P2 Final Verified State
+
+At P2 freeze, AgentHub supports:
+
+- P1 real Codex Direct Start path:
+  `Start run -> real Codex file mutation -> diff card -> preview iframe -> mock deploy card`.
+- Fallback-based P0 path:
+  `forced Codex failure -> ScriptedMockAdapter fallback -> real diff -> healthy Vite preview -> mock deploy card`.
+- Approval cards and approve/deny API/UI wiring for existing P0 approval
+  payloads.
+- Deterministic second-change orchestration for button/title text changes in
+  the same session worktree.
+- Browser preview iframe refresh after a second deterministic change.
+- CI for `pnpm check`, `pnpm test`, and `git diff --check`.
+- Minimal `ClaudeCodeAdapter` with fake-runner tests and one real backend smoke
+  proving a tiny file mutation and diff artifact.
+- `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` to create normal Direct Start
+  coding TaskRuns with `adapterType: claude_code`.
 
 ## P2-1 Fix Locale Hydration Warning
 

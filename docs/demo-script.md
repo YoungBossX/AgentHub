@@ -2,8 +2,8 @@
 
 This script is for the OpenSpec change
 `openspec/changes/agenthub-im-coding-mvp`. It describes the local AgentHub demo
-as implemented through the completed P0 scope and the P1 direct-Codex
-rehearsals.
+as implemented through the completed P0 scope, P1 direct-Codex rehearsals, and
+P2 stabilization/Claude-default mode notes.
 
 ## Setup Before The Demo
 

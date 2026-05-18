@@ -1119,6 +1119,48 @@ Evidence:
 
 ---
 
+## P2 Final Freeze Review
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/demo-script.md` | Updated the introduction to include P2 stabilization and Claude-default mode notes. |
+| `docs/p2-roadmap.md` | Reconciled the original P2 plan with the final completed P2 state and remaining caveats. |
+| `docs/project-state.md` | Recorded the P2 final freeze review result. |
+| `docs/change-log.md` | Recorded this freeze review. |
+
+No app code, adapter code, backend API behavior, frontend behavior, tests, or
+dependencies changed during the P2 final freeze review.
+
+### Review Result
+
+The reviewed docs are aligned on the current P2 state:
+
+- P2 stabilization work is complete through P2-9.
+- P1 real Codex Direct Start and fallback-based P0 paths remain preserved.
+- Claude default mode is documented with
+  `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`.
+- Remaining caveats are visible:
+  - full browser UI Claude-default execution through diff/preview/deploy is
+    unrehearsed
+  - real Claude auth-failure and usage-limit outputs remain partially
+    unverified
+  - broad arbitrary natural-language editing remains out of scope
+  - production deploy remains out of scope
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (137 tests: 25 web + 112 API) |
+| `git diff --check` | Pass |
+
+---
+
 ## P2-3: Natural-Language Second-Change Orchestration
 
 **Date:** 2026-05-17

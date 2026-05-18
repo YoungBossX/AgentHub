@@ -515,3 +515,25 @@ Known P2-9 limits:
 - Full browser UI Claude-default execution through diff/preview/deploy remains
   unrehearsed.
 - P2-7 remains the real Claude mutation and diff artifact evidence.
+
+### P2 Final Freeze Review
+
+P2 final freeze review confirmed the documentation is aligned on the current
+P2 baseline:
+
+- P2 stabilization work is complete through P2-9.
+- P2 validation remains green with `pnpm check`, `pnpm test`, and
+  `git diff --check`.
+- The P1 real Codex demo path and fallback-based P0 demo path remain preserved.
+- Claude Code default mode is documented with
+  `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`.
+- P2 caveats remain visible:
+  - full browser UI Claude-default execution through diff/preview/deploy is
+    unrehearsed
+  - real Claude auth-failure and usage-limit outputs remain partially
+    unverified
+  - broad arbitrary natural-language editing remains out of scope
+  - production deploy remains out of scope
+
+No app code, adapter code, backend API behavior, frontend behavior, or tests
+changed during the P2 final freeze review.
