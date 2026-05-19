@@ -47,19 +47,28 @@ describe("PreviewCard", () => {
 
     render(
       createElement(PreviewPanel, {
+        artifactItems: [
+          {
+            artifact: samplePreviewArtifact,
+            id: "preview-asset",
+            kind: "preview",
+            taskRunId: "run-1",
+            taskTitle: "Build the Vite React login page",
+          },
+        ],
         frameKey: 2,
         onClose,
         onRefresh,
-        preview: samplePreviewArtifact,
+        selectedArtifactId: "preview-asset",
       }),
     )
 
     const frame = screen.getByTitle("Vite React preview")
     expect(frame.getAttribute("src")).toBe("http://127.0.0.1:5173")
-    expect(screen.getByText("127.0.0.1:5173")).toBeTruthy()
+    expect(screen.getAllByText("127.0.0.1:5173").length).toBeGreaterThan(0)
 
     fireEvent.click(screen.getByRole("button", { name: "Refresh panel" }))
-    fireEvent.click(screen.getByRole("button", { name: "Close preview" }))
+    fireEvent.click(screen.getByRole("button", { name: "Close artifact" }))
 
     expect(onRefresh).toHaveBeenCalledWith("run-1")
     expect(onClose).toHaveBeenCalled()

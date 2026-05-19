@@ -2,9 +2,12 @@
 
 import { ExternalLink, Monitor, RefreshCw, Rocket, Square, X } from "lucide-react"
 
+import { DeployCard } from "./deploy-card"
+import { DiffCard } from "./diff-card"
 import { Button } from "@/components/ui/button"
-import type { PreviewArtifact } from "@/lib/api"
+import type { DeploymentArtifact, DiffArtifact, PreviewArtifact } from "@/lib/api"
 import { formatCompactDateTime } from "@/lib/date-format"
+import { cn } from "@/lib/utils"
 
 type PreviewCardProps = {
   busy?: boolean
@@ -16,11 +19,40 @@ type PreviewCardProps = {
 }
 
 type PreviewPanelProps = {
+  artifactItems: ArtifactPanelItem[]
+  busy?: boolean
   frameKey: number
   onClose?: () => void
+  onCreateDeploy?: (previewId: string) => void
+  onOpenPreview?: (preview: PreviewArtifact) => void
   onRefresh?: (taskRunId: string) => void
-  preview: PreviewArtifact | null
+  onSelectArtifact?: (artifactId: string) => void
+  onStopPreview?: (previewId: string) => void
+  selectedArtifactId: string | null
 }
+
+export type ArtifactPanelItem =
+  | {
+      artifact: DiffArtifact
+      id: string
+      kind: "diff"
+      taskRunId: string
+      taskTitle: string
+    }
+  | {
+      artifact: PreviewArtifact
+      id: string
+      kind: "preview"
+      taskRunId: string
+      taskTitle: string
+    }
+  | {
+      artifact: DeploymentArtifact
+      id: string
+      kind: "deployment"
+      taskRunId: string
+      taskTitle: string
+    }
 
 function formatPreviewTime(value: string | null) {
   if (!value) {
@@ -133,65 +165,317 @@ export function PreviewCard({
 }
 
 export function PreviewPanel({
+  artifactItems,
+  busy = false,
   frameKey,
   onClose,
+  onCreateDeploy,
+  onOpenPreview,
   onRefresh,
-  preview,
+  onSelectArtifact,
+  onStopPreview,
+  selectedArtifactId,
 }: PreviewPanelProps) {
+  const selectedItem =
+    artifactItems.find((item) => item.id === selectedArtifactId) ?? null
+  const selectedPreview =
+    selectedItem?.kind === "preview" ? selectedItem.artifact : null
+  const latestByKind = (kind: ArtifactPanelItem["kind"]) =>
+    [...artifactItems].reverse().find((item) => item.kind === kind) ?? null
+  const activeKind = selectedItem?.kind ?? "empty"
+
   return (
-    <aside className="flex min-h-[560px] flex-col border-t border-[var(--border)] bg-slate-50 xl:border-l xl:border-t-0">
-      <header className="flex items-start justify-between gap-3 border-b border-[var(--border)] bg-white p-4">
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
-            Preview panel
-          </p>
-          <h2 className="mt-1 truncate text-base font-semibold">
-            {preview ? previewHost(preview.url) : "No preview selected"}
-          </h2>
-          {preview ? (
-            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-              {preview.healthStatus} · port {preview.port}
+    <aside className="flex min-h-0 flex-col overflow-hidden border-t border-[var(--border)] bg-[#FBF9FF] lg:border-l lg:border-t-0">
+      <header className="shrink-0 border-b border-[var(--border)] bg-white px-4 py-3 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+              Artifact detail
             </p>
-          ) : null}
+            <h2 className="mt-1 truncate text-base font-semibold text-slate-950">
+              {panelTitle(selectedItem)}
+            </h2>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+              {selectedItem
+                ? selectedItem.taskTitle
+                : "Select a diff, preview, or deploy artifact from the timeline."}
+            </p>
+            {selectedItem ? (
+              <p className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-normal text-slate-600">
+                {artifactKindLabel(selectedItem.kind)}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button
+              aria-label="Refresh panel"
+              className="h-8 w-8 rounded-lg p-0"
+              disabled={!selectedPreview || !onRefresh}
+              onClick={() => selectedPreview && onRefresh?.(selectedPreview.taskRunId)}
+              type="button"
+              variant="secondary"
+            >
+              <RefreshCw aria-hidden="true" size={14} />
+            </Button>
+            <Button
+              aria-label="Close artifact"
+              className="h-8 w-8 rounded-lg p-0"
+              disabled={!selectedItem || !onClose}
+              onClick={onClose}
+              type="button"
+              variant="secondary"
+            >
+              <X aria-hidden="true" size={14} />
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            aria-label="Refresh panel"
-            className="h-8 w-8 p-0"
-            disabled={!preview || !onRefresh}
-            onClick={() => preview && onRefresh?.(preview.taskRunId)}
-            type="button"
-            variant="secondary"
-          >
-            <RefreshCw aria-hidden="true" size={14} />
-          </Button>
-          <Button
-            aria-label="Close preview"
-            className="h-8 w-8 p-0"
-            disabled={!preview || !onClose}
-            onClick={onClose}
-            type="button"
-            variant="secondary"
-          >
-            <X aria-hidden="true" size={14} />
-          </Button>
+
+        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-100 p-1">
+          <ArtifactRailItem
+            active={activeKind === "diff"}
+            count={artifactItems.filter((item) => item.kind === "diff").length}
+            label="Diff"
+            onSelect={() => {
+              const item = latestByKind("diff")
+              if (item) {
+                onSelectArtifact?.(item.id)
+              }
+            }}
+          />
+          <ArtifactRailItem
+            active={activeKind === "preview"}
+            count={artifactItems.filter((item) => item.kind === "preview").length}
+            label="Preview"
+            onSelect={() => {
+              const item = latestByKind("preview")
+              if (item) {
+                onSelectArtifact?.(item.id)
+              }
+            }}
+          />
+          <ArtifactRailItem
+            active={activeKind === "deployment"}
+            count={artifactItems.filter((item) => item.kind === "deployment").length}
+            label="Deploy"
+            onSelect={() => {
+              const item = latestByKind("deployment")
+              if (item) {
+                onSelectArtifact?.(item.id)
+              }
+            }}
+          />
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0 p-3">
-        {preview ? (
-          <iframe
-            className="min-h-[480px] w-full rounded-md border border-[var(--border)] bg-white"
-            key={`${preview.id}-${frameKey}`}
-            src={preview.url}
-            title="Vite React preview"
+      <div
+        className="grid min-h-0 flex-1 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 overflow-y-auto p-4"
+        data-region="artifact-scroll"
+      >
+        {selectedItem ? <ArtifactSummary item={selectedItem} /> : null}
+
+        <section className="rounded-xl border border-[var(--border)] bg-white p-3 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+              Preview Environment
+            </p>
+            <span className="text-[11px] font-semibold text-[var(--primary)]">
+              Vite
+            </span>
+          </div>
+          <div className="mt-3 rounded-lg bg-slate-100 p-2">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+              <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+              <span className="ml-2 min-w-0 flex-1 truncate rounded bg-white px-2 py-1 text-center text-xs text-[var(--muted-foreground)]">
+                {selectedPreview?.url ?? "Preview not started yet"}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {selectedItem ? (
+          <ArtifactDetail
+            busy={busy}
+            frameKey={frameKey}
+            item={selectedItem}
+            onCreateDeploy={onCreateDeploy}
+            onOpenPreview={onOpenPreview}
+            onRefresh={onRefresh}
+            onStopPreview={onStopPreview}
           />
         ) : (
-          <div className="flex min-h-[480px] w-full items-center justify-center rounded-md border border-dashed border-[var(--border)] bg-white p-5 text-center text-sm text-[var(--muted-foreground)]">
-            Start or open a task run preview to inspect the Vite React demo.
+          <div className="flex min-h-[360px] w-full items-start justify-center rounded-xl border border-dashed border-[var(--border)] bg-[radial-gradient(#DDD6FE_1px,transparent_1px)] [background-size:18px_18px] p-8 pt-20 text-center text-sm text-[var(--muted-foreground)]">
+            <div className="w-full max-w-64 rounded-xl border border-[var(--border)] bg-white px-6 py-7 shadow-sm">
+              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary)] text-white">
+                <Monitor aria-hidden="true" size={18} />
+              </span>
+              <p className="mt-4 font-semibold text-slate-900">Waiting for preview</p>
+              <p className="mt-1 leading-6">
+                Start preview after a completed run creates evidence.
+              </p>
+              <div className="mt-5 h-9 rounded-lg bg-[var(--primary)]" />
+            </div>
           </div>
         )}
       </div>
     </aside>
   )
+}
+
+function ArtifactSummary({ item }: { item: ArtifactPanelItem }) {
+  const rows = summaryRows(item)
+
+  return (
+    <section className="rounded-xl border border-[var(--border)] bg-white p-3 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+            Source task
+          </p>
+          <p className="mt-1 line-clamp-2 text-sm font-semibold text-slate-950">
+            {item.taskTitle}
+          </p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-mono text-[11px] font-semibold text-slate-600">
+          {item.taskRunId.slice(0, 8)}
+        </span>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        {rows.map((row) => (
+          <div className="min-w-0 rounded-lg bg-slate-50 px-2.5 py-2" key={row.label}>
+            <dt className="text-[var(--text-muted)]">{row.label}</dt>
+            <dd className="mt-1 truncate font-semibold text-slate-800">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
+function ArtifactDetail({
+  busy,
+  frameKey,
+  item,
+  onCreateDeploy,
+  onOpenPreview,
+  onRefresh,
+  onStopPreview,
+}: {
+  busy: boolean
+  frameKey: number
+  item: ArtifactPanelItem
+  onCreateDeploy?: (previewId: string) => void
+  onOpenPreview?: (preview: PreviewArtifact) => void
+  onRefresh?: (taskRunId: string) => void
+  onStopPreview?: (previewId: string) => void
+}) {
+  if (item.kind === "diff") {
+    return <DiffCard diff={item.artifact} />
+  }
+
+  if (item.kind === "deployment") {
+    return <DeployCard deployment={item.artifact} />
+  }
+
+  return (
+    <div className="grid gap-3">
+      <PreviewCard
+        busy={busy}
+        onCreateDeploy={onCreateDeploy}
+        onOpen={onOpenPreview}
+        onRefresh={onRefresh}
+        onStop={onStopPreview}
+        preview={item.artifact}
+      />
+      <iframe
+        className="min-h-[420px] w-full rounded-xl border border-[var(--border)] bg-white shadow-sm"
+        key={`${item.artifact.id}-${frameKey}`}
+        src={item.artifact.url}
+        title="Vite React preview"
+      />
+    </div>
+  )
+}
+
+function ArtifactRailItem({
+  active,
+  count,
+  label,
+  onSelect,
+}: {
+  active: boolean
+  count: number
+  label: string
+  onSelect: () => void
+}) {
+  return (
+    <button
+      className={cn(
+        "rounded-lg px-2 py-2 text-center text-sm font-semibold transition",
+        active
+          ? "bg-white text-[var(--primary)] shadow-sm"
+          : "text-slate-500 hover:bg-white/70",
+        count === 0 && "cursor-not-allowed opacity-50 hover:bg-transparent",
+      )}
+      disabled={count === 0}
+      onClick={onSelect}
+      type="button"
+    >
+      {label}
+      {count > 0 ? <span className="ml-1 text-xs text-current">{count}</span> : null}
+    </button>
+  )
+}
+
+function panelTitle(item: ArtifactPanelItem | null) {
+  if (!item) {
+    return "Evidence workspace"
+  }
+  if (item.kind === "preview") {
+    return previewHost(item.artifact.url)
+  }
+  if (item.kind === "deployment") {
+    return item.artifact.title
+  }
+  return item.artifact.title
+}
+
+function artifactKindLabel(kind: ArtifactPanelItem["kind"]) {
+  if (kind === "deployment") {
+    return "Deploy artifact"
+  }
+
+  return `${kind} artifact`
+}
+
+function summaryRows(item: ArtifactPanelItem) {
+  if (item.kind === "diff") {
+    return [
+      { label: "Files", value: String(item.artifact.stats.filesChanged) },
+      {
+        label: "Changed",
+        value: item.artifact.changedFiles[0] ?? "No file listed",
+      },
+      { label: "Additions", value: `+${item.artifact.stats.additions}` },
+      { label: "Deletions", value: `-${item.artifact.stats.deletions}` },
+    ]
+  }
+
+  if (item.kind === "preview") {
+    return [
+      { label: "Health", value: item.artifact.healthStatus },
+      { label: "Status", value: item.artifact.status },
+      { label: "Port", value: String(item.artifact.port) },
+      { label: "URL", value: previewHost(item.artifact.url) },
+    ]
+  }
+
+  return [
+    { label: "Provider", value: item.artifact.provider },
+    { label: "Status", value: item.artifact.status },
+    { label: "Environment", value: item.artifact.environment },
+    { label: "URL", value: item.artifact.url ?? "mock://pending" },
+  ]
 }

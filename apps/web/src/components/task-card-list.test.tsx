@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { createElement } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -36,7 +36,8 @@ describe("TaskCardList", () => {
     render(createElement(TaskCardList, { tasks: [baseTask] }))
 
     expect(screen.getByText("Build the Vite React login page")).toBeTruthy()
-    expect(screen.getByText("Step 1 · frontend")).toBeTruthy()
+    expect(screen.getByText("Task 1")).toBeTruthy()
+    expect(screen.getByText("@frontend")).toBeTruthy()
     expect(screen.getByText("pending")).toBeTruthy()
     expect(screen.getByText("Depends on task-0")).toBeTruthy()
   })
@@ -100,7 +101,9 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(screen.getByText("Run 1 · codex · failed")).toBeTruthy()
+    expect(screen.getAllByText("Run 1").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("codex").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("failed").length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole("button", { name: "Start run" }))
     fireEvent.click(screen.getByRole("button", { name: "Force Codex failure" }))
     fireEvent.click(screen.getByRole("button", { name: "Retry" }))
@@ -222,12 +225,16 @@ describe("TaskCardList", () => {
 
     render(createElement(TaskCardList, { tasks: [recoveredTask] }))
 
-    expect(screen.getByText("Run 1 · codex · failed")).toBeTruthy()
-    expect(screen.getByText("Run 2 · scripted_mock · completed")).toBeTruthy()
+    expect(screen.getByText("Recovered")).toBeTruthy()
+    expect(screen.getByText("Run 1")).toBeTruthy()
+    expect(screen.getByText("Run 2")).toBeTruthy()
+    expect(screen.getByText("scripted_mock")).toBeTruthy()
     expect(screen.getByText("CODEX_DEMO_FORCED_FAILURE")).toBeTruthy()
   })
 
-  it("loads and renders diff cards for task run history", async () => {
+  it("loads diff artifacts as timeline summary chips and panel items", async () => {
+    const onArtifactsChange = vi.fn()
+    const onSelectArtifact = vi.fn()
     const fetcher = vi.fn(async (input: string | URL | Request) => {
       const url = input.toString()
       if (url.endsWith("/previews") || url.endsWith("/deployments")) {
@@ -266,12 +273,26 @@ describe("TaskCardList", () => {
         artifactRefreshKey: 1,
         backendUrl: "http://127.0.0.1:8000",
         fetcher,
+        onArtifactsChange,
+        onSelectArtifact,
         tasks: [completedTask],
       }),
     )
 
-    expect(await screen.findByText("Git diff")).toBeTruthy()
-    expect(screen.getByText("apps/demo/src/App.tsx")).toBeTruthy()
+    expect(await screen.findByText(/Diff ready/)).toBeTruthy()
+    expect(screen.getByText("Changed: apps/demo/src/App.tsx")).toBeTruthy()
+    expect(screen.queryByText("Git diff")).toBeNull()
+    fireEvent.click(screen.getByText(/Diff ready/))
+    expect(onSelectArtifact).toHaveBeenCalledWith(`diff:${sampleDiffArtifact.id}`)
+    await waitFor(() =>
+      expect(onArtifactsChange).toHaveBeenLastCalledWith([
+        expect.objectContaining({
+          artifact: sampleDiffArtifact,
+          id: `diff:${sampleDiffArtifact.id}`,
+          kind: "diff",
+        }),
+      ]),
+    )
     expect(fetcher).toHaveBeenCalledWith(
       "http://127.0.0.1:8000/task-runs/run-1/diffs",
       {
@@ -280,11 +301,10 @@ describe("TaskCardList", () => {
     )
   })
 
-  it("loads previews and starts a preview from task run history", async () => {
-    const onCreateDeploy = vi.fn()
-    const onOpenPreview = vi.fn()
+  it("loads previews as timeline summary chips and still starts preview runs", async () => {
+    const onArtifactsChange = vi.fn()
+    const onSelectArtifact = vi.fn()
     const onStartPreview = vi.fn()
-    const onRefreshPreviews = vi.fn()
     const fetcher = vi.fn(async (input: string | URL | Request) => {
       const url = input.toString()
       if (url.endsWith("/diffs") || url.endsWith("/deployments")) {
@@ -323,27 +343,34 @@ describe("TaskCardList", () => {
         artifactRefreshKey: 1,
         backendUrl: "http://127.0.0.1:8000",
         fetcher,
-        onCreateDeploy,
-        onOpenPreview,
-        onRefreshPreviews,
+        onArtifactsChange,
+        onSelectArtifact,
         onStartPreview,
         tasks: [completedTask],
       }),
     )
 
-    expect(await screen.findByText("Vite React preview")).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Open preview" }))
-    fireEvent.click(screen.getByRole("button", { name: "Refresh preview" }))
-    fireEvent.click(screen.getByRole("button", { name: "Create deploy card" }))
+    expect(await screen.findByText("Preview healthy")).toBeTruthy()
+    expect(screen.queryByText("Vite React preview")).toBeNull()
+    fireEvent.click(screen.getByText("Preview healthy"))
     fireEvent.click(screen.getByRole("button", { name: "Start preview" }))
 
-    expect(onOpenPreview).toHaveBeenCalledWith(samplePreviewArtifact)
-    expect(onRefreshPreviews).toHaveBeenCalledWith("run-1")
-    expect(onCreateDeploy).toHaveBeenCalledWith("preview-1")
+    expect(onSelectArtifact).toHaveBeenCalledWith(`preview:${samplePreviewArtifact.id}`)
     expect(onStartPreview).toHaveBeenCalledWith("run-1")
+    await waitFor(() =>
+      expect(onArtifactsChange).toHaveBeenLastCalledWith([
+        expect.objectContaining({
+          artifact: samplePreviewArtifact,
+          id: `preview:${samplePreviewArtifact.id}`,
+          kind: "preview",
+        }),
+      ]),
+    )
   })
 
-  it("loads and renders deployment cards for task run history", async () => {
+  it("loads deployments as timeline summary chips and panel items", async () => {
+    const onArtifactsChange = vi.fn()
+    const onSelectArtifact = vi.fn()
     const fetcher = vi.fn(async (input: string | URL | Request) => {
       const url = input.toString()
       if (url.endsWith("/deployments")) {
@@ -382,12 +409,29 @@ describe("TaskCardList", () => {
         artifactRefreshKey: 1,
         backendUrl: "http://127.0.0.1:8000",
         fetcher,
+        onArtifactsChange,
+        onSelectArtifact,
         tasks: [completedTask],
       }),
     )
 
-    expect(await screen.findByText("Mock deploy")).toBeTruthy()
-    expect(screen.getByText("https://mock.agenthub.local/deployments/deployment-1")).toBeTruthy()
+    expect(await screen.findByText("Deploy mock ready")).toBeTruthy()
+    expect(
+      screen.queryByText("https://mock.agenthub.local/deployments/deployment-1"),
+    ).toBeNull()
+    fireEvent.click(screen.getByText("Deploy mock ready"))
+    expect(onSelectArtifact).toHaveBeenCalledWith(
+      `deployment:${sampleDeploymentArtifact.id}`,
+    )
+    await waitFor(() =>
+      expect(onArtifactsChange).toHaveBeenLastCalledWith([
+        expect.objectContaining({
+          artifact: sampleDeploymentArtifact,
+          id: `deployment:${sampleDeploymentArtifact.id}`,
+          kind: "deployment",
+        }),
+      ]),
+    )
     expect(fetcher).toHaveBeenCalledWith(
       "http://127.0.0.1:8000/task-runs/run-1/deployments",
       {

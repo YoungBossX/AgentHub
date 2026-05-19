@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react"
+import type { ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import Home from "./page"
@@ -8,7 +9,12 @@ vi.mock("@/components/health-card", () => ({
 }))
 
 vi.mock("@/components/workspace-shell", () => ({
-  WorkspaceShell: () => <section data-testid="workspace-shell">Workspace shell</section>,
+  WorkspaceShell: ({ healthSlot }: { healthSlot?: ReactNode }) => (
+    <section data-testid="workspace-shell">
+      Workspace shell
+      {healthSlot ? <div data-testid="health-slot">{healthSlot}</div> : null}
+    </section>
+  ),
 }))
 
 vi.mock("@/lib/api", () => ({
@@ -31,14 +37,15 @@ vi.mock("@/lib/api", () => ({
 afterEach(() => cleanup())
 
 describe("Home", () => {
-  it("lets the workspace shell own the full content width for its preview panel", async () => {
+  it("lets the workspace shell own the command-center page structure", async () => {
     render(await Home())
 
     const workspaceShell = screen.getByTestId("workspace-shell")
-    const contentGrid = workspaceShell.parentElement
 
-    expect(contentGrid?.className).toBe("grid gap-4")
-    expect(contentGrid?.className).not.toContain("md:grid-cols")
+    expect(workspaceShell.parentElement?.className).toContain("h-screen")
+    expect(workspaceShell.parentElement?.className).toContain("overflow-hidden")
+    expect(workspaceShell.parentElement?.className).not.toContain("max-w-[1440px]")
     expect(screen.getByTestId("health-card")).toBeTruthy()
+    expect(screen.getByTestId("health-slot")).toBeTruthy()
   })
 })

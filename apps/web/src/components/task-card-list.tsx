@@ -1,12 +1,11 @@
 "use client"
 
 import { Check, CircleAlert, Play, RotateCcw, Shuffle, Square, X } from "lucide-react"
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
-import { DeployCard } from "./deploy-card"
-import { DiffCard } from "./diff-card"
-import { PreviewCard } from "./preview-card"
+import type { ArtifactPanelItem } from "./preview-card"
 import { Button } from "./ui/button"
+import { cn } from "@/lib/utils"
 import {
   listTaskRunDeployments,
   listTaskRunDiffs,
@@ -25,6 +24,7 @@ type TaskCardListProps = {
   busy?: boolean
   fetcher?: typeof fetch
   onApproveRun?: (taskRunId: string) => void
+  onArtifactsChange?: (artifacts: ArtifactPanelItem[]) => void
   onCreateDeploy?: (previewId: string) => void
   onCreateRun?: (taskId: string) => void
   onDenyRun?: (taskRunId: string) => void
@@ -34,8 +34,10 @@ type TaskCardListProps = {
   onRefreshPreviews?: (taskRunId: string) => void
   onRetryRun?: (taskRunId: string) => void
   onRetryWithFallback?: (taskRunId: string) => void
+  onSelectArtifact?: (artifactId: string) => void
   onStartPreview?: (taskRunId: string) => void
   onStopPreview?: (previewId: string) => void
+  selectedArtifactId?: string | null
 }
 
 const activeRunStates = new Set([
@@ -49,6 +51,38 @@ const activeRunStates = new Set([
 ])
 const retryableRunStates = new Set(["failed", "interrupted"])
 
+function statusClasses(status: string) {
+  if (status === "completed") {
+    return {
+      badge: "bg-green-50 text-green-700 border-green-200",
+      border: "border-l-green-600",
+    }
+  }
+  if (status === "failed") {
+    return {
+      badge: "bg-red-50 text-red-700 border-red-200",
+      border: "border-l-red-600",
+    }
+  }
+  if (status === "waiting_approval") {
+    return {
+      badge: "bg-amber-50 text-amber-700 border-amber-200",
+      border: "border-l-amber-500",
+    }
+  }
+  if (status === "running" || status === "active") {
+    return {
+      badge: "bg-blue-50 text-blue-700 border-blue-200",
+      border: "border-l-blue-600",
+    }
+  }
+
+  return {
+    badge: "bg-slate-50 text-slate-600 border-slate-200",
+    border: "border-l-slate-300",
+  }
+}
+
 export function TaskCardList({
   tasks,
   artifactRefreshKey = 0,
@@ -56,17 +90,16 @@ export function TaskCardList({
   busy = false,
   fetcher = fetch,
   onApproveRun,
-  onCreateDeploy,
+  onArtifactsChange,
   onCreateRun,
   onDenyRun,
   onForceCodexFailure,
   onInterruptRun,
-  onOpenPreview,
-  onRefreshPreviews,
   onRetryRun,
   onRetryWithFallback,
+  onSelectArtifact,
   onStartPreview,
-  onStopPreview,
+  selectedArtifactId = null,
 }: TaskCardListProps) {
   const [deploymentsByRunId, setDeploymentsByRunId] = useState<
     Record<string, DeploymentArtifact[]>
@@ -76,6 +109,41 @@ export function TaskCardList({
   const taskRunIds = useMemo(
     () => tasks.flatMap((task) => task.taskRuns.map((taskRun) => taskRun.id)),
     [tasks],
+  )
+  const artifactItems = useMemo(
+    () =>
+      tasks.flatMap((task) =>
+        task.taskRuns.flatMap((taskRun) => [
+          ...(diffsByRunId[taskRun.id] ?? []).map(
+            (diff): ArtifactPanelItem => ({
+              artifact: diff,
+              id: `diff:${diff.id}`,
+              kind: "diff",
+              taskRunId: taskRun.id,
+              taskTitle: task.title,
+            }),
+          ),
+          ...(previewsByRunId[taskRun.id] ?? []).map(
+            (preview): ArtifactPanelItem => ({
+              artifact: preview,
+              id: `preview:${preview.id}`,
+              kind: "preview",
+              taskRunId: taskRun.id,
+              taskTitle: task.title,
+            }),
+          ),
+          ...(deploymentsByRunId[taskRun.id] ?? []).map(
+            (deployment): ArtifactPanelItem => ({
+              artifact: deployment,
+              id: `deployment:${deployment.id}`,
+              kind: "deployment",
+              taskRunId: taskRun.id,
+              taskTitle: task.title,
+            }),
+          ),
+        ]),
+      ),
+    [deploymentsByRunId, diffsByRunId, previewsByRunId, tasks],
   )
 
   useEffect(() => {
@@ -99,6 +167,10 @@ export function TaskCardList({
       cancelled = true
     }
   }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
+
+  useEffect(() => {
+    onArtifactsChange?.(artifactItems)
+  }, [artifactItems, onArtifactsChange])
 
   useEffect(() => {
     if (!backendUrl || taskRunIds.length === 0) {
@@ -149,7 +221,7 @@ export function TaskCardList({
   }
 
   return (
-    <div className="grid gap-2">
+    <ol className="relative grid gap-4 pl-8 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-slate-200">
       {tasks.map((task, index) => {
         const latestRun = task.taskRuns[task.taskRuns.length - 1] ?? null
         const taskDiffs = task.taskRuns.flatMap((taskRun) => diffsByRunId[taskRun.id] ?? [])
@@ -159,30 +231,106 @@ export function TaskCardList({
         const taskPreviews = task.taskRuns.flatMap(
           (taskRun) => previewsByRunId[taskRun.id] ?? [],
         )
+        const taskArtifactItems = artifactItems.filter((item) =>
+          task.taskRuns.some((taskRun) => taskRun.id === item.taskRunId),
+        )
+        const stateStyle = statusClasses(task.status)
         return (
-          <Fragment key={task.id}>
-            <article className="rounded-md border border-[var(--border)] bg-white p-3">
+          <li className="relative" key={task.id}>
+            <span
+              className={cn(
+                "absolute -left-8 top-5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-4 border-white text-[10px] font-bold shadow-sm",
+                task.status === "completed" && "bg-green-600 text-white",
+                task.status === "failed" && "bg-red-600 text-white",
+                task.status === "waiting_approval" && "bg-amber-500 text-white",
+                (task.status === "running" || task.status === "active") &&
+                  "bg-blue-600 text-white",
+                !["completed", "failed", "waiting_approval", "running", "active"].includes(
+                  task.status,
+                ) && "bg-slate-200 text-slate-600",
+              )}
+            >
+              {index + 1}
+            </span>
+            <article
+              className={cn(
+                "rounded-xl border bg-white p-4 shadow-sm ring-1 ring-transparent transition hover:shadow-md",
+                task.status === "completed"
+                  ? "border-green-200"
+                  : "border-[var(--border)]",
+                selectedArtifactId &&
+                  taskArtifactItems.some((item) => item.id === selectedArtifactId) &&
+                  "ring-[var(--primary-border)]",
+                stateStyle.border,
+              )}
+            >
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
-                    Step {index + 1} · {task.assignedAgentRole ?? "unassigned"}
-                  </p>
-                  <h3 className="mt-1 text-sm font-semibold">{task.title}</h3>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-600">
+                      Task {index + 1}
+                    </span>
+                    <span className="rounded border border-[var(--border)] bg-white px-2 py-1 font-mono text-xs text-[var(--muted-foreground)]">
+                      @{task.assignedAgentRole ?? "unassigned"}
+                    </span>
+                  </div>
+                  <h3 className="mt-2 text-[17px] font-semibold leading-6 text-slate-950">
+                    {task.title}
+                  </h3>
                 </div>
-                <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
+                <span
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-xs font-semibold",
+                    stateStyle.badge,
+                  )}
+                >
                   {task.status}
                 </span>
               </div>
               {task.dependsOnTaskIds.length > 0 ? (
-                <p className="mt-2 truncate text-xs text-[var(--muted-foreground)]">
+                <p className="mt-2 truncate text-xs font-medium text-[var(--muted-foreground)]">
                   Depends on {task.dependsOnTaskIds.join(", ")}
                 </p>
               ) : null}
+              <ArtifactChips
+                deployments={taskDeployments}
+                diffs={taskDiffs}
+                onSelectArtifact={onSelectArtifact}
+                previews={taskPreviews}
+                recovered={Boolean(
+                  task.taskRuns.find(
+                    (run) =>
+                      run.adapterType === "scripted_mock" &&
+                      (run.metricsJson.retryOfRunId || run.metricsJson.fallbackFromRunId),
+                  ),
+                )}
+                selectedArtifactId={selectedArtifactId}
+                taskArtifactItems={taskArtifactItems}
+              />
               {task.taskRuns.length > 0 ? (
-                <div className="mt-3 grid gap-1 rounded-md bg-slate-50 p-2">
+                <div className="mt-3 grid gap-2 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+                      Run history
+                    </p>
+                    <p className="text-[11px] font-medium text-slate-500">
+                      {task.taskRuns.length} runs
+                    </p>
+                  </div>
                   {task.taskRuns.map((taskRun, runIndex) => (
-                    <RunSummary key={taskRun.id} run={taskRun} runIndex={runIndex} />
+                    <RunSummary
+                      artifactReady={Boolean(
+                        taskArtifactItems.find((item) => item.taskRunId === taskRun.id),
+                      )}
+                      key={taskRun.id}
+                      run={taskRun}
+                      runIndex={runIndex}
+                    />
                   ))}
+                  <RecoverySummary
+                    artifactReady={taskArtifactItems.length > 0}
+                    runs={task.taskRuns}
+                  />
                 </div>
               ) : null}
               <RunControls
@@ -214,37 +362,206 @@ export function TaskCardList({
                 }
               />
             </article>
-            {taskDiffs.map((diff) => (
-              <DiffCard diff={diff} key={diff.id} />
-            ))}
-            {taskPreviews.map((preview) => (
-              <PreviewCard
-                busy={busy}
-                key={preview.id}
-                onCreateDeploy={onCreateDeploy}
-                onOpen={onOpenPreview}
-                onRefresh={onRefreshPreviews}
-                onStop={onStopPreview}
-                preview={preview}
-              />
-            ))}
-            {taskDeployments.map((deployment) => (
-              <DeployCard deployment={deployment} key={deployment.id} />
-            ))}
-          </Fragment>
+          </li>
         )
       })}
+    </ol>
+  )
+}
+
+function RunSummary({
+  artifactReady,
+  run,
+  runIndex,
+}: {
+  artifactReady: boolean
+  run: TaskRun
+  runIndex: number
+}) {
+  const failed = run.state === "failed"
+  const completed = run.state === "completed"
+  const fallback = run.adapterType === "scripted_mock"
+  const label = failed
+    ? "Codex failed"
+    : completed && fallback
+      ? "Fallback recovered"
+      : completed
+        ? "Completed"
+        : run.state
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-xs shadow-sm",
+        failed && "border-red-200 bg-red-50/50",
+        completed && !fallback && "border-green-200 bg-green-50/50",
+        completed && fallback && "border-purple-200 bg-purple-50/50",
+        !failed && !completed && "border-blue-200 bg-blue-50/50",
+      )}
+    >
+      <span className="min-w-0 truncate">
+        <span className="font-semibold text-slate-800">Run {runIndex + 1}</span>{" "}
+        · <span className="font-mono">{run.adapterType}</span> · {label}
+      </span>
+      {artifactReady ? (
+        <span className="text-green-700">artifacts ready</span>
+      ) : run.errorCode ? (
+        <span className="truncate text-red-700">{run.errorCode}</span>
+      ) : null}
     </div>
   )
 }
 
-function RunSummary({ run, runIndex }: { run: TaskRun; runIndex: number }) {
+function ArtifactChips({
+  deployments,
+  diffs,
+  onSelectArtifact,
+  previews,
+  recovered,
+  selectedArtifactId,
+  taskArtifactItems,
+}: {
+  deployments: DeploymentArtifact[]
+  diffs: DiffArtifact[]
+  onSelectArtifact?: (artifactId: string) => void
+  previews: PreviewArtifact[]
+  recovered: boolean
+  selectedArtifactId: string | null
+  taskArtifactItems: ArtifactPanelItem[]
+}) {
+  if (
+    diffs.length === 0 &&
+    previews.length === 0 &&
+    deployments.length === 0 &&
+    !recovered
+  ) {
+    return null
+  }
+
   return (
-    <div className="flex items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
-      <span>
-        Run {runIndex + 1} · {run.adapterType} · {run.state}
-      </span>
-      {run.errorCode ? <span className="truncate">{run.errorCode}</span> : null}
+    <div className="mt-3 flex flex-wrap gap-2">
+      {recovered ? (
+        <EvidenceChip className="bg-purple-50 text-purple-700" label="Recovered" />
+      ) : null}
+      {diffs.length > 0 ? (
+        <EvidenceChip
+          className="bg-cyan-50 text-cyan-700"
+          label={`Diff ready · ${diffs[0]?.stats.filesChanged ?? diffs.length} files`}
+          onClick={selectLatestArtifact("diff", taskArtifactItems, onSelectArtifact)}
+          selected={selectedArtifactId === latestArtifactId("diff", taskArtifactItems)}
+        />
+      ) : null}
+      {diffs[0]?.changedFiles[0] ? (
+        <EvidenceChip
+          className="bg-slate-100 font-mono text-slate-700"
+          label={`Changed: ${diffs[0].changedFiles[0]}`}
+          onClick={selectLatestArtifact("diff", taskArtifactItems, onSelectArtifact)}
+          selected={selectedArtifactId === latestArtifactId("diff", taskArtifactItems)}
+        />
+      ) : null}
+      {previews.length > 0 ? (
+        <EvidenceChip
+          className="bg-green-50 text-green-700"
+          label={`Preview ${previews[previews.length - 1]?.healthStatus}`}
+          onClick={selectLatestArtifact("preview", taskArtifactItems, onSelectArtifact)}
+          selected={selectedArtifactId === latestArtifactId("preview", taskArtifactItems)}
+        />
+      ) : null}
+      {deployments.length > 0 ? (
+        <EvidenceChip
+          className="bg-[var(--primary-soft)] text-[var(--primary)]"
+          label="Deploy mock ready"
+          onClick={selectLatestArtifact(
+            "deployment",
+            taskArtifactItems,
+            onSelectArtifact,
+          )}
+          selected={selectedArtifactId === latestArtifactId("deployment", taskArtifactItems)}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function EvidenceChip({
+  className,
+  label,
+  onClick,
+  selected = false,
+}: {
+  className: string
+  label: string
+  onClick?: () => void
+  selected?: boolean
+}) {
+  const chipClassName = cn(
+    "rounded-full px-2.5 py-1 text-xs font-semibold",
+    onClick && "transition hover:ring-2 hover:ring-[var(--primary-border)]",
+    selected && "ring-2 ring-[var(--primary-border)]",
+    className,
+  )
+
+  if (onClick) {
+    return (
+      <button className={chipClassName} onClick={onClick} type="button">
+        {label}
+      </button>
+    )
+  }
+
+  return (
+    <span className={chipClassName}>{label}</span>
+  )
+}
+
+function latestArtifactId(
+  kind: ArtifactPanelItem["kind"],
+  items: ArtifactPanelItem[],
+) {
+  return [...items].reverse().find((item) => item.kind === kind)?.id ?? null
+}
+
+function selectLatestArtifact(
+  kind: ArtifactPanelItem["kind"],
+  items: ArtifactPanelItem[],
+  onSelectArtifact?: (artifactId: string) => void,
+) {
+  const artifactId = latestArtifactId(kind, items)
+  if (!artifactId || !onSelectArtifact) {
+    return undefined
+  }
+
+  return () => onSelectArtifact(artifactId)
+}
+
+function RecoverySummary({
+  artifactReady,
+  runs,
+}: {
+  artifactReady: boolean
+  runs: TaskRun[]
+}) {
+  const hasFailedCodex = runs.some(
+    (run) => run.adapterType === "codex" && run.state === "failed",
+  )
+  const hasRecoveredFallback = runs.some(
+    (run) => run.adapterType === "scripted_mock" && run.state === "completed",
+  )
+
+  if (!hasFailedCodex || !hasRecoveredFallback) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2 text-xs">
+      <EvidenceChip className="bg-red-50 text-red-700" label="Codex failed" />
+      <span className="font-semibold text-slate-300">-&gt;</span>
+      <EvidenceChip className="bg-purple-50 text-purple-700" label="fallback recovered" />
+      {artifactReady ? (
+        <>
+          <span className="font-semibold text-slate-300">-&gt;</span>
+        <EvidenceChip className="bg-green-50 text-green-700" label="Artifacts ready" />
+        </>
+      ) : null}
     </div>
   )
 }

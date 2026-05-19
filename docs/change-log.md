@@ -1,5 +1,367 @@
 # AgentHub Change Log
 
+## TaskRun Test Environment Isolation
+
+**Date:** 2026-05-19
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_task_runs.py` | Isolated TaskRun API tests from inherited `AGENTHUB_DEFAULT_CODE_ADAPTER` shell state while preserving explicit Claude default-adapter coverage. |
+| `docs/change-log.md` | Recorded the test isolation fix. |
+
+### What Changed
+
+The TaskRun tests now clear `AGENTHUB_DEFAULT_CODE_ADAPTER` in the shared
+`client` fixture so default Codex assertions are stable even when a developer
+starts tests from a shell configured for Claude Code demos. Tests that
+intentionally verify `claude_code` selection still set the environment variable
+explicitly with `monkeypatch`.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm test:api` | Pass (112 API tests) |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (25 web tests, 112 API tests) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- This does not change runtime adapter selection behavior; it only stabilizes
+  the test environment.
+
+---
+
+## Command-Center Layout Scrolling Fix
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/app/globals.css` | Locked `html` and `body` to viewport height and disabled document-level scrolling. |
+| `apps/web/src/app/page.tsx` | Changed the page root to a viewport-height, overflow-hidden app shell. |
+| `apps/web/src/app/page.test.tsx` | Updated the shell ownership assertion for the viewport-height layout. |
+| `apps/web/src/components/workspace-shell.tsx` | Made the command-center shell, sidebar, center timeline, and composer use bounded flex/grid sizing with internal scroll regions. |
+| `apps/web/src/components/preview-card.tsx` | Made the Artifact Detail panel a bounded internal scroll region. |
+| `docs/change-log.md` | Recorded this layout scrolling fix. |
+
+### What Changed
+
+This pass keeps the command-center structure, state ownership, APIs, and demo
+actions unchanged while fixing page-level scrolling:
+
+- The app shell now uses viewport height with overflow hidden.
+- The left session list scrolls inside the sidebar.
+- The center chat/task timeline scrolls inside the center panel.
+- The composer remains anchored at the bottom of the center workspace.
+- The right Artifact Detail panel scrolls internally instead of stretching the
+  document.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (25 web tests, 112 API tests) |
+| `git diff --check` | Pass |
+| Browser layout check | Pass: Chrome DevTools measurement showed document/body scroll heights equal viewport height, `html`/`body` overflow hidden, sidebar and center scroll regions overflowing internally, Artifact Panel using internal overflow, composer visible at bottom, and header visible. Screenshot captured at `/tmp/agenthub-scroll-check.png`. |
+
+### Known Limitations
+
+- This is a layout mechanics pass only; it does not redesign the task timeline
+  or add full Artifact Panel tabs.
+
+---
+
+## P3 UI Final Visual QA Pass
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/components/task-card-list.tsx` | Increased task timeline readability with stronger selected artifact emphasis, larger task titles, denser dependency text, and retained vertical rail hierarchy. |
+| `apps/web/src/components/preview-card.tsx` | Added Artifact Detail summary metadata for source task, task run, changed file, diff stats, preview health/status, and deploy status/provider. |
+| `apps/web/src/components/workspace-shell.tsx` | De-emphasized low-value smoke sessions, reduced sidebar metadata repetition, and labeled the top pipeline as the demo flow. |
+| `docs/change-log.md` | Recorded this final visual QA polish pass. |
+
+### What Changed
+
+This pass keeps the command-center structure and artifact state ownership
+unchanged while tightening the visual presentation:
+
+- Center task cards now have stronger title weight and selected-artifact focus.
+- The left session list visually de-emphasizes repeated smoke sessions and only
+  shows task-focus metadata for the active session.
+- The right Artifact Detail panel now includes a source-task summary and
+  artifact-specific stats:
+  - Diff: file count, changed file, additions, deletions.
+  - Preview: health, status, port, host.
+  - Deploy: provider, status, environment, URL.
+- The top pipeline now carries an explicit `Demo flow` label.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (25 web tests, 112 API tests) |
+| `git diff --check` | Pass |
+| Browser render check | Pass: captured `/tmp/agenthub-final-visual-qa.png` against the running local UI. |
+
+### Known Limitations
+
+- This does not add new Artifact Panel workflows or production-grade tabs.
+- Mobile/responsive behavior is still a future pass.
+- Smoke sessions remain selectable; they are only visually de-emphasized.
+
+---
+
+## P3 UI Redesign Phase 3: Timeline and Artifact Panel Polish
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/components/task-card-list.tsx` | Polished the center task list into a stronger vertical execution rail, improved task card spacing, and made fallback recovery read as a clearer Codex failed → fallback recovered → artifacts ready sequence. |
+| `apps/web/src/components/task-card-list.test.tsx` | Updated the task marker assertion for the polished task label. |
+| `apps/web/src/components/preview-card.tsx` | Strengthened Artifact Panel hierarchy with clearer detail header, segmented Diff/Preview/Deploy selector, selected artifact label, and stronger active tab state. |
+| `apps/web/src/components/workspace-shell.tsx` | Reduced sidebar session-list noise and improved top pipeline status readability. |
+| `docs/change-log.md` | Recorded this Phase 3 visual polish pass. |
+
+### What Changed
+
+Phase 3 keeps the Phase 2 data ownership and API behavior intact while polishing
+visual hierarchy:
+
+- The center task timeline now has a vertical rail with numbered task nodes.
+- Task cards are lighter, more scannable, and less boxy.
+- Run history is grouped with clearer run counts and recovery status.
+- Fallback recovery now presents as:
+  `Codex failed -> fallback recovered -> artifacts ready`.
+- Sidebar sessions show less repeated metadata; only the selected session shows
+  task focus detail.
+- The top pipeline uses clearer status pills for completed, recovered, ready,
+  running, and pending states.
+- The Artifact Panel now reads as a detail panel with a clearer header, selected
+  artifact type label, and segmented Diff / Preview / Deploy controls.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (25 web tests, 112 API tests) |
+| `git diff --check` | Pass |
+| Browser render check | Pass: captured `/tmp/agenthub-phase3-polish.png` against the existing local web/API services. |
+
+### Known Limitations
+
+- This is still not a full task execution-detail page.
+- Artifact Panel controls are polished but remain a compact selector, not full
+  production tabs.
+- Mobile layout remains a later pass.
+
+---
+
+## P3 UI Redesign Phase 2: Artifact Panel Ownership
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/components/task-card-list.tsx` | Removed inline detailed Diff, Preview, and Deploy card rendering from the center timeline; task cards now show artifact summary chips and clearer recovery/run summaries. |
+| `apps/web/src/components/preview-card.tsx` | Expanded the right panel into an Artifact Panel that can render selected diff, preview, or deployment details and expose existing preview/deploy actions. |
+| `apps/web/src/components/workspace-shell.tsx` | Added frontend-only artifact selection state, default latest-artifact selection, and right-panel callbacks while preserving existing API calls and SSE refresh. |
+| `apps/web/src/components/task-card-list.test.tsx` | Updated task timeline tests to assert summary chips, artifact selection, and artifact item handoff instead of inline detail cards. |
+| `apps/web/src/components/preview-card.test.tsx` | Updated panel tests for selected artifact rendering. |
+| `docs/change-log.md` | Recorded this Phase 2 frontend redesign slice. |
+
+### What Changed
+
+The center task timeline now stays focused on execution state. It no longer
+duplicates detailed diff, preview, or deployment cards inline after each task.
+Instead, each task card exposes only compact artifact evidence:
+
+- Diff ready
+- Changed file
+- Preview health
+- Deploy mock ready
+- Recovered / fallback state
+
+`TaskCardList` still uses the existing frontend API client functions to fetch
+TaskRun artifacts, but it now converts them into frontend-only
+`ArtifactPanelItem` objects and hands them to `WorkspaceShell`. `WorkspaceShell`
+keeps the selected artifact id and defaults the panel to the latest available
+artifact when no valid selection exists.
+
+The right Artifact Panel now owns artifact detail rendering:
+
+- Diff artifacts render through the existing `DiffCard`.
+- Preview artifacts render through the existing `PreviewCard` plus iframe.
+- Deployment artifacts render through the existing `DeployCard`.
+
+Existing behavior is preserved:
+
+- Start, Retry, Retry with ScriptedMockAdapter, Force Codex failure, Interrupt,
+  Approve, and Deny remain in the center task cards.
+- Preview refresh, open, stop, and mock deploy actions remain wired to the
+  existing API callbacks through the right panel.
+- No backend API changes were made.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (25 web tests, 112 API tests) |
+| `git diff --check` | Pass |
+| Browser render check | Pass: captured `/tmp/agenthub-phase2-artifact-panel.png`; right panel defaulted to the latest diff artifact while center timeline no longer rendered inline artifact detail cards. |
+
+### Known Limitations
+
+- This does not implement full Artifact Panel tabs or a task detail page.
+- The panel still uses a compact selector rail; richer artifact browsing remains
+  a later visual pass.
+- The center task timeline still needs another pass for a denser vertical rail
+  treatment once artifact ownership settles.
+
+---
+
+## P3 UI Visual QA Refinement Pass 1
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/app/page.tsx` | Removed the capped outer page card wrapper so the command center reads as a full workspace. |
+| `apps/web/src/app/page.test.tsx` | Updated the shell ownership assertion for the full-screen page structure. |
+| `apps/web/src/components/health-card.tsx` | Compressed Backend health into a single header badge with tooltip detail. |
+| `apps/web/src/components/preview-card.tsx` | Refined the right Artifact Panel placeholder with tab-like labels, Safari-style preview chrome, dotted preview canvas, and a visible waiting card. |
+| `apps/web/src/components/workspace-shell.tsx` | Tuned header hierarchy, pipeline treatment, sidebar selected state, central empty-state card, composer surface, and orchestrator plan styling. |
+| `docs/change-log.md` | Recorded this visual QA refinement pass. |
+
+### Visual QA Method
+
+Used the three root-level reference PNGs (`1.png`, `2.png`, `3.png`) as the
+available visual references because `docs/ui-redesign/assets` is absent in this
+checkout. The main workspace target is `3.png`.
+
+Captured the current UI with local Google Chrome headless:
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless=new \
+  --disable-gpu \
+  --hide-scrollbars \
+  --window-size=1440,1000 \
+  --virtual-time-budget=5000 \
+  --screenshot=/tmp/agenthub-main-workspace-task-refined.png \
+  "http://127.0.0.1:3000?session=cb653482-c31a-48da-a8ee-31ed8cd367e3"
+```
+
+### Top Visual Mismatches Found
+
+1. The command center still read as a large rounded page card instead of a
+   full-screen workspace.
+2. Header height and Backend health weight made the pipeline feel secondary.
+3. Sidebar selected-session styling was too generic and did not match the
+   reference's stronger active rail.
+4. The right Artifact Panel placeholder lacked the preview-canvas quality of
+   the reference.
+5. Orchestrator/empty-state cards needed lighter hierarchy and softer borders.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (25 web tests, 112 API tests) |
+| `git diff --check` | Pass |
+
+### Known Limitations
+
+- This pass intentionally does not implement execution-detail pages or full
+  Artifact Panel tabs.
+- Sidebar timestamps remain backed by the existing date formatter to avoid
+  introducing hydration-sensitive relative-time rendering in this visual-only
+  slice.
+
+---
+
+## P3 UI Redesign Slice 1: Command Center Shell
+
+**Date:** 2026-05-18
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/app/globals.css` | Added command-center design tokens for surfaces, primary indigo, muted text, borders, and code colors. |
+| `apps/web/src/app/page.tsx` | Replaced the old page wrapper with a command-center container and moved health into the workspace shell header slot. |
+| `apps/web/src/app/page.test.tsx` | Updated the home-page test to assert the shell owns the command-center page structure. |
+| `apps/web/src/components/health-card.tsx` | Slimmed backend health from a large page card into a compact status surface for the header. |
+| `apps/web/src/components/preview-card.tsx` | Reworked the right preview area into an Artifact Panel placeholder while preserving preview refresh/close and iframe behavior. |
+| `apps/web/src/components/task-card-list.tsx` | Reframed tasks as a timeline with agent tags, run history, evidence chips, and preserved run/approval/preview/deploy controls. |
+| `apps/web/src/components/task-card-list.test.tsx` | Updated assertions for the new timeline labels and split run-history markup. |
+| `apps/web/src/components/ui/button.tsx` | Aligned button radius and primary color with the command-center token direction. |
+| `apps/web/src/components/workspace-shell.tsx` | Rebuilt the frontend shell into a left sidebar, central IM chat/task timeline, top demo pipeline, and right artifact panel layout while preserving existing state ownership and API callbacks. |
+| `docs/change-log.md` | Recorded this frontend-only redesign slice. |
+
+### What Changed
+
+Implemented the first real UI redesign slice from `docs/ui-redesign-spec.md`.
+The previous page-level card layout was replaced with an IM-style Coding Agent
+Command Center:
+
+1. A fixed left workspace/session sidebar with workspace identity, session
+   list, current-session status metadata, and full-width New Session action.
+2. A central workspace containing the current session header, chat bubbles,
+   orchestrator plan callout, task timeline container, and composer.
+3. A right Artifact Panel placeholder that visually reserves the final
+   diff/preview/deploy workspace without adding unsupported tabs.
+4. A top demo pipeline showing the P0 loop:
+   Requirement → Plan → Run → Diff → Preview → Deploy.
+
+All existing frontend API calls and callbacks for Start, Retry, Force failure,
+Fallback, Preview, Deploy, Approve, Deny, Interrupt, SSE refresh, and persisted
+session/task/run/artifact fetching remain wired through the existing client
+functions.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (25 web tests, 112 API tests) |
+| `git diff --check` | Pass |
+| Manual local render check | Pass: reused existing `127.0.0.1:8000` and `127.0.0.1:3000` services; verified rendered HTML includes the command-center title, demo pipeline stages, Backend status, New Session action, and Artifact Panel placeholder. |
+
+### Known Limitations
+
+- This slice intentionally does not implement full Artifact Panel tabs.
+- Pipeline Preview and Deploy stages remain visual placeholders until the
+  artifact-panel phase connects richer artifact state.
+- `docs/ui-redesign/assets` was not present in this checkout; root-level
+  untracked reference PNGs were left untouched.
+- Screenshot capture was not produced because Playwright was not installed in
+  the workspace; the manual check used the already-running local Next.js server
+  and rendered HTML verification.
+
+---
+
 ## Frontend Design Handoff Brief
 
 **Date:** 2026-05-17
