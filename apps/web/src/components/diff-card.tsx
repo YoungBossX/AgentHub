@@ -33,11 +33,13 @@ export function DiffCard({ diff }: DiffCardProps) {
         <div className="min-w-0">
           <p className="flex items-center gap-1 text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
             <FileCode2 aria-hidden="true" size={14} />
-            Diff artifact
+            Diff 产物
           </p>
-          <h4 className="mt-1 text-sm font-semibold">{diff.title}</h4>
+          <h4 className="mt-1 text-sm font-semibold">
+            {diff.title === "Git diff" ? "Git Diff" : diff.title}
+          </h4>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {formatFilesChanged(filesChanged)} · {shortRef(diff.baseRef)} to{" "}
+            {formatFilesChanged(filesChanged)} · {shortRef(diff.baseRef)} 到{" "}
             {shortRef(diff.headRef)}
           </p>
         </div>
@@ -51,7 +53,7 @@ export function DiffCard({ diff }: DiffCardProps) {
         </div>
       </div>
 
-      <ul className="mt-3 grid gap-1" aria-label="Changed files">
+      <ul className="mt-3 grid gap-1" aria-label="变更文件">
         {diff.changedFiles.map((file) => (
           <li
             className="truncate rounded-sm border border-[var(--border)] bg-slate-50 px-2 py-1 text-xs"
@@ -69,13 +71,13 @@ export function DiffCard({ diff }: DiffCardProps) {
         variant="secondary"
       >
         {expanded ? <ChevronUp aria-hidden="true" size={14} /> : <ChevronDown aria-hidden="true" size={14} />}
-        {expanded ? "Collapse diff" : "Expand diff"}
+        {expanded ? "收起 Diff" : "展开 Diff"}
       </Button>
 
       {expanded ? (
         <div className="mt-3 grid gap-3">
           {parsedFiles.length > 1 ? (
-            <div className="flex flex-wrap gap-2" aria-label="Diff files">
+            <div className="flex flex-wrap gap-2" aria-label="Diff 文件">
               {parsedFiles.map((file) => (
                 <button
                   className={cn(
@@ -171,7 +173,7 @@ export function parseUnifiedDiff(patchText: string): ParsedFileDiff[] {
 }
 
 function formatFilesChanged(filesChanged: number) {
-  return filesChanged === 1 ? "1 file changed" : `${filesChanged} files changed`
+  return filesChanged === 1 ? "1 个文件变更" : `${filesChanged} 个文件变更`
 }
 
 function shortRef(ref: string) {

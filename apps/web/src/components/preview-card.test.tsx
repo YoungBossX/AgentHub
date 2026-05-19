@@ -24,16 +24,16 @@ describe("PreviewCard", () => {
       }),
     )
 
-    expect(screen.getByText("Vite React preview")).toBeTruthy()
-    expect(screen.getByText("healthy")).toBeTruthy()
+    expect(screen.getByText("Vite React 预览")).toBeTruthy()
+    expect(screen.getByText("健康")).toBeTruthy()
     expect(screen.getByText("http://127.0.0.1:5173")).toBeTruthy()
     expect(screen.getByText("5173")).toBeTruthy()
-    expect(screen.getByText("Last checked: May 15, 10:30")).toBeTruthy()
+    expect(screen.getByText("最近检查：5月15日 10:30")).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "Open preview" }))
-    fireEvent.click(screen.getByRole("button", { name: "Refresh preview" }))
-    fireEvent.click(screen.getByRole("button", { name: "Create deploy card" }))
-    fireEvent.click(screen.getByRole("button", { name: "Stop preview" }))
+    fireEvent.click(screen.getByRole("button", { name: "打开预览" }))
+    fireEvent.click(screen.getByRole("button", { name: "刷新预览" }))
+    fireEvent.click(screen.getByRole("button", { name: "创建部署卡片" }))
+    fireEvent.click(screen.getByRole("button", { name: "停止预览" }))
 
     expect(onOpen).toHaveBeenCalledWith(samplePreviewArtifact)
     expect(onRefresh).toHaveBeenCalledWith("run-1")
@@ -63,12 +63,12 @@ describe("PreviewCard", () => {
       }),
     )
 
-    const frame = screen.getByTitle("Vite React preview")
+    const frame = screen.getByTitle("Vite React 预览")
     expect(frame.getAttribute("src")).toBe("http://127.0.0.1:5173")
     expect(screen.getAllByText("127.0.0.1:5173").length).toBeGreaterThan(0)
 
-    fireEvent.click(screen.getByRole("button", { name: "Refresh panel" }))
-    fireEvent.click(screen.getByRole("button", { name: "Close artifact" }))
+    fireEvent.click(screen.getByRole("button", { name: "刷新面板" }))
+    fireEvent.click(screen.getByRole("button", { name: "关闭产物" }))
 
     expect(onRefresh).toHaveBeenCalledWith("run-1")
     expect(onClose).toHaveBeenCalled()

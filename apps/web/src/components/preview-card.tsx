@@ -56,10 +56,10 @@ export type ArtifactPanelItem =
 
 function formatPreviewTime(value: string | null) {
   if (!value) {
-    return "Last checked: pending"
+    return "最近检查：等待中"
   }
 
-  return `Last checked: ${formatCompactDateTime(value)}`
+  return `最近检查：${formatCompactDateTime(value)}`
 }
 
 function previewHost(url: string) {
@@ -68,6 +68,22 @@ function previewHost(url: string) {
   } catch {
     return url
   }
+}
+
+function previewTitle(title: string) {
+  return title === "Vite React preview" ? "Vite React 预览" : title
+}
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    healthy: "健康",
+    pending: "等待中",
+    ready: "就绪",
+    starting: "启动中",
+    stopped: "已停止",
+    unhealthy: "异常",
+  }
+  return labels[status] ?? status
 }
 
 export function PreviewCard({
@@ -84,29 +100,31 @@ export function PreviewCard({
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
             <Monitor aria-hidden="true" size={14} />
-            Preview
+            预览
           </p>
-          <h3 className="mt-1 truncate text-sm font-semibold">{preview.title}</h3>
+          <h3 className="mt-1 truncate text-sm font-semibold">
+            {previewTitle(preview.title)}
+          </h3>
           <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">
             {preview.url}
           </p>
         </div>
         <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
-          {preview.healthStatus}
+          {statusLabel(preview.healthStatus)}
         </span>
       </div>
 
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
         <div>
-          <dt className="text-[var(--muted-foreground)]">Status</dt>
-          <dd className="mt-1 font-medium">{preview.status}</dd>
+          <dt className="text-[var(--muted-foreground)]">状态</dt>
+          <dd className="mt-1 font-medium">{statusLabel(preview.status)}</dd>
         </div>
         <div>
-          <dt className="text-[var(--muted-foreground)]">Port</dt>
+          <dt className="text-[var(--muted-foreground)]">端口</dt>
           <dd className="mt-1 font-medium">{preview.port}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-[var(--muted-foreground)]">Checked</dt>
+          <dt className="text-[var(--muted-foreground)]">检查时间</dt>
           <dd className="mt-1 truncate font-medium">
             {formatPreviewTime(preview.lastCheckedAt)}
           </dd>
@@ -127,7 +145,7 @@ export function PreviewCard({
           type="button"
         >
           <ExternalLink aria-hidden="true" size={14} />
-          Open preview
+          打开预览
         </Button>
         <Button
           className="h-8 px-3 text-xs"
@@ -137,7 +155,7 @@ export function PreviewCard({
           variant="secondary"
         >
           <RefreshCw aria-hidden="true" size={14} />
-          Refresh preview
+          刷新预览
         </Button>
         <Button
           className="h-8 px-3 text-xs"
@@ -147,7 +165,7 @@ export function PreviewCard({
           variant="secondary"
         >
           <Rocket aria-hidden="true" size={14} />
-          Create deploy card
+          创建部署卡片
         </Button>
         <Button
           className="h-8 px-3 text-xs"
@@ -157,7 +175,7 @@ export function PreviewCard({
           variant="secondary"
         >
           <Square aria-hidden="true" size={14} />
-          Stop preview
+          停止预览
         </Button>
       </div>
     </article>
@@ -190,7 +208,7 @@ export function PreviewPanel({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-              Artifact detail
+              产物详情
             </p>
             <h2 className="mt-1 truncate text-base font-semibold text-slate-950">
               {panelTitle(selectedItem)}
@@ -198,7 +216,7 @@ export function PreviewPanel({
             <p className="mt-1 text-xs text-[var(--muted-foreground)]">
               {selectedItem
                 ? selectedItem.taskTitle
-                : "Select a diff, preview, or deploy artifact from the timeline."}
+                : "从时间线选择 Diff、预览或部署产物。"}
             </p>
             {selectedItem ? (
               <p className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-normal text-slate-600">
@@ -208,7 +226,7 @@ export function PreviewPanel({
           </div>
           <div className="flex gap-2 pt-1">
             <Button
-              aria-label="Refresh panel"
+              aria-label="刷新面板"
               className="h-8 w-8 rounded-lg p-0"
               disabled={!selectedPreview || !onRefresh}
               onClick={() => selectedPreview && onRefresh?.(selectedPreview.taskRunId)}
@@ -218,7 +236,7 @@ export function PreviewPanel({
               <RefreshCw aria-hidden="true" size={14} />
             </Button>
             <Button
-              aria-label="Close artifact"
+              aria-label="关闭产物"
               className="h-8 w-8 rounded-lg p-0"
               disabled={!selectedItem || !onClose}
               onClick={onClose}
@@ -245,7 +263,7 @@ export function PreviewPanel({
           <ArtifactRailItem
             active={activeKind === "preview"}
             count={artifactItems.filter((item) => item.kind === "preview").length}
-            label="Preview"
+            label="预览"
             onSelect={() => {
               const item = latestByKind("preview")
               if (item) {
@@ -256,7 +274,7 @@ export function PreviewPanel({
           <ArtifactRailItem
             active={activeKind === "deployment"}
             count={artifactItems.filter((item) => item.kind === "deployment").length}
-            label="Deploy"
+            label="部署"
             onSelect={() => {
               const item = latestByKind("deployment")
               if (item) {
@@ -276,7 +294,7 @@ export function PreviewPanel({
         <section className="rounded-xl border border-[var(--border)] bg-white p-3 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-              Preview Environment
+              预览环境
             </p>
             <span className="text-[11px] font-semibold text-[var(--primary)]">
               Vite
@@ -288,7 +306,7 @@ export function PreviewPanel({
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
               <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
               <span className="ml-2 min-w-0 flex-1 truncate rounded bg-white px-2 py-1 text-center text-xs text-[var(--muted-foreground)]">
-                {selectedPreview?.url ?? "Preview not started yet"}
+                {selectedPreview?.url ?? "预览尚未启动"}
               </span>
             </div>
           </div>
@@ -310,9 +328,9 @@ export function PreviewPanel({
               <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary)] text-white">
                 <Monitor aria-hidden="true" size={18} />
               </span>
-              <p className="mt-4 font-semibold text-slate-900">Waiting for preview</p>
+              <p className="mt-4 font-semibold text-slate-900">等待预览</p>
               <p className="mt-1 leading-6">
-                Start preview after a completed run creates evidence.
+                完成运行并生成证据后，可在这里启动预览。
               </p>
               <div className="mt-5 h-9 rounded-lg bg-[var(--primary)]" />
             </div>
@@ -331,7 +349,7 @@ function ArtifactSummary({ item }: { item: ArtifactPanelItem }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-            Source task
+            来源任务
           </p>
           <p className="mt-1 line-clamp-2 text-sm font-semibold text-slate-950">
             {item.taskTitle}
@@ -393,7 +411,7 @@ function ArtifactDetail({
         className="min-h-[420px] w-full rounded-xl border border-[var(--border)] bg-white shadow-sm"
         key={`${item.artifact.id}-${frameKey}`}
         src={item.artifact.url}
-        title="Vite React preview"
+        title="Vite React 预览"
       />
     </div>
   )
@@ -431,7 +449,7 @@ function ArtifactRailItem({
 
 function panelTitle(item: ArtifactPanelItem | null) {
   if (!item) {
-    return "Evidence workspace"
+    return "证据工作台"
   }
   if (item.kind === "preview") {
     return previewHost(item.artifact.url)
@@ -444,38 +462,38 @@ function panelTitle(item: ArtifactPanelItem | null) {
 
 function artifactKindLabel(kind: ArtifactPanelItem["kind"]) {
   if (kind === "deployment") {
-    return "Deploy artifact"
+    return "部署产物"
   }
 
-  return `${kind} artifact`
+  return kind === "preview" ? "预览产物" : "Diff 产物"
 }
 
 function summaryRows(item: ArtifactPanelItem) {
   if (item.kind === "diff") {
     return [
-      { label: "Files", value: String(item.artifact.stats.filesChanged) },
+      { label: "文件", value: String(item.artifact.stats.filesChanged) },
       {
-        label: "Changed",
-        value: item.artifact.changedFiles[0] ?? "No file listed",
+        label: "变更文件",
+        value: item.artifact.changedFiles[0] ?? "暂无文件",
       },
-      { label: "Additions", value: `+${item.artifact.stats.additions}` },
-      { label: "Deletions", value: `-${item.artifact.stats.deletions}` },
+      { label: "新增", value: `+${item.artifact.stats.additions}` },
+      { label: "删除", value: `-${item.artifact.stats.deletions}` },
     ]
   }
 
   if (item.kind === "preview") {
     return [
-      { label: "Health", value: item.artifact.healthStatus },
-      { label: "Status", value: item.artifact.status },
-      { label: "Port", value: String(item.artifact.port) },
+      { label: "健康", value: statusLabel(item.artifact.healthStatus) },
+      { label: "状态", value: statusLabel(item.artifact.status) },
+      { label: "端口", value: String(item.artifact.port) },
       { label: "URL", value: previewHost(item.artifact.url) },
     ]
   }
 
   return [
-    { label: "Provider", value: item.artifact.provider },
-    { label: "Status", value: item.artifact.status },
-    { label: "Environment", value: item.artifact.environment },
+    { label: "提供方", value: item.artifact.provider },
+    { label: "状态", value: statusLabel(item.artifact.status) },
+    { label: "环境", value: item.artifact.environment },
     { label: "URL", value: item.artifact.url ?? "mock://pending" },
   ]
 }

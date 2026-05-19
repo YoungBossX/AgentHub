@@ -83,6 +83,36 @@ function statusClasses(status: string) {
   }
 }
 
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    active: "运行中",
+    applying_changes: "应用变更",
+    collecting_diff: "收集 Diff",
+    completed: "已完成",
+    created: "已创建",
+    failed: "失败",
+    interrupted: "已中断",
+    pending: "待处理",
+    queued: "排队中",
+    running: "运行中",
+    starting_preview: "启动预览",
+    streaming: "执行中",
+    waiting_approval: "等待审批",
+  }
+  return labels[status] ?? status
+}
+
+function healthLabel(health: string) {
+  const labels: Record<string, string> = {
+    healthy: "健康",
+    pending: "等待中",
+    starting: "启动中",
+    stopped: "已停止",
+    unhealthy: "异常",
+  }
+  return labels[health] ?? health
+}
+
 export function TaskCardList({
   tasks,
   artifactRefreshKey = 0,
@@ -221,7 +251,7 @@ export function TaskCardList({
   }
 
   return (
-    <ol className="relative grid gap-4 pl-8 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-slate-200">
+    <ol className="relative grid gap-3.5 pl-8 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-slate-200">
       {tasks.map((task, index) => {
         const latestRun = task.taskRuns[task.taskRuns.length - 1] ?? null
         const taskDiffs = task.taskRuns.flatMap((taskRun) => diffsByRunId[taskRun.id] ?? [])
@@ -268,7 +298,7 @@ export function TaskCardList({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-600">
-                      Task {index + 1}
+                      任务 {index + 1}
                     </span>
                     <span className="rounded border border-[var(--border)] bg-white px-2 py-1 font-mono text-xs text-[var(--muted-foreground)]">
                       @{task.assignedAgentRole ?? "unassigned"}
@@ -284,12 +314,12 @@ export function TaskCardList({
                     stateStyle.badge,
                   )}
                 >
-                  {task.status}
+                    {statusLabel(task.status)}
                 </span>
               </div>
               {task.dependsOnTaskIds.length > 0 ? (
                 <p className="mt-2 truncate text-xs font-medium text-[var(--muted-foreground)]">
-                  Depends on {task.dependsOnTaskIds.join(", ")}
+                  依赖 {task.dependsOnTaskIds.join(", ")}
                 </p>
               ) : null}
               <ArtifactChips
@@ -311,10 +341,10 @@ export function TaskCardList({
                 <div className="mt-3 grid gap-2 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-                      Run history
+                      运行记录
                     </p>
                     <p className="text-[11px] font-medium text-slate-500">
-                      {task.taskRuns.length} runs
+                      {task.taskRuns.length} 次运行
                     </p>
                   </div>
                   {task.taskRuns.map((taskRun, runIndex) => (
@@ -382,12 +412,12 @@ function RunSummary({
   const completed = run.state === "completed"
   const fallback = run.adapterType === "scripted_mock"
   const label = failed
-    ? "Codex failed"
+    ? "Codex 失败"
     : completed && fallback
-      ? "Fallback recovered"
+      ? "兜底已恢复"
       : completed
-        ? "Completed"
-        : run.state
+        ? "已完成"
+        : statusLabel(run.state)
   return (
     <div
       className={cn(
@@ -399,11 +429,11 @@ function RunSummary({
       )}
     >
       <span className="min-w-0 truncate">
-        <span className="font-semibold text-slate-800">Run {runIndex + 1}</span>{" "}
+        <span className="font-semibold text-slate-800">第 {runIndex + 1} 次</span>{" "}
         · <span className="font-mono">{run.adapterType}</span> · {label}
       </span>
       {artifactReady ? (
-        <span className="text-green-700">artifacts ready</span>
+        <span className="text-green-700">产物就绪</span>
       ) : run.errorCode ? (
         <span className="truncate text-red-700">{run.errorCode}</span>
       ) : null}
@@ -440,12 +470,12 @@ function ArtifactChips({
   return (
     <div className="mt-3 flex flex-wrap gap-2">
       {recovered ? (
-        <EvidenceChip className="bg-purple-50 text-purple-700" label="Recovered" />
+        <EvidenceChip className="bg-purple-50 text-purple-700" label="已恢复" />
       ) : null}
       {diffs.length > 0 ? (
         <EvidenceChip
           className="bg-cyan-50 text-cyan-700"
-          label={`Diff ready · ${diffs[0]?.stats.filesChanged ?? diffs.length} files`}
+          label={`Diff 就绪 · ${diffs[0]?.stats.filesChanged ?? diffs.length} 个文件`}
           onClick={selectLatestArtifact("diff", taskArtifactItems, onSelectArtifact)}
           selected={selectedArtifactId === latestArtifactId("diff", taskArtifactItems)}
         />
@@ -453,7 +483,7 @@ function ArtifactChips({
       {diffs[0]?.changedFiles[0] ? (
         <EvidenceChip
           className="bg-slate-100 font-mono text-slate-700"
-          label={`Changed: ${diffs[0].changedFiles[0]}`}
+          label={`已变更：${diffs[0].changedFiles[0]}`}
           onClick={selectLatestArtifact("diff", taskArtifactItems, onSelectArtifact)}
           selected={selectedArtifactId === latestArtifactId("diff", taskArtifactItems)}
         />
@@ -461,7 +491,7 @@ function ArtifactChips({
       {previews.length > 0 ? (
         <EvidenceChip
           className="bg-green-50 text-green-700"
-          label={`Preview ${previews[previews.length - 1]?.healthStatus}`}
+          label={`预览${healthLabel(previews[previews.length - 1]?.healthStatus ?? "")}`}
           onClick={selectLatestArtifact("preview", taskArtifactItems, onSelectArtifact)}
           selected={selectedArtifactId === latestArtifactId("preview", taskArtifactItems)}
         />
@@ -469,7 +499,7 @@ function ArtifactChips({
       {deployments.length > 0 ? (
         <EvidenceChip
           className="bg-[var(--primary-soft)] text-[var(--primary)]"
-          label="Deploy mock ready"
+          label="模拟部署就绪"
           onClick={selectLatestArtifact(
             "deployment",
             taskArtifactItems,
@@ -553,13 +583,13 @@ function RecoverySummary({
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2 text-xs">
-      <EvidenceChip className="bg-red-50 text-red-700" label="Codex failed" />
+      <EvidenceChip className="bg-red-50 text-red-700" label="Codex 失败" />
       <span className="font-semibold text-slate-300">-&gt;</span>
-      <EvidenceChip className="bg-purple-50 text-purple-700" label="fallback recovered" />
+      <EvidenceChip className="bg-purple-50 text-purple-700" label="兜底已恢复" />
       {artifactReady ? (
         <>
           <span className="font-semibold text-slate-300">-&gt;</span>
-        <EvidenceChip className="bg-green-50 text-green-700" label="Artifacts ready" />
+          <EvidenceChip className="bg-green-50 text-green-700" label="产物就绪" />
         </>
       ) : null}
     </div>
@@ -599,7 +629,7 @@ function RunControls({
           type="button"
         >
           <Play aria-hidden="true" size={14} />
-          Start run
+          开始运行
         </Button>
         {onForceCodexFailure ? (
           <Button
@@ -610,7 +640,7 @@ function RunControls({
             variant="secondary"
           >
             <CircleAlert aria-hidden="true" size={14} />
-            Force Codex failure
+            模拟 Codex 失败
           </Button>
         ) : null}
       </div>
@@ -639,7 +669,7 @@ function RunControls({
           variant="secondary"
         >
           <Square aria-hidden="true" size={14} />
-          Interrupt
+          中断
         </Button>
       </div>
     )
@@ -655,7 +685,7 @@ function RunControls({
           type="button"
         >
           <RotateCcw aria-hidden="true" size={14} />
-          Retry
+          重试
         </Button>
         {latestRun.adapterType === "codex" ? (
           <Button
@@ -666,7 +696,7 @@ function RunControls({
             variant="secondary"
           >
             <Shuffle aria-hidden="true" size={14} />
-            Retry with ScriptedMockAdapter
+            使用兜底重试
           </Button>
         ) : null}
       </div>
@@ -684,7 +714,7 @@ function RunControls({
           variant="secondary"
         >
           <Play aria-hidden="true" size={14} />
-          Start preview
+          启动预览
         </Button>
       </div>
     )
@@ -710,30 +740,30 @@ function ApprovalRequestCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-normal text-amber-800">
-            Approval required
+            需要审批
           </p>
           <p className="mt-1 text-sm font-medium text-amber-950">
-            {request?.requestedAction ?? "Review requested action"}
+            {request?.requestedAction ?? "查看请求动作"}
           </p>
         </div>
         <span className="rounded-sm border border-amber-300 bg-white px-2 py-0.5 text-xs text-amber-800">
-          {request?.approvalType ?? "approval"}
+          {request?.approvalType ?? "审批"}
         </span>
       </div>
       <p className="mt-2 text-sm leading-6 text-amber-950">
-        {request?.reason ?? "This run is waiting for a user decision before it can continue."}
+        {request?.reason ?? "这次运行正在等待用户确认，确认后才能继续。"}
       </p>
       {request?.command || request?.path ? (
         <dl className="mt-2 grid gap-1 text-xs text-amber-900">
           {request.command ? (
             <div className="grid gap-1">
-              <dt className="font-semibold">Command</dt>
+              <dt className="font-semibold">命令</dt>
               <dd className="truncate font-mono">{request.command}</dd>
             </div>
           ) : null}
           {request.path ? (
             <div className="grid gap-1">
-              <dt className="font-semibold">Path</dt>
+              <dt className="font-semibold">路径</dt>
               <dd className="truncate font-mono">{request.path}</dd>
             </div>
           ) : null}
@@ -747,7 +777,7 @@ function ApprovalRequestCard({
           type="button"
         >
           <Check aria-hidden="true" size={14} />
-          Approve
+          批准
         </Button>
         <Button
           className="h-8 px-3 text-xs"
@@ -757,7 +787,7 @@ function ApprovalRequestCard({
           variant="secondary"
         >
           <X aria-hidden="true" size={14} />
-          Deny
+          拒绝
         </Button>
       </div>
     </div>

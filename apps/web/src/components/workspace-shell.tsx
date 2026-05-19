@@ -60,10 +60,20 @@ type WorkspaceShellProps = {
 
 function formatSessionTime(value: string | null) {
   if (!value) {
-    return "No messages"
+    return "暂无消息"
   }
 
   return formatCompactDateTime(value)
+}
+
+function senderLabel(senderType: string) {
+  if (senderType === "user") {
+    return "用户"
+  }
+  if (senderType === "agent") {
+    return "Agent"
+  }
+  return senderType
 }
 
 export function WorkspaceShell({
@@ -85,6 +95,7 @@ export function WorkspaceShell({
   const [artifactItems, setArtifactItems] = useState<ArtifactPanelItem[]>([])
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
   const selectedSession = useMemo(
@@ -114,6 +125,24 @@ export function WorkspaceShell({
         (run.metricsJson.retryOfRunId || run.metricsJson.fallbackFromRunId),
     ),
   )
+  const reportSyncError = useCallback(
+    (action: string, error: unknown) => {
+      void error
+      setSyncError(
+        `${action}。请确认 FastAPI 后端可访问：${backendUrl}。`,
+      )
+    },
+    [backendUrl],
+  )
+
+  const runClientAction = useCallback(
+    (action: () => Promise<void>, failureMessage: string) => {
+      startTransition(() => {
+        void action().catch((error) => reportSyncError(failureMessage, error))
+      })
+    },
+    [reportSyncError, startTransition],
+  )
 
   useEffect(() => {
     if (!selectedSessionId) {
@@ -121,37 +150,51 @@ export function WorkspaceShell({
     }
 
     let cancelled = false
-    listSessionMessages(backendUrl, selectedSessionId).then((nextMessages) => {
-      if (!cancelled) {
-        setMessages(nextMessages)
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [backendUrl, selectedSessionId])
-
-  useEffect(() => {
-    if (!selectedSessionId) {
-      return
-    }
-
-    let cancelled = false
-    listSessionTasks(backendUrl, selectedSessionId).then((nextTasks) => {
-      if (!cancelled) {
-        setTasks(nextTasks)
-        if (nextTasks.length === 0) {
-          setArtifactItems([])
-          setSelectedArtifactId(null)
+    listSessionMessages(backendUrl, selectedSessionId)
+      .then((nextMessages) => {
+        if (!cancelled) {
+          setMessages(nextMessages)
+          setSyncError(null)
         }
-      }
-    })
+      })
+      .catch((error) => {
+        if (!cancelled) {
+        reportSyncError("无法加载会话消息", error)
+        }
+      })
 
     return () => {
       cancelled = true
     }
-  }, [backendUrl, selectedSessionId])
+  }, [backendUrl, reportSyncError, selectedSessionId])
+
+  useEffect(() => {
+    if (!selectedSessionId) {
+      return
+    }
+
+    let cancelled = false
+    listSessionTasks(backendUrl, selectedSessionId)
+      .then((nextTasks) => {
+        if (!cancelled) {
+          setTasks(nextTasks)
+          setSyncError(null)
+          if (nextTasks.length === 0) {
+            setArtifactItems([])
+            setSelectedArtifactId(null)
+          }
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          reportSyncError("无法加载会话任务", error)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [backendUrl, reportSyncError, selectedSessionId])
 
   useEffect(() => {
     if (!selectedSessionId) {
@@ -162,11 +205,21 @@ export function WorkspaceShell({
       sessionEventsUrl(backendUrl, selectedSessionId, lastEventSequence),
     )
     source.onmessage = (event) => {
-      const payload = JSON.parse(event.data) as { sequence?: number }
-      if (typeof payload.sequence === "number") {
-        setLastEventSequence((current) => Math.max(current, payload.sequence ?? 0))
+      try {
+        const payload = JSON.parse(event.data) as { sequence?: number }
+        if (typeof payload.sequence === "number") {
+          setLastEventSequence((current) => Math.max(current, payload.sequence ?? 0))
+        }
+      } catch (error) {
+        reportSyncError("无法解析会话事件", error)
+        return
       }
-      listSessionTasks(backendUrl, selectedSessionId).then(setTasks)
+      listSessionTasks(backendUrl, selectedSessionId)
+        .then((nextTasks) => {
+          setTasks(nextTasks)
+          setSyncError(null)
+        })
+        .catch((error) => reportSyncError("无法刷新任务时间线", error))
     }
     source.onerror = () => {
       source.close()
@@ -175,9 +228,10 @@ export function WorkspaceShell({
     return () => {
       source.close()
     }
-  }, [backendUrl, lastEventSequence, selectedSessionId])
+  }, [backendUrl, lastEventSequence, reportSyncError, selectedSessionId])
 
   function selectSession(sessionId: string) {
+    setSyncError(null)
     setArtifactItems([])
     setSelectedArtifactId(null)
     const params = new URLSearchParams(searchParams.toString())
@@ -190,25 +244,31 @@ export function WorkspaceShell({
       return
     }
 
-    const title = `Session ${sessions.length + 1}`
-    startTransition(async () => {
+    const title = `会话 ${sessions.length + 1}`
+    runClientAction(async () => {
       const created = await createWorkspaceSession(backendUrl, workspace.id, title)
       setSessions((current) => [created, ...current])
       const params = new URLSearchParams(searchParams.toString())
       params.set("session", created.id)
       router.replace(`${pathname}?${params.toString()}`)
-    })
+      setSyncError(null)
+    }, "无法创建会话")
   }
 
   async function refreshSelectedTasks() {
     if (!selectedSessionId) {
       return
     }
-    const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
-    setTasks(nextTasks)
-    if (nextTasks.length === 0) {
-      setArtifactItems([])
-      setSelectedArtifactId(null)
+    try {
+      const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
+      setTasks(nextTasks)
+      setSyncError(null)
+      if (nextTasks.length === 0) {
+        setArtifactItems([])
+        setSelectedArtifactId(null)
+      }
+    } catch (error) {
+      reportSyncError("无法刷新任务时间线", error)
     }
   }
 
@@ -217,57 +277,57 @@ export function WorkspaceShell({
   }
 
   function handleCreateTaskRun(taskId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       await createTaskRun(backendUrl, taskId)
       await refreshSelectedTasks()
-    })
+    }, "无法启动任务运行")
   }
 
   function handleForceCodexFailure(taskId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       await forceCodexFailure(backendUrl, taskId)
       await refreshSelectedTasks()
       refreshArtifacts()
-    })
+    }, "无法模拟 Codex 失败")
   }
 
   function handleInterruptTaskRun(taskRunId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       await interruptTaskRun(backendUrl, taskRunId)
       await refreshSelectedTasks()
-    })
+    }, "无法中断任务运行")
   }
 
   function handleRetryTaskRun(taskRunId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       await retryTaskRun(backendUrl, taskRunId)
       await refreshSelectedTasks()
-    })
+    }, "无法重试任务运行")
   }
 
   function handleRetryTaskRunWithFallback(taskRunId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       await retryTaskRunWithFallback(backendUrl, taskRunId)
       await refreshSelectedTasks()
-    })
+    }, "无法使用 ScriptedMockAdapter 兜底重试")
   }
 
   function handleApproveTaskRun(taskRunId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       await approveTaskRun(backendUrl, taskRunId)
       await refreshSelectedTasks()
-    })
+    }, "无法批准任务运行")
   }
 
   function handleDenyTaskRun(taskRunId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       await denyTaskRun(
         backendUrl,
         taskRunId,
-        "User denied approval request from AgentHub UI.",
+        "用户已在 AgentHub 界面拒绝审批请求。",
       )
       await refreshSelectedTasks()
-    })
+    }, "无法拒绝任务运行")
   }
 
   function handleOpenPreview(preview: PreviewArtifact) {
@@ -276,7 +336,7 @@ export function WorkspaceShell({
   }
 
   function handleRefreshPreviews(taskRunId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       const previews = await listTaskRunPreviews(backendUrl, taskRunId)
       const latestPreview = previews[previews.length - 1] ?? null
       if (latestPreview && selectedPreview?.taskRunId === taskRunId) {
@@ -284,34 +344,38 @@ export function WorkspaceShell({
         setPreviewFrameKey((current) => current + 1)
       }
       refreshArtifacts()
-    })
+      setSyncError(null)
+    }, "无法刷新预览")
   }
 
   function handleStartPreview(taskRunId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       const preview = await startTaskRunPreview(backendUrl, taskRunId)
       setSelectedArtifactId(`preview:${preview.id}`)
       setPreviewFrameKey((current) => current + 1)
       refreshArtifacts()
-    })
+      setSyncError(null)
+    }, "无法启动预览")
   }
 
   function handleCreateDeployment(previewId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       const deployment = await createPreviewDeployment(backendUrl, previewId)
       setSelectedArtifactId(`deployment:${deployment.id}`)
       refreshArtifacts()
-    })
+      setSyncError(null)
+    }, "无法创建部署卡片")
   }
 
   function handleStopPreview(previewId: string) {
-    startTransition(async () => {
+    runClientAction(async () => {
       await stopPreview(backendUrl, previewId)
       if (selectedPreview?.id === previewId) {
         setPreviewFrameKey((current) => current + 1)
       }
       refreshArtifacts()
-    })
+      setSyncError(null)
+    }, "无法停止预览")
   }
 
   const handleArtifactsChange = useCallback((artifacts: ArtifactPanelItem[]) => {
@@ -333,7 +397,7 @@ export function WorkspaceShell({
 
     const content = draft.trim()
     setDraft("")
-    startTransition(async () => {
+    runClientAction(async () => {
       const created = await createSessionMessage(backendUrl, selectedSessionId, content)
       const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
       setMessages((current) => [...current, created])
@@ -345,15 +409,16 @@ export function WorkspaceShell({
             : session,
         ),
       )
-    })
+      setSyncError(null)
+    }, "无法发送消息")
   }
 
   if (!workspace) {
     return (
       <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h2 className="text-lg font-semibold">Workspace unavailable</h2>
+        <h2 className="text-lg font-semibold">工作区不可用</h2>
         <p className="mt-3 text-sm leading-6 text-[var(--muted-foreground)]">
-          Start the API and seed the SQLite database, then refresh AgentHub.
+          请先启动 API 并初始化 SQLite 数据库，然后刷新 AgentHub。
         </p>
       </section>
     )
@@ -378,7 +443,7 @@ export function WorkspaceShell({
                 AgentHub
               </h1>
               <p className="text-xs font-medium text-[var(--text-secondary)]">
-                Coding Agent Command Center
+                代码 Agent 指挥中心
               </p>
             </div>
           </div>
@@ -404,7 +469,7 @@ export function WorkspaceShell({
               </span>
               <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-                  Workspace
+                  工作区
                 </p>
                 <h2 className="mt-1 truncate text-base font-semibold text-slate-950">
                   {workspace.name}
@@ -416,8 +481,8 @@ export function WorkspaceShell({
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <WorkspaceMeta label="Sessions" value={String(sessions.length)} />
-              <WorkspaceMeta label="Current tasks" value={String(tasks.length)} />
+              <WorkspaceMeta label="会话" value={String(sessions.length)} />
+              <WorkspaceMeta label="当前任务" value={String(tasks.length)} />
             </div>
           </div>
 
@@ -428,7 +493,7 @@ export function WorkspaceShell({
             type="button"
           >
             <Plus aria-hidden="true" size={16} />
-            New Session
+            新建会话
           </Button>
         </div>
 
@@ -437,7 +502,7 @@ export function WorkspaceShell({
           data-region="sidebar-scroll"
         >
           <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-            Recent Sessions
+            最近会话
           </div>
           <div className="grid gap-1.5">
             {sessions.map((session) => {
@@ -469,7 +534,7 @@ export function WorkspaceShell({
                   </span>
                   {selected ? (
                     <span className="text-xs font-semibold text-[var(--primary)]">
-                      {tasks.length} tasks in focus
+                      聚焦 {tasks.length} 个任务
                     </span>
                   ) : null}
                 </button>
@@ -478,7 +543,7 @@ export function WorkspaceShell({
 
             {sessions.length === 0 ? (
               <div className="rounded-md border border-dashed border-[var(--border)] bg-white p-4 text-sm text-[var(--muted-foreground)]">
-                No sessions yet.
+                暂无会话。
               </div>
             ) : null}
           </div>
@@ -486,9 +551,9 @@ export function WorkspaceShell({
 
         <div className="shrink-0 border-t border-[var(--border)] p-4 text-xs text-[var(--muted-foreground)]">
           <div className="flex items-center justify-between">
-            <span>Docs</span>
+            <span>文档</span>
             <span>API</span>
-            <span>Support</span>
+            <span>支持</span>
           </div>
         </div>
       </aside>
@@ -496,18 +561,27 @@ export function WorkspaceShell({
       <main className="flex min-h-0 flex-col overflow-hidden bg-white">
         <header className="shrink-0 border-b border-[var(--border)] px-5 py-3">
           <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-            Current Session
+            当前会话
           </p>
           <h2 className="mt-1 text-xl font-semibold text-slate-950">
-            {selectedSession?.title ?? "No session selected"}
+            {selectedSession?.title ?? "未选择会话"}
           </h2>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            {workspace.rootPath} · {tasks.length} tasks ·{" "}
-            {hasCompletedRun ? "execution evidence available" : "waiting for run"}
+            {workspace.rootPath} · {tasks.length} 个任务 ·{" "}
+            {hasCompletedRun ? "已有执行证据" : "等待运行"}
           </p>
         </header>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden bg-[#FDFBFF] p-5">
+          {syncError ? (
+            <div
+              className="mx-auto w-full max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+              role="alert"
+            >
+              {syncError}
+            </div>
+          ) : null}
+
           <section
             className="min-h-0 flex-1 overflow-y-auto pr-1"
             data-region="center-scroll"
@@ -524,8 +598,8 @@ export function WorkspaceShell({
                         @orchestrator
                       </p>
                       <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
-                        This session has its own worktree. Send a requirement to
-                        generate the execution plan and task timeline.
+                        当前会话拥有独立 worktree。发送需求后，Orchestrator
+                        会生成执行计划与任务时间线。
                       </p>
                     </div>
                   </div>
@@ -545,14 +619,14 @@ export function WorkspaceShell({
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-                        Agent Task Timeline
+                        Agent 任务时间线
                       </p>
                       <h3 className="mt-1 text-base font-semibold text-slate-950">
-                        Execution plan and controls
+                        执行计划与操作
                       </h3>
                     </div>
                     <span className="rounded bg-white px-2 py-1 text-xs font-medium text-[var(--muted-foreground)]">
-                      {tasks.length} tasks
+                      {tasks.length} 个任务
                     </span>
                   </div>
                   <TaskCardList
@@ -592,14 +666,14 @@ export function WorkspaceShell({
                 <input
                   className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none"
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder="@orchestrator build a login page for the demo app"
+                  placeholder="@orchestrator 为演示应用构建登录页"
                   type="text"
                   value={draft}
                 />
               </div>
               <Button disabled={isPending || draft.trim().length === 0} type="submit">
                 <Send aria-hidden="true" size={16} />
-                Send
+                发送
               </Button>
             </form>
           ) : null}
@@ -666,7 +740,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             isUser ? "text-indigo-100" : "text-[var(--text-muted)]",
           )}
         >
-          {message.senderType}
+          {senderLabel(message.senderType)}
         </p>
         <p className="whitespace-pre-wrap">{message.contentMd}</p>
       </div>
@@ -687,13 +761,11 @@ function OrchestratorPlanCard({ taskCount }: { taskCount: number }) {
               @orchestrator
             </p>
             <span className="rounded bg-white/80 px-2 py-1 text-[11px] font-bold uppercase tracking-normal text-[var(--primary)]">
-              Planning complete
+              规划完成
             </span>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-800">
-            Generated a command-center execution plan with {taskCount} tasks.
-            Use the timeline below to start runs, recover failures, inspect diff
-            evidence, launch preview, and create a mock deploy card.
+            已生成包含 {taskCount} 个任务的指挥中心执行计划。你可以在下方时间线中启动运行、恢复失败、查看 Diff 证据、启动预览并创建模拟部署卡片。
           </p>
         </div>
       </div>
@@ -715,10 +787,10 @@ function DemoPipeline({
   hasTasks: boolean
 }) {
   const stages = [
-    { label: "Requirement", state: hasRequirement ? "complete" : "pending" },
-    { label: "Plan", state: hasTasks ? "complete" : "pending" },
+    { label: "需求", state: hasRequirement ? "complete" : "pending" },
+    { label: "计划", state: hasTasks ? "complete" : "pending" },
     {
-      label: "Run",
+      label: "运行",
       state: hasRecoveredRun
         ? "recovered"
         : hasCompletedRun
@@ -728,14 +800,14 @@ function DemoPipeline({
             : "pending",
     },
     { label: "Diff", state: hasCompletedRun ? "ready" : "pending" },
-    { label: "Preview", state: "pending" },
-    { label: "Deploy", state: "pending" },
+    { label: "预览", state: "pending" },
+    { label: "部署", state: "pending" },
   ]
 
   return (
     <div className="flex flex-col items-start gap-1 xl:items-center">
       <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-        Demo flow
+        演示流程
       </p>
       <ol className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
         {stages.map((stage, index) => (

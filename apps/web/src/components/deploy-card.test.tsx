@@ -11,10 +11,10 @@ describe("DeployCard", () => {
   it("shows persisted mock deployment details", () => {
     render(createElement(DeployCard, { deployment: sampleDeploymentArtifact }))
 
-    expect(screen.getByText("Mock deploy")).toBeTruthy()
+    expect(screen.getByText("模拟部署")).toBeTruthy()
     expect(screen.getByText("mock")).toBeTruthy()
     expect(screen.getByText("preview")).toBeTruthy()
-    expect(screen.getByText("ready")).toBeTruthy()
+    expect(screen.getByText("就绪")).toBeTruthy()
     expect(screen.getByText("def456+worktree")).toBeTruthy()
     expect(
       screen.getByText("https://mock.agenthub.local/deployments/deployment-1"),

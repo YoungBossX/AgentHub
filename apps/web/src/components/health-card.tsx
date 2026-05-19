@@ -9,6 +9,8 @@ type HealthCardProps = {
 
 export function HealthCard({ backendUrl, health }: HealthCardProps) {
   const isReady = health.status === "ok" && health.database === "ready"
+  const serviceStatus = health.status === "ok" ? "正常" : health.status
+  const databaseStatus = health.database === "ready" ? "就绪" : health.database
 
   return (
     <aside
@@ -23,9 +25,9 @@ export function HealthCard({ backendUrl, health }: HealthCardProps) {
         }
       />
       <Server aria-hidden="true" className="text-slate-500" size={14} />
-      <span className="text-xs font-semibold text-slate-950">Backend</span>
+      <span className="text-xs font-semibold text-slate-950">后端</span>
       <span className="hidden text-xs text-[var(--muted-foreground)] xl:inline">
-        {health.status} / {health.database}
+        {serviceStatus} / {databaseStatus}
       </span>
     </aside>
   )

@@ -1,5 +1,103 @@
 # AgentHub Change Log
 
+## Frontend Chinese Copy and Typography Polish
+
+**Date:** 2026-05-19
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/app/globals.css` | Added a Chinese-first font stack and global line-height/text rendering tuning. |
+| `apps/web/src/lib/date-format.ts` | Changed compact timestamps to Chinese month/day formatting. |
+| `apps/web/src/lib/date-format.test.ts` | Updated timestamp expectations for Chinese date output. |
+| `apps/web/src/components/workspace-shell.tsx` | Localized command-center shell labels, error copy, composer placeholder, demo pipeline, sidebar, chat, and timeline headings. |
+| `apps/web/src/components/task-card-list.tsx` | Localized task statuses, run history, evidence chips, approval copy, and run controls while preserving existing callbacks. |
+| `apps/web/src/components/preview-card.tsx` | Localized preview/artifact panel labels, action buttons, summary metadata, empty state, and iframe title. |
+| `apps/web/src/components/diff-card.tsx` | Localized diff artifact labels, changed-file metadata, and expand/collapse control. |
+| `apps/web/src/components/deploy-card.tsx` | Localized deploy-card labels and common status/title display. |
+| `apps/web/src/components/health-card.tsx` | Localized backend health badge display. |
+| Frontend component tests | Updated assertions for localized UI copy. |
+| `docs/change-log.md` | Recorded this localization and typography pass. |
+
+### What Changed
+
+The frontend now presents the command-center chrome in Chinese while keeping
+backend data, adapter names, file paths, URLs, and technical product terms such
+as `Diff`, `Vite`, and `API` intact where they help the coding-agent demo.
+
+Spacing and typography were adjusted lightly for Chinese readability:
+
+- Chinese-first system font stack with `PingFang SC`, `Microsoft YaHei`, and
+  Noto CJK fallbacks.
+- Global body line height set to `1.5`.
+- Timeline item gap tightened slightly for denser Chinese labels.
+- User-facing date formatting now renders like `5月17日 02:06`.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm --filter @agenthub/web check` | Pass |
+| `pnpm --filter @agenthub/web test` | Pass (26 web tests) |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (26 web tests, 113 API tests) |
+| `git diff --check` | Pass |
+| Browser render check | Pass: verified Chinese shell copy, Chinese-first font stack, viewport-height document, internal scroll regions, and composer visibility. Screenshot captured at `/tmp/agenthub-zh-ui-check.png`. |
+
+### Known Limitations
+
+- Task titles, session titles, adapter names, artifact titles, paths, URLs, and
+  raw backend status strings can still be English when they come from persisted
+  backend data or intentionally technical identifiers.
+
+---
+
+## P3 UI Sync Error Handling
+
+**Date:** 2026-05-19
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/main.py` | Allowed both `http://127.0.0.1:3000` and `http://localhost:3000` as local frontend CORS origins. |
+| `apps/api/tests/test_health.py` | Added CORS regression coverage for loopback and localhost frontend origins. |
+| `apps/web/src/components/workspace-shell.tsx` | Added guarded client-side session sync error handling for messages, tasks, SSE task refresh, and UI actions. |
+| `apps/web/src/components/workspace-shell.test.tsx` | Added a regression test that simulates browser fetch failures and verifies a user-facing backend sync warning is shown. |
+| `docs/change-log.md` | Recorded the fix. |
+
+### What Changed
+
+Browser-side session refreshes now catch failed `fetch` calls instead of
+leaking unhandled promise rejections. When the FastAPI backend is unreachable or
+a session sync request fails, the UI keeps the existing page mounted and shows a
+compact warning telling the user to check the backend URL.
+
+The backend now accepts both common local browser origins, so opening the web UI
+at `localhost:3000` or `127.0.0.1:3000` does not trip CORS while fetching from
+the API on port 8000. Expected client sync failures no longer call
+`console.error`, so they do not appear as Next/browser error stacks in the dev
+terminal.
+
+### Why
+
+The browser reported unhandled rejections from `listSessionMessages` and
+`listSessionTasks` when `fetch` failed while switching or loading sessions. The
+failure should be visible and recoverable in the UI rather than surfacing as a
+runtime error. In local development, the browser origin can also differ between
+`localhost` and `127.0.0.1`; CORS must allow both forms.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (139 tests: 26 web + 113 API) |
+| `git diff --check` | Pass |
+
+---
+
 ## TaskRun Test Environment Isolation
 
 **Date:** 2026-05-19

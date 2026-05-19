@@ -36,10 +36,10 @@ describe("TaskCardList", () => {
     render(createElement(TaskCardList, { tasks: [baseTask] }))
 
     expect(screen.getByText("Build the Vite React login page")).toBeTruthy()
-    expect(screen.getByText("Task 1")).toBeTruthy()
+    expect(screen.getByText("任务 1")).toBeTruthy()
     expect(screen.getByText("@frontend")).toBeTruthy()
-    expect(screen.getByText("pending")).toBeTruthy()
-    expect(screen.getByText("Depends on task-0")).toBeTruthy()
+    expect(screen.getByText("待处理")).toBeTruthy()
+    expect(screen.getByText("依赖 task-0")).toBeTruthy()
   })
 
   it("renders run history and P0 run controls", () => {
@@ -101,14 +101,14 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(screen.getAllByText("Run 1").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("第 1 次").length).toBeGreaterThan(0)
     expect(screen.getAllByText("codex").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("failed").length).toBeGreaterThan(0)
-    fireEvent.click(screen.getByRole("button", { name: "Start run" }))
-    fireEvent.click(screen.getByRole("button", { name: "Force Codex failure" }))
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
-    fireEvent.click(screen.getByRole("button", { name: "Retry with ScriptedMockAdapter" }))
-    fireEvent.click(screen.getByRole("button", { name: "Interrupt" }))
+    expect(screen.getAllByText("失败").length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole("button", { name: "开始运行" }))
+    fireEvent.click(screen.getByRole("button", { name: "模拟 Codex 失败" }))
+    fireEvent.click(screen.getByRole("button", { name: "重试" }))
+    fireEvent.click(screen.getByRole("button", { name: "使用兜底重试" }))
+    fireEvent.click(screen.getByRole("button", { name: "中断" }))
 
     expect(onCreateRun).toHaveBeenCalledWith("task-1")
     expect(onForceCodexFailure).toHaveBeenCalledWith("task-1")
@@ -163,11 +163,11 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(screen.getByText("Approval required")).toBeTruthy()
+    expect(screen.getByText("需要审批")).toBeTruthy()
     expect(screen.getByText("continue scripted mock run")).toBeTruthy()
     expect(screen.getByText("product_confirmation")).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Approve" }))
-    fireEvent.click(screen.getByRole("button", { name: "Deny" }))
+    fireEvent.click(screen.getByRole("button", { name: "批准" }))
+    fireEvent.click(screen.getByRole("button", { name: "拒绝" }))
 
     expect(onApproveRun).toHaveBeenCalledWith("run-approval")
     expect(onDenyRun).toHaveBeenCalledWith("run-approval")
@@ -225,9 +225,9 @@ describe("TaskCardList", () => {
 
     render(createElement(TaskCardList, { tasks: [recoveredTask] }))
 
-    expect(screen.getByText("Recovered")).toBeTruthy()
-    expect(screen.getByText("Run 1")).toBeTruthy()
-    expect(screen.getByText("Run 2")).toBeTruthy()
+    expect(screen.getByText("已恢复")).toBeTruthy()
+    expect(screen.getByText("第 1 次")).toBeTruthy()
+    expect(screen.getByText("第 2 次")).toBeTruthy()
     expect(screen.getByText("scripted_mock")).toBeTruthy()
     expect(screen.getByText("CODEX_DEMO_FORCED_FAILURE")).toBeTruthy()
   })
@@ -279,10 +279,10 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(await screen.findByText(/Diff ready/)).toBeTruthy()
-    expect(screen.getByText("Changed: apps/demo/src/App.tsx")).toBeTruthy()
-    expect(screen.queryByText("Git diff")).toBeNull()
-    fireEvent.click(screen.getByText(/Diff ready/))
+    expect(await screen.findByText(/Diff 就绪/)).toBeTruthy()
+    expect(screen.getByText("已变更：apps/demo/src/App.tsx")).toBeTruthy()
+    expect(screen.queryByText("Git Diff")).toBeNull()
+    fireEvent.click(screen.getByText(/Diff 就绪/))
     expect(onSelectArtifact).toHaveBeenCalledWith(`diff:${sampleDiffArtifact.id}`)
     await waitFor(() =>
       expect(onArtifactsChange).toHaveBeenLastCalledWith([
@@ -350,10 +350,10 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(await screen.findByText("Preview healthy")).toBeTruthy()
-    expect(screen.queryByText("Vite React preview")).toBeNull()
-    fireEvent.click(screen.getByText("Preview healthy"))
-    fireEvent.click(screen.getByRole("button", { name: "Start preview" }))
+    expect(await screen.findByText("预览健康")).toBeTruthy()
+    expect(screen.queryByText("Vite React 预览")).toBeNull()
+    fireEvent.click(screen.getByText("预览健康"))
+    fireEvent.click(screen.getByRole("button", { name: "启动预览" }))
 
     expect(onSelectArtifact).toHaveBeenCalledWith(`preview:${samplePreviewArtifact.id}`)
     expect(onStartPreview).toHaveBeenCalledWith("run-1")
@@ -415,11 +415,11 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(await screen.findByText("Deploy mock ready")).toBeTruthy()
+    expect(await screen.findByText("模拟部署就绪")).toBeTruthy()
     expect(
       screen.queryByText("https://mock.agenthub.local/deployments/deployment-1"),
     ).toBeNull()
-    fireEvent.click(screen.getByText("Deploy mock ready"))
+    fireEvent.click(screen.getByText("模拟部署就绪"))
     expect(onSelectArtifact).toHaveBeenCalledWith(
       `deployment:${sampleDeploymentArtifact.id}`,
     )
