@@ -33,7 +33,9 @@ documentation change.
 
 ### New Capabilities
 
-None. This change does not add product capabilities or runtime behavior.
+- `demo-baseline-hardening`: Governance and evidence requirements for final
+  AgentHub demo hardening. This is a documentation and verification capability,
+  not a runtime feature expansion.
 
 ### Modified Capabilities
 

@@ -67,7 +67,7 @@ The system MUST let the user expand a diff card and inspect file-level changes.
 - **AND** detailed changes can be inspected through Monaco Diff Editor or an equivalent Monaco-based diff view
 
 ### Requirement: Optional patch validation
-The system SHOULD support `git apply --check` for generated patch validation when it is safe and useful.
+The system MUST support optional `git apply --check` validation for generated patches when patch validation is enabled.
 
 #### Scenario: Patch validation runs
 - **GIVEN** a patch has been generated

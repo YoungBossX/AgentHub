@@ -3,6 +3,80 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P4 Status
+
+### P4-1 Baseline Governance Cleanup
+
+P4-1 aligns repository governance around the current project identity:
+
+- AgentHub is a local single-user Agent Coding Workspace / strong demo MVP, not
+  a full multi-user IM collaboration platform.
+- `CodexAdapter`, `ClaudeCodeAdapter`, and `ScriptedMockAdapter` are all current
+  adapters and must not be removed or regressed.
+- The fallback-based P0 path, P1/P2/P3 verified paths, and P4-0 real-agent
+  evidence remain preserved.
+- Production deploy, provider marketplace, WebSocket/multiplayer, Docker
+  sandbox, external IM integrations, PR creation, broad arbitrary editing, and
+  enterprise workflows remain deferred.
+
+### P4-0 Full E2E Agent Execution Capability Audit
+
+P4-0 verified that AgentHub can drive the full coding-agent execution pipeline
+through the browser-facing API path:
+
+```text
+requirement -> orchestrator plan -> Direct Start -> agent execution -> file mutation -> diff -> preview -> mock deploy
+```
+
+Real-agent path with Claude Code default adapter passed:
+
+- Session: `ebec86df-90bf-47ed-a5f1-b4f3b82a6c84`
+- Task: `7c0fab95-e929-4252-9231-d92c2cc7e2e1`
+- TaskRun: `ab038575-a4e4-406c-bfcf-e0ae3ca4a318`
+- Adapter: `claude_code`
+- Final state: `completed`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff artifact: `1c53db5d-94ba-4667-af09-c8e5b8a2214f`
+- Preview: `51e6c80f-006f-48e5-b1f7-2ecd629de442`
+- Preview URL: `http://127.0.0.1:62044`
+- Preview health/status: `healthy`, `ready`
+- Deployment: `2b9e1c5e-c936-47c5-bd2a-4b29e243cca1`
+- Provider/status: `mock`, `ready`
+
+Fallback path passed:
+
+- Session: `52836726-e895-43da-964a-3244a30d5948`
+- Task: `773483a0-e026-4aa0-b816-0cb4decdfaf4`
+- Failed Codex TaskRun: `608113c6-a5f8-4df1-9742-8db1db7934de`
+- Failed error code: `CODEX_DEMO_FORCED_FAILURE`
+- Fallback TaskRun: `9662bb80-70dc-4d47-b82d-4ea1c9effb89`
+- Adapter: `scripted_mock`
+- Final state: `completed`
+- Diff artifact: `8007fd66-6f6b-4e9d-b61f-abf946cc9a08`
+- Preview: `38b3e7c9-2ec6-4fb0-ad7f-f4fc142f6b64`
+- Preview URL: `http://127.0.0.1:62136`
+- Preview health: `healthy`
+- Deployment: `fd5ca6bb-ae1c-4ce3-b0f2-dfd50e04eb3f`
+- Provider/status: `mock`, `ready`
+
+Follow-up path passed in the same real-agent session:
+
+- Request: `把按钮文案改成 Sign in`
+- Follow-up task: `81aeff37-608c-4708-a8c1-284e73b6ba2d`
+- Follow-up TaskRun: `62c9ff50-7772-4000-9fe5-77a6596d7f92`
+- Adapter: `claude_code`
+- Final state: `completed`
+- Diff artifact: `a76d098b-f16c-4823-ac40-22062515edf0`
+- Preview: `b850d9c8-5e3f-4862-96aa-6cd0cb5942fa`
+- Preview URL: `http://127.0.0.1:62341`
+- Preview health: `healthy`
+
+Browser automation caveat: this audit opened the audited session URL, but full
+automated browser-button clicking was blocked because Playwright is not
+installed and Chrome AppleScript control hit a macOS Apple Events permission
+prompt. The audit therefore verifies the browser-facing API execution path and
+records the browser-click automation gap honestly.
+
 ## P0 Baseline
 
 P0 is complete and the judge-demoable path remains fallback-based:

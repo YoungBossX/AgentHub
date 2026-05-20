@@ -1,10 +1,11 @@
-# AgentHub P0 Implementation Guardrails
+# AgentHub Demo Baseline Guardrails
 
-This repo is implementing the OpenSpec change at
-`openspec/changes/agenthub-im-coding-mvp`. Treat that change's `proposal.md`,
-`design.md`, `tasks.md`, and capability specs as the source of truth. If this
-file conflicts with those artifacts, stop and resolve the conflict before
-coding.
+This repo has completed the original P0 OpenSpec change at
+`openspec/changes/agenthub-im-coding-mvp` and is currently hardening the final
+local demo through `openspec/changes/agenthub-final-demo-hardening`. Treat those
+OpenSpec artifacts, `docs/project-state.md`, and `docs/change-log.md` as the
+current baseline. If this file conflicts with those artifacts, stop and resolve
+the conflict before coding.
 
 ## Project-Wide Mandatory Rules
 
@@ -13,50 +14,54 @@ coding.
 - Do not fake real Codex success.
 - Do not claim unverified behavior.
 - Preserve the fallback-based P0 demo path.
-- Do not implement `ClaudeCodeAdapter`, `HumanAgentAdapter`, Docker sandbox,
-  WebSocket, provider marketplace, PR creation, or production deployment unless
-  explicitly asked.
+- Do not remove or regress the current adapters: `CodexAdapter`,
+  `ClaudeCodeAdapter`, or `ScriptedMockAdapter`.
+- Do not add new adapters, `HumanAgentAdapter`, Docker sandbox, WebSocket,
+  provider marketplace, PR creation, or production deployment unless explicitly
+  asked through a focused OpenSpec task.
 - Do not silently install dependencies.
 - If code or engineering files change, update `docs/change-log.md`.
 - Do not commit or push unless explicitly instructed.
 
-## Current P0 Stack
+## Current Demo Stack
 
 - Product UI: Next.js App Router, TypeScript, Tailwind CSS, and shadcn/ui-style
   components in `apps/web`.
 - Backend: FastAPI, Pydantic, SQLModel, and SQLite in `apps/api`.
-- Realtime: SSE for P0. Do not add WebSocket for P0.
+- Realtime: SSE. Do not add WebSocket for the final demo baseline.
 - Demo app boundary: the agent-modified demo app is Vite React only.
 - Diff and isolation: Git CLI diffs from one session-level git worktree per
   Session.
-- Real adapter path: `CodexAdapter` uses the local Codex CLI inside the assigned
-  session worktree.
-- Codex CLI feasibility notes live in `docs/adapter-notes.md`; read them before
-  implementing `CodexAdapter`.
+- Real adapter paths:
+  - `CodexAdapter` uses the local Codex CLI inside the assigned session
+    worktree.
+  - `ClaudeCodeAdapter` is a current runtime option, selected for coding agents
+    with `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`.
 - Reliability path: `ScriptedMockAdapter` must make real file changes in the
   Vite React demo repo and feed the same diff/preview path.
 
-## P0 Scope
+## Current Baseline Scope
 
-Build only the capabilities needed for the local single-user demo loop:
+AgentHub is currently a local single-user Agent Coding Workspace / strong demo
+MVP, not a full Feishu/WeChat-style multi-user IM collaboration platform. The
+verified local demo loop is:
 
 ```text
 requirement -> orchestrator plan -> agent execution -> real git diff -> real preview -> deploy card
 ```
 
-P0 includes single-user workspaces, multiple sessions, IM-style chat, mention
-routing for `@orchestrator`, `@frontend`, `@backend`, and `@qa`, simple
+The baseline includes single-user workspaces, multiple sessions, IM-style chat,
+mention routing for `@orchestrator`, `@frontend`, `@backend`, and `@qa`, simple
 orchestrator planning, TaskRunEvent-backed SSE recovery, session-level
 worktrees, real git diffs, Vite React preview, basic approvals, retry,
-interrupt, `CodexAdapter`, `ScriptedMockAdapter`, and a deploy card that may be
-mock-backed.
+interrupt, `CodexAdapter`, `ClaudeCodeAdapter`, `ScriptedMockAdapter`, and a
+mock-backed deploy card.
 
-## Defer P1/P2
+## Defer Platform Scope
 
-Do not add P1 or P2 features while implementing P0 tasks.
+Do not add broad platform features while implementing demo-hardening tasks.
 
-P1 examples to defer:
-- `ClaudeCodeAdapter`
+Deferred examples:
 - `HumanAgentAdapter`
 - Docker sandbox
 - WebSocket
@@ -64,8 +69,6 @@ P1 examples to defer:
 - Codex API/cloud task wrapper
 - Alembic adoption unless a later task explicitly adds it
 - richer provider configuration
-
-P2 or mock-only examples to defer:
 - multi-user collaboration
 - Slack, Feishu, WeChat, or other external IM integrations
 - provider marketplace
@@ -79,10 +82,10 @@ P2 or mock-only examples to defer:
 
 ## Data and Runtime Boundaries
 
-- SQLite is the P0 database. Do not require Postgres for P0.
-- The P0 schema is limited to User, Workspace, Session, Message, Agent, Task,
+- SQLite is the demo database. Do not require Postgres for the final demo.
+- The demo schema is limited to User, Workspace, Session, Message, Agent, Task,
   TaskRun, TaskRunEvent, Artifact, Diff, Preview, and Deployment.
-- `TaskRunEvent` is the only P0 support entity beyond the core model.
+- `TaskRunEvent` is the only support entity beyond the core model.
 - Each Session gets exactly one persisted worktree path.
 - Multiple TaskRuns in the same Session reuse that Session worktree.
 - Different Sessions must not share a worktree.
@@ -113,8 +116,8 @@ Do not expose protected host paths to adapters. Do not allow edits to
 
 ## Command Allowlist
 
-P0 execution must use explicit commands only. Keep commands scoped to the repo,
-the backend app, the frontend app, or the assigned session worktree.
+Demo execution must use explicit commands only. Keep commands scoped to the
+repo, the backend app, the frontend app, or the assigned session worktree.
 
 Currently allowed project commands:
 
@@ -137,12 +140,14 @@ Expected P0 runtime command families:
   `pnpm dev --host 127.0.0.1 --port <port>`.
 - Local Codex CLI invocation for `CodexAdapter`, only inside
   `Session.worktreePath`.
+- Local Claude Code CLI invocation for `ClaudeCodeAdapter`, only inside
+  `Session.worktreePath`.
 - Controlled `ScriptedMockAdapter` scripts, only inside the assigned session
   worktree and demo app boundary.
 
 Anything outside the allowlist must be blocked or routed through the approval
-flow required by the OpenSpec design. Network access is off by default for agent
-execution unless a later P0 approval rule explicitly allows it.
+flow required by the OpenSpec design. Network access is off by default for
+agent execution unless a later focused approval rule explicitly allows it.
 
 ## Future Codex Task Rules
 
@@ -150,7 +155,7 @@ execution unless a later P0 approval rule explicitly allows it.
 - Do not proceed to the next task unless the user asks.
 - Read the relevant OpenSpec artifacts before changing files.
 - Keep changes minimal and tied to the current task's acceptance criteria.
-- Do not add P1/P2 features while completing P0 work.
+- Do not add broad platform features while completing final demo hardening.
 - Do not add auth provider integration, Postgres requirement, Alembic workflow,
   Docker sandbox, WebSocket, provider marketplace, multiplayer collaboration,
   external IM integrations, or full deploy matrix unless a future task explicitly
@@ -198,13 +203,12 @@ The completed P0 demo must let a judge:
 - fall back to `ScriptedMockAdapter` if local Codex CLI execution fails
 - reach a backend-created deploy card, mock-backed if necessary
 
-## Definition of Done for P0 Tasks
+## Definition of Done for Final Demo Tasks
 
-A P0 task is done only when:
+A final demo hardening task is done only when:
 
-- its implementation matches the specific task in
-  `openspec/changes/agenthub-im-coding-mvp/tasks.md`
-- it stays within the P0/P1/P2 boundaries above
+- its implementation matches the specific task in the active OpenSpec change
+- it stays within the local single-user demo boundaries above
 - relevant tests, checks, or manual smoke commands have been run
 - any database initialization or generated runtime artifacts are verified when
   the task touches persistence

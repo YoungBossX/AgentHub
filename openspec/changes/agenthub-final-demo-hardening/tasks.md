@@ -1,6 +1,6 @@
 ## 1. Final Demo Hardening Tasks
 
-- [ ] 1.1 P4-1 Baseline governance cleanup.
+- [x] 1.1 P4-1 Baseline governance cleanup.
   - Objective: Make the repository's written baseline match the current
     implementation reality while preserving safety boundaries.
   - Scope:

@@ -1,14 +1,17 @@
 # AgentHub
 
-AgentHub is a local, single-user IM-style coding-agent demo. The P0 loop is:
+AgentHub is a local, single-user Agent Coding Workspace / strong demo MVP. It
+uses an IM-style command-center interface, but it is not a full multi-user
+Feishu/WeChat-style collaboration platform. The verified demo loop is:
 
 ```text
 requirement -> orchestrator plan -> agent execution -> real git diff -> real preview -> deploy card
 ```
 
-The source of truth for the current MVP is the OpenSpec change at
-`openspec/changes/agenthub-im-coding-mvp`, plus the implementation guardrails in
-`AGENTS.md`.
+The original MVP source is the completed OpenSpec change at
+`openspec/changes/agenthub-im-coding-mvp`. Final demo hardening is tracked in
+`openspec/changes/agenthub-final-demo-hardening`, with current state recorded in
+`AGENTS.md`, `docs/project-state.md`, and `docs/change-log.md`.
 
 ## Current Stack
 
@@ -18,7 +21,8 @@ The source of truth for the current MVP is the OpenSpec change at
 - Demo app modified by agents: Vite React only in `apps/demo`.
 - Realtime: SSE backed by persisted `TaskRunEvent` records.
 - Isolation: one git worktree per AgentHub Session.
-- Execution adapters: local-CLI `CodexAdapter` and `ScriptedMockAdapter`.
+- Execution adapters: local-CLI `CodexAdapter`, local-CLI
+  `ClaudeCodeAdapter`, and `ScriptedMockAdapter`.
 - Artifacts: Git diff cards, Vite React preview cards, and mock deploy cards.
 
 ## Prerequisites
@@ -26,9 +30,11 @@ The source of truth for the current MVP is the OpenSpec change at
 - Node.js and pnpm. This repo declares `pnpm@10.33.4` in `package.json`.
 - Python 3.9 or newer.
 - Git.
-- Optional for the real adapter path: the local Codex CLI, logged in and
+- Optional for the Codex real adapter path: the local Codex CLI, logged in and
   available at either `CODEX_CLI_PATH` or the default macOS app path used by
   `apps/api/app/codex_adapter.py`.
+- Optional for the Claude Code real adapter path: the local Claude Code CLI,
+  logged in and available as `claude` or via `CLAUDE_CODE_CLI_PATH`.
 
 ## Setup
 
@@ -175,34 +181,42 @@ The deterministic demo mutation targets are in `apps/demo/src/App.tsx`:
 
 Use `docs/demo-script.md` for the narrated demo. It includes:
 
-- a main demo path through session creation, planning, task cards, real Codex
-  Direct Start execution, diff, preview, and mock deploy
+- a main demo path through session creation, planning, task cards, real local
+  agent Direct Start execution, diff, preview, and mock deploy
 - a failure recovery path showing a failed Codex run preserved in history and a
   successful `ScriptedMockAdapter` retry
 
-Current P1 freeze status: the `Start run` UI dispatches real Codex Direct Start
+Current P4 status: the `Start run` UI dispatches real local agent Direct Start
 execution. P1-11 verified a clean SQLite rehearsal through real Codex file
-mutation, diff, healthy Vite preview, and mock deploy card. The forced-failure
-`ScriptedMockAdapter` path remains the reliability fallback if Codex is
-unavailable, unauthenticated, usage-limited, or too slow for the demo window.
+mutation, diff, healthy Vite preview, and mock deploy card. P4-0 verified a
+Claude Code default-adapter path, plus fallback and follow-up paths, through the
+browser-facing API path. The forced-failure `ScriptedMockAdapter` path remains
+the reliability fallback if real local agent execution is unavailable,
+unauthenticated, usage-limited, or too slow for the demo window.
 
-## P0 Boundaries
+To use Claude Code as the default coding adapter for frontend/backend coding
+tasks:
 
-P0 includes:
+```bash
+AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api
+```
+
+## Current Demo Boundaries
+
+The current local demo includes:
 
 - single-user local workspace and sessions
 - SSE, not WebSocket
 - session-level git worktrees, not Docker sandbox
 - Vite React preview only
 - SQLite, not Postgres
-- local Codex CLI as the real adapter path
+- local Codex CLI and local Claude Code CLI as real adapter paths
 - `ScriptedMockAdapter` as the reliability fallback, with real file changes
 - Git CLI diff collection and persisted diff artifacts
 - mock-backed deploy card when real deployment is unavailable
 
-Deferred P1/P2 items include:
+Deferred platform items include:
 
-- `ClaudeCodeAdapter`
 - `HumanAgentAdapter`
 - Docker sandbox
 - WebSocket
@@ -257,11 +271,11 @@ pnpm db:init
 Refresh the web app. The health card should show the backend as reachable, and
 the workspace should be `AgentHub Demo`.
 
-### Codex CLI Is Unavailable, Unauthenticated, Or Usage-Limited
+### Real Agent CLI Is Unavailable, Unauthenticated, Or Usage-Limited
 
-Read `docs/adapter-notes.md` for the known CLI command shape and failure modes.
-Use the visible recovery path: `Force Codex failure`, then
-`Retry with ScriptedMockAdapter`.
+Read `docs/adapter-notes.md` for Codex notes and
+`docs/claude-code-adapter-notes.md` for Claude Code notes. Use the visible
+recovery path: `Force Codex failure`, then `Retry with ScriptedMockAdapter`.
 
 ### Preview Port Is Unavailable
 

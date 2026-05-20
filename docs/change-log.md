@@ -1,5 +1,101 @@
 # AgentHub Change Log
 
+## P4-1 Baseline Governance Cleanup
+
+**Date:** 2026-05-20
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `AGENTS.md` | Updated the repo guardrails from P0-only wording to the current final-demo baseline, including Codex, Claude Code, and scripted mock adapters. |
+| `README.md` | Reframed AgentHub as a local single-user Agent Coding Workspace / strong demo MVP and documented current adapter paths. |
+| `docs/project-state.md` | Added P4-1 governance baseline notes preserving P0/P1/P2/P3/P4 verified paths. |
+| `docs/change-log.md` | Recorded this cleanup. |
+| `openspec/changes/agenthub-im-coding-mvp/specs/worktree-diff/spec.md` | Changed the optional patch-validation requirement to strict-compatible MUST wording. |
+| `openspec/changes/agenthub-final-demo-hardening/proposal.md` | Added a documentation/verification capability for strict OpenSpec validation. |
+| `openspec/changes/agenthub-final-demo-hardening/specs/demo-baseline-hardening/spec.md` | Added governance and evidence-discipline requirements for final demo hardening. |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-1 complete after validation. |
+
+### What Changed
+
+Aligned baseline governance around the current project state:
+
+- AgentHub is now consistently described as a local single-user Agent Coding
+  Workspace / strong demo MVP, not a complete multi-user IM collaboration
+  platform.
+- `CodexAdapter`, `ClaudeCodeAdapter`, and `ScriptedMockAdapter` are all treated
+  as current adapters and must not be removed or regressed.
+- The fallback-based P0 path remains preserved.
+- Production deploy, provider marketplace, Docker sandbox, WebSocket/multiplayer,
+  external IM integrations, PR creation, broad arbitrary editing, and enterprise
+  workflows remain out of scope.
+- The previous OpenSpec strict-validation issue in `worktree-diff` is fixed.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `openspec validate agenthub-im-coding-mvp --strict` | Pass |
+| `openspec validate agenthub-final-demo-hardening --strict` | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (26 web tests, 113 API tests) |
+| `git diff --check` | Pass |
+
+### Remaining Governance Caveats
+
+- P4-2 still needs a browser E2E click rehearsal; P4-0 verified the
+  browser-facing API path but did not complete automated browser clicking.
+- Pre-existing dirty files, including local app/test/doc changes and untracked
+  screenshots, were left untouched unless directly required by P4-1.
+- No app runtime behavior was changed for this task.
+
+---
+
+## P4-0 Full E2E Agent Execution Capability Audit
+
+**Date:** 2026-05-19
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/e2e-capability-audit.md` | Added the P4-0 execution capability audit, evidence IDs, limitations, and conclusions. |
+| `docs/project-state.md` | Recorded the P4-0 verified real-agent, fallback, and follow-up paths. |
+| `docs/change-log.md` | Recorded this audit. |
+
+### What Changed
+
+Documented a full E2E capability audit for the current AgentHub execution
+pipeline. The audit used `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` and
+verified:
+
+```text
+requirement -> orchestrator plan -> Direct Start -> ClaudeCodeAdapter -> file mutation -> diff -> healthy preview -> mock deploy
+```
+
+It also verified the forced Codex failure plus ScriptedMockAdapter fallback path
+and the same-session natural-language follow-up path for `把按钮文案改成 Sign in`.
+
+### Audit Result
+
+- Real agent path: Pass through browser-facing API endpoints.
+- Fallback path: Pass.
+- Follow-up path: Pass.
+- Browser click automation: Not fully verified because Playwright is not
+  installed and Chrome AppleScript control was blocked by a macOS Apple Events
+  permission prompt.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass (139 tests: 26 web + 113 API) |
+| `git diff --check` | Pass |
+
+---
+
 ## Frontend Chinese Copy and Typography Polish
 
 **Date:** 2026-05-19
