@@ -43,7 +43,7 @@
     - browser rehearsal notes;
     - `git diff --check`.
 
-- [ ] 1.3 P4-3 Demo reset / clean seed helper.
+- [x] 1.3 P4-3 Demo reset / clean seed helper.
   - Objective: Make the final demo reset safe and repeatable.
   - Scope:
     - define or add a helper workflow that backs up SQLite before reset;

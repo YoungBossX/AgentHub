@@ -1,5 +1,60 @@
 # AgentHub Change Log
 
+## P4-3 Safe Demo Reset Helper
+
+**Date:** 2026-05-20
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `scripts/demo-reset.sh` | Added a non-destructive local demo reset helper that backs up SQLite state before rebuilding the seeded DB. |
+| `package.json` | Added `pnpm demo:reset`. |
+| `AGENTS.md` | Added `pnpm demo:reset` to the documented project command allowlist. |
+| `README.md` | Documented safe reset behavior, backup location, and restore method. |
+| `docs/demo-script.md` | Added clean rehearsal setup guidance. |
+| `docs/project-state.md` | Recorded P4-3 reset helper behavior. |
+| `docs/change-log.md` | Recorded this task. |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-3 complete after reset rehearsal and validation. |
+
+### What Changed
+
+Added a repeatable reset workflow for local demo state:
+
+```bash
+pnpm demo:reset
+```
+
+The helper backs up `apps/api/data/agenthub.sqlite3` and any SQLite WAL/SHM
+files under `apps/api/data/backups/demo-reset-<timestamp>/`, removes only the
+active SQLite files after backup, then recreates and seeds the DB with the
+existing SQLModel initialization path.
+
+The helper does not delete `.worktrees`, source code, dependencies, or preview
+files, and it does not stop running preview or dev-server processes. It refuses
+to run while the SQLite database is open by the API process and prints restore
+instructions for the backup it created.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm demo:reset` while API had SQLite open | Pass: refused reset and printed the owning process. |
+| `pnpm demo:reset` after stopping API | Pass: backed up the DB and recreated seeded SQLite state. |
+| SQLite seed check | Pass: 1 user, 1 workspace, 4 agents, 0 sessions, 0 task runs, 0 previews. |
+| `.worktrees` check | Pass: `.worktrees` remained present and was not deleted. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 26 web tests and 113 API tests. |
+| `git diff --check` | Pass |
+
+Reset rehearsal backup:
+
+```text
+apps/api/data/backups/demo-reset-20260520-124612/
+```
+
+---
+
 ## Long-Term Platform Roadmap
 
 **Date:** 2026-05-20

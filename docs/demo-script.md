@@ -17,6 +17,20 @@ pnpm demo:setup
 pnpm db:init
 ```
 
+For a clean local rehearsal when the database contains old sessions or stale
+preview records, stop the API first and run:
+
+```bash
+pnpm demo:reset
+```
+
+The reset helper backs up the current SQLite database under
+`apps/api/data/backups/demo-reset-<timestamp>/`, recreates and seeds a clean
+database through the existing SQLModel init path, and leaves `.worktrees`
+untouched. It does not stop running preview or dev-server processes. The command
+prints the exact restore commands for the backup it creates. After reset, create
+a new session from the UI before sending the demo request.
+
 Start the backend:
 
 ```bash

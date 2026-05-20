@@ -127,6 +127,7 @@ pnpm test
 pnpm db:init
 pnpm dev:api
 pnpm dev:web
+pnpm demo:reset
 pnpm demo:setup
 pnpm demo:dev
 ```
@@ -173,6 +174,7 @@ pnpm test
 pnpm db:init
 pnpm dev:api
 pnpm dev:web
+pnpm demo:reset
 pnpm demo:setup
 pnpm demo:dev
 ```

@@ -83,6 +83,32 @@ pnpm db:seed
 The default database URL is `sqlite:///data/agenthub.sqlite3`, relative to
 `apps/api`.
 
+## Safe Demo Reset
+
+Use the reset helper when the local demo database has accumulated old sessions,
+task runs, previews, or smoke-test records:
+
+```bash
+pnpm demo:reset
+```
+
+The helper is non-destructive by default:
+
+- it refuses to run while the SQLite database is open by the API process;
+- it backs up `apps/api/data/agenthub.sqlite3` and any SQLite WAL/SHM files to
+  `apps/api/data/backups/demo-reset-<timestamp>/`;
+- it removes only the active SQLite files after backup;
+- it recreates and seeds the database through the existing SQLModel init path;
+- it does not delete `.worktrees`, source code, dependencies, or preview files;
+- it does not stop running preview or dev-server processes.
+
+After reset, start `pnpm dev:api` and `pnpm dev:web`, create a fresh session in
+the UI, and send the fixed demo request again.
+
+To restore the previous database, stop the API and copy the backed-up files back
+to `apps/api/data/agenthub.sqlite3`. The reset command prints the exact backup
+path and restore commands each time it runs.
+
 ## Run Locally
 
 Start the backend:

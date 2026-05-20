@@ -5,6 +5,38 @@ reference instead of repeating long context blocks.
 
 ## P4 Status
 
+### P4-3 Demo Reset / Clean Seed Helper
+
+P4-3 adds a safe local reset workflow for repeatable final-demo rehearsals:
+
+- Command: `pnpm demo:reset`
+- Script: `scripts/demo-reset.sh`
+- Active SQLite DB: `apps/api/data/agenthub.sqlite3`
+- Backup location:
+  `apps/api/data/backups/demo-reset-<timestamp>/`
+- Reset behavior:
+  - refuses to run while the SQLite DB is open by the API process;
+  - backs up the active DB plus any SQLite WAL/SHM files;
+  - recreates and seeds the database using the existing SQLModel init path;
+  - does not delete `.worktrees`, source code, dependencies, or preview files;
+  - does not stop running preview or dev-server processes;
+  - prints restore commands for the created backup.
+
+The helper seeds the existing baseline demo records: one demo user, one
+`AgentHub Demo` workspace pointing at `apps/demo`, and enabled orchestrator,
+frontend, backend, and QA agents. It does not pre-create a session; the demo
+starts cleanly by creating a new session in the UI.
+
+Reset rehearsal on 2026-05-20:
+
+- First run while the API had SQLite open: refused reset and printed the owning
+  process.
+- Second run after stopping the API: backed up the previous DB to
+  `apps/api/data/backups/demo-reset-20260520-124612/`.
+- Seed check after reset: 1 user, 1 workspace, 4 agents, 0 sessions, 0 task
+  runs, 0 previews.
+- `.worktrees` remained present and was not deleted.
+
 ### P4-2 Browser E2E Click Rehearsal
 
 P4-2 verified the final demo loop through browser UI clicks at

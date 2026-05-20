@@ -15,6 +15,7 @@
     "test:api": "bash scripts/test-api.sh",
     "db:init": "bash scripts/init-db.sh",
     "db:seed": "bash scripts/seed-db.sh",
+    "demo:reset": "bash scripts/demo-reset.sh",
     "demo:setup": "pnpm --filter @agenthub/demo install",
     "demo:dev": "pnpm --filter @agenthub/demo dev --host 127.0.0.1 --port ${AGENTHUB_DEMO_PORT:-5173}"
   },
