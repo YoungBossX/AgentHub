@@ -80,7 +80,7 @@
     - `pnpm test`;
     - `git diff --check`.
 
-- [ ] 1.5 P4-5 Final project summary / interview explanation.
+- [x] 1.5 P4-5 Final project summary / interview explanation.
   - Objective: Create a concise explanation of what AgentHub is, how it works,
     and where it stops.
   - Scope:

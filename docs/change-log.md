@@ -1,5 +1,39 @@
 # AgentHub Change Log
 
+## P4-5 Final Project Summary / Interview Explanation
+
+**Date:** 2026-05-20
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/project-summary-for-interview.md` | Added a truthful final summary for demo, review, and interview use. |
+| `docs/project-state.md` | Recorded P4-5 summary scope. |
+| `docs/change-log.md` | Recorded this documentation update. |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-5 complete after doc validation. |
+
+### What Changed
+
+Created a final project summary that explains AgentHub as a local single-user
+Agent Coding Workspace / strong demo MVP. The summary covers the problem,
+architecture, session worktree model, adapter model, artifact pipeline,
+failure-recovery path, follow-up text-change flow, real versus mock components,
+explicit non-goals, design trade-offs, and interview talking points.
+
+The summary refers to `docs/e2e-capability-audit.md` for evidence rather than
+inventing new IDs.
+
+No app code or runtime behavior changed.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `git diff --check` | Pass |
+
+---
+
 ## P4-4 Final Demo Checklist
 
 **Date:** 2026-05-20

@@ -5,6 +5,26 @@ reference instead of repeating long context blocks.
 
 ## P4 Status
 
+### P4-5 Final Project Summary / Interview Explanation
+
+P4-5 adds `docs/project-summary-for-interview.md`, a truthful final project
+summary for demo, review, and interview use. It positions AgentHub as a local
+single-user Agent Coding Workspace / strong demo MVP and explains:
+
+- the problem AgentHub solves;
+- frontend, backend, SQLite, session worktree, adapter, and artifact-pipeline
+  architecture;
+- the core requirement -> plan -> execution -> diff -> preview -> mock deploy
+  workflow;
+- `CodexAdapter`, `ClaudeCodeAdapter`, and `ScriptedMockAdapter`;
+- forced-failure fallback recovery;
+- same-session follow-up text-change flow;
+- what is real, what is mock, and what is intentionally not implemented;
+- design trade-offs and interview talking points.
+
+The summary points readers to `docs/e2e-capability-audit.md` for evidence IDs
+instead of inventing new evidence.
+
 ### P4-4 Final Demo Checklist
 
 P4-4 adds `docs/final-demo-checklist.md` as the evidence-first rehearsal
