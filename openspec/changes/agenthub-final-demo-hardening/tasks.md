@@ -99,7 +99,7 @@
     - doc review against current README, project state, and P4 evidence;
     - `git diff --check`.
 
-- [ ] 1.6 P4-6 Final freeze review.
+- [x] 1.6 P4-6 Final freeze review.
   - Objective: Freeze the final demo baseline after hardening.
   - Scope:
     - verify P4-1 through P4-5 are complete;

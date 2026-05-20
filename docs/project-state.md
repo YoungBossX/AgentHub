@@ -5,6 +5,44 @@ reference instead of repeating long context blocks.
 
 ## P4 Status
 
+### P4-6 Final Freeze Review
+
+P4-6 final freeze review completed on 2026-05-20.
+
+Freeze result: ready to freeze the `agenthub-final-demo-hardening` baseline.
+
+Verified documentation consistency:
+
+- `AGENTS.md`, README, `docs/project-state.md`, `docs/change-log.md`,
+  `docs/e2e-capability-audit.md`, `docs/final-demo-checklist.md`,
+  `docs/project-summary-for-interview.md`, `docs/platform-roadmap.md`, and the
+  `agenthub-final-demo-hardening` OpenSpec artifacts consistently describe
+  AgentHub as a local single-user Agent Coding Workspace / strong demo MVP.
+- Docs do not claim a full IM multi-user platform, production deploy, provider
+  marketplace, Docker sandbox, PR creation, or broad arbitrary
+  natural-language editing.
+- P4 tasks 1.1 through 1.6 are complete after this review.
+
+Remaining caveats are documented:
+
+- deploy is mock-backed, not production deployment;
+- browser click automation has local tooling/permission caveats recorded in
+  `docs/e2e-capability-audit.md`;
+- `pnpm demo:reset` does not delete `.worktrees`;
+- `pnpm demo:reset` does not stop old preview or dev-server processes;
+- mobile/responsive polish remains future work, not final-demo scope.
+
+Validation passed:
+
+- `openspec validate agenthub-im-coding-mvp --strict`
+- `openspec validate agenthub-final-demo-hardening --strict`
+- `pnpm check`
+- `pnpm test`
+- `git diff --check`
+
+Recommended tag name after committing the final freeze review:
+`agenthub-final-demo-hardening-freeze`.
+
 ### P4-5 Final Project Summary / Interview Explanation
 
 P4-5 adds `docs/project-summary-for-interview.md`, a truthful final project

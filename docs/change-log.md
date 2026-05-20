@@ -1,5 +1,55 @@
 # AgentHub Change Log
 
+## P4-6 Final Freeze Review
+
+**Date:** 2026-05-20
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/project-state.md` | Recorded final freeze readiness, caveats, validation results, and recommended tag name. |
+| `docs/change-log.md` | Recorded this final freeze review. |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-6 complete after validation. |
+
+### What Changed
+
+Completed the final freeze review for `agenthub-final-demo-hardening`.
+
+The review verified that baseline docs consistently describe AgentHub as a
+local single-user Agent Coding Workspace / strong demo MVP and do not claim a
+full IM multi-user platform, production deploy, provider marketplace, Docker
+sandbox, PR creation, or broad arbitrary natural-language editing.
+
+Remaining caveats are documented:
+
+- deploy is mock-backed, not production deployment;
+- browser click automation limitations are recorded;
+- `pnpm demo:reset` does not delete `.worktrees`;
+- `pnpm demo:reset` does not stop stale preview or dev-server processes;
+- mobile/responsive polish remains future work.
+
+No app code, runtime behavior, adapter behavior, UI redesign, or production
+deployment work changed.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `openspec validate agenthub-im-coding-mvp --strict` | Pass |
+| `openspec validate agenthub-final-demo-hardening --strict` | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 26 web tests and 113 API tests. |
+| `git diff --check` | Pass |
+
+Recommended final tag after committing this review:
+
+```text
+agenthub-final-demo-hardening-freeze
+```
+
+---
+
 ## P4-5 Final Project Summary / Interview Explanation
 
 **Date:** 2026-05-20
