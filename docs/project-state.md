@@ -5,6 +5,24 @@ reference instead of repeating long context blocks.
 
 ## P4 Status
 
+### P4-4 Final Demo Checklist
+
+P4-4 adds `docs/final-demo-checklist.md` as the evidence-first rehearsal
+checklist for the final AgentHub demo. It covers:
+
+- clean reset with `pnpm demo:reset`;
+- backend/frontend startup;
+- optional Claude Code default adapter startup;
+- fixed requirement message;
+- task run, adapter, diff, preview, and mock deploy verification;
+- fallback recovery through forced Codex failure and `ScriptedMockAdapter`;
+- same-session follow-up request `把按钮文案改成 Sign in`;
+- evidence ID capture;
+- troubleshooting for occupied ports, missing API, auth/quota/runtime issues,
+  stale preview, and reset refusal while SQLite is open.
+
+The checklist is documentation-only and does not change app behavior.
+
 ### P4-3 Demo Reset / Clean Seed Helper
 
 P4-3 adds a safe local reset workflow for repeatable final-demo rehearsals:

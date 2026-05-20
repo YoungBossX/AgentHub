@@ -60,7 +60,7 @@
     - reset rehearsal or documented dry run;
     - `git diff --check`.
 
-- [ ] 1.4 P4-4 Final demo checklist.
+- [x] 1.4 P4-4 Final demo checklist.
   - Objective: Produce the final evidence checklist for the judge/demo path.
   - Scope:
     - real agent path;

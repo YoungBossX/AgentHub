@@ -1,5 +1,46 @@
 # AgentHub Change Log
 
+## P4-4 Final Demo Checklist
+
+**Date:** 2026-05-20
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/final-demo-checklist.md` | Added an evidence-first final demo checklist for reset, startup, real-agent path, fallback path, follow-up path, evidence IDs, and troubleshooting. |
+| `docs/demo-script.md` | Linked the final demo checklist from setup instructions. |
+| `docs/project-state.md` | Recorded P4-4 checklist scope. |
+| `docs/change-log.md` | Recorded this documentation update. |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-4 complete after doc validation. |
+
+### What Changed
+
+Created a final demo checklist that can be followed before rehearsal,
+recording, or review. It covers:
+
+- `pnpm demo:reset`;
+- backend and frontend startup;
+- optional `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`;
+- fixed request `@orchestrator build a login page for the demo app`;
+- task run and adapter verification;
+- diff artifact, preview iframe, and mock deploy card checks;
+- forced-failure fallback through `ScriptedMockAdapter`;
+- follow-up request `把按钮文案改成 Sign in`;
+- evidence ID capture;
+- troubleshooting for ports, API availability, Claude/Codex auth or quota,
+  stale preview, and reset refusal while the API has SQLite open.
+
+No app code or runtime behavior changed.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `git diff --check` | Pass |
+
+---
+
 ## P4-3 Safe Demo Reset Helper
 
 **Date:** 2026-05-20

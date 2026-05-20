@@ -49,6 +49,9 @@ Open:
 http://127.0.0.1:3000
 ```
 
+Use `docs/final-demo-checklist.md` as the rehearsal checklist when recording
+evidence IDs for the real-agent, fallback, and follow-up paths.
+
 Keep `docs/adapter-notes.md` handy if you plan to demonstrate real local
 Codex CLI behavior.
 
