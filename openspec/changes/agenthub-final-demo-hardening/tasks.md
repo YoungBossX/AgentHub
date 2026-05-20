@@ -22,7 +22,7 @@
     - `git diff --check`;
     - OpenSpec strict validation for the fixed change.
 
-- [ ] 1.2 P4-2 Browser E2E click rehearsal.
+- [x] 1.2 P4-2 Browser E2E click rehearsal.
   - Objective: Verify the final demo through the browser UI as far as local
     permissions allow.
   - Scope:

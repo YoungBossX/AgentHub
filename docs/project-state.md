@@ -5,6 +5,62 @@ reference instead of repeating long context blocks.
 
 ## P4 Status
 
+### P4-2 Browser E2E Click Rehearsal
+
+P4-2 verified the final demo loop through browser UI clicks at
+`http://127.0.0.1:3000` while the API ran with
+`AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api`.
+
+Real Claude Code path passed through UI clicks:
+
+- Session: `59ad209a-1f8d-4134-97c4-e4ad275b6f67`
+- UI label: `会话 55`
+- Task: `eaac4f19-03c7-486f-b85a-1c4847cdcec8`
+- TaskRun: `f1e78e9e-2f6b-4b9c-b4a7-5879d513c555`
+- Adapter: `claude_code`
+- Final state: `completed`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff artifact: `b4c0fae4-bfeb-4105-a506-64de639472c6`
+- Preview: `4eb1622b-fb10-49e7-9b3d-5c256fad4b29`
+- Preview URL: `http://127.0.0.1:49373`
+- Preview health/status: `healthy`, `ready`
+- Deployment: `6c5a423c-ec7b-4070-9a05-87a8dddd91a1`
+- Provider/status: `mock`, `ready`
+
+Fallback path passed through UI clicks:
+
+- Session: `c148a1d6-8cd1-4efb-a797-7d10bbe475aa`
+- UI label: `会话 56`
+- Task: `200e3d57-5856-41d1-9ec5-1ba203edc1f0`
+- Failed Codex TaskRun: `e7cead6e-93cd-4195-9a53-e258da253a81`
+- Failed error code: `CODEX_DEMO_FORCED_FAILURE`
+- Fallback TaskRun: `36d68849-f644-4242-a64b-27c05b8cf2d8`
+- Adapter: `scripted_mock`
+- Final state: `completed`
+- Changed file: `apps/demo/src/App.tsx`
+- Diff artifact: `fbe67726-20e3-4ad5-9b08-d4514aa97cbe`
+- Preview: `6c7f6f46-e287-4698-b6be-c99058f69b11`
+- Preview URL: `http://127.0.0.1:49752`
+- Preview health/status: `healthy`, `ready`
+- Deployment: `a0b5d533-acee-4b2a-a384-103197d46481`
+- Provider/status: `mock`, `ready`
+
+Reload caveat: persisted runs, chips, and artifact tabs survived reload. The
+right artifact panel defaults back to Diff after reload; click `预览1` to show
+the persisted preview URL and iframe again.
+
+Follow-up browser spot check on 2026-05-20 re-opened the persisted P4-2
+sessions without running another real agent mutation:
+
+- Real Claude Code session
+  `59ad209a-1f8d-4134-97c4-e4ad275b6f67` still showed the completed
+  `claude_code` run, `apps/demo/src/App.tsx` diff chip, `预览1` iframe at
+  `http://127.0.0.1:49373`, and mock deployment
+  `6c5a423c-ec7b-4070-9a05-87a8dddd91a1`.
+- Fallback session `c148a1d6-8cd1-4efb-a797-7d10bbe475aa` still showed
+  `CODEX_DEMO_FORCED_FAILURE`, `scripted_mock`, `兜底已恢复`, `Diff 就绪`,
+  `预览健康`, and `模拟部署就绪`.
+
 ### P4-1 Baseline Governance Cleanup
 
 P4-1 aligns repository governance around the current project identity:

@@ -1,5 +1,118 @@
 # AgentHub Change Log
 
+## Long-Term Platform Roadmap
+
+**Date:** 2026-05-20
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/platform-roadmap.md` | Added a long-term AgentHub platform roadmap from current local demo baseline to IM-style multi-agent collaboration platform. |
+| `docs/change-log.md` | Recorded this roadmap documentation update. |
+
+### What Changed
+
+Created a strategic roadmap that keeps the current final-demo-hardening scope
+separate from future platform work. It covers dynamic orchestrator planning,
+shared context and memory, manager/worker scheduling, a Claude Code security
+review agent, multi-user IM integration, plugin/skill ecosystem, and real deploy
+providers.
+
+The roadmap explicitly states that these phases are not current three-week
+tasks and should become focused OpenSpec changes before implementation.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `git diff --check` | Pass |
+
+---
+
+## P4-2 Browser E2E Click Rehearsal
+
+**Date:** 2026-05-20
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/e2e-capability-audit.md` | Added P4-2 browser-click rehearsal evidence for real Claude Code and fallback paths, plus reload and UI caveats. |
+| `docs/project-state.md` | Recorded P4-2 evidence IDs and the reload caveat in the stable project state. |
+| `docs/change-log.md` | Recorded this documentation update. |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-2 complete after browser rehearsal and validation. |
+
+### What Changed
+
+Documented a browser UI click rehearsal for the final AgentHub demo hardening
+change. The rehearsal verified:
+
+```text
+requirement -> plan -> UI Start run -> agent execution -> diff -> preview -> mock deploy
+```
+
+Real-agent path:
+
+- Session: `59ad209a-1f8d-4134-97c4-e4ad275b6f67`
+- TaskRun: `f1e78e9e-2f6b-4b9c-b4a7-5879d513c555`
+- Adapter: `claude_code`
+- Diff artifact: `b4c0fae4-bfeb-4105-a506-64de639472c6`
+- Preview: `4eb1622b-fb10-49e7-9b3d-5c256fad4b29`
+- Preview URL: `http://127.0.0.1:49373`
+- Deployment: `6c5a423c-ec7b-4070-9a05-87a8dddd91a1`
+- Provider/status: `mock`, `ready`
+
+Fallback path:
+
+- Session: `c148a1d6-8cd1-4efb-a797-7d10bbe475aa`
+- Failed Codex TaskRun: `e7cead6e-93cd-4195-9a53-e258da253a81`
+- Failed error code: `CODEX_DEMO_FORCED_FAILURE`
+- Fallback TaskRun: `36d68849-f644-4242-a64b-27c05b8cf2d8`
+- Adapter: `scripted_mock`
+- Diff artifact: `fbe67726-20e3-4ad5-9b08-d4514aa97cbe`
+- Preview: `6c7f6f46-e287-4698-b6be-c99058f69b11`
+- Preview URL: `http://127.0.0.1:49752`
+- Deployment: `a0b5d533-acee-4b2a-a384-103197d46481`
+- Provider/status: `mock`, `ready`
+
+### Caveats
+
+- The broad browser locator for the Start button initially matched all three
+  task cards; the rehearsal recovered by targeting the second `开始运行` button
+  for the frontend task.
+- After reload, the artifact panel defaults to the Diff tab even when preview
+  and deployment artifacts are persisted. Clicking `预览1` restores the preview
+  URL and iframe view.
+- No app code, product behavior, UI redesign, provider marketplace, production
+  deploy, Docker sandbox, WebSocket/multiplayer, PR creation, or broad editing
+  feature was added.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+
+### Follow-Up Browser Spot Check
+
+On 2026-05-20, the persisted P4-2 real Claude Code and fallback sessions were
+re-opened in the Codex in-app browser without running another real agent
+mutation.
+
+- Real Claude Code session
+  `59ad209a-1f8d-4134-97c4-e4ad275b6f67` still showed completed
+  `claude_code` evidence, the `apps/demo/src/App.tsx` diff chip, preview iframe
+  `http://127.0.0.1:49373`, and mock deployment
+  `6c5a423c-ec7b-4070-9a05-87a8dddd91a1`.
+- Fallback session `c148a1d6-8cd1-4efb-a797-7d10bbe475aa` still showed
+  `CODEX_DEMO_FORCED_FAILURE`, `scripted_mock`, `兜底已恢复`, `Diff 就绪`,
+  `预览健康`, and `模拟部署就绪`.
+
+---
+
 ## P4-1 Baseline Governance Cleanup
 
 **Date:** 2026-05-20
