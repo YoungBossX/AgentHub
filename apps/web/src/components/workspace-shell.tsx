@@ -35,6 +35,7 @@ import {
   createWorkspaceSession,
   denyTaskRun,
   forceCodexFailure,
+  getSessionLedger,
   interruptTaskRun,
   listTaskRunPreviews,
   listSessionMessages,
@@ -47,6 +48,7 @@ import {
   type AgentContact,
   type ChatMessage,
   type PreviewArtifact,
+  type SessionExecutionLedger,
   type SessionTask,
   type Workspace,
   type WorkspaceSession,
@@ -101,6 +103,7 @@ export function WorkspaceShell({
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
   const [syncError, setSyncError] = useState<string | null>(null)
+  const [ledger, setLedger] = useState<SessionExecutionLedger | null>(null)
   const [agentMode, setAgentMode] = useState<"direct" | "group">("group")
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
     initialAgents[0]?.id ?? null,
@@ -153,16 +156,29 @@ export function WorkspaceShell({
     [reportSyncError, startTransition],
   )
 
+  const refreshLedger = useCallback(async () => {
+    if (!selectedSessionId) {
+      setLedger(null)
+      return
+    }
+    const nextLedger = await getSessionLedger(backendUrl, selectedSessionId)
+    setLedger(nextLedger)
+  }, [backendUrl, selectedSessionId])
+
   useEffect(() => {
     if (!selectedSessionId) {
       return
     }
 
     let cancelled = false
-    listSessionMessages(backendUrl, selectedSessionId)
-      .then((nextMessages) => {
+    Promise.all([
+      listSessionMessages(backendUrl, selectedSessionId),
+      getSessionLedger(backendUrl, selectedSessionId),
+    ])
+      .then(([nextMessages, nextLedger]) => {
         if (!cancelled) {
           setMessages(nextMessages)
+          setLedger(nextLedger)
           setSyncError(null)
         }
       })
@@ -227,6 +243,9 @@ export function WorkspaceShell({
         .then((nextTasks) => {
           setTasks(nextTasks)
           setSyncError(null)
+          void refreshLedger().catch((error) =>
+            reportSyncError("无法刷新工作区上下文", error),
+          )
         })
         .catch((error) => reportSyncError("无法刷新任务时间线", error))
     }
@@ -237,12 +256,13 @@ export function WorkspaceShell({
     return () => {
       source.close()
     }
-  }, [backendUrl, lastEventSequence, reportSyncError, selectedSessionId])
+  }, [backendUrl, lastEventSequence, refreshLedger, reportSyncError, selectedSessionId])
 
   function selectSession(sessionId: string) {
     setSyncError(null)
     setArtifactItems([])
     setSelectedArtifactId(null)
+    setLedger(null)
     const params = new URLSearchParams(searchParams.toString())
     params.set("session", sessionId)
     router.replace(`${pathname}?${params.toString()}`)
@@ -271,6 +291,7 @@ export function WorkspaceShell({
     try {
       const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
       setTasks(nextTasks)
+      await refreshLedger()
       setSyncError(null)
       if (nextTasks.length === 0) {
         setArtifactItems([])
@@ -352,6 +373,7 @@ export function WorkspaceShell({
         setSelectedArtifactId(`preview:${latestPreview.id}`)
         setPreviewFrameKey((current) => current + 1)
       }
+      await refreshLedger()
       refreshArtifacts()
       setSyncError(null)
     }, "无法刷新预览")
@@ -362,6 +384,7 @@ export function WorkspaceShell({
       const preview = await startTaskRunPreview(backendUrl, taskRunId)
       setSelectedArtifactId(`preview:${preview.id}`)
       setPreviewFrameKey((current) => current + 1)
+      await refreshLedger()
       refreshArtifacts()
       setSyncError(null)
     }, "无法启动预览")
@@ -371,6 +394,7 @@ export function WorkspaceShell({
     runClientAction(async () => {
       const deployment = await createPreviewDeployment(backendUrl, previewId)
       setSelectedArtifactId(`deployment:${deployment.id}`)
+      await refreshLedger()
       refreshArtifacts()
       setSyncError(null)
     }, "无法创建部署卡片")
@@ -411,6 +435,7 @@ export function WorkspaceShell({
       const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
       setMessages((current) => [...current, created])
       setTasks(nextTasks)
+      await refreshLedger()
       setSessions((current) =>
         current.map((session) =>
           session.id === selectedSessionId
@@ -597,6 +622,10 @@ export function WorkspaceShell({
             >
               {syncError}
             </div>
+          ) : null}
+
+          {selectedSession ? (
+            <WorkspaceContextCard ledger={ledger} />
           ) : null}
 
           <section
@@ -858,6 +887,67 @@ function AgentStatus({ status }: { status: string }) {
     >
       {label}
     </span>
+  )
+}
+
+function WorkspaceContextCard({
+  ledger,
+}: {
+  ledger: SessionExecutionLedger | null
+}) {
+  const latestEvidence = ledger?.latestDeploymentStatus
+    ? `Mock deploy ${ledger.latestDeploymentStatus}`
+    : ledger?.latestPreviewHealth
+      ? `Preview ${ledger.latestPreviewHealth}`
+      : ledger?.latestDiffArtifactId
+        ? "Diff ready"
+        : "等待证据"
+
+  return (
+    <section className="mx-auto w-full max-w-3xl rounded-lg border border-[var(--border)] bg-white px-4 py-3 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+            Workspace Context
+          </p>
+          <p className="mt-1 truncate text-sm font-semibold text-slate-950">
+            {ledger?.currentGoal ?? "等待用户需求"}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {(ledger?.activeAgents.length ? ledger.activeAgents : ["orchestrator"]).map(
+              (role) => (
+                <span
+                  className="rounded border border-[var(--border)] bg-[var(--surface-muted)] px-2 py-1 font-mono text-[11px] text-slate-700"
+                  key={role}
+                >
+                  @{role}
+                </span>
+              ),
+            )}
+          </div>
+        </div>
+        <div className="grid min-w-[180px] gap-1 text-xs text-[var(--muted-foreground)]">
+          <ContextRow label="Latest" value={latestEvidence} />
+          <ContextRow
+            label="Adapter"
+            value={ledger?.lastSuccessfulAdapter ?? "未完成"}
+          />
+          <ContextRow
+            label="Files"
+            value={ledger?.latestChangedFiles.slice(0, 2).join(", ") || "无"}
+          />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ContextRow({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="flex items-center justify-between gap-3">
+      <span>{label}</span>
+      <span className="truncate font-medium text-slate-800">{value}</span>
+    </p>
   )
 }
 

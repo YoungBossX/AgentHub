@@ -27,7 +27,7 @@
     - `pnpm test`;
     - `git diff --check`.
 
-- [ ] 1.2 P5-2 Shared Context and Execution Ledger.
+- [x] 1.2 P5-2 Shared Context and Execution Ledger.
   - Objective: Persist and display a compact execution ledger for the current
     session.
   - Scope:

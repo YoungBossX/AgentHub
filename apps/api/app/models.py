@@ -162,3 +162,24 @@ class Deployment(SQLModel, table=True):
     deploy_log_uri: Optional[str] = None
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
+
+
+class SessionExecutionLedger(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    session_id: str = Field(foreign_key="session.id", index=True, unique=True)
+    current_goal: Optional[str] = None
+    active_agents_json: str = "[]"
+    latest_task_id: Optional[str] = Field(default=None, foreign_key="task.id")
+    latest_task_run_id: Optional[str] = Field(default=None, foreign_key="taskrun.id")
+    latest_diff_artifact_id: Optional[str] = Field(default=None, foreign_key="artifact.id")
+    latest_changed_files_json: str = "[]"
+    latest_preview_id: Optional[str] = Field(default=None, foreign_key="preview.id")
+    latest_preview_url: Optional[str] = None
+    latest_preview_health: Optional[str] = None
+    latest_deployment_id: Optional[str] = Field(default=None, foreign_key="deployment.id")
+    latest_deployment_provider: Optional[str] = None
+    latest_deployment_status: Optional[str] = None
+    last_successful_adapter: Optional[str] = None
+    summary_md: str = ""
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)

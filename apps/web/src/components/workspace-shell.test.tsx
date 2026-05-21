@@ -15,6 +15,7 @@ const apiMocks = vi.hoisted(() => ({
   createWorkspaceSession: vi.fn(),
   denyTaskRun: vi.fn(),
   forceCodexFailure: vi.fn(),
+  getSessionLedger: vi.fn(),
   interruptTaskRun: vi.fn(),
   listSessionMessages: vi.fn(),
   listSessionTasks: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   createWorkspaceSession: apiMocks.createWorkspaceSession,
   denyTaskRun: apiMocks.denyTaskRun,
   forceCodexFailure: apiMocks.forceCodexFailure,
+  getSessionLedger: apiMocks.getSessionLedger,
   interruptTaskRun: apiMocks.interruptTaskRun,
   listSessionMessages: apiMocks.listSessionMessages,
   listSessionTasks: apiMocks.listSessionTasks,
@@ -134,6 +136,7 @@ describe("WorkspaceShell", () => {
     apiMocks.sessionEventsUrl.mockReturnValue(
       "http://127.0.0.1:8000/sessions/session-1/events?after=0&stream=true",
     )
+    apiMocks.getSessionLedger.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -183,5 +186,48 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("@frontend · codex")).toBeTruthy()
     expect(screen.getByText("@review · claude_code")).toBeTruthy()
     expect(screen.getByText("计划中")).toBeTruthy()
+  })
+
+  it("renders the workspace context ledger for the selected session", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    apiMocks.getSessionLedger.mockResolvedValue({
+      activeAgents: ["orchestrator", "frontend"],
+      currentGoal: "@orchestrator build a login page for the demo app",
+      id: "ledger-1",
+      lastSuccessfulAdapter: "scripted_mock",
+      latestChangedFiles: ["apps/demo/src/App.tsx"],
+      latestDeploymentId: "deployment-1",
+      latestDeploymentProvider: "mock",
+      latestDeploymentStatus: "ready",
+      latestDiffArtifactId: "artifact-diff-1",
+      latestPreviewHealth: "healthy",
+      latestPreviewId: "preview-1",
+      latestPreviewUrl: "http://127.0.0.1:4317",
+      latestTaskId: "task-1",
+      latestTaskRunId: "run-1",
+      sessionId: "session-1",
+      summaryMd: "Current goal: @orchestrator build a login page",
+      updatedAt: "2026-05-21T00:00:00Z",
+    })
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Workspace Context")).toBeTruthy()
+      expect(
+        screen.getByText("@orchestrator build a login page for the demo app"),
+      ).toBeTruthy()
+      expect(screen.getByText("Mock deploy ready")).toBeTruthy()
+      expect(screen.getByText("scripted_mock")).toBeTruthy()
+      expect(screen.getByText("apps/demo/src/App.tsx")).toBeTruthy()
+    })
   })
 })

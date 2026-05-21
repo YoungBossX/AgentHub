@@ -126,6 +126,14 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     assert "I created a 3-step plan" in messages[0].content_md
     assert all(json.loads(task.plan_json) for task in stored_tasks)
 
+    ledger_response = client.get(f"/sessions/{session.id}/ledger")
+    assert ledger_response.status_code == 200
+    ledger = ledger_response.json()
+    assert ledger["currentGoal"] == "@orchestrator build a login page for the demo app"
+    assert ledger["activeAgents"] == ["orchestrator", "frontend", "qa"]
+    assert ledger["latestTaskId"] == tasks[-1]["id"]
+    assert "Current goal" in ledger["summaryMd"]
+
 
 def test_workspace_agent_registry_returns_im_contacts(client: TestClient) -> None:
     with next(db_from_override()) as db:

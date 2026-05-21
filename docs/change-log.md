@@ -1,5 +1,61 @@
 # AgentHub Change Log
 
+## P5-2 Shared Context and Execution Ledger
+
+**Date:** 2026-05-21
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/models.py` | Added persisted `SessionExecutionLedger` for session-scoped context snapshots. |
+| `apps/api/app/ledger.py` | Added deterministic ledger refresh/read helpers derived from messages, tasks, runs, and artifacts. |
+| `apps/api/app/schemas.py` | Added the execution ledger response schema. |
+| `apps/api/app/main.py` | Added `GET /sessions/{session_id}/ledger` and refreshed ledger after message/planning, diff, preview, and mock deploy events. |
+| `apps/api/tests/test_models.py` | Updated model boundary coverage for the new ledger table. |
+| `apps/api/tests/test_planning.py` | Covered ledger creation after requirement planning. |
+| `apps/api/tests/test_diffs.py` | Covered ledger updates after diff collection. |
+| `apps/api/tests/test_previews.py` | Covered ledger updates after healthy preview creation. |
+| `apps/api/tests/test_deployments.py` | Covered ledger updates after mock deployment creation. |
+| `apps/web/src/lib/api.ts` | Added `SessionExecutionLedger` and `getSessionLedger`. |
+| `apps/web/src/lib/api.test.ts` | Added client API coverage for session ledger reads. |
+| `apps/web/src/components/workspace-shell.tsx` | Added the selected-session `Workspace Context` card. |
+| `apps/web/src/components/workspace-shell.test.tsx` | Added UI coverage for the workspace context ledger card. |
+| `docs/project-state.md` | Recorded P5-2 state, refresh points, limitations, and validation. |
+| `docs/change-log.md` | Recorded this P5-2 implementation. |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-2 complete after validation. |
+
+### What Changed
+
+Implemented a lightweight persisted execution ledger for each session. The
+ledger stores the current goal, active agents, latest task/run/diff/preview/mock
+deploy references, changed files, last successful adapter, summary Markdown,
+and update timestamp.
+
+The ledger is refreshed from existing database records after user
+message/planning, diff collection, healthy preview creation or refresh, and mock
+deployment creation. The read endpoint also refreshes from persisted data so
+older sessions can be reconstructed without adding cross-session memory.
+
+The frontend now renders a compact `Workspace Context` card in the workspace
+shell for the selected session. It shows the current goal, active agents, latest
+evidence, adapter, and changed files while keeping the existing task timeline
+and artifact panel intact.
+
+P5-2 does not add vector DB, embeddings, cross-session long-term memory, Review
+Agent execution, Manager/Worker scheduling, or adapter execution changes.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 30 web tests and 113 API tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+
+---
+
 ## P5-1 Agent Registry and IM Contact UI
 
 **Date:** 2026-05-21

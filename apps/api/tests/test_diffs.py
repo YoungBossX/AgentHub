@@ -180,6 +180,17 @@ def test_diff_api_returns_stored_diff_artifacts(
     assert created["patchText"] == listed[0]["patchText"]
     assert "node_modules" not in created["patchText"]
 
+    task_run = db.get(TaskRun, task_run_id)
+    assert task_run is not None
+    task = db.get(Task, task_run.task_id)
+    assert task is not None
+    ledger_response = client.get(f"/sessions/{task.session_id}/ledger")
+    assert ledger_response.status_code == 200
+    ledger = ledger_response.json()
+    assert ledger["latestTaskRunId"] == task_run_id
+    assert ledger["latestDiffArtifactId"] == created["artifactId"]
+    assert ledger["latestChangedFiles"] == ["apps/demo/src/App.tsx"]
+
 
 def test_parse_numstat_value_handles_binary_and_normal() -> None:
     assert _parse_numstat_value("0") == 0

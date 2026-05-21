@@ -82,6 +82,26 @@ class MessageCreateRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class SessionExecutionLedgerResponse(ApiModel):
+    id: str
+    session_id: str = Field(alias="sessionId")
+    current_goal: Optional[str] = Field(alias="currentGoal")
+    active_agents: list[str] = Field(alias="activeAgents")
+    latest_task_id: Optional[str] = Field(alias="latestTaskId")
+    latest_task_run_id: Optional[str] = Field(alias="latestTaskRunId")
+    latest_diff_artifact_id: Optional[str] = Field(alias="latestDiffArtifactId")
+    latest_changed_files: list[str] = Field(alias="latestChangedFiles")
+    latest_preview_id: Optional[str] = Field(alias="latestPreviewId")
+    latest_preview_url: Optional[str] = Field(alias="latestPreviewUrl")
+    latest_preview_health: Optional[str] = Field(alias="latestPreviewHealth")
+    latest_deployment_id: Optional[str] = Field(alias="latestDeploymentId")
+    latest_deployment_provider: Optional[str] = Field(alias="latestDeploymentProvider")
+    latest_deployment_status: Optional[str] = Field(alias="latestDeploymentStatus")
+    last_successful_adapter: Optional[str] = Field(alias="lastSuccessfulAdapter")
+    summary_md: str = Field(alias="summaryMd")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
 class TaskResponse(ApiModel):
     id: str
     session_id: str = Field(alias="sessionId")

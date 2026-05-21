@@ -8,6 +8,7 @@ import {
   createWorkspaceSession,
   denyTaskRun,
   forceCodexFailure,
+  getSessionLedger,
   getBackendHealth,
   getDemoWorkspace,
   interruptTaskRun,
@@ -248,6 +249,48 @@ describe("message and event API", () => {
     expect(sessionEventsUrl("http://127.0.0.1:8000", "session-1", 4)).toBe(
       "http://127.0.0.1:8000/sessions/session-1/events?after=4&stream=true",
     )
+  })
+
+  it("reads the session execution ledger", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          id: "ledger-1",
+          sessionId: "session-1",
+          currentGoal: "@orchestrator build a login page",
+          activeAgents: ["orchestrator", "frontend"],
+          latestTaskId: "task-1",
+          latestTaskRunId: "run-1",
+          latestDiffArtifactId: "artifact-diff-1",
+          latestChangedFiles: ["apps/demo/src/App.tsx"],
+          latestPreviewId: "preview-1",
+          latestPreviewUrl: "http://127.0.0.1:4317",
+          latestPreviewHealth: "healthy",
+          latestDeploymentId: "deployment-1",
+          latestDeploymentProvider: "mock",
+          latestDeploymentStatus: "ready",
+          lastSuccessfulAdapter: "scripted_mock",
+          summaryMd: "Current goal: @orchestrator build a login page",
+          updatedAt: "2026-05-21T00:00:00Z",
+        }),
+        { status: 200 },
+      )
+    })
+
+    const ledger = await getSessionLedger(
+      "http://127.0.0.1:8000",
+      "session-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/sessions/session-1/ledger",
+      {
+        cache: "no-store",
+      },
+    )
+    expect(ledger?.activeAgents).toEqual(["orchestrator", "frontend"])
+    expect(ledger?.latestPreviewHealth).toBe("healthy")
   })
 })
 

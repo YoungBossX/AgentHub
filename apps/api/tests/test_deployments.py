@@ -136,15 +136,24 @@ def test_deploy_api_creates_and_lists_mock_deployments(tmp_path: Path) -> None:
             client = TestClient(app)
             create_response = client.post(f"/previews/{preview_id}/deploy")
             list_response = client.get(f"/task-runs/{task_run_id}/deployments")
+            task_run = db.get(TaskRun, task_run_id)
+            assert task_run is not None
+            task = db.get(Task, task_run.task_id)
+            assert task is not None
+            ledger_response = client.get(f"/sessions/{task.session_id}/ledger")
         finally:
             app.dependency_overrides.clear()
 
         assert create_response.status_code == 201
         assert list_response.status_code == 200
+        assert ledger_response.status_code == 200
         assert create_response.json()["provider"] == "mock"
         assert create_response.json()["environment"] == "preview"
         assert create_response.json()["commitSha"] == "def456+worktree"
         assert list_response.json()[0]["url"].startswith("https://mock.agenthub.local/")
+        assert ledger_response.json()["latestDeploymentId"] == create_response.json()["id"]
+        assert ledger_response.json()["latestDeploymentProvider"] == "mock"
+        assert ledger_response.json()["latestDeploymentStatus"] == "ready"
 
 
 def test_mock_deploy_rejects_nonexistent_preview(tmp_path: Path) -> None:

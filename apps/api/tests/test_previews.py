@@ -180,6 +180,11 @@ def test_preview_api_starts_lists_and_stops_preview(
         client = TestClient(app)
         create_response = client.post(f"/task-runs/{task_run_id}/preview")
         list_response = client.get(f"/task-runs/{task_run_id}/previews")
+        task_run = db.get(TaskRun, task_run_id)
+        assert task_run is not None
+        task = db.get(Task, task_run.task_id)
+        assert task is not None
+        ledger_response = client.get(f"/sessions/{task.session_id}/ledger")
         preview_id = create_response.json()["id"]
         stop_response = client.post(f"/previews/{preview_id}/stop")
     finally:
@@ -190,6 +195,10 @@ def test_preview_api_starts_lists_and_stops_preview(
     assert stop_response.status_code == 200
     assert create_response.json()["healthStatus"] == "healthy"
     assert list_response.json()[0]["url"] == "http://127.0.0.1:4318"
+    assert ledger_response.status_code == 200
+    assert ledger_response.json()["latestPreviewId"] == preview_id
+    assert ledger_response.json()["latestPreviewUrl"] == "http://127.0.0.1:4318"
+    assert ledger_response.json()["latestPreviewHealth"] == "healthy"
     assert stop_response.json()["healthStatus"] == "stopped"
     assert runner.stopped == [4242]
 

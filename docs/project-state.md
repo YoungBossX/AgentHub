@@ -5,6 +5,47 @@ reference instead of repeating long context blocks.
 
 ## P5 Status
 
+### P5-2 Shared Context and Execution Ledger
+
+P5-2 completed on 2026-05-21.
+
+AgentHub now persists a lightweight session-scoped execution ledger in SQLite
+and exposes it through `GET /sessions/{session_id}/ledger`. The ledger is a
+deterministic snapshot of existing session records, not long-term memory. It
+tracks:
+
+- current goal;
+- active agent roles;
+- latest task and task run;
+- latest diff artifact and changed files;
+- latest preview ID, URL, and health;
+- latest mock deployment ID, provider, and status;
+- last successful adapter;
+- a compact Markdown summary and update timestamp.
+
+Ledger refresh points:
+
+- after user message creation and planning;
+- after successful diff collection;
+- after healthy preview creation or preview health refresh;
+- after mock deployment creation;
+- on ledger read, so older sessions can be reconstructed from persisted
+  messages, tasks, runs, and artifacts.
+
+The workspace shell now shows a small `Workspace Context` card for the selected
+session. It summarizes the current goal, active agents, latest evidence,
+adapter, and changed files without replacing the task timeline.
+
+P5-2 does not add vector memory, embeddings, cross-session memory, Review Agent
+execution, Manager/Worker scheduling, or adapter dispatch changes.
+
+Validation passed:
+
+- `pnpm check`
+- `pnpm test` (30 web tests, 113 API tests)
+- `git diff --check`
+- `openspec validate agenthub-p5-platform-evolution --strict`
+
 ### P5-1 Agent Registry and IM Contact UI
 
 P5-1 completed on 2026-05-21 as the first implementation slice of

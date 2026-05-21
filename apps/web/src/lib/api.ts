@@ -52,6 +52,26 @@ export type ChatMessage = {
   createdAt: string
 }
 
+export type SessionExecutionLedger = {
+  id: string
+  sessionId: string
+  currentGoal: string | null
+  activeAgents: string[]
+  latestTaskId: string | null
+  latestTaskRunId: string | null
+  latestDiffArtifactId: string | null
+  latestChangedFiles: string[]
+  latestPreviewId: string | null
+  latestPreviewUrl: string | null
+  latestPreviewHealth: string | null
+  latestDeploymentId: string | null
+  latestDeploymentProvider: string | null
+  latestDeploymentStatus: string | null
+  lastSuccessfulAdapter: string | null
+  summaryMd: string
+  updatedAt: string
+}
+
 export type SessionTask = {
   id: string
   sessionId: string
@@ -274,6 +294,22 @@ export async function listSessionMessages(
   }
 
   return (await response.json()) as ChatMessage[]
+}
+
+export async function getSessionLedger(
+  backendUrl: string,
+  sessionId: string,
+  fetcher: Fetcher = fetch,
+): Promise<SessionExecutionLedger | null> {
+  const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/ledger`), {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    return null
+  }
+
+  return (await response.json()) as SessionExecutionLedger
 }
 
 export async function createSessionMessage(

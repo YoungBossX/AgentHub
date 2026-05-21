@@ -17,8 +17,15 @@ from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
 from app.diffs import DiffCollectionError, StoredDiffArtifact, collect_task_run_diff, list_task_run_diffs
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
 from app.guardrails import approve_task_run, deny_task_run
+from app.ledger import (
+    active_agents_for_ledger,
+    changed_files_for_ledger,
+    refresh_session_ledger,
+    refresh_session_ledger_for_task_run,
+)
 from app.models import Agent, Message, Task, TaskRun
 from app.models import Session as AgentHubSession
+from app.models import SessionExecutionLedger
 from app.models import TaskRunEvent
 from app.models import utc_now
 from app.planning import MentionParseError, plan_for_message
@@ -46,6 +53,7 @@ from app.schemas import (
     MessageResponse,
     PreviewResponse,
     SessionCreateRequest,
+    SessionExecutionLedgerResponse,
     SessionResponse,
     SessionUpdateRequest,
     TaskResponse,
@@ -366,7 +374,45 @@ def create_message(
                 detail=str(exc),
             ) from exc
 
+    refresh_session_ledger(db, session.id)
     return created
+
+
+def ledger_response(
+    ledger: SessionExecutionLedger,
+) -> SessionExecutionLedgerResponse:
+    return SessionExecutionLedgerResponse(
+        id=ledger.id,
+        sessionId=ledger.session_id,
+        currentGoal=ledger.current_goal,
+        activeAgents=active_agents_for_ledger(ledger),
+        latestTaskId=ledger.latest_task_id,
+        latestTaskRunId=ledger.latest_task_run_id,
+        latestDiffArtifactId=ledger.latest_diff_artifact_id,
+        latestChangedFiles=changed_files_for_ledger(ledger),
+        latestPreviewId=ledger.latest_preview_id,
+        latestPreviewUrl=ledger.latest_preview_url,
+        latestPreviewHealth=ledger.latest_preview_health,
+        latestDeploymentId=ledger.latest_deployment_id,
+        latestDeploymentProvider=ledger.latest_deployment_provider,
+        latestDeploymentStatus=ledger.latest_deployment_status,
+        lastSuccessfulAdapter=ledger.last_successful_adapter,
+        summaryMd=ledger.summary_md,
+        updatedAt=ledger.updated_at,
+    )
+
+
+@app.get(
+    "/sessions/{session_id}/ledger",
+    response_model=SessionExecutionLedgerResponse,
+)
+def read_session_execution_ledger(
+    session_id: str,
+    db: DbSession = Depends(get_db),
+) -> SessionExecutionLedgerResponse:
+    if get_session(db, session_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return ledger_response(refresh_session_ledger(db, session_id))
 
 
 def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
@@ -530,6 +576,7 @@ async def execute_task_run(
     db.refresh(task_run)
     if task_run.state == "completed":
         collect_task_run_diff(db, task_run.id)
+        refresh_session_ledger_for_task_run(db, task_run.id)
         db.refresh(task_run)
     return task_run
 
@@ -750,6 +797,7 @@ async def retry_existing_task_run_with_fallback(
         db.refresh(task_run)
         if task_run.state == "completed":
             collect_task_run_diff(db, task_run.id)
+            refresh_session_ledger_for_task_run(db, task_run.id)
             db.refresh(task_run)
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -806,6 +854,7 @@ def collect_diff_for_task_run(
 ) -> DiffArtifactResponse:
     try:
         diff_artifact = collect_task_run_diff(db, task_run_id)
+        refresh_session_ledger_for_task_run(db, task_run_id)
     except DiffCollectionError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return diff_artifact_response(diff_artifact)
@@ -833,6 +882,8 @@ def start_preview_for_task_run(
 ) -> PreviewResponse:
     try:
         preview = previews.start_task_run_preview(db, task_run_id)
+        if preview.health_status == "healthy":
+            refresh_session_ledger_for_task_run(db, task_run_id)
     except PreviewError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return preview_response(preview)
@@ -846,9 +897,12 @@ def read_task_run_previews(
 ) -> list[PreviewResponse]:
     if db.get(TaskRun, task_run_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    stored_previews = previews.list_task_run_previews(db, task_run_id)
+    if any(preview.health_status == "healthy" for preview in stored_previews):
+        refresh_session_ledger_for_task_run(db, task_run_id)
     return [
         preview_response(preview)
-        for preview in previews.list_task_run_previews(db, task_run_id)
+        for preview in stored_previews
     ]
 
 
@@ -877,6 +931,7 @@ def create_mock_deployment_for_preview(
 ) -> DeploymentResponse:
     try:
         deployment = deployments.create_mock_deployment(db, preview_id)
+        refresh_session_ledger_for_task_run(db, deployment.task_run_id)
     except DeployError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return deployment_response(deployment)
