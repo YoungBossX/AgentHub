@@ -9,7 +9,12 @@ from sqlmodel import SQLModel, create_engine, select
 
 from app.main import app, get_db
 from app.models import Agent, Message, Session, Task, Workspace
-from app.planning import MentionParseError, parse_followup_change, parse_mentions
+from app.planning import (
+    MentionParseError,
+    parse_followup_change,
+    parse_frontend_intent,
+    parse_mentions,
+)
 
 
 @pytest.fixture
@@ -112,6 +117,11 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     frontend_task = next(task for task in tasks if task["assignedAgentRole"] == "frontend")
     assert frontend_task["intentType"] == "frontend_change"
     assert "login_page" in frontend_task["planJson"]["target"]
+    assert frontend_task["planJson"]["planner"] == "deterministic_login_v1"
+    assert frontend_task["planJson"]["expectedArtifactTypes"] == ["diff", "review"]
+    assert frontend_task["planJson"]["taskGraph"]["goal"] == (
+        "@orchestrator build a login page for the demo app"
+    )
 
     with next(db_from_override()) as db:
         messages = db.exec(
@@ -209,7 +219,85 @@ def test_parse_followup_change_supports_english_and_chinese_copy_requests() -> N
     assert title.target_text == "Welcome back"
 
 
-def test_followup_message_creates_single_frontend_task_in_same_session(
+def test_parse_frontend_intent_supports_bounded_p5_dynamic_intents() -> None:
+    title = parse_frontend_intent("change the title to Welcome back")
+    button = parse_frontend_intent("把按钮文案改成 Sign in")
+    color = parse_frontend_intent("@orchestrator change the accent color to #14b8a6")
+    input_field = parse_frontend_intent("add a phone number input field")
+    status_text = parse_frontend_intent("add help text Use your work email")
+    layout_copy = parse_frontend_intent("adjust layout copy to Fast local demo")
+
+    assert title is not None
+    assert title.target == "demo_heading_text"
+    assert button is not None
+    assert button.target == "primary_action_button_text"
+    assert color is not None
+    assert color.target == "theme_accent_color"
+    assert color.files == ["apps/demo/src/styles.css"]
+    assert input_field is not None
+    assert input_field.target == "simple_input_field"
+    assert status_text is not None
+    assert status_text.target == "status_help_text"
+    assert layout_copy is not None
+    assert layout_copy.target == "layout_copy"
+
+
+def test_orchestrator_supported_frontend_intent_creates_dynamic_task_graph(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@orchestrator change the accent color to #14b8a6"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert len(tasks) == 3
+    assert [task["assignedAgentRole"] for task in tasks] == [
+        "orchestrator",
+        "frontend",
+        "qa",
+    ]
+    assert [task["intentType"] for task in tasks] == [
+        "planning",
+        "frontend_change",
+        "review",
+    ]
+    assert tasks[1]["dependsOnTaskIds"] == [tasks[0]["id"]]
+    assert tasks[2]["dependsOnTaskIds"] == [tasks[1]["id"]]
+
+    frontend_plan = tasks[1]["planJson"]
+    assert frontend_plan["planner"] == "dynamic_manager_v1"
+    assert frontend_plan["intent"] == "theme_accent_color_change"
+    assert frontend_plan["target"] == "theme_accent_color"
+    assert frontend_plan["targetText"] == "#14b8a6"
+    assert frontend_plan["files"] == ["apps/demo/src/styles.css"]
+    assert frontend_plan["expectedArtifactTypes"] == ["diff", "review"]
+    assert frontend_plan["taskGraph"]["goal"] == (
+        "@orchestrator change the accent color to #14b8a6"
+    )
+    assert frontend_plan["taskGraph"]["tasks"][2]["expectedArtifactTypes"] == [
+        "review"
+    ]
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message).where(
+                Message.session_id == session_id,
+                Message.sender_type == "orchestrator",
+            )
+        ).all()
+
+    assert len(messages) == 1
+    assert "bounded dynamic plan" in messages[0].content_md
+
+
+def test_followup_message_creates_frontend_and_review_tasks_in_same_session(
     client: TestClient,
 ) -> None:
     with next(db_from_override()) as db:
@@ -231,16 +319,22 @@ def test_followup_message_creates_single_frontend_task_in_same_session(
     task_response = client.get(f"/sessions/{session_id}/tasks")
     assert task_response.status_code == 200
     tasks = task_response.json()
-    followup = tasks[-1]
+    followup = tasks[-2]
+    review = tasks[-1]
 
-    assert len(tasks) == 4
+    assert len(tasks) == 5
     assert followup["sessionId"] == session_id
     assert followup["assignedAgentRole"] == "frontend"
     assert followup["intentType"] == "frontend_change"
     assert followup["title"] == "Change primary button text to Sign in"
     assert followup["planJson"]["target"] == "primary_action_button_text"
     assert followup["planJson"]["targetText"] == "Sign in"
-    assert followup["dependsOnTaskIds"] == [tasks[-2]["id"]]
+    assert followup["planJson"]["planner"] == "dynamic_manager_v1"
+    assert followup["planJson"]["expectedArtifactTypes"] == ["diff", "review"]
+    assert followup["dependsOnTaskIds"] == [tasks[-3]["id"]]
+    assert review["assignedAgentRole"] == "qa"
+    assert review["intentType"] == "review"
+    assert review["dependsOnTaskIds"] == [followup["id"]]
 
     with next(db_from_override()) as db:
         messages = db.exec(
@@ -251,7 +345,23 @@ def test_followup_message_creates_single_frontend_task_in_same_session(
         ).all()
 
     assert len(messages) == 2
-    assert "focused follow-up task" in messages[-1].content_md
+    assert "bounded dynamic plan" in messages[-1].content_md
+
+
+def test_unsupported_orchestrator_request_falls_back_without_claiming_support(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@orchestrator refactor the whole app into a dashboard"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
 
 
 def test_followup_message_without_existing_plan_is_ignored(client: TestClient) -> None:

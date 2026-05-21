@@ -1,5 +1,57 @@
 # AgentHub Change Log
 
+## P5-5 Dynamic Manager Planner v1
+
+**Date:** 2026-05-21
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Added a bounded rule-based Manager planner v1, structured task graph metadata, graph validation, and dynamic frontend intent classification. |
+| `apps/api/app/main.py` | Added bounded adapter instructions for the new frontend change targets. |
+| `apps/api/tests/test_planning.py` | Added coverage for dynamic intents, graph metadata, follow-up review tasks, and unsupported fallback behavior. |
+| `docs/project-state.md` | Recorded P5-5 behavior, limitations, and validation. |
+| `docs/change-log.md` | Recorded this P5-5 implementation. |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-5 complete after validation. |
+
+### What Changed
+
+Implemented a deterministic local Manager planner v1 for bounded frontend
+change intents. The planner now classifies these supported requests:
+
+- title or heading text change;
+- primary button text change;
+- theme/accent color change;
+- simple input field addition;
+- simple status/help text addition;
+- small layout copy adjustment.
+
+Supported orchestrator-led requests produce a structured task graph with goal,
+planner version, intent, task nodes, assigned agent role, priority,
+dependencies, and expected artifact types. The graph creates Manager, Frontend
+Coding, and Review tasks. Same-session follow-up requests create a serial
+Frontend Coding task followed by a Review task.
+
+The original login-page path remains deterministic and is labeled
+`deterministic_login_v1`. Unsupported broad requests fall back to the existing
+deterministic behavior and do not create tasks or claim support.
+
+P5-5 does not call an LLM planner, implement unrestricted arbitrary editing,
+change adapter dispatch, add Manager/Worker scheduling, add production deploy,
+or add real multi-user IM.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 34 web tests and 116 API tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+
+---
+
 ## P5-4 Multi-Agent Execution Trace UI
 
 **Date:** 2026-05-21

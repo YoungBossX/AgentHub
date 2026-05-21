@@ -5,6 +5,50 @@ reference instead of repeating long context blocks.
 
 ## P5 Status
 
+### P5-5 Dynamic Manager Planner v1
+
+P5-5 completed on 2026-05-21.
+
+AgentHub now has a bounded local Manager planner v1 for a small set of
+frontend change intents. The implementation is deterministic and rule-based;
+it does not call an LLM planner and does not claim unrestricted natural
+language editing.
+
+Supported dynamic frontend intents:
+
+- title or heading text change;
+- primary button text change;
+- theme/accent color change;
+- simple input field addition;
+- simple status/help text addition;
+- small layout copy adjustment.
+
+Dynamic Manager plans persist structured task graph metadata in task
+`planJson`. The graph includes the goal, planner version, intent, task nodes,
+assigned agent role, priority, dependencies, and expected artifact types. For
+new orchestrator-led bounded frontend requests, the graph creates Manager,
+Frontend Coding, and Review tasks. For same-session follow-up requests, it
+creates a serial Frontend Coding task followed by a Review task that depends on
+the coding task.
+
+The existing deterministic login-page planner remains intact as
+`deterministic_login_v1`, and the known button/title follow-up path still
+works. Unsupported broad requests, such as whole-app refactors, fall back to
+the existing deterministic behavior and do not create tasks or claim support.
+
+P5-5 adds bounded instructions for real coding adapters for the new targets,
+but it does not change adapter dispatch, adapter runtime semantics,
+Manager/Worker scheduling, production deploy, multi-user IM, or the P4 final
+demo baseline. `ScriptedMockAdapter` remains optimized for the original login
+page and copy-change demo path.
+
+Validation passed:
+
+- `pnpm check`
+- `pnpm test` (34 web tests, 116 API tests)
+- `git diff --check`
+- `openspec validate agenthub-p5-platform-evolution --strict`
+
 ### P5-4 Multi-Agent Execution Trace UI
 
 P5-4 completed on 2026-05-21.

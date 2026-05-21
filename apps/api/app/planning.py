@@ -10,6 +10,9 @@ from app.models import Agent, Message, Task
 from app.repositories import create_session_message, list_session_tasks
 
 SUPPORTED_MENTION_ROLES = {"orchestrator", "frontend", "backend", "qa"}
+GRAPH_AGENT_ROLES = {"orchestrator", "frontend", "qa"}
+GRAPH_EXPECTED_ARTIFACTS = {"plan", "diff", "review"}
+GRAPH_ALLOWED_FILES = {"apps/demo/src/App.tsx", "apps/demo/src/styles.css"}
 MENTION_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9_-]*)")
 CHANGE_TO_PATTERN = re.compile(
     r"(?:change\s+(?:the\s+)?(?:primary\s+)?(?:login\s+page\s+)?"
@@ -17,6 +20,31 @@ CHANGE_TO_PATTERN = re.compile(
     r"(?:\s+(?:text|copy))?\s+to\s+|"
     r"(?:把|再把)?(?:登录页)?(?P<chinese_target>按钮文案|按钮|标题|标题文案)"
     r"改成\s+)"
+    r"(?P<value>.+)",
+    re.IGNORECASE,
+)
+THEME_COLOR_PATTERN = re.compile(
+    r"(?:change\s+(?:the\s+)?(?:theme|accent|primary|brand)\s+color\s+to\s+|"
+    r"(?:把|将)?(?:主题色|主色|强调色|品牌色)改成\s+)"
+    r"(?P<value>#[0-9a-fA-F]{3,8}|[A-Za-z][A-Za-z0-9\s-]{0,40})",
+    re.IGNORECASE,
+)
+INPUT_FIELD_PATTERN = re.compile(
+    r"(?:add\s+(?:a\s+)?(?P<english_label>[A-Za-z][A-Za-z0-9\s-]{1,40})\s+"
+    r"(?:input\s+)?field|"
+    r"(?:添加|新增)(?:一个)?(?P<chinese_label>[\u4e00-\u9fffA-Za-z0-9\s-]{1,40})(?:输入框|字段))",
+    re.IGNORECASE,
+)
+STATUS_TEXT_PATTERN = re.compile(
+    r"(?:add\s+(?:a\s+)?(?:status|help|helper)\s+(?:text|copy|message)\s*(?:[:：]|to)?\s*|"
+    r"(?:添加|新增)(?:状态|帮助|提示)(?:文本|文案)?\s*)"
+    r"(?P<value>.+)",
+    re.IGNORECASE,
+)
+LAYOUT_COPY_PATTERN = re.compile(
+    r"(?:adjust\s+(?:the\s+)?(?:layout\s+)?copy\s+to\s+|"
+    r"(?:update|change)\s+(?:the\s+)?lede\s+copy\s+to\s+|"
+    r"(?:调整|更新)(?:布局)?文案(?:为|成)\s*)"
     r"(?P<value>.+)",
     re.IGNORECASE,
 )
@@ -35,6 +63,25 @@ class ParsedMentions:
 class FollowupChange:
     target: str
     target_text: str
+
+
+@dataclass(frozen=True)
+class FrontendIntent:
+    intent: str
+    target: str
+    target_text: str
+    files: list[str]
+    summary: str
+
+
+@dataclass(frozen=True)
+class TaskSpec:
+    title: str
+    intent_type: str
+    role: str
+    priority: int
+    plan: dict
+    expected_artifact_types: list[str]
 
 
 def parse_mentions(db: DbSession, content: str) -> ParsedMentions:
@@ -63,19 +110,30 @@ def plan_for_message(
     parsed = parse_mentions(db, content)
     existing_tasks = list_session_tasks(db, message.session_id)
 
-    followup = parse_followup_change(content)
-    if followup is not None and existing_tasks:
-        return _create_followup_task(db, message, followup, existing_tasks)
+    bounded_intent = parse_frontend_intent(content)
+    if bounded_intent is not None and existing_tasks:
+        return _create_dynamic_frontend_tasks(
+            db,
+            message,
+            bounded_intent,
+            existing_tasks=existing_tasks,
+        )
 
     if "orchestrator" not in parsed.roles:
-        return []
-
-    if "login page" not in content.lower() or "demo app" not in content.lower():
         return []
 
     if existing_tasks:
         return []
 
+    if "login page" not in content.lower() or "demo app" not in content.lower():
+        if bounded_intent is None:
+            return []
+        return _create_dynamic_frontend_tasks(db, message, bounded_intent)
+
+    return _create_login_page_plan(db, message)
+
+
+def _create_login_page_plan(db: DbSession, message: Message) -> list[Task]:
     agents = {
         agent.role: agent
         for agent in db.exec(select(Agent).where(Agent.role.in_(SUPPORTED_MENTION_ROLES))).all()
@@ -87,54 +145,71 @@ def plan_for_message(
         raise MentionParseError(f"Planning requires enabled agents: {', '.join(missing)}.")
 
     task_specs = [
-        {
-            "title": "Plan the login page change",
-            "intent_type": "planning",
-            "role": "orchestrator",
-            "priority": 0,
-            "plan": {
+        TaskSpec(
+            title="Plan the login page change",
+            intent_type="planning",
+            role="orchestrator",
+            priority=0,
+            plan={
                 "target": "login_page",
                 "summary": "Confirm the demo login-page scope and execution order.",
                 "parallelGroup": None,
             },
-        },
-        {
-            "title": "Build the Vite React login page",
-            "intent_type": "frontend_change",
-            "role": "frontend",
-            "priority": 1,
-            "plan": {
+            expected_artifact_types=["plan"],
+        ),
+        TaskSpec(
+            title="Build the Vite React login page",
+            intent_type="frontend_change",
+            role="frontend",
+            priority=1,
+            plan={
                 "target": "login_page",
                 "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
                 "parallelGroup": None,
             },
-        },
-        {
-            "title": "Review the login page demo path",
-            "intent_type": "qa_review",
-            "role": "qa",
-            "priority": 2,
-            "plan": {
+            expected_artifact_types=["diff", "review"],
+        ),
+        TaskSpec(
+            title="Review the login page demo path",
+            intent_type="qa_review",
+            role="qa",
+            priority=2,
+            plan={
                 "target": "login_page",
                 "checks": ["page renders", "button target remains deterministic"],
                 "parallelGroup": None,
             },
-        },
+            expected_artifact_types=["review"],
+        ),
     ]
+    _validate_task_graph(task_specs)
 
     tasks: list[Task] = []
+    graph = _graph_metadata(
+        goal=message.content_md,
+        intent="login_page",
+        planner="deterministic_login_v1",
+        task_specs=task_specs,
+    )
     for index, spec in enumerate(task_specs):
         depends_on = [tasks[index - 1].id] if index > 0 else []
+        plan = {
+            **spec.plan,
+            "planner": "deterministic_login_v1",
+            "goal": message.content_md,
+            "expectedArtifactTypes": spec.expected_artifact_types,
+            "taskGraph": graph,
+        }
         task = Task(
             session_id=message.session_id,
             created_by_message_id=message.id,
-            title=spec["title"],
-            intent_type=spec["intent_type"],
+            title=spec.title,
+            intent_type=spec.intent_type,
             status="pending",
-            priority=spec["priority"],
-            plan_json=json.dumps(spec["plan"], separators=(",", ":")),
+            priority=spec.priority,
+            plan_json=json.dumps(plan, separators=(",", ":")),
             depends_on_task_ids=json.dumps(depends_on, separators=(",", ":")),
-            assigned_agent_id=agents[spec["role"]].id,
+            assigned_agent_id=agents[spec.role].id,
         )
         db.add(task)
         db.commit()
@@ -151,6 +226,77 @@ def plan_for_message(
     )
     create_session_message(db, _session_for_message(db, message), summary)
     return tasks
+
+
+def parse_frontend_intent(content: str) -> Optional[FrontendIntent]:
+    followup = parse_followup_change(content)
+    if followup is not None:
+        target_label = (
+            "primary button text"
+            if followup.target == "primary_action_button_text"
+            else "demo heading text"
+        )
+        return FrontendIntent(
+            intent="copy_change",
+            target=followup.target,
+            target_text=followup.target_text,
+            files=["apps/demo/src/App.tsx"],
+            summary=f"Change only the {target_label}.",
+        )
+
+    normalized = MENTION_PATTERN.sub("", content).strip()
+
+    color_match = THEME_COLOR_PATTERN.search(normalized)
+    if color_match is not None:
+        value = _clean_target_text(color_match.group("value"))
+        if value:
+            return FrontendIntent(
+                intent="theme_accent_color_change",
+                target="theme_accent_color",
+                target_text=value,
+                files=["apps/demo/src/styles.css"],
+                summary="Change only the demo app accent color tokens.",
+            )
+
+    input_match = INPUT_FIELD_PATTERN.search(normalized)
+    if input_match is not None:
+        label = _clean_target_text(
+            input_match.group("english_label") or input_match.group("chinese_label") or ""
+        )
+        if label:
+            return FrontendIntent(
+                intent="simple_input_field_addition",
+                target="simple_input_field",
+                target_text=label,
+                files=["apps/demo/src/App.tsx"],
+                summary="Add one simple input field inside the demo mutation area.",
+            )
+
+    status_match = STATUS_TEXT_PATTERN.search(normalized)
+    if status_match is not None:
+        value = _clean_target_text(status_match.group("value"))
+        if value:
+            return FrontendIntent(
+                intent="status_help_text_addition",
+                target="status_help_text",
+                target_text=value,
+                files=["apps/demo/src/App.tsx"],
+                summary="Add one short status or help text line to the demo app.",
+            )
+
+    layout_match = LAYOUT_COPY_PATTERN.search(normalized)
+    if layout_match is not None:
+        value = _clean_target_text(layout_match.group("value"))
+        if value:
+            return FrontendIntent(
+                intent="layout_copy_adjustment",
+                target="layout_copy",
+                target_text=value,
+                files=["apps/demo/src/App.tsx"],
+                summary="Adjust a small layout copy block without broader layout changes.",
+            )
+
+    return None
 
 
 def parse_followup_change(content: str) -> Optional[FollowupChange]:
@@ -175,60 +321,182 @@ def _clean_target_text(value: str) -> str:
     return cleaned[:60]
 
 
-def _create_followup_task(
+def _create_dynamic_frontend_tasks(
     db: DbSession,
     message: Message,
-    followup: FollowupChange,
-    existing_tasks: list[Task],
+    intent: FrontendIntent,
+    existing_tasks: Optional[list[Task]] = None,
 ) -> list[Task]:
+    existing_tasks = existing_tasks or []
     frontend = db.exec(select(Agent).where(Agent.role == "frontend")).first()
     orchestrator = db.exec(select(Agent).where(Agent.role == "orchestrator")).first()
+    qa = db.exec(select(Agent).where(Agent.role == "qa")).first()
     if frontend is None or not frontend.enabled:
-        raise MentionParseError("Follow-up planning requires the enabled frontend agent.")
+        raise MentionParseError("Dynamic Manager planning requires the enabled frontend agent.")
+    if qa is None or not qa.enabled:
+        raise MentionParseError("Dynamic Manager planning requires the enabled QA agent.")
+    if not existing_tasks and (orchestrator is None or not orchestrator.enabled):
+        raise MentionParseError("Dynamic Manager planning requires the enabled orchestrator agent.")
 
-    latest_task = existing_tasks[-1]
-    priority = max(task.priority for task in existing_tasks) + 1
-    target_label = (
-        "primary button text"
-        if followup.target == "primary_action_button_text"
-        else "demo heading text"
+    base_priority = max((task.priority for task in existing_tasks), default=-1) + 1
+    task_specs: list[TaskSpec] = []
+    if not existing_tasks:
+        task_specs.append(
+            TaskSpec(
+                title="Plan the bounded frontend change",
+                intent_type="planning",
+                role="orchestrator",
+                priority=base_priority,
+                plan={
+                    "target": intent.target,
+                    "summary": intent.summary,
+                    "parallelGroup": None,
+                },
+                expected_artifact_types=["plan"],
+            )
+        )
+
+    task_specs.extend(
+        [
+            TaskSpec(
+                title=_coding_title_for(intent),
+                intent_type="frontend_change",
+                role="frontend",
+                priority=base_priority + len(task_specs),
+                plan={
+                    "target": intent.target,
+                    "targetText": intent.target_text,
+                    "files": intent.files,
+                    "summary": intent.summary,
+                    "parallelGroup": None,
+                },
+                expected_artifact_types=["diff", "review"],
+            ),
+            TaskSpec(
+                title=f"Review {intent.target.replace('_', ' ')} change",
+                intent_type="review",
+                role="qa",
+                priority=base_priority + len(task_specs) + 1,
+                plan={
+                    "target": intent.target,
+                    "checks": ["diff is focused", "preview remains eligible"],
+                    "parallelGroup": None,
+                },
+                expected_artifact_types=["review"],
+            ),
+        ]
     )
-    task = Task(
-        session_id=message.session_id,
-        created_by_message_id=message.id,
-        title=f"Change {target_label} to {followup.target_text}",
-        intent_type="frontend_change",
-        status="pending",
-        priority=priority,
-        plan_json=json.dumps(
-            {
-                "target": followup.target,
-                "targetText": followup.target_text,
-                "files": ["apps/demo/src/App.tsx"],
-                "summary": f"Change only the {target_label}.",
-                "parallelGroup": None,
-            },
-            separators=(",", ":"),
-        ),
-        depends_on_task_ids=json.dumps([latest_task.id], separators=(",", ":")),
-        assigned_agent_id=frontend.id,
+    _validate_task_graph(task_specs)
+
+    agents = {"frontend": frontend, "qa": qa}
+    if orchestrator is not None and orchestrator.enabled:
+        agents["orchestrator"] = orchestrator
+
+    graph = _graph_metadata(
+        goal=message.content_md,
+        intent=intent.intent,
+        planner="dynamic_manager_v1",
+        task_specs=task_specs,
     )
-    db.add(task)
-    db.commit()
-    db.refresh(task)
+    tasks: list[Task] = []
+    prior_task_id = existing_tasks[-1].id if existing_tasks else None
+    for index, spec in enumerate(task_specs):
+        depends_on = [tasks[index - 1].id] if index > 0 else []
+        if index == 0 and prior_task_id is not None:
+            depends_on = [prior_task_id]
+        plan = {
+            **spec.plan,
+            "planner": "dynamic_manager_v1",
+            "goal": message.content_md,
+            "intent": intent.intent,
+            "expectedArtifactTypes": spec.expected_artifact_types,
+            "taskGraph": graph,
+        }
+        task = Task(
+            session_id=message.session_id,
+            created_by_message_id=message.id,
+            title=spec.title,
+            intent_type=spec.intent_type,
+            status="pending",
+            priority=spec.priority,
+            plan_json=json.dumps(plan, separators=(",", ":")),
+            depends_on_task_ids=json.dumps(depends_on, separators=(",", ":")),
+            assigned_agent_id=agents[spec.role].id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        tasks.append(task)
 
     if orchestrator is not None and orchestrator.enabled:
         summary = Message(
             session_id=message.session_id,
             sender_type="orchestrator",
             sender_id=orchestrator.id,
-            content_md=f"I created a focused follow-up task to change the {target_label}.",
+            content_md=(
+                f"I created a bounded dynamic plan for {intent.target.replace('_', ' ')}."
+            ),
             message_kind="plan",
             parent_message_id=message.id,
         )
         create_session_message(db, _session_for_message(db, message), summary)
 
-    return [task]
+    return tasks
+
+
+def _coding_title_for(intent: FrontendIntent) -> str:
+    labels = {
+        "demo_heading_text": "Change demo heading text",
+        "primary_action_button_text": "Change primary button text",
+        "theme_accent_color": "Change theme accent color",
+        "simple_input_field": "Add simple input field",
+        "status_help_text": "Add status/help text",
+        "layout_copy": "Adjust layout copy",
+    }
+    label = labels.get(intent.target, "Apply bounded frontend change")
+    return f"{label} to {intent.target_text}"
+
+
+def _graph_metadata(
+    *,
+    goal: str,
+    intent: str,
+    planner: str,
+    task_specs: list[TaskSpec],
+) -> dict:
+    return {
+        "goal": goal,
+        "intent": intent,
+        "planner": planner,
+        "tasks": [
+            {
+                "key": f"{index + 1}-{spec.role}-{spec.intent_type}",
+                "title": spec.title,
+                "assignedAgentRole": spec.role,
+                "priority": spec.priority,
+                "dependsOn": [f"{index}-{task_specs[index - 1].role}-{task_specs[index - 1].intent_type}"]
+                if index > 0
+                else [],
+                "expectedArtifactTypes": spec.expected_artifact_types,
+            }
+            for index, spec in enumerate(task_specs)
+        ],
+    }
+
+
+def _validate_task_graph(task_specs: list[TaskSpec]) -> None:
+    if not 1 <= len(task_specs) <= 3:
+        raise MentionParseError("Manager planner generated too many tasks.")
+
+    for spec in task_specs:
+        if spec.role not in GRAPH_AGENT_ROLES:
+            raise MentionParseError(f"Unsupported planner role: {spec.role}.")
+        expected = set(spec.expected_artifact_types)
+        if not expected.issubset(GRAPH_EXPECTED_ARTIFACTS):
+            raise MentionParseError("Manager planner generated unsupported artifacts.")
+        files = spec.plan.get("files", [])
+        if isinstance(files, list) and not set(files).issubset(GRAPH_ALLOWED_FILES):
+            raise MentionParseError("Manager planner generated unsupported target files.")
 
 
 def _session_for_message(db: DbSession, message: Message):

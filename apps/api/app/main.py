@@ -42,6 +42,12 @@ from app.repositories import (
     next_session_title,
     persist_session,
 )
+from app.reviews import (
+    ReviewError,
+    StoredReviewArtifact,
+    create_scripted_review_for_task_run,
+    list_task_run_reviews,
+)
 from app.schemas import (
     AgentContactResponse,
     ApprovalDecisionRequest,
@@ -52,6 +58,7 @@ from app.schemas import (
     MessageCreateRequest,
     MessageResponse,
     PreviewResponse,
+    ReviewArtifactResponse,
     SessionCreateRequest,
     SessionExecutionLedgerResponse,
     SessionResponse,
@@ -539,6 +546,64 @@ def instruction_for_task(task: Task) -> str:
             "do not run setup or dependency install commands."
         )
 
+    if (
+        task.intent_type == "frontend_change"
+        and isinstance(plan, dict)
+        and plan.get("target") == "theme_accent_color"
+    ):
+        target_text = str(plan.get("targetText") or "").strip()
+        return (
+            "In apps/demo/src/styles.css, change only the demo app accent color "
+            f'to "{target_text}". Keep the change bounded to existing color '
+            "values used by the eyebrow, slot label, primary action, hover "
+            "state, and soft blue background accent. Do not edit unrelated "
+            "files, do not read the OpenSpec change, and do not run setup or "
+            "dependency install commands."
+        )
+
+    if (
+        task.intent_type == "frontend_change"
+        and isinstance(plan, dict)
+        and plan.get("target") == "simple_input_field"
+    ):
+        target_text = str(plan.get("targetText") or "").strip()
+        return (
+            "In apps/demo/src/App.tsx, add exactly one simple labeled input "
+            f'field for "{target_text}" inside the element with '
+            'data-agenthub-target="login-page-slot". Keep deterministic '
+            "data-agenthub-target attributes intact, do not edit unrelated "
+            "files, do not read the OpenSpec change, and do not run setup or "
+            "dependency install commands."
+        )
+
+    if (
+        task.intent_type == "frontend_change"
+        and isinstance(plan, dict)
+        and plan.get("target") == "status_help_text"
+    ):
+        target_text = str(plan.get("targetText") or "").strip()
+        return (
+            "In apps/demo/src/App.tsx, add one short status or help text line "
+            f'with the copy "{target_text}" inside the mutation card. Keep '
+            "deterministic data-agenthub-target attributes intact, do not edit "
+            "unrelated files, do not read the OpenSpec change, and do not run "
+            "setup or dependency install commands."
+        )
+
+    if (
+        task.intent_type == "frontend_change"
+        and isinstance(plan, dict)
+        and plan.get("target") == "layout_copy"
+    ):
+        target_text = str(plan.get("targetText") or "").strip()
+        return (
+            "In apps/demo/src/App.tsx, update only one short layout copy block "
+            f'to "{target_text}". Prefer the lede or slot copy text, keep the '
+            "existing component structure and deterministic targets intact, "
+            "do not edit unrelated files, do not read the OpenSpec change, and "
+            "do not run setup or dependency install commands."
+        )
+
     return task.title
 
 
@@ -576,6 +641,7 @@ async def execute_task_run(
     db.refresh(task_run)
     if task_run.state == "completed":
         collect_task_run_diff(db, task_run.id)
+        create_scripted_review_for_task_run(db, task_run.id)
         refresh_session_ledger_for_task_run(db, task_run.id)
         db.refresh(task_run)
     return task_run
@@ -632,6 +698,24 @@ def diff_artifact_response(diff_artifact: StoredDiffArtifact) -> DiffArtifactRes
         patchText=diff_artifact.patch_text,
         changedFiles=diff_artifact.changed_files,
         stats=diff_artifact.stats,
+    )
+
+
+def review_response(review: StoredReviewArtifact) -> ReviewArtifactResponse:
+    return ReviewArtifactResponse(
+        id=review.id,
+        artifactId=review.artifact_id,
+        taskRunId=review.task_run_id,
+        reviewedDiffArtifactId=review.reviewed_diff_artifact_id,
+        artifactType=review.artifact_type,
+        title=review.title,
+        status=review.status,
+        riskLevel=review.risk_level,
+        summary=review.summary,
+        filesReviewed=review.files_reviewed,
+        findings=review.findings,
+        suggestedChanges=review.suggested_changes,
+        adapterType=review.adapter_type,
     )
 
 
@@ -797,11 +881,14 @@ async def retry_existing_task_run_with_fallback(
         db.refresh(task_run)
         if task_run.state == "completed":
             collect_task_run_diff(db, task_run.id)
+            create_scripted_review_for_task_run(db, task_run.id)
             refresh_session_ledger_for_task_run(db, task_run.id)
             db.refresh(task_run)
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except DiffCollectionError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except ReviewError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return task_run_response(db, task_run)
 
@@ -854,8 +941,11 @@ def collect_diff_for_task_run(
 ) -> DiffArtifactResponse:
     try:
         diff_artifact = collect_task_run_diff(db, task_run_id)
+        create_scripted_review_for_task_run(db, task_run_id)
         refresh_session_ledger_for_task_run(db, task_run_id)
     except DiffCollectionError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except ReviewError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return diff_artifact_response(diff_artifact)
 
@@ -868,6 +958,35 @@ def read_task_run_diffs(
     if db.get(TaskRun, task_run_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
     return [diff_artifact_response(diff) for diff in list_task_run_diffs(db, task_run_id)]
+
+
+@app.post(
+    "/task-runs/{task_run_id}/review",
+    response_model=ReviewArtifactResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_review_for_task_run(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> ReviewArtifactResponse:
+    if db.get(TaskRun, task_run_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    try:
+        review = create_scripted_review_for_task_run(db, task_run_id)
+        refresh_session_ledger_for_task_run(db, task_run_id)
+    except ReviewError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return review_response(review)
+
+
+@app.get("/task-runs/{task_run_id}/reviews", response_model=list[ReviewArtifactResponse])
+def read_task_run_reviews(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[ReviewArtifactResponse]:
+    if db.get(TaskRun, task_run_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    return [review_response(review) for review in list_task_run_reviews(db, task_run_id)]
 
 
 @app.post(

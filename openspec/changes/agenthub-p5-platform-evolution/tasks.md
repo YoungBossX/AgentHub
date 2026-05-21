@@ -94,7 +94,7 @@
     - `pnpm test`;
     - `git diff --check`.
 
-- [ ] 1.5 P5-5 Dynamic Manager Planner v1.
+- [x] 1.5 P5-5 Dynamic Manager Planner v1.
   - Objective: Add a bounded dynamic Manager planner for frontend change
     intents while preserving deterministic fallback planning.
   - Scope:
