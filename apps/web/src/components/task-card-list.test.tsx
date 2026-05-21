@@ -6,6 +6,7 @@ import { TaskCardList } from "./task-card-list"
 import { sampleDeploymentArtifact } from "./__fixtures__/sample-deployment"
 import { sampleDiffArtifact } from "./__fixtures__/sample-diff"
 import { samplePreviewArtifact } from "./__fixtures__/sample-preview"
+import { sampleReviewArtifact } from "./__fixtures__/sample-review"
 import type { SessionTask } from "@/lib/api"
 
 vi.mock("@monaco-editor/react", () => ({
@@ -237,7 +238,11 @@ describe("TaskCardList", () => {
     const onSelectArtifact = vi.fn()
     const fetcher = vi.fn(async (input: string | URL | Request) => {
       const url = input.toString()
-      if (url.endsWith("/previews") || url.endsWith("/deployments")) {
+      if (
+        url.endsWith("/previews") ||
+        url.endsWith("/reviews") ||
+        url.endsWith("/deployments")
+      ) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
       return new Response(JSON.stringify([sampleDiffArtifact]), { status: 200 })
@@ -307,7 +312,11 @@ describe("TaskCardList", () => {
     const onStartPreview = vi.fn()
     const fetcher = vi.fn(async (input: string | URL | Request) => {
       const url = input.toString()
-      if (url.endsWith("/diffs") || url.endsWith("/deployments")) {
+      if (
+        url.endsWith("/diffs") ||
+        url.endsWith("/reviews") ||
+        url.endsWith("/deployments")
+      ) {
         return new Response(JSON.stringify([]), { status: 200 })
       }
       return new Response(JSON.stringify([samplePreviewArtifact]), { status: 200 })
@@ -437,6 +446,187 @@ describe("TaskCardList", () => {
       {
         cache: "no-store",
       },
+    )
+  })
+
+  it("loads review artifacts as non-blocking timeline chips and panel items", async () => {
+    const onArtifactsChange = vi.fn()
+    const onSelectArtifact = vi.fn()
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = input.toString()
+      if (url.endsWith("/reviews")) {
+        return new Response(JSON.stringify([sampleReviewArtifact]), { status: 200 })
+      }
+      return new Response(JSON.stringify([]), { status: 200 })
+    })
+    const completedTask: SessionTask = {
+      ...baseTask,
+      status: "completed",
+      taskRuns: [
+        {
+          id: "run-1",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "scripted_mock",
+          adapterRunId: null,
+          state: "completed",
+          startedAt: "2026-05-14T00:00:00Z",
+          endedAt: "2026-05-14T00:00:01Z",
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: "abc123",
+          headRef: "def456+worktree",
+          errorCode: null,
+          errorMessage: null,
+          metricsJson: { adapterType: "scripted_mock" },
+          createdAt: "2026-05-14T00:00:00Z",
+          updatedAt: "2026-05-14T00:00:01Z",
+        },
+      ],
+    }
+
+    render(
+      createElement(TaskCardList, {
+        artifactRefreshKey: 1,
+        backendUrl: "http://127.0.0.1:8000",
+        fetcher,
+        onArtifactsChange,
+        onSelectArtifact,
+        tasks: [completedTask],
+      }),
+    )
+
+    expect(await screen.findByText("评审通过")).toBeTruthy()
+    fireEvent.click(screen.getByText("评审通过"))
+    expect(onSelectArtifact).toHaveBeenCalledWith(`review:${sampleReviewArtifact.id}`)
+    await waitFor(() =>
+      expect(onArtifactsChange).toHaveBeenLastCalledWith([
+        expect.objectContaining({
+          artifact: sampleReviewArtifact,
+          id: `review:${sampleReviewArtifact.id}`,
+          kind: "review",
+        }),
+      ]),
+    )
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/task-runs/run-1/reviews",
+      {
+        cache: "no-store",
+      },
+    )
+  })
+
+  it("renders a multi-agent execution trace with artifact links and warning states", async () => {
+    const onSelectArtifact = vi.fn()
+    const warningReview = {
+      ...sampleReviewArtifact,
+      riskLevel: "medium",
+      status: "warning",
+      summary: "Review Agent found a non-blocking caveat.",
+    }
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = input.toString()
+      if (url.endsWith("/diffs")) {
+        return new Response(JSON.stringify([sampleDiffArtifact]), { status: 200 })
+      }
+      if (url.endsWith("/reviews")) {
+        return new Response(JSON.stringify([warningReview]), { status: 200 })
+      }
+      if (url.endsWith("/previews")) {
+        return new Response(JSON.stringify([samplePreviewArtifact]), { status: 200 })
+      }
+      if (url.endsWith("/deployments")) {
+        return new Response(JSON.stringify([sampleDeploymentArtifact]), { status: 200 })
+      }
+      return new Response(JSON.stringify([]), { status: 200 })
+    })
+    const recoveredTask: SessionTask = {
+      ...baseTask,
+      status: "completed",
+      taskRuns: [
+        {
+          id: "run-failed",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "codex",
+          adapterRunId: null,
+          state: "failed",
+          startedAt: "2026-05-15T10:30:00Z",
+          endedAt: "2026-05-15T10:31:00Z",
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: "abc123",
+          headRef: null,
+          errorCode: "CODEX_DEMO_FORCED_FAILURE",
+          errorMessage: "Forced Codex failure requested for demo recovery.",
+          metricsJson: { adapterType: "codex", forcedFailure: true },
+          createdAt: "2026-05-15T10:30:00Z",
+          updatedAt: "2026-05-15T10:31:00Z",
+        },
+        {
+          id: "run-1",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "scripted_mock",
+          adapterRunId: "scripted-mock-1",
+          state: "completed",
+          startedAt: "2026-05-15T10:32:00Z",
+          endedAt: "2026-05-15T10:33:00Z",
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: "abc123",
+          headRef: "def456+worktree",
+          errorCode: null,
+          errorMessage: null,
+          metricsJson: {
+            adapterType: "scripted_mock",
+            fallbackFromRunId: "run-failed",
+            retryOfRunId: "run-failed",
+          },
+          createdAt: "2026-05-15T10:32:00Z",
+          updatedAt: "2026-05-15T10:33:00Z",
+        },
+      ],
+    }
+
+    render(
+      createElement(TaskCardList, {
+        artifactRefreshKey: 1,
+        backendUrl: "http://127.0.0.1:8000",
+        fetcher,
+        onSelectArtifact,
+        tasks: [recoveredTask],
+      }),
+    )
+
+    expect(await screen.findByText("Diff produced")).toBeTruthy()
+    expect(screen.getByText("Manager planned")).toBeTruthy()
+    expect(screen.getByText("Coding Agent ran")).toBeTruthy()
+    expect(screen.getByText("Review Agent reviewed")).toBeTruthy()
+    expect(screen.getByText("Preview healthy")).toBeTruthy()
+    expect(screen.getByText("Mock deploy ready")).toBeTruthy()
+    expect(screen.getByText("Fallback")).toBeTruthy()
+    expect(screen.getByText("Review warning")).toBeTruthy()
+    expect(screen.getByText("Review Agent found a non-blocking caveat.")).toBeTruthy()
+    expect(screen.getByText("Diff Service · git diff service")).toBeTruthy()
+    expect(screen.getByText("Preview Service · Vite preview service")).toBeTruthy()
+    expect(screen.getByText("Mock Deploy Service · mock")).toBeTruthy()
+
+    const artifactButtons = screen.getAllByRole("button", { name: "查看产物" })
+    fireEvent.click(artifactButtons[0])
+    fireEvent.click(artifactButtons[1])
+    fireEvent.click(artifactButtons[2])
+    fireEvent.click(artifactButtons[3])
+
+    expect(onSelectArtifact).toHaveBeenNthCalledWith(1, `diff:${sampleDiffArtifact.id}`)
+    expect(onSelectArtifact).toHaveBeenNthCalledWith(2, `review:${warningReview.id}`)
+    expect(onSelectArtifact).toHaveBeenNthCalledWith(
+      3,
+      `preview:${samplePreviewArtifact.id}`,
+    )
+    expect(onSelectArtifact).toHaveBeenNthCalledWith(
+      4,
+      `deployment:${sampleDeploymentArtifact.id}`,
     )
   })
 })

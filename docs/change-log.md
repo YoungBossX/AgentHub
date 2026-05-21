@@ -1,5 +1,110 @@
 # AgentHub Change Log
 
+## P5-4 Multi-Agent Execution Trace UI
+
+**Date:** 2026-05-21
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/components/task-card-list.tsx` | Added a derived multi-agent execution trace for Manager, Coding Agent, Diff, Review, Preview, and Mock Deploy stages. |
+| `apps/web/src/components/task-card-list.test.tsx` | Added coverage for trace rendering, fallback highlighting, review warning highlighting, and artifact links. |
+| `docs/project-state.md` | Recorded P5-4 behavior, limitations, and validation. |
+| `docs/change-log.md` | Recorded this P5-4 implementation. |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-4 complete after validation. |
+
+### What Changed
+
+Implemented a frontend-first multi-agent execution trace in the task timeline.
+The trace derives its state from existing tasks, task runs, artifacts, reviews,
+previews, and deployments. It shows:
+
+- Manager planned;
+- Coding Agent ran;
+- Diff produced;
+- Review Agent reviewed;
+- Preview healthy;
+- Mock deploy ready.
+
+Each stage shows agent or service identity, adapter/service type, status, and
+artifact links where available. Diff, Review, Preview, and Mock Deploy nodes
+reuse the existing artifact selection behavior so the right-side artifact panel
+remains the detailed inspector.
+
+Fallback recovery and review warning states are highlighted. System-generated
+steps are labeled as services rather than autonomous agents.
+
+P5-4 does not change adapter dispatch, task execution, diff collection, preview,
+mock deployment, Review Agent semantics, or backend runtime behavior. It does
+not add Manager/Worker scheduling, dynamic planning, real multi-user IM,
+production deploy, or real Claude/Codex review execution.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 34 web tests and 113 API tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+
+---
+
+## P5-3 Review Agent Workflow
+
+**Date:** 2026-05-21
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/models.py` | Added persisted `Review` records linked to review artifacts and reviewed diff artifacts. |
+| `apps/api/app/reviews.py` | Added deterministic scripted review creation, listing, idempotency, and event emission. |
+| `apps/api/app/ledger.py` | Included latest review summary in session ledger summaries. |
+| `apps/api/app/schemas.py` | Added the Review artifact response schema. |
+| `apps/api/app/main.py` | Added review endpoints and automatic non-blocking scripted review creation after diff generation. |
+| `apps/api/tests/test_models.py` | Updated model boundary coverage for Review. |
+| `apps/api/tests/test_diffs.py` | Covered automatic review creation, manual/idempotent review creation, and ledger summary updates. |
+| `apps/web/src/lib/api.ts` | Added Review artifact types and review API helpers. |
+| `apps/web/src/lib/api.test.ts` | Added client API coverage for review create/list endpoints. |
+| `apps/web/src/components/__fixtures__/sample-review.ts` | Added a reusable review artifact fixture. |
+| `apps/web/src/components/task-card-list.tsx` | Loaded Review artifacts and rendered review timeline chips. |
+| `apps/web/src/components/task-card-list.test.tsx` | Covered review timeline chip and artifact panel handoff behavior. |
+| `apps/web/src/components/preview-card.tsx` | Added Review artifacts to the right-side artifact panel. |
+| `apps/web/src/components/preview-card.test.tsx` | Covered Review artifact rendering. |
+| `docs/project-state.md` | Recorded P5-3 behavior, limitations, and validation. |
+| `docs/change-log.md` | Recorded this P5-3 implementation. |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-3 complete after validation. |
+
+### What Changed
+
+Implemented a non-blocking Review Agent workflow after diff generation. When a
+TaskRun produces a diff, AgentHub now creates a persisted Review artifact using
+the deterministic `scripted_mock` review path. The review includes status,
+risk level, summary, files reviewed, findings, suggested changes, reviewed diff
+artifact ID, and adapter type.
+
+The review path is advisory only. It does not prevent preview creation or mock
+deployment, and it does not change existing coding adapter behavior. No real
+Claude or Codex review execution was run or claimed in this task.
+
+The right artifact panel now supports Review artifacts alongside Diff, Preview,
+and Mock Deploy. The task timeline loads review artifacts and shows a review
+chip when one is available. The session ledger summary includes the latest
+review summary after refresh.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 33 web tests and 113 API tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+
+---
+
 ## P5-2 Shared Context and Execution Ledger
 
 **Date:** 2026-05-21

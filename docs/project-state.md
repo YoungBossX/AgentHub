@@ -5,6 +5,82 @@ reference instead of repeating long context blocks.
 
 ## P5 Status
 
+### P5-4 Multi-Agent Execution Trace UI
+
+P5-4 completed on 2026-05-21.
+
+AgentHub now shows a multi-agent execution trace inside each task card. The
+trace is derived from existing tasks, task runs, loaded artifacts, reviews,
+previews, and deployments; it does not add a new backend trace endpoint or
+change adapter execution semantics.
+
+Trace stages:
+
+- Manager planned;
+- Coding Agent ran;
+- Diff produced;
+- Review Agent reviewed;
+- Preview healthy;
+- Mock deploy ready.
+
+Each stage shows the responsible agent or service identity, adapter/service
+type, state, and available artifact link. Diff, Review, Preview, and Mock
+Deploy trace nodes reuse the existing artifact selection behavior so the
+right-side artifact panel remains the detailed inspector. System steps such as
+Diff Service, Preview Service, and Mock Deploy Service are labeled as services,
+not autonomous agents.
+
+The trace highlights fallback recovery when a `scripted_mock` run recovered
+from a prior run and highlights review warning states. The P5-3 review remains
+advisory and non-blocking.
+
+P5-4 does not add Manager/Worker scheduling, dynamic planning, real multi-user
+IM, production deploy, new adapters, or real Claude/Codex review execution.
+
+Validation passed:
+
+- `pnpm check`
+- `pnpm test` (34 web tests, 113 API tests)
+- `git diff --check`
+- `openspec validate agenthub-p5-platform-evolution --strict`
+
+### P5-3 Review Agent Workflow
+
+P5-3 completed on 2026-05-21.
+
+AgentHub now creates a non-blocking Review Agent artifact after a coding diff is
+generated. The first implementation is deterministic and labeled as
+`scripted_mock`; it does not claim real Claude or Codex review execution.
+
+Review behavior:
+
+- diff collection still stores the Git diff first;
+- a scripted Review artifact is created for the latest diff on the TaskRun;
+- repeated review creation for the same diff is idempotent;
+- review status is advisory and can be `passed`, `warning`, or `failed`;
+- v1 review does not block preview creation or mock deployment;
+- `GET /task-runs/{task_run_id}/reviews` lists persisted review artifacts;
+- `POST /task-runs/{task_run_id}/review` can create or return the current
+  scripted review for a TaskRun.
+
+Review artifact schema includes status, risk level, summary, reviewed files,
+findings, suggested changes, reviewed diff artifact ID, and adapter type.
+
+The session ledger summary now includes the latest review summary when present.
+The right artifact panel and task timeline can show Review artifacts alongside
+Diff, Preview, and Mock Deploy artifacts.
+
+P5-3 does not add enterprise approval gates, security enforcement, real
+Claude/Codex review execution, Manager/Worker scheduling, or any blocking
+policy for preview/deploy.
+
+Validation passed:
+
+- `pnpm check`
+- `pnpm test` (33 web tests, 113 API tests)
+- `git diff --check`
+- `openspec validate agenthub-p5-platform-evolution --strict`
+
 ### P5-2 Shared Context and Execution Ledger
 
 P5-2 completed on 2026-05-21.

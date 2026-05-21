@@ -50,7 +50,7 @@
     - `pnpm test`;
     - `git diff --check`.
 
-- [ ] 1.3 P5-3 Review Agent Workflow.
+- [x] 1.3 P5-3 Review Agent Workflow.
   - Objective: Add a non-blocking Review Agent workflow after coding diffs.
   - Scope:
     - after a coding diff is produced, create or run a Review Agent task;
@@ -72,7 +72,7 @@
     - `pnpm test`;
     - `git diff --check`.
 
-- [ ] 1.4 P5-4 Multi-Agent Execution Trace UI.
+- [x] 1.4 P5-4 Multi-Agent Execution Trace UI.
   - Objective: Show Manager, Coding Agent, Review Agent, QA/Preview/Deploy
     services as a visible execution trace.
   - Scope:
