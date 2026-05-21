@@ -26,6 +26,7 @@ from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
 from app.repositories import (
     create_session_message,
     get_demo_workspace,
+    get_enabled_agents,
     get_session,
     get_workspace,
     list_session_messages,
@@ -35,6 +36,7 @@ from app.repositories import (
     persist_session,
 )
 from app.schemas import (
+    AgentContactResponse,
     ApprovalDecisionRequest,
     ApprovalRequestResponse,
     HealthResponse,
@@ -73,10 +75,16 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 settings = get_settings()
 
+LOCAL_FRONTEND_ORIGINS = {
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+    settings.frontend_origin,
+}
+
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
+    allow_origins=sorted(LOCAL_FRONTEND_ORIGINS),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["*"],
@@ -94,6 +102,78 @@ def get_worktree_service() -> WorktreeService:
 
 _preview_service = PreviewService()
 _deploy_service = DeployService()
+
+AGENT_CONTACT_METADATA: dict[str, dict[str, Any]] = {
+    "orchestrator": {
+        "displayName": "Manager / Orchestrator",
+        "avatarInitials": "MO",
+        "capabilityTags": ["planning", "task assignment", "coordination"],
+        "status": "available",
+        "safeForWrite": False,
+        "safeForReview": True,
+        "description": "Plans the local demo workflow and coordinates role agents.",
+        "contactType": "agent",
+    },
+    "frontend": {
+        "displayName": "Frontend Agent",
+        "avatarInitials": "FE",
+        "capabilityTags": ["Vite React", "UI changes", "diff artifacts"],
+        "status": "available",
+        "safeForWrite": True,
+        "safeForReview": False,
+        "description": "Executes bounded frontend changes inside the session worktree.",
+        "contactType": "agent",
+    },
+    "backend": {
+        "displayName": "Backend Agent",
+        "avatarInitials": "BE",
+        "capabilityTags": ["FastAPI", "API changes", "SQLite"],
+        "status": "available",
+        "safeForWrite": True,
+        "safeForReview": False,
+        "description": "Represents backend coding work while preserving demo guardrails.",
+        "contactType": "agent",
+    },
+    "qa": {
+        "displayName": "QA Agent",
+        "avatarInitials": "QA",
+        "capabilityTags": ["demo QA", "preview checks", "workflow review"],
+        "status": "available",
+        "safeForWrite": False,
+        "safeForReview": True,
+        "description": "Reviews the demo path and expected evidence without changing dispatch.",
+        "contactType": "agent",
+    },
+}
+
+VIRTUAL_AGENT_CONTACTS: tuple[AgentContactResponse, ...] = (
+    AgentContactResponse(
+        id="virtual-review-agent",
+        displayName="Review Agent",
+        avatarInitials="RV",
+        role="review",
+        adapterType="claude_code",
+        capabilityTags=["planned", "read-only", "non-blocking review"],
+        status="planned",
+        safeForWrite=False,
+        safeForReview=True,
+        description="P5 placeholder for the future non-blocking review workflow.",
+        contactType="placeholder",
+    ),
+    AgentContactResponse(
+        id="virtual-fallback-agent",
+        displayName="Fallback Agent / ScriptedMock",
+        avatarInitials="FB",
+        role="fallback",
+        adapterType="scripted_mock",
+        capabilityTags=["demo recovery", "scripted fallback", "real file changes"],
+        status="available",
+        safeForWrite=True,
+        safeForReview=False,
+        description="Documents the preserved ScriptedMockAdapter reliability path.",
+        contactType="service",
+    ),
+)
 
 
 def get_preview_service() -> PreviewService:
@@ -117,6 +197,49 @@ def health() -> HealthResponse:
 @app.get("/workspaces/demo", response_model=WorkspaceResponse)
 def read_demo_workspace(db: DbSession = Depends(get_db)) -> WorkspaceResponse:
     return get_demo_workspace(db)
+
+
+def agent_contact_response(agent: Agent) -> AgentContactResponse:
+    metadata = AGENT_CONTACT_METADATA.get(agent.role, {})
+    return AgentContactResponse(
+        id=agent.id,
+        displayName=str(metadata.get("displayName") or agent.name),
+        avatarInitials=str(metadata.get("avatarInitials") or agent.role[:2].upper()),
+        role=agent.role,
+        adapterType=agent.adapter_type,
+        capabilityTags=list(metadata.get("capabilityTags") or []),
+        status=str(metadata.get("status") or "available"),
+        safeForWrite=bool(metadata.get("safeForWrite", False)),
+        safeForReview=bool(metadata.get("safeForReview", False)),
+        description=str(metadata.get("description") or agent.system_prompt),
+        contactType=str(metadata.get("contactType") or "agent"),
+    )
+
+
+@app.get(
+    "/workspaces/{workspace_id}/agents",
+    response_model=list[AgentContactResponse],
+)
+def read_workspace_agents(
+    workspace_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[AgentContactResponse]:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+
+    role_order = {
+        "orchestrator": 0,
+        "frontend": 1,
+        "backend": 2,
+        "qa": 3,
+    }
+    agents = sorted(
+        get_enabled_agents(db),
+        key=lambda agent: role_order.get(agent.role, 99),
+    )
+    return [agent_contact_response(agent) for agent in agents] + list(
+        VIRTUAL_AGENT_CONTACTS
+    )
 
 
 @app.get(

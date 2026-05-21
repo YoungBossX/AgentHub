@@ -3,15 +3,23 @@ import type { ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import Home from "./page"
+import type { AgentContact } from "@/lib/api"
 
 vi.mock("@/components/health-card", () => ({
   HealthCard: () => <aside data-testid="health-card">Backend health</aside>,
 }))
 
 vi.mock("@/components/workspace-shell", () => ({
-  WorkspaceShell: ({ healthSlot }: { healthSlot?: ReactNode }) => (
+  WorkspaceShell: ({
+    healthSlot,
+    initialAgents,
+  }: {
+    healthSlot?: ReactNode
+    initialAgents: AgentContact[]
+  }) => (
     <section data-testid="workspace-shell">
       Workspace shell
+      <span data-testid="agent-count">{initialAgents.length}</span>
       {healthSlot ? <div data-testid="health-slot">{healthSlot}</div> : null}
     </section>
   ),
@@ -31,6 +39,21 @@ vi.mock("@/lib/api", () => ({
     repoUrl: "local://apps/demo",
     rootPath: "apps/demo",
   })),
+  listWorkspaceAgents: vi.fn(async () => [
+    {
+      adapterType: "scripted_mock",
+      avatarInitials: "MO",
+      capabilityTags: ["planning"],
+      contactType: "agent",
+      description: "Plans the workflow.",
+      displayName: "Manager / Orchestrator",
+      id: "agent-orchestrator",
+      role: "orchestrator",
+      safeForReview: true,
+      safeForWrite: false,
+      status: "available",
+    },
+  ]),
   listWorkspaceSessions: vi.fn(async () => []),
 }))
 
@@ -47,5 +70,6 @@ describe("Home", () => {
     expect(workspaceShell.parentElement?.className).not.toContain("max-w-[1440px]")
     expect(screen.getByTestId("health-card")).toBeTruthy()
     expect(screen.getByTestId("health-slot")).toBeTruthy()
+    expect(screen.getByTestId("agent-count").textContent).toBe("1")
   })
 })

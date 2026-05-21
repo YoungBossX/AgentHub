@@ -3,6 +3,39 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P5 Status
+
+### P5-1 Agent Registry and IM Contact UI
+
+P5-1 completed on 2026-05-21 as the first implementation slice of
+`agenthub-p5-platform-evolution`.
+
+AgentHub now exposes enabled built-in agents as IM-style contacts through a
+workspace-scoped read API and renders them in the workspace shell. The contact
+registry is display/metadata only and does not change adapter dispatch,
+planning, task execution, diff collection, preview, or mock deploy behavior.
+
+Visible contacts:
+
+- Manager / Orchestrator (`@orchestrator`, `scripted_mock`);
+- Frontend Agent (`@frontend`, `codex`);
+- Backend Agent (`@backend`, `codex`);
+- QA Agent (`@qa`, `scripted_mock`);
+- Review Agent placeholder (`@review`, planned `claude_code`);
+- Fallback Agent / ScriptedMock (`@fallback`, `scripted_mock` service).
+
+The UI adds local visual modes for Direct chat and Group workflow. These are
+single-user product modes only; they do not add multi-user accounts, external
+IM integration, Manager/Worker scheduling, dynamic planning, or Review Agent
+execution.
+
+Validation passed:
+
+- `pnpm check`
+- `pnpm test` (28 web tests, 114 API tests)
+- `git diff --check`
+- `openspec validate agenthub-p5-platform-evolution --strict`
+
 ## P4 Status
 
 ### P4-6 Final Freeze Review

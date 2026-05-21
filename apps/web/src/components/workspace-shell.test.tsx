@@ -76,6 +76,48 @@ const initialSessions = [
   },
 ]
 
+const initialAgents = [
+  {
+    adapterType: "scripted_mock",
+    avatarInitials: "MO",
+    capabilityTags: ["planning", "task assignment", "coordination"],
+    contactType: "agent",
+    description: "Plans the local demo workflow.",
+    displayName: "Manager / Orchestrator",
+    id: "agent-orchestrator",
+    role: "orchestrator",
+    safeForReview: true,
+    safeForWrite: false,
+    status: "available",
+  },
+  {
+    adapterType: "codex",
+    avatarInitials: "FE",
+    capabilityTags: ["Vite React", "UI changes", "diff artifacts"],
+    contactType: "agent",
+    description: "Executes bounded frontend changes.",
+    displayName: "Frontend Agent",
+    id: "agent-frontend",
+    role: "frontend",
+    safeForReview: false,
+    safeForWrite: true,
+    status: "available",
+  },
+  {
+    adapterType: "claude_code",
+    avatarInitials: "RV",
+    capabilityTags: ["planned", "read-only", "non-blocking review"],
+    contactType: "placeholder",
+    description: "Future non-blocking review workflow.",
+    displayName: "Review Agent",
+    id: "virtual-review-agent",
+    role: "review",
+    safeForReview: true,
+    safeForWrite: false,
+    status: "planned",
+  },
+]
+
 class MockEventSource {
   onerror: (() => void) | null = null
   onmessage: ((event: MessageEvent) => void) | null = null
@@ -106,6 +148,7 @@ describe("WorkspaceShell", () => {
     render(
       <WorkspaceShell
         backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
         initialSessions={initialSessions}
         workspace={workspace}
       />,
@@ -116,5 +159,29 @@ describe("WorkspaceShell", () => {
         "请确认 FastAPI 后端可访问：http://127.0.0.1:8000。",
       )
     })
+  })
+
+  it("renders built-in agent contacts and local IM visual modes", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    expect(screen.getByText("Agent 联系人")).toBeTruthy()
+    expect(screen.getByText("Direct chat")).toBeTruthy()
+    expect(screen.getByText("Group workflow")).toBeTruthy()
+    expect(screen.getByText("Manager / Orchestrator")).toBeTruthy()
+    expect(screen.getByText("Frontend Agent")).toBeTruthy()
+    expect(screen.getByText("Review Agent")).toBeTruthy()
+    expect(screen.getByText("@frontend · codex")).toBeTruthy()
+    expect(screen.getByText("@review · claude_code")).toBeTruthy()
+    expect(screen.getByText("计划中")).toBeTruthy()
   })
 })

@@ -11,6 +11,7 @@ import {
   getBackendHealth,
   getDemoWorkspace,
   interruptTaskRun,
+  listWorkspaceAgents,
   listTaskRunDeployments,
   listTaskRunDiffs,
   listTaskRunPreviews,
@@ -136,6 +137,44 @@ describe("workspace and session API", () => {
         method: "POST",
       },
     )
+  })
+
+  it("lists IM-style agent contacts for a workspace", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify([
+          {
+            id: "agent-frontend",
+            displayName: "Frontend Agent",
+            avatarInitials: "FE",
+            role: "frontend",
+            adapterType: "codex",
+            capabilityTags: ["Vite React", "UI changes"],
+            status: "available",
+            safeForWrite: true,
+            safeForReview: false,
+            description: "Executes bounded frontend changes.",
+            contactType: "agent",
+          },
+        ]),
+        { status: 200 },
+      )
+    })
+
+    const agents = await listWorkspaceAgents(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/agents",
+      {
+        cache: "no-store",
+      },
+    )
+    expect(agents[0].displayName).toBe("Frontend Agent")
+    expect(agents[0].capabilityTags).toContain("Vite React")
   })
 })
 

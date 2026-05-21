@@ -1,6 +1,6 @@
 ## 1. P5 Implementation Tasks
 
-- [ ] 1.1 P5-1 Agent Registry and IM Contact UI.
+- [x] 1.1 P5-1 Agent Registry and IM Contact UI.
   - Objective: Make built-in agents visible as IM-style contacts and introduce
     direct-chat/group-workflow visual modes without adding real multi-user
     accounts.

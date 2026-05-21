@@ -23,6 +23,20 @@ class WorkspaceResponse(ApiModel):
     created_at: datetime = Field(alias="createdAt")
 
 
+class AgentContactResponse(ApiModel):
+    id: str
+    display_name: str = Field(alias="displayName")
+    avatar_initials: str = Field(alias="avatarInitials")
+    role: str
+    adapter_type: str = Field(alias="adapterType")
+    capability_tags: list[str] = Field(alias="capabilityTags")
+    status: str
+    safe_for_write: bool = Field(alias="safeForWrite")
+    safe_for_review: bool = Field(alias="safeForReview")
+    description: str
+    contact_type: str = Field(alias="contactType")
+
+
 class SessionResponse(ApiModel):
     id: str
     workspace_id: str = Field(alias="workspaceId")

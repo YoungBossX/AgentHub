@@ -12,7 +12,9 @@ def get_demo_workspace(db: DbSession) -> Workspace:
 
 
 def get_enabled_agents(db: DbSession) -> list[Agent]:
-    return db.exec(select(Agent).where(Agent.enabled == True)).all()  # noqa: E712
+    return db.exec(  # noqa: E712
+        select(Agent).where(Agent.enabled == True).order_by(Agent.role)
+    ).all()
 
 
 def get_workspace(db: DbSession, workspace_id: str) -> Optional[Workspace]:

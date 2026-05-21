@@ -13,6 +13,20 @@ export type Workspace = {
   createdAt: string
 }
 
+export type AgentContact = {
+  id: string
+  displayName: string
+  avatarInitials: string
+  role: string
+  adapterType: string
+  capabilityTags: string[]
+  status: string
+  safeForWrite: boolean
+  safeForReview: boolean
+  description: string
+  contactType: "agent" | "placeholder" | "service" | string
+}
+
 export type WorkspaceSession = {
   id: string
   workspaceId: string
@@ -203,6 +217,25 @@ export async function listWorkspaceSessions(
   }
 
   return (await response.json()) as WorkspaceSession[]
+}
+
+export async function listWorkspaceAgents(
+  backendUrl: string,
+  workspaceId: string,
+  fetcher: Fetcher = fetch,
+): Promise<AgentContact[]> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/agents`),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as AgentContact[]
 }
 
 export async function createWorkspaceSession(

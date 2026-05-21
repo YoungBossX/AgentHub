@@ -127,6 +127,46 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     assert all(json.loads(task.plan_json) for task in stored_tasks)
 
 
+def test_workspace_agent_registry_returns_im_contacts(client: TestClient) -> None:
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+
+    response = client.get(f"/workspaces/{workspace.id}/agents")
+
+    assert response.status_code == 200
+    contacts = response.json()
+
+    assert [contact["role"] for contact in contacts] == [
+        "orchestrator",
+        "frontend",
+        "backend",
+        "qa",
+        "review",
+        "fallback",
+    ]
+    assert contacts[0]["displayName"] == "Manager / Orchestrator"
+    assert contacts[0]["adapterType"] == "scripted_mock"
+    assert contacts[0]["safeForWrite"] is False
+    assert contacts[0]["safeForReview"] is True
+
+    frontend = contacts[1]
+    assert frontend["displayName"] == "Frontend Agent"
+    assert frontend["adapterType"] == "codex"
+    assert "Vite React" in frontend["capabilityTags"]
+    assert frontend["safeForWrite"] is True
+
+    review = contacts[-2]
+    assert review["displayName"] == "Review Agent"
+    assert review["status"] == "planned"
+    assert review["contactType"] == "placeholder"
+    assert review["safeForReview"] is True
+
+    fallback = contacts[-1]
+    assert fallback["displayName"] == "Fallback Agent / ScriptedMock"
+    assert fallback["adapterType"] == "scripted_mock"
+    assert fallback["contactType"] == "service"
+
+
 def test_disabled_mention_returns_user_facing_parse_error(client: TestClient) -> None:
     with next(db_from_override()) as db:
         session = db.exec(select(Session).where(Session.title == "Planning session")).one()

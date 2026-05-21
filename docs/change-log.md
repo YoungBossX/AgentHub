@@ -1,5 +1,55 @@
 # AgentHub Change Log
 
+## P5-1 Agent Registry and IM Contact UI
+
+**Date:** 2026-05-21
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/schemas.py` | Added the agent contact response schema for IM-style registry metadata. |
+| `apps/api/app/repositories.py` | Ordered enabled agent lookup for deterministic registry output. |
+| `apps/api/app/main.py` | Added the workspace-scoped agent contact registry endpoint and display metadata mapping. |
+| `apps/api/tests/test_planning.py` | Added backend coverage for built-in contacts, Review placeholder, and ScriptedMock fallback service. |
+| `apps/web/src/lib/api.ts` | Added `AgentContact` and `listWorkspaceAgents`. |
+| `apps/web/src/lib/api.test.ts` | Added client API coverage for workspace agent contacts. |
+| `apps/web/src/app/page.tsx` | Loaded agent contacts for the workspace shell. |
+| `apps/web/src/app/page.test.tsx` | Covered passing fetched contacts into the shell. |
+| `apps/web/src/components/workspace-shell.tsx` | Added the Agent Contact UI and Direct chat / Group workflow visual modes. |
+| `apps/web/src/components/workspace-shell.test.tsx` | Added UI coverage for contacts and visual modes. |
+| `docs/project-state.md` | Recorded P5-1 state, limitations, and validation. |
+| `docs/change-log.md` | Recorded this P5-1 implementation. |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-1 complete after validation. |
+
+### What Changed
+
+Implemented P5-1 without changing runtime execution semantics. AgentHub now
+has a backend-backed contact registry shape for enabled built-in agents and
+renders them as first-class IM-style contacts in the workspace sidebar.
+
+The registry exposes display name, avatar initials, role, adapter type,
+capability tags, status, contact type, and write/review safety flags. It keeps
+the existing `CodexAdapter`, `ClaudeCodeAdapter`, and `ScriptedMockAdapter`
+model intact, adds a Review Agent placeholder for future P5 review workflow
+work, and keeps ScriptedMock visible as the fallback service.
+
+The UI adds Direct chat and Group workflow as local visual modes only. P5-1
+does not add multi-user accounts, external IM integration, Manager/Worker
+scheduling, dynamic planning, Review Agent execution, provider marketplace, or
+production deploy.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 28 web tests and 114 API tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+
+---
+
 ## P4-6 Final Freeze Review
 
 **Date:** 2026-05-20
