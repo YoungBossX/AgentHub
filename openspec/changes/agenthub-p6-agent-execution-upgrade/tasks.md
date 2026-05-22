@@ -39,7 +39,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p6-agent-execution-upgrade --strict`.
 
-- [ ] 1.2 P6-2 Session Context Pack.
+- [x] 1.2 P6-2 Session Context Pack.
   - Objective: Give agent runs structured session context for multi-turn
     iteration.
   - Scope:
@@ -65,7 +65,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p6-agent-execution-upgrade --strict`.
 
-- [ ] 1.3 P6-3 Role-based Agent Instruction Builder.
+- [x] 1.3 P6-3 Role-based Agent Instruction Builder.
   - Objective: Generate meaningful, role-specific instructions for frontend,
     backend, QA/review, and manager tasks.
   - Scope:

@@ -7,9 +7,24 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
+from app.context_pack import build_session_context_pack
 from app.main import agent_run_request_for, app, get_db
 from app.guardrails import ApprovalRequestPayload, request_task_run_approval
-from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.models import (
+    Agent,
+    Artifact,
+    Deployment,
+    Diff,
+    Message,
+    Preview,
+    Review,
+    Session,
+    Task,
+    TaskRun,
+    TaskRunEvent,
+    Workspace,
+)
+from app.models import utc_now
 from app.task_runs import TaskRunLifecycleError, create_task_run, transition_task_run
 
 
@@ -41,6 +56,12 @@ def client() -> Iterator[TestClient]:
             adapter_type="codex",
             provider="local",
         )
+        backend = Agent(
+            name="Backend Agent",
+            role="backend",
+            adapter_type="codex",
+            provider="local",
+        )
         qa = Agent(
             name="QA Agent",
             role="qa",
@@ -57,6 +78,7 @@ def client() -> Iterator[TestClient]:
         db.add(workspace)
         db.add(session)
         db.add(frontend)
+        db.add(backend)
         db.add(qa)
         db.add(task)
         db.commit()
@@ -261,6 +283,282 @@ def test_agent_run_request_preserves_generic_demo_frontend_request(
     assert "production deploy" in request.instruction
     assert "login-page-slot" not in request.instruction
     assert request.plan_context["originalRequest"] == original_request
+    assert "Session Context Pack" in request.instruction
+    assert request.plan_context["sessionContext"]["originalUserRequest"] == original_request
+    assert request.plan_context["sessionContext"]["safeTargetPaths"] == [
+        "apps/demo/src",
+        "apps/demo/src/App.tsx",
+        "apps/demo/src/styles.css",
+    ]
+
+
+def test_context_pack_includes_recent_messages_ledger_and_excludes_other_sessions(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        task = db.get(Task, task_id())
+        user_message = Message(
+            session_id=task.session_id,
+            sender_type="user",
+            content_md="Build a dashboard",
+        )
+        assistant_message = Message(
+            session_id=task.session_id,
+            sender_type="orchestrator",
+            content_md="Routing to the Frontend Agent.",
+        )
+        other_session = Session(
+            workspace_id=workspace.id,
+            title="Other session",
+            bound_branch="main",
+            worktree_path=".worktrees/other-session",
+        )
+        other_message = Message(
+            session_id=other_session.id,
+            sender_type="user",
+            content_md="Do not leak this message",
+        )
+        task.created_by_message_id = user_message.id
+        task.plan_json = json.dumps(
+            {
+                "target": "demo_frontend_request",
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+                "originalRequest": "Build a dashboard",
+            },
+            separators=(",", ":"),
+        )
+        db.add(user_message)
+        db.add(assistant_message)
+        db.add(other_session)
+        db.add(other_message)
+        db.add(task)
+        db.commit()
+
+        context = build_session_context_pack(db, task)
+
+    assert context["version"] == "session_context_pack_v1"
+    assert context["originalUserRequest"] == "Build a dashboard"
+    assert context["currentGoal"] == "Build a dashboard"
+    assert context["ledger"]["summaryMd"].startswith("Current goal: Build a dashboard")
+    assert [message["contentMd"] for message in context["recentMessages"]] == [
+        "Build a dashboard",
+        "Routing to the Frontend Agent.",
+    ]
+    assert all(
+        message["contentMd"] != "Do not leak this message"
+        for message in context["recentMessages"]
+    )
+
+
+def test_context_pack_includes_latest_artifact_preview_and_deploy_metadata(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "target": "demo_frontend_request",
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+                "originalRequest": "Build a dashboard",
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+        transition_task_run(db, task_run.id, "completed")
+        now = utc_now()
+        diff_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+            meta_json=json.dumps(
+                {"changedFiles": ["apps/demo/src/App.tsx"]},
+                separators=(",", ":"),
+            ),
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(diff_artifact)
+        db.commit()
+        db.refresh(diff_artifact)
+        diff = Diff(
+            artifact_id=diff_artifact.id,
+            base_ref="base",
+            head_ref="head+worktree",
+            patch_text="diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx",
+            changed_files_json=json.dumps(["apps/demo/src/App.tsx"], separators=(",", ":")),
+            stats_json=json.dumps({"filesChanged": 1, "additions": 3, "deletions": 1}, separators=(",", ":")),
+        )
+        review_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="review",
+            title="Review Agent report",
+            status="passed",
+            created_at=now,
+            updated_at=now,
+        )
+        preview_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="preview",
+            title="Vite preview",
+            status="running",
+            created_at=now,
+            updated_at=now,
+        )
+        deploy_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="deployment",
+            title="Mock deploy",
+            status="ready",
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(diff)
+        db.add(review_artifact)
+        db.add(preview_artifact)
+        db.add(deploy_artifact)
+        db.commit()
+        db.refresh(review_artifact)
+        db.refresh(preview_artifact)
+        db.refresh(deploy_artifact)
+        review = Review(
+            artifact_id=review_artifact.id,
+            reviewed_diff_artifact_id=diff_artifact.id,
+            adapter_type="scripted_mock",
+            status="passed",
+            risk_level="low",
+            summary="Looks good.",
+            files_reviewed_json=json.dumps(["apps/demo/src/App.tsx"], separators=(",", ":")),
+        )
+        preview = Preview(
+            artifact_id=preview_artifact.id,
+            port=5173,
+            url="http://127.0.0.1:5173",
+            command="pnpm dev --host 127.0.0.1 --port 5173",
+            health_status="healthy",
+        )
+        deployment = Deployment(
+            artifact_id=deploy_artifact.id,
+            provider="mock",
+            environment="preview",
+            url="https://mock.agenthub.local/deployments/demo",
+            status="ready",
+        )
+        db.add(review)
+        db.add(preview)
+        db.add(deployment)
+        db.commit()
+
+        context = build_session_context_pack(
+            db,
+            task,
+            plan_context={"selectedArtifactId": diff_artifact.id},
+        )
+
+    assert context["latestDiff"]["artifactId"] == diff_artifact.id
+    assert context["latestDiff"]["changedFiles"] == ["apps/demo/src/App.tsx"]
+    assert context["latestReview"]["summary"] == "Looks good."
+    assert context["latestPreview"]["healthStatus"] == "healthy"
+    assert context["latestDeployment"]["provider"] == "mock"
+    assert context["selectedArtifact"]["valid"] is True
+    assert context["selectedArtifact"]["artifactId"] == diff_artifact.id
+    assert context["ledger"]["latestChangedFiles"] == ["apps/demo/src/App.tsx"]
+
+
+def test_backend_instruction_handles_missing_demo_backend_target_honestly(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        backend_agent = db.exec(select(Agent).where(Agent.role == "backend")).one()
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        backend_task = Task(
+            session_id=session_id,
+            title="Backend: add contacts endpoint",
+            intent_type="backend_change",
+            status="pending",
+            assigned_agent_id=backend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "target": "demo_backend_request",
+                    "safeTarget": "apps/demo-api",
+                    "originalRequest": "@backend add a contacts endpoint",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(backend_task)
+        db.commit()
+        db.refresh(backend_task)
+        task_run = create_task_run(db, backend_task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert "apps/demo-api is not available yet" in request.instruction
+    assert "Do not edit apps/api" in request.instruction
+    assert "do not pretend backend execution is possible" in request.instruction
+    assert request.plan_context["sessionContext"]["safeTargetPaths"] == ["apps/demo-api"]
+
+
+def test_review_instruction_includes_reviewable_diff_context(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task_run = create_task_run(db, task.id)
+        transition_task_run(db, task_run.id, "completed")
+        diff_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+            meta_json="{}",
+        )
+        db.add(diff_artifact)
+        db.commit()
+        db.refresh(diff_artifact)
+        diff = Diff(
+            artifact_id=diff_artifact.id,
+            base_ref="base",
+            head_ref="head+worktree",
+            patch_text="diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx",
+            changed_files_json=json.dumps(["apps/demo/src/App.tsx"], separators=(",", ":")),
+            stats_json=json.dumps({"filesChanged": 1}, separators=(",", ":")),
+        )
+        qa_agent = db.exec(select(Agent).where(Agent.role == "qa")).one()
+        review_task = Task(
+            session_id=task.session_id,
+            title="Review latest diff",
+            intent_type="review",
+            status="pending",
+            assigned_agent_id=qa_agent.id,
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "review",
+                    "target": "session_review_request",
+                    "selectedArtifactId": diff_artifact.id,
+                    "originalRequest": "@review check the latest diff",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(diff)
+        db.add(review_task)
+        db.commit()
+        db.refresh(review_task)
+        review_run = create_task_run(db, review_task.id)
+
+        request = agent_run_request_for(db, review_run, adapter_type="scripted_mock")
+
+    assert "QA / Review Agent" in request.instruction
+    assert "read-oriented by default" in request.instruction
+    assert diff_artifact.id in request.instruction
+    assert "apps/demo/src/App.tsx" in request.instruction
+    assert request.plan_context["sessionContext"]["latestDiff"]["artifactId"] == diff_artifact.id
 
 
 def test_transition_helper_rejects_unknown_states(client: TestClient) -> None:

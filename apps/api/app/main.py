@@ -12,11 +12,13 @@ from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
 from app.config import get_settings
 from app.claude_code_adapter import ClaudeCodeAdapter
 from app.codex_adapter import CodexAdapter
+from app.context_pack import build_session_context_pack
 from app.db import engine, init_database
 from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
 from app.diffs import DiffCollectionError, StoredDiffArtifact, collect_task_run_diff, list_task_run_diffs
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
 from app.guardrails import approve_task_run, deny_task_run
+from app.instruction_builder import build_role_instruction
 from app.ledger import (
     active_agents_for_ledger,
     changed_files_for_ledger,
@@ -520,10 +522,19 @@ def agent_run_request_for(
     session = db.get(AgentHubSession, task.session_id)
     if session is None:
         raise TaskRunLifecycleError(f"Session not found: {task.session_id}")
+    agent = db.get(Agent, task_run.agent_id)
+    if agent is None:
+        raise TaskRunLifecycleError(f"Agent not found: {task_run.agent_id}")
     task_plan = plan_json_for_task(task)
     merged_plan_context = dict(task_plan)
     if plan_context:
         merged_plan_context.update(plan_context)
+    context_pack = build_session_context_pack(
+        db,
+        task,
+        plan_context=merged_plan_context,
+    )
+    merged_plan_context["sessionContext"] = context_pack
     return AgentRunRequest(
         taskRunId=task_run.id,
         sessionId=session.id,
@@ -531,7 +542,7 @@ def agent_run_request_for(
         worktreePath=session.worktree_path,
         agentId=task_run.agent_id,
         adapterType=adapter_type,
-        instruction=instruction_for_task(task),
+        instruction=build_role_instruction(task, agent, context_pack),
         planContext=merged_plan_context,
         permissionProfile={"network": "off"},
         demoMode=True,

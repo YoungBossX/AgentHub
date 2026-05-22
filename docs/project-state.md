@@ -5,6 +5,57 @@ reference instead of repeating long context blocks.
 
 ## P6 Status
 
+### P6-2 / P6-3 Context Pack And Role-Based Instructions
+
+P6-2 and P6-3 completed on 2026-05-22.
+
+AgentHub now builds a reusable session context pack for agent execution and
+uses a role-based instruction builder for TaskRun adapter requests.
+
+Context pack fields include:
+
+- original user request;
+- current task ID, title, intent type, description, and plan;
+- recent messages from the same session only, bounded to eight messages;
+- session execution ledger summary and latest ledger IDs;
+- latest changed files;
+- latest diff metadata, including artifact ID, refs, changed files, and stats;
+- latest review summary, status, risk, files reviewed, findings, and
+  suggestions;
+- latest preview ID, URL, health, and port;
+- latest mock deployment ID, provider, environment, status, and URL;
+- selected artifact context when a valid current-session artifact ID is passed;
+- safe target paths;
+- validation expectations for the task role and artifact flow.
+
+The context pack is attached to adapter `planContext` as `sessionContext` and
+is also embedded in the generated instruction as a JSON block. This gives
+Claude Code / Codex enough session state for follow-up work without allowing
+cross-session leakage.
+
+Role instruction behavior:
+
+- Manager / Orchestrator instructions focus on routing, bounded task creation,
+  clarification, and honest rejection for unsupported work.
+- Frontend instructions preserve the original request, include session context,
+  keep legacy login-page/button/title templates intact, and allow meaningful
+  changes only inside `apps/demo/src` for generic demo frontend requests.
+- Backend instructions prepare for `apps/demo-api`, but clearly state that the
+  safe demo backend target is not available yet and that `apps/api` must not be
+  modified.
+- QA / Review instructions are read-oriented by default and focus on diff,
+  changed files, ledger, preview/deploy status, and advisory findings.
+
+P6-2/P6-3 do not add `apps/demo-api`, full-stack app generation,
+Manager/Worker scheduling, production deploy, new adapters, or broader
+guardrail permissions.
+
+Validation passed:
+
+- targeted `pytest tests/test_planning.py tests/test_task_runs.py -q`
+  (37 tests);
+- full validation results are recorded in the change log for this task.
+
 ### P6-1b Orchestrator Autonomy Real Smoke
 
 P6-1b completed on 2026-05-22 as an API-driven real execution smoke.

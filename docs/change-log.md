@@ -1,5 +1,64 @@
 # AgentHub Change Log
 
+## P6-2 / P6-3 Session Context Pack And Role-Based Instructions
+
+**Date:** 2026-05-22
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/context_pack.py` | Added a reusable session context pack builder for adapter execution. |
+| `apps/api/app/instruction_builder.py` | Added role-specific instruction generation for manager, frontend, backend, and QA/review tasks. |
+| `apps/api/app/main.py` | Updated TaskRun request construction to attach `sessionContext` and use role-based instructions. |
+| `apps/api/tests/test_task_runs.py` | Added coverage for context pack contents, artifact metadata, selected artifact validation, frontend request preservation, backend missing-target honesty, and review diff context. |
+| `docs/project-state.md` | Recorded P6-2/P6-3 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-2 and P6-3 complete after validation. |
+
+### What Changed
+
+Implemented the P6 session context and instruction quality layer. Adapter
+requests now include a `sessionContext` object in `planContext`, and generated
+instructions embed the same context as JSON for Claude Code / Codex.
+
+The context pack includes the original user request, current task metadata,
+recent same-session messages, ledger summary, latest changed files, latest diff
+metadata, latest review summary, latest preview/deploy state, selected artifact
+context when provided, safe target paths, and validation expectations.
+
+Role-specific instruction behavior:
+
+- Manager / Orchestrator: plan, route, clarify, or reject unsupported requests
+  honestly.
+- Frontend: preserve the original request, include session context, keep
+  legacy login-page/button/title paths intact, and allow meaningful bounded
+  changes inside `apps/demo/src`.
+- Backend: prepare for `apps/demo-api` while clearly stating that the target is
+  unavailable and `apps/api` must not be modified.
+- QA / Review: remain read-oriented and focus on diff, changed files, ledger,
+  preview/deploy status, and advisory findings.
+
+P6-2/P6-3 do not add a demo backend scaffold, full-stack generation,
+Manager/Worker scheduling, production deploy, new adapters, or broader
+guardrail permissions.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pytest tests/test_planning.py tests/test_task_runs.py -q` | Pass: 37 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+
+Manual follow-up smoke did not run a new real Claude/Codex mutation. Follow-up
+context support was verified through backend tests that inspect generated
+`sessionContext` and role instructions.
+
+---
+
 ## P6-1b Orchestrator Autonomy Real Smoke
 
 **Date:** 2026-05-22
