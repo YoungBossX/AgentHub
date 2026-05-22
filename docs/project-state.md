@@ -5,6 +5,82 @@ reference instead of repeating long context blocks.
 
 ## P5 Status
 
+### P5-7 E2E Rehearsal And Freeze Review
+
+P5-7 completed on 2026-05-22.
+
+Freeze result: P5 is ready to freeze as a local single-user IM-style
+multi-agent coding workspace v1. It preserves the P4 final demo baseline and
+does not claim to be a full multi-user IM platform.
+
+Review basis:
+
+- initial worktree was clean at `d3b479d feat: add review workflow, execution
+  trace, and artifact cards`;
+- reviewed `AGENTS.md`, the project README, project state, change log, P4 audit
+  and final demo docs, platform roadmap, and the P5 OpenSpec proposal, design,
+  tasks, and spec;
+- no new Claude/Codex mutation was run during P5-7, to avoid repeated real
+  adapter work after the P4 browser rehearsal already verified the real and
+  fallback execution paths;
+- P5-specific behavior was verified through committed backend/frontend tests and
+  code review of the implemented task slices.
+
+P5 freeze evidence:
+
+- Agent contacts render Manager / Orchestrator, Frontend, Backend, QA, Review,
+  and Fallback entries with role, adapter type, tags, and status. Direct chat
+  and Group workflow remain local visual modes only.
+- Workspace Context / Execution Ledger is persisted and exposed through
+  `GET /sessions/{session_id}/ledger`, with tests covering updates after
+  planning, diff, preview, and mock deployment.
+- Dynamic Manager Planner v1 supports bounded frontend intents for heading/title
+  text, primary button text, accent color, simple input field, status/help text,
+  and small layout copy changes. Unsupported broad requests create no tasks and
+  do not claim support.
+- Review artifacts are created after diff collection, use deterministic
+  `scripted_mock` review behavior in v1, and remain non-blocking for preview and
+  mock deploy.
+- Multi-Agent Execution Trace shows Manager planned, Coding Agent ran, Diff
+  produced, Review Agent reviewed, Preview healthy, and Mock deploy ready.
+- Artifact Message Cards render Diff, Review, Preview, and Mock Deploy cards,
+  select the right Artifact Panel item, and only expose actions backed by
+  existing APIs.
+- Preview and Mock Deploy continue to use the existing preview/deployment APIs.
+- P4 browser evidence remains the real end-to-end proof for
+  requirement -> plan -> agent execution -> diff -> preview -> mock deploy:
+  real Claude Code run `f1e78e9e-2f6b-4b9c-b4a7-5879d513c555`, diff artifact
+  `b4c0fae4-bfeb-4105-a506-64de639472c6`, preview
+  `4eb1622b-fb10-49e7-9b3d-5c256fad4b29`, deployment
+  `6c5a423c-ec7b-4070-9a05-87a8dddd91a1`; fallback run
+  `36d68849-f644-4242-a64b-27c05b8cf2d8`, diff artifact
+  `fbe67726-20e3-4ad5-9b08-d4514aa97cbe`, preview
+  `6c7f6f46-e287-4698-b6be-c99058f69b11`, deployment
+  `a0b5d533-acee-4b2a-a384-103197d46481`.
+
+Remaining caveats:
+
+- P5 is still local single-user software, not a full multi-user IM product.
+- Direct chat and Group workflow are visual modes only; no accounts,
+  multiplayer sync, or external IM integration was added.
+- The Review Agent is deterministic and non-blocking in v1, not an enterprise
+  security gate or real Claude/Codex review path.
+- The dynamic planner is bounded and rule-based, not unrestricted natural
+  language editing or a general LLM planner.
+- Artifact context selection is a frontend session affordance only; artifact
+  references are not persisted into backend message records.
+- Mock Deploy remains mock evidence, not production deployment.
+
+Recommended tag name after committing the P5 freeze review:
+`agenthub-p5-platform-evolution-freeze`.
+
+Validation passed:
+
+- `openspec validate agenthub-p5-platform-evolution --strict`
+- `pnpm check`
+- `pnpm test` (36 web tests, 116 API tests)
+- `git diff --check`
+
 ### P5-6 Artifact Message Cards v2
 
 P5-6 completed on 2026-05-21.

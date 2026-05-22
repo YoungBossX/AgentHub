@@ -1,5 +1,62 @@
 # AgentHub Change Log
 
+## P5-7 E2E Rehearsal And Freeze Review
+
+**Date:** 2026-05-22
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `AGENTS.md` | Aligned baseline guardrails with the completed P5 ledger/review/artifact UI state. |
+| `docs/project-state.md` | Recorded P5 freeze readiness, evidence, caveats, validation, and recommended tag name. |
+| `docs/change-log.md` | Recorded this P5-7 freeze review. |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-7 complete after validation. |
+
+### What Changed
+
+Completed the P5 freeze review for
+`agenthub-p5-platform-evolution`. The review confirms AgentHub now presents as
+a local single-user IM-style multi-agent coding workspace v1 while preserving
+the P4 final demo loop:
+
+```text
+requirement -> plan -> agent execution -> diff -> preview -> mock deploy
+```
+
+The review used the P4 browser evidence for real Claude Code and fallback
+execution paths, plus P5 backend/frontend test coverage and code review for the
+new workspace shape:
+
+- Agent contact list and local Direct chat / Group workflow visual modes;
+- session execution ledger and Workspace Context card;
+- bounded Dynamic Manager Planner v1;
+- non-blocking Review Agent artifacts;
+- Multi-Agent Execution Trace;
+- Diff, Review, Preview, and Mock Deploy artifact message cards.
+
+No new Claude/Codex mutation was run during P5-7. P5 remains explicitly scoped
+to a local single-user workspace and does not add multi-user IM, external IM
+integration, production deploy, provider marketplace, Docker sandbox, PR
+creation, or unrestricted arbitrary editing.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests and 116 API tests. |
+| `git diff --check` | Pass |
+
+Recommended freeze tag after committing:
+
+```text
+agenthub-p5-platform-evolution-freeze
+```
+
+---
+
 ## P5-6 Artifact Message Cards v2
 
 **Date:** 2026-05-21

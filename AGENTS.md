@@ -1,8 +1,9 @@
 # AgentHub Demo Baseline Guardrails
 
 This repo has completed the original P0 OpenSpec change at
-`openspec/changes/agenthub-im-coding-mvp` and is currently hardening the final
-local demo through `openspec/changes/agenthub-final-demo-hardening`. Treat those
+`openspec/changes/agenthub-im-coding-mvp`, hardened the final local demo through
+`openspec/changes/agenthub-final-demo-hardening`, and is evolving the local
+workspace through `openspec/changes/agenthub-p5-platform-evolution`. Treat those
 OpenSpec artifacts, `docs/project-state.md`, and `docs/change-log.md` as the
 current baseline. If this file conflicts with those artifacts, stop and resolve
 the conflict before coding.
@@ -52,10 +53,12 @@ requirement -> orchestrator plan -> agent execution -> real git diff -> real pre
 
 The baseline includes single-user workspaces, multiple sessions, IM-style chat,
 mention routing for `@orchestrator`, `@frontend`, `@backend`, and `@qa`, simple
-orchestrator planning, TaskRunEvent-backed SSE recovery, session-level
-worktrees, real git diffs, Vite React preview, basic approvals, retry,
-interrupt, `CodexAdapter`, `ClaudeCodeAdapter`, `ScriptedMockAdapter`, and a
-mock-backed deploy card.
+orchestrator planning, Agent contact UI, local Direct chat / Group workflow
+visual modes, session execution ledger, non-blocking review artifacts,
+multi-agent execution trace UI, artifact message cards, TaskRunEvent-backed SSE
+recovery, session-level worktrees, real git diffs, Vite React preview, basic
+approvals, retry, interrupt, `CodexAdapter`, `ClaudeCodeAdapter`,
+`ScriptedMockAdapter`, and a mock-backed deploy card.
 
 ## Defer Platform Scope
 
@@ -84,8 +87,10 @@ Deferred examples:
 
 - SQLite is the demo database. Do not require Postgres for the final demo.
 - The demo schema is limited to User, Workspace, Session, Message, Agent, Task,
-  TaskRun, TaskRunEvent, Artifact, Diff, Preview, and Deployment.
-- `TaskRunEvent` is the only support entity beyond the core model.
+  TaskRun, TaskRunEvent, Artifact, Diff, Preview, Deployment,
+  SessionExecutionLedger, and Review.
+- `TaskRunEvent`, `SessionExecutionLedger`, and `Review` are the only support
+  entities beyond the core model.
 - Each Session gets exactly one persisted worktree path.
 - Multiple TaskRuns in the same Session reuse that Session worktree.
 - Different Sessions must not share a worktree.
@@ -156,7 +161,7 @@ agent execution unless a later focused approval rule explicitly allows it.
 - Do not proceed to the next task unless the user asks.
 - Read the relevant OpenSpec artifacts before changing files.
 - Keep changes minimal and tied to the current task's acceptance criteria.
-- Do not add broad platform features while completing final demo hardening.
+- Do not add broad platform features while completing focused OpenSpec tasks.
 - Do not add auth provider integration, Postgres requirement, Alembic workflow,
   Docker sandbox, WebSocket, provider marketplace, multiplayer collaboration,
   external IM integrations, or full deploy matrix unless a future task explicitly

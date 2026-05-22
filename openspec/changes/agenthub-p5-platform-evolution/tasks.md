@@ -142,7 +142,7 @@
     - `pnpm test`;
     - `git diff --check`.
 
-- [ ] 1.7 P5-7 P5 E2E rehearsal and freeze review.
+- [x] 1.7 P5-7 P5 E2E rehearsal and freeze review.
   - Objective: Verify and freeze P5 as a local single-user IM-style
     multi-agent coding workspace v1.
   - Scope:
