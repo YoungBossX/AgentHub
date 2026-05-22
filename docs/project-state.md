@@ -5,6 +5,56 @@ reference instead of repeating long context blocks.
 
 ## P6 Status
 
+### P6-1b Orchestrator Autonomy Real Smoke
+
+P6-1b completed on 2026-05-22 as an API-driven real execution smoke.
+
+Smoke request:
+
+```text
+帮我把当前 demo app 改成一个 dashboard，有三张统计卡片和一个最近活动列表
+```
+
+Result: a normal user message without an explicit `@mention` routed to
+Orchestrator / Manager, created a safe demo frontend task, auto-started a
+TaskRun, invoked `ClaudeCodeAdapter`, produced a real diff, generated a
+non-blocking scripted review artifact, started a healthy preview during the
+smoke, and created a mock deploy artifact.
+
+Evidence:
+
+- session ID: `cca9af54-1338-4cdd-b239-7f8b6e1dcc76`;
+- message ID: `48bad4c0-8ddf-4514-bf35-d2561082c22e`;
+- task ID: `63a8aded-b311-40f3-a54c-a40d232102c5`;
+- task run ID: `210f3f89-df0f-4e72-8c20-d505faed5ea2`;
+- adapter type: `claude_code`;
+- final state: `completed`;
+- changed files: `apps/demo/src/App.tsx`,
+  `apps/demo/src/styles.css`;
+- diff artifact ID: `7114d52a-925a-4c4d-a00b-4d6c8775a20c`;
+- review artifact ID: `ce989818-5d85-4f88-9f70-8b9b5e69d606`;
+- preview ID / URL / health: `841f7fd6-bb75-4e80-b19c-9b228f5040fb`,
+  `http://127.0.0.1:58487`, healthy during the smoke;
+- deployment ID / provider / status:
+  `7c9fab78-2b5f-44b3-a9fc-2af0d912a757`, `mock`, `ready`.
+
+The session ledger recorded the original goal, `frontend` as active agent, the
+latest diff/review/preview/deploy evidence, and `claude_code` as the last
+successful adapter.
+
+Caveats:
+
+- this was an API-driven smoke using FastAPI `TestClient`, not a browser click
+  rehearsal;
+- a follow-up `curl` after the one-shot TestClient process exited could not
+  reach the preview URL, so long-lived preview availability should be verified
+  under `pnpm dev:api` in a later browser rehearsal;
+- the Review artifact used deterministic `scripted_mock` review behavior;
+- ScriptedMock fallback execution was not needed because the real Claude Code
+  run succeeded.
+
+Detailed evidence is recorded in `docs/p6-orchestrator-autonomy-smoke.md`.
+
 ### P6-1 Orchestrator Autonomy Spike
 
 P6-1 completed on 2026-05-22.
