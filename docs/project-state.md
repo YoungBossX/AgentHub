@@ -5,6 +5,45 @@ reference instead of repeating long context blocks.
 
 ## P5 Status
 
+### P5-6 Artifact Message Cards v2
+
+P5-6 completed on 2026-05-21.
+
+AgentHub now renders Diff, Review, Preview, and Mock Deploy artifacts as
+message-style cards inside the task timeline. The cards reuse existing loaded
+artifacts and do not add a new backend artifact-reference table.
+
+Artifact card behavior:
+
+- Diff cards show changed files, additions/deletions, source task/run, and
+  actions to inspect the Diff, use the Diff as local follow-up context, or
+  trigger the existing Review API when a review is not already loaded.
+- Review cards show review status, risk, files reviewed, adapter type, source
+  task/run, and actions to inspect or use the review as local follow-up
+  context.
+- Preview cards show URL, health, status, port, source task/run, and actions to
+  inspect, open the preview, or create the existing mock deploy card when the
+  preview is healthy.
+- Mock Deploy cards show provider, environment, status, URL, source task/run,
+  and remain explicitly labeled as mock deploy evidence.
+
+The right Artifact Panel remains the detailed inspector. Selecting a card opens
+the matching panel item. The composer now shows a local, session-scoped
+follow-up context chip when the user chooses an artifact as context. This is a
+frontend affordance only; P5-6 does not persist message-to-artifact references
+or change backend planning semantics.
+
+P5-6 does not add production deploy, provider marketplace, document/PPT
+rendering, full code editor editing, unrestricted arbitrary editing, or adapter
+execution changes.
+
+Validation passed:
+
+- `pnpm check`
+- `pnpm test` (36 web tests, 116 API tests)
+- `git diff --check`
+- `openspec validate agenthub-p5-platform-evolution --strict`
+
 ### P5-5 Dynamic Manager Planner v1
 
 P5-5 completed on 2026-05-21.

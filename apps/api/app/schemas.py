@@ -171,6 +171,22 @@ class DiffArtifactResponse(ApiModel):
     stats: dict[str, Any]
 
 
+class ReviewArtifactResponse(ApiModel):
+    id: str
+    artifact_id: str = Field(alias="artifactId")
+    task_run_id: str = Field(alias="taskRunId")
+    reviewed_diff_artifact_id: str = Field(alias="reviewedDiffArtifactId")
+    artifact_type: str = Field(alias="artifactType")
+    title: str
+    status: str
+    risk_level: str = Field(alias="riskLevel")
+    summary: str
+    files_reviewed: list[str] = Field(alias="filesReviewed")
+    findings: list[dict[str, Any]]
+    suggested_changes: list[str] = Field(alias="suggestedChanges")
+    adapter_type: str = Field(alias="adapterType")
+
+
 class PreviewResponse(ApiModel):
     id: str
     artifact_id: str = Field(alias="artifactId")

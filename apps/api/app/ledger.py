@@ -16,6 +16,7 @@ from app.models import (
     TaskRun,
     utc_now,
 )
+from app.reviews import latest_review_for_task_runs
 
 
 def get_or_create_session_ledger(
@@ -57,6 +58,10 @@ def refresh_session_ledger(
     latest_task = tasks[-1] if tasks else None
     latest_task_run = task_runs[-1] if task_runs else None
     latest_diff = _latest_diff_for_runs(db, task_runs)
+    latest_review = latest_review_for_task_runs(
+        db,
+        [task_run.id for task_run in task_runs],
+    )
     latest_preview = _latest_preview_for_runs(db, task_runs)
     latest_deployment = _latest_deployment_for_runs(db, task_runs)
     last_successful_run = next(
@@ -104,7 +109,7 @@ def refresh_session_ledger(
         if last_successful_run is not None
         else None
     )
-    ledger.summary_md = _summary_md(ledger)
+    ledger.summary_md = _summary_md(ledger, latest_review.summary if latest_review else None)
     ledger.updated_at = now
     db.add(ledger)
     db.commit()
@@ -242,7 +247,10 @@ def _latest_deployment_for_runs(
     return {"artifact": artifact, "deployment": deployment}
 
 
-def _summary_md(ledger: SessionExecutionLedger) -> str:
+def _summary_md(
+    ledger: SessionExecutionLedger,
+    latest_review_summary: Optional[str] = None,
+) -> str:
     lines = []
     if ledger.current_goal:
         lines.append(f"Current goal: {ledger.current_goal}")
@@ -262,6 +270,8 @@ def _summary_md(ledger: SessionExecutionLedger) -> str:
             "Deployment: "
             f"{ledger.latest_deployment_provider} ({ledger.latest_deployment_status})"
         )
+    if latest_review_summary:
+        lines.append(f"Review: {latest_review_summary}")
     if ledger.last_successful_adapter:
         lines.append(f"Last successful adapter: {ledger.last_successful_adapter}")
     return "\n".join(lines) if lines else "No goal captured yet."

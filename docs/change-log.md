@@ -1,5 +1,54 @@
 # AgentHub Change Log
 
+## P5-6 Artifact Message Cards v2
+
+**Date:** 2026-05-21
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/components/task-card-list.tsx` | Added inline message-style cards for Diff, Review, Preview, and Mock Deploy artifacts with panel/context/action affordances. |
+| `apps/web/src/components/task-card-list.test.tsx` | Added frontend coverage for artifact cards, context selection, review action, preview open, and mock deploy action behavior. |
+| `apps/web/src/components/workspace-shell.tsx` | Added local session-scoped follow-up artifact context chip and wired review/deploy/preview card actions to existing APIs. |
+| `apps/web/src/components/workspace-shell.test.tsx` | Updated API mocks for the Review action. |
+| `docs/project-state.md` | Recorded P5-6 behavior, limitations, and validation. |
+| `docs/change-log.md` | Recorded this P5-6 implementation. |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-6 complete after validation. |
+
+### What Changed
+
+Implemented frontend-first artifact message cards for the P5 IM-style
+workspace. Diff, Review, Preview, and Mock Deploy artifacts now render as
+inline cards inside the task timeline with source task/run metadata, status,
+key artifact details, and action buttons.
+
+Mapped card actions only to existing behavior:
+
+- inspect artifact in the right Artifact Panel;
+- use Diff or Review as local follow-up context;
+- trigger the existing Review API for a Diff when no review is loaded;
+- open an existing Preview;
+- create an existing mock deploy card from a healthy Preview.
+
+The composer now shows a session-scoped local follow-up context chip for the
+selected artifact. P5-6 does not persist artifact references in backend message
+records, and it does not change planner or adapter semantics.
+
+Mock Deploy remains clearly labeled as mock evidence rather than production
+deployment.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests and 116 API tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+
+---
+
 ## P5-5 Dynamic Manager Planner v1
 
 **Date:** 2026-05-21

@@ -136,6 +136,22 @@ class Diff(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
 
 
+class Review(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    artifact_id: str = Field(foreign_key="artifact.id", index=True)
+    reviewed_diff_artifact_id: str = Field(foreign_key="artifact.id", index=True)
+    reviewer_agent_id: Optional[str] = Field(default=None, foreign_key="agent.id")
+    adapter_type: str
+    status: str
+    risk_level: str
+    summary: str
+    files_reviewed_json: str = "[]"
+    findings_json: str = "[]"
+    suggested_changes_json: str = "[]"
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
 class Preview(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     artifact_id: str = Field(foreign_key="artifact.id", index=True)

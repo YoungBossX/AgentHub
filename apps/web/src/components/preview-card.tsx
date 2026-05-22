@@ -1,11 +1,16 @@
 "use client"
 
-import { ExternalLink, Monitor, RefreshCw, Rocket, Square, X } from "lucide-react"
+import { ExternalLink, Monitor, RefreshCw, Rocket, ShieldCheck, Square, X } from "lucide-react"
 
 import { DeployCard } from "./deploy-card"
 import { DiffCard } from "./diff-card"
 import { Button } from "@/components/ui/button"
-import type { DeploymentArtifact, DiffArtifact, PreviewArtifact } from "@/lib/api"
+import type {
+  DeploymentArtifact,
+  DiffArtifact,
+  PreviewArtifact,
+  ReviewArtifact,
+} from "@/lib/api"
 import { formatCompactDateTime } from "@/lib/date-format"
 import { cn } from "@/lib/utils"
 
@@ -43,6 +48,13 @@ export type ArtifactPanelItem =
       artifact: PreviewArtifact
       id: string
       kind: "preview"
+      taskRunId: string
+      taskTitle: string
+    }
+  | {
+      artifact: ReviewArtifact
+      id: string
+      kind: "review"
       taskRunId: string
       taskTitle: string
     }
@@ -248,7 +260,7 @@ export function PreviewPanel({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-100 p-1">
+        <div className="mt-4 grid grid-cols-4 gap-2 rounded-xl bg-slate-100 p-1">
           <ArtifactRailItem
             active={activeKind === "diff"}
             count={artifactItems.filter((item) => item.kind === "diff").length}
@@ -266,6 +278,17 @@ export function PreviewPanel({
             label="预览"
             onSelect={() => {
               const item = latestByKind("preview")
+              if (item) {
+                onSelectArtifact?.(item.id)
+              }
+            }}
+          />
+          <ArtifactRailItem
+            active={activeKind === "review"}
+            count={artifactItems.filter((item) => item.kind === "review").length}
+            label="评审"
+            onSelect={() => {
+              const item = latestByKind("review")
               if (item) {
                 onSelectArtifact?.(item.id)
               }
@@ -397,6 +420,10 @@ function ArtifactDetail({
     return <DeployCard deployment={item.artifact} />
   }
 
+  if (item.kind === "review") {
+    return <ReviewCard review={item.artifact} />
+  }
+
   return (
     <div className="grid gap-3">
       <PreviewCard
@@ -457,6 +484,9 @@ function panelTitle(item: ArtifactPanelItem | null) {
   if (item.kind === "deployment") {
     return item.artifact.title
   }
+  if (item.kind === "review") {
+    return item.artifact.title
+  }
   return item.artifact.title
 }
 
@@ -465,7 +495,11 @@ function artifactKindLabel(kind: ArtifactPanelItem["kind"]) {
     return "部署产物"
   }
 
-  return kind === "preview" ? "预览产物" : "Diff 产物"
+  if (kind === "preview") {
+    return "预览产物"
+  }
+
+  return kind === "review" ? "评审产物" : "Diff 产物"
 }
 
 function summaryRows(item: ArtifactPanelItem) {
@@ -490,10 +524,107 @@ function summaryRows(item: ArtifactPanelItem) {
     ]
   }
 
+  if (item.kind === "review") {
+    return [
+      { label: "状态", value: reviewStatusLabel(item.artifact.status) },
+      { label: "风险", value: riskLabel(item.artifact.riskLevel) },
+      { label: "文件", value: String(item.artifact.filesReviewed.length) },
+      { label: "Adapter", value: item.artifact.adapterType },
+    ]
+  }
+
   return [
     { label: "提供方", value: item.artifact.provider },
     { label: "状态", value: statusLabel(item.artifact.status) },
     { label: "环境", value: item.artifact.environment },
     { label: "URL", value: item.artifact.url ?? "mock://pending" },
   ]
+}
+
+function ReviewCard({ review }: { review: ReviewArtifact }) {
+  return (
+    <article className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
+            <ShieldCheck aria-hidden="true" size={14} />
+            Review Agent
+          </p>
+          <h3 className="mt-1 truncate text-sm font-semibold">{review.title}</h3>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            Advisory only · {review.adapterType}
+          </p>
+        </div>
+        <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
+          {reviewStatusLabel(review.status)}
+        </span>
+      </div>
+
+      <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm leading-6 text-slate-800">
+        {review.summary}
+      </p>
+
+      <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+        <div>
+          <dt className="text-[var(--muted-foreground)]">风险</dt>
+          <dd className="mt-1 font-medium">{riskLabel(review.riskLevel)}</dd>
+        </div>
+        <div>
+          <dt className="text-[var(--muted-foreground)]">文件</dt>
+          <dd className="mt-1 font-medium">{review.filesReviewed.length}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--muted-foreground)]">Diff</dt>
+          <dd className="mt-1 truncate font-mono font-medium">
+            {review.reviewedDiffArtifactId.slice(0, 8)}
+          </dd>
+        </div>
+      </dl>
+
+      {review.findings.length > 0 ? (
+        <div className="mt-3 grid gap-2">
+          {review.findings.map((finding, index) => (
+            <div
+              className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-950"
+              key={`${String(finding.message)}-${index}`}
+            >
+              <p className="font-semibold">
+                {String(finding.severity ?? "warning")}
+                {finding.file ? ` · ${String(finding.file)}` : ""}
+              </p>
+              <p className="mt-1 leading-5">{String(finding.message ?? "")}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {review.suggestedChanges.length > 0 ? (
+        <ul className="mt-3 grid gap-1 text-xs text-slate-700">
+          {review.suggestedChanges.map((change) => (
+            <li className="rounded bg-slate-50 px-2 py-1" key={change}>
+              {change}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </article>
+  )
+}
+
+function reviewStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    failed: "未通过",
+    passed: "通过",
+    warning: "警告",
+  }
+  return labels[status] ?? status
+}
+
+function riskLabel(riskLevel: string) {
+  const labels: Record<string, string> = {
+    high: "高",
+    low: "低",
+    medium: "中",
+  }
+  return labels[riskLevel] ?? riskLevel
 }

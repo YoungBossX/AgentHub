@@ -32,6 +32,7 @@ import {
   createPreviewDeployment,
   createSessionMessage,
   createTaskRun,
+  createTaskRunReview,
   createWorkspaceSession,
   denyTaskRun,
   forceCodexFailure,
@@ -101,6 +102,7 @@ export function WorkspaceShell({
   const [artifactRefreshVersion, setArtifactRefreshVersion] = useState(0)
   const [artifactItems, setArtifactItems] = useState<ArtifactPanelItem[]>([])
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
+  const [contextArtifactId, setContextArtifactId] = useState<string | null>(null)
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [ledger, setLedger] = useState<SessionExecutionLedger | null>(null)
@@ -116,6 +118,8 @@ export function WorkspaceShell({
   )
   const selectedArtifact =
     artifactItems.find((artifact) => artifact.id === selectedArtifactId) ?? null
+  const contextArtifact =
+    artifactItems.find((artifact) => artifact.id === contextArtifactId) ?? null
   const selectedPreview =
     selectedArtifact?.kind === "preview" ? selectedArtifact.artifact : null
   const visibleMessages = selectedSessionId ? messages : []
@@ -390,6 +394,16 @@ export function WorkspaceShell({
     }, "无法启动预览")
   }
 
+  function handleCreateReview(taskRunId: string) {
+    runClientAction(async () => {
+      const review = await createTaskRunReview(backendUrl, taskRunId)
+      setSelectedArtifactId(`review:${review.id}`)
+      await refreshLedger()
+      refreshArtifacts()
+      setSyncError(null)
+    }, "无法创建评审产物")
+  }
+
   function handleCreateDeployment(previewId: string) {
     runClientAction(async () => {
       const deployment = await createPreviewDeployment(backendUrl, previewId)
@@ -420,7 +434,19 @@ export function WorkspaceShell({
 
       return artifacts[artifacts.length - 1]?.id ?? null
     })
+    setContextArtifactId((current) => {
+      if (current && artifacts.some((artifact) => artifact.id === current)) {
+        return current
+      }
+
+      return null
+    })
   }, [])
+
+  function handleUseArtifactContext(artifact: ArtifactPanelItem) {
+    setContextArtifactId(artifact.id)
+    setSelectedArtifactId(artifact.id)
+  }
 
   function handleSendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -681,14 +707,18 @@ export function WorkspaceShell({
                     busy={isPending}
                     onApproveRun={handleApproveTaskRun}
                     onArtifactsChange={handleArtifactsChange}
+                    onCreateDeploy={handleCreateDeployment}
+                    onCreateReview={handleCreateReview}
                     onCreateRun={handleCreateTaskRun}
                     onDenyRun={handleDenyTaskRun}
                     onForceCodexFailure={handleForceCodexFailure}
                     onInterruptRun={handleInterruptTaskRun}
+                    onOpenPreview={handleOpenPreview}
                     onRetryRun={handleRetryTaskRun}
                     onRetryWithFallback={handleRetryTaskRunWithFallback}
                     onSelectArtifact={setSelectedArtifactId}
                     onStartPreview={handleStartPreview}
+                    onUseArtifactContext={handleUseArtifactContext}
                     selectedArtifactId={selectedArtifactId}
                     tasks={tasks}
                   />
@@ -698,30 +728,52 @@ export function WorkspaceShell({
           </section>
 
           {selectedSession ? (
-            <form
-              className="mx-auto flex w-full max-w-3xl shrink-0 gap-2 rounded-xl border border-[var(--border)] bg-white p-2 shadow-sm"
-              data-region="composer"
-              onSubmit={handleSendMessage}
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-[var(--surface-muted)] px-3">
-                <MessageSquare
-                  aria-hidden="true"
-                  className="shrink-0 text-[var(--muted-foreground)]"
-                  size={16}
-                />
-                <input
-                  className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none"
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder="@orchestrator 为演示应用构建登录页"
-                  type="text"
-                  value={draft}
-                />
-              </div>
-              <Button disabled={isPending || draft.trim().length === 0} type="submit">
-                <Send aria-hidden="true" size={16} />
-                发送
-              </Button>
-            </form>
+            <div className="mx-auto grid w-full max-w-3xl shrink-0 gap-2">
+              {contextArtifact ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-xs shadow-sm">
+                  <div className="min-w-0">
+                    <span className="font-semibold text-[var(--primary)]">
+                      Follow-up context
+                    </span>
+                    <span className="ml-2 text-[var(--muted-foreground)]">
+                      {artifactContextLabel(contextArtifact)} · run{" "}
+                      {contextArtifact.taskRunId.slice(0, 8)}
+                    </span>
+                  </div>
+                  <button
+                    className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-600 transition hover:bg-slate-200"
+                    onClick={() => setContextArtifactId(null)}
+                    type="button"
+                  >
+                    Clear context
+                  </button>
+                </div>
+              ) : null}
+              <form
+                className="flex gap-2 rounded-xl border border-[var(--border)] bg-white p-2 shadow-sm"
+                data-region="composer"
+                onSubmit={handleSendMessage}
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-[var(--surface-muted)] px-3">
+                  <MessageSquare
+                    aria-hidden="true"
+                    className="shrink-0 text-[var(--muted-foreground)]"
+                    size={16}
+                  />
+                  <input
+                    className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none"
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder="@orchestrator 为演示应用构建登录页"
+                    type="text"
+                    value={draft}
+                  />
+                </div>
+                <Button disabled={isPending || draft.trim().length === 0} type="submit">
+                  <Send aria-hidden="true" size={16} />
+                  发送
+                </Button>
+              </form>
+            </div>
           ) : null}
         </div>
       </main>
@@ -1017,6 +1069,16 @@ function OrchestratorPlanCard({ taskCount }: { taskCount: number }) {
       </div>
     </section>
   )
+}
+
+function artifactContextLabel(item: ArtifactPanelItem) {
+  const labels: Record<ArtifactPanelItem["kind"], string> = {
+    deployment: "Mock Deploy artifact",
+    diff: "Diff artifact",
+    preview: "Preview artifact",
+    review: "Review artifact",
+  }
+  return labels[item.kind]
 }
 
 function DemoPipeline({

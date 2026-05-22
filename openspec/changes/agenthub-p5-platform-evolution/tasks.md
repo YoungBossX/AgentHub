@@ -119,7 +119,7 @@
     - `pnpm test`;
     - `git diff --check`.
 
-- [ ] 1.6 P5-6 Artifact Message Cards v2.
+- [x] 1.6 P5-6 Artifact Message Cards v2.
   - Objective: Render Diff, Preview, Review, and Mock Deploy as inline message
     cards and support artifact selection/reference for follow-up interaction.
   - Scope:

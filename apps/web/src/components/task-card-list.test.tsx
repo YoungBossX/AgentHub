@@ -426,8 +426,8 @@ describe("TaskCardList", () => {
 
     expect(await screen.findByText("模拟部署就绪")).toBeTruthy()
     expect(
-      screen.queryByText("https://mock.agenthub.local/deployments/deployment-1"),
-    ).toBeNull()
+      screen.getByText("https://mock.agenthub.local/deployments/deployment-1"),
+    ).toBeTruthy()
     fireEvent.click(screen.getByText("模拟部署就绪"))
     expect(onSelectArtifact).toHaveBeenCalledWith(
       `deployment:${sampleDeploymentArtifact.id}`,
@@ -604,10 +604,12 @@ describe("TaskCardList", () => {
     expect(screen.getByText("Coding Agent ran")).toBeTruthy()
     expect(screen.getByText("Review Agent reviewed")).toBeTruthy()
     expect(screen.getByText("Preview healthy")).toBeTruthy()
-    expect(screen.getByText("Mock deploy ready")).toBeTruthy()
+    expect(screen.getAllByText("Mock deploy ready").length).toBeGreaterThan(0)
     expect(screen.getByText("Fallback")).toBeTruthy()
     expect(screen.getByText("Review warning")).toBeTruthy()
-    expect(screen.getByText("Review Agent found a non-blocking caveat.")).toBeTruthy()
+    expect(
+      screen.getAllByText("Review Agent found a non-blocking caveat.").length,
+    ).toBeGreaterThan(0)
     expect(screen.getByText("Diff Service · git diff service")).toBeTruthy()
     expect(screen.getByText("Preview Service · Vite preview service")).toBeTruthy()
     expect(screen.getByText("Mock Deploy Service · mock")).toBeTruthy()
@@ -628,5 +630,153 @@ describe("TaskCardList", () => {
       4,
       `deployment:${sampleDeploymentArtifact.id}`,
     )
+  })
+
+  it("renders artifact message cards and maps actions to existing panel/context APIs", async () => {
+    const onOpenPreview = vi.fn()
+    const onSelectArtifact = vi.fn()
+    const onUseArtifactContext = vi.fn()
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = input.toString()
+      if (url.endsWith("/diffs")) {
+        return new Response(JSON.stringify([sampleDiffArtifact]), { status: 200 })
+      }
+      if (url.endsWith("/reviews")) {
+        return new Response(JSON.stringify([sampleReviewArtifact]), { status: 200 })
+      }
+      if (url.endsWith("/previews")) {
+        return new Response(JSON.stringify([samplePreviewArtifact]), { status: 200 })
+      }
+      if (url.endsWith("/deployments")) {
+        return new Response(JSON.stringify([sampleDeploymentArtifact]), { status: 200 })
+      }
+      return new Response(JSON.stringify([]), { status: 200 })
+    })
+    const completedTask: SessionTask = {
+      ...baseTask,
+      status: "completed",
+      taskRuns: [
+        {
+          id: "run-1",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "scripted_mock",
+          adapterRunId: null,
+          state: "completed",
+          startedAt: "2026-05-14T00:00:00Z",
+          endedAt: "2026-05-14T00:00:01Z",
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: "abc123",
+          headRef: "def456+worktree",
+          errorCode: null,
+          errorMessage: null,
+          metricsJson: { adapterType: "scripted_mock" },
+          createdAt: "2026-05-14T00:00:00Z",
+          updatedAt: "2026-05-14T00:00:01Z",
+        },
+      ],
+    }
+
+    render(
+      createElement(TaskCardList, {
+        artifactRefreshKey: 1,
+        backendUrl: "http://127.0.0.1:8000",
+        fetcher,
+        onOpenPreview,
+        onSelectArtifact,
+        onUseArtifactContext,
+        tasks: [completedTask],
+      }),
+    )
+
+    expect(await screen.findByText("Artifact Cards")).toBeTruthy()
+    expect(screen.getByText("4 session-scoped")).toBeTruthy()
+    expect(
+      screen.getByText(
+        "Mock deploy card for local demo evidence. Not a production deployment.",
+      ),
+    ).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "View diff" }))
+    fireEvent.click(screen.getByRole("button", { name: "Use this diff as context" }))
+    fireEvent.click(screen.getByRole("button", { name: "View review" }))
+    fireEvent.click(screen.getByRole("button", { name: "Open preview" }))
+    fireEvent.click(screen.getByRole("button", { name: "View mock deploy" }))
+
+    expect(onSelectArtifact).toHaveBeenNthCalledWith(1, `diff:${sampleDiffArtifact.id}`)
+    expect(onUseArtifactContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: `diff:${sampleDiffArtifact.id}`,
+        kind: "diff",
+      }),
+    )
+    expect(onSelectArtifact).toHaveBeenNthCalledWith(
+      2,
+      `review:${sampleReviewArtifact.id}`,
+    )
+    expect(onOpenPreview).toHaveBeenCalledWith(samplePreviewArtifact)
+    expect(onSelectArtifact).toHaveBeenNthCalledWith(
+      3,
+      `deployment:${sampleDeploymentArtifact.id}`,
+    )
+  })
+
+  it("offers review and mock deploy card actions only when backed by existing APIs", async () => {
+    const onCreateDeploy = vi.fn()
+    const onCreateReview = vi.fn()
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = input.toString()
+      if (url.endsWith("/diffs")) {
+        return new Response(JSON.stringify([sampleDiffArtifact]), { status: 200 })
+      }
+      if (url.endsWith("/previews")) {
+        return new Response(JSON.stringify([samplePreviewArtifact]), { status: 200 })
+      }
+      return new Response(JSON.stringify([]), { status: 200 })
+    })
+    const completedTask: SessionTask = {
+      ...baseTask,
+      status: "completed",
+      taskRuns: [
+        {
+          id: "run-1",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-frontend",
+          adapterType: "scripted_mock",
+          adapterRunId: null,
+          state: "completed",
+          startedAt: "2026-05-14T00:00:00Z",
+          endedAt: "2026-05-14T00:00:01Z",
+          worktreePath: "/repo/.worktrees/session-1",
+          baseRef: "abc123",
+          headRef: "def456+worktree",
+          errorCode: null,
+          errorMessage: null,
+          metricsJson: { adapterType: "scripted_mock" },
+          createdAt: "2026-05-14T00:00:00Z",
+          updatedAt: "2026-05-14T00:00:01Z",
+        },
+      ],
+    }
+
+    render(
+      createElement(TaskCardList, {
+        artifactRefreshKey: 1,
+        backendUrl: "http://127.0.0.1:8000",
+        fetcher,
+        onCreateDeploy,
+        onCreateReview,
+        tasks: [completedTask],
+      }),
+    )
+
+    expect(await screen.findByText("Artifact Cards")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Review this diff" }))
+    fireEvent.click(screen.getByRole("button", { name: "Create mock deploy" }))
+
+    expect(onCreateReview).toHaveBeenCalledWith("run-1")
+    expect(onCreateDeploy).toHaveBeenCalledWith(samplePreviewArtifact.id)
   })
 })

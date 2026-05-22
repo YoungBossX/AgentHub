@@ -5,6 +5,7 @@ import {
   createSessionMessage,
   createTaskRun,
   createPreviewDeployment,
+  createTaskRunReview,
   createWorkspaceSession,
   denyTaskRun,
   forceCodexFailure,
@@ -16,6 +17,7 @@ import {
   listTaskRunDeployments,
   listTaskRunDiffs,
   listTaskRunPreviews,
+  listTaskRunReviews,
   listSessionMessages,
   listSessionTasks,
   listWorkspaceSessions,
@@ -508,6 +510,57 @@ describe("task API", () => {
     )
     expect(diffs[0].changedFiles).toEqual(["apps/demo/src/App.tsx"])
     expect(diffs[0].stats.additions).toBe(2)
+  })
+
+  it("creates and lists review artifacts for a task run", async () => {
+    const reviewPayload = {
+      id: "review-1",
+      artifactId: "artifact-review-1",
+      taskRunId: "run-1",
+      reviewedDiffArtifactId: "artifact-diff-1",
+      artifactType: "review",
+      title: "Review Agent report",
+      status: "passed",
+      riskLevel: "low",
+      summary: "Scripted Review Agent passed 1 changed file with low risk.",
+      filesReviewed: ["apps/demo/src/App.tsx"],
+      findings: [],
+      suggestedChanges: [],
+      adapterType: "scripted_mock",
+    }
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input.toString()
+      if (url.endsWith("/reviews")) {
+        return new Response(JSON.stringify([reviewPayload]), { status: 200 })
+      }
+      return new Response(JSON.stringify(reviewPayload), {
+        status: init?.method === "POST" ? 201 : 200,
+      })
+    })
+
+    const created = await createTaskRunReview(
+      "http://127.0.0.1:8000",
+      "run-1",
+      fetchMock,
+    )
+    const reviews = await listTaskRunReviews(
+      "http://127.0.0.1:8000",
+      "run-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://127.0.0.1:8000/task-runs/run-1/review",
+      { method: "POST" },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1:8000/task-runs/run-1/reviews",
+      { cache: "no-store" },
+    )
+    expect(created.status).toBe("passed")
+    expect(reviews[0].adapterType).toBe("scripted_mock")
   })
 
   it("starts, lists, and stops preview artifacts for a task run", async () => {

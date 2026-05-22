@@ -18,7 +18,7 @@ from app.diffs import (
     git_diff_pathspec,
 )
 from app.main import app, get_db
-from app.models import Agent, Artifact, Diff, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.models import Agent, Artifact, Diff, Review, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.task_runs import create_task_run
 
 
@@ -170,15 +170,28 @@ def test_diff_api_returns_stored_diff_artifacts(
 
     create_response = client.post(f"/task-runs/{task_run_id}/diff")
     list_response = client.get(f"/task-runs/{task_run_id}/diffs")
+    reviews_response = client.get(f"/task-runs/{task_run_id}/reviews")
+    manual_review_response = client.post(f"/task-runs/{task_run_id}/review")
 
     assert create_response.status_code == 201
     assert list_response.status_code == 200
+    assert reviews_response.status_code == 200
+    assert manual_review_response.status_code == 201
     created = create_response.json()
     listed = list_response.json()
+    reviews = reviews_response.json()
     assert created["artifactType"] == "diff"
     assert created["changedFiles"] == ["apps/demo/src/App.tsx"]
     assert created["patchText"] == listed[0]["patchText"]
     assert "node_modules" not in created["patchText"]
+    assert len(reviews) == 1
+    assert reviews[0]["artifactType"] == "review"
+    assert reviews[0]["reviewedDiffArtifactId"] == created["artifactId"]
+    assert reviews[0]["status"] == "passed"
+    assert reviews[0]["riskLevel"] == "low"
+    assert reviews[0]["adapterType"] == "scripted_mock"
+    assert reviews[0]["filesReviewed"] == ["apps/demo/src/App.tsx"]
+    assert manual_review_response.json()["id"] == reviews[0]["id"]
 
     task_run = db.get(TaskRun, task_run_id)
     assert task_run is not None
@@ -190,6 +203,11 @@ def test_diff_api_returns_stored_diff_artifacts(
     assert ledger["latestTaskRunId"] == task_run_id
     assert ledger["latestDiffArtifactId"] == created["artifactId"]
     assert ledger["latestChangedFiles"] == ["apps/demo/src/App.tsx"]
+    assert "Review: Scripted Review Agent passed" in ledger["summaryMd"]
+
+    stored_review = db.get(Review, reviews[0]["id"])
+    assert stored_review is not None
+    assert stored_review.reviewed_diff_artifact_id == created["artifactId"]
 
 
 def test_parse_numstat_value_handles_binary_and_normal() -> None:

@@ -3,6 +3,7 @@ import { createElement } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { samplePreviewArtifact } from "./__fixtures__/sample-preview"
+import { sampleReviewArtifact } from "./__fixtures__/sample-review"
 import { PreviewCard, PreviewPanel } from "./preview-card"
 
 afterEach(() => cleanup())
@@ -72,5 +73,30 @@ describe("PreviewCard", () => {
 
     expect(onRefresh).toHaveBeenCalledWith("run-1")
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it("renders review artifacts in the right-side panel", () => {
+    render(
+      createElement(PreviewPanel, {
+        artifactItems: [
+          {
+            artifact: sampleReviewArtifact,
+            id: "review-asset",
+            kind: "review",
+            taskRunId: "run-1",
+            taskTitle: "Build the Vite React login page",
+          },
+        ],
+        frameKey: 1,
+        selectedArtifactId: "review-asset",
+      }),
+    )
+
+    expect(screen.getAllByText("Review Agent report").length).toBeGreaterThan(0)
+    expect(screen.getByText("Advisory only · scripted_mock")).toBeTruthy()
+    expect(
+      screen.getByText("Scripted Review Agent passed 1 changed file with low risk."),
+    ).toBeTruthy()
+    expect(screen.getAllByText("通过").length).toBeGreaterThan(0)
   })
 })

@@ -147,6 +147,22 @@ export type DiffArtifact = {
   stats: DiffStats
 }
 
+export type ReviewArtifact = {
+  id: string
+  artifactId: string
+  taskRunId: string
+  reviewedDiffArtifactId: string
+  artifactType: "review" | string
+  title: string
+  status: "passed" | "warning" | "failed" | string
+  riskLevel: "low" | "medium" | "high" | string
+  summary: string
+  filesReviewed: string[]
+  findings: Array<Record<string, unknown>>
+  suggestedChanges: string[]
+  adapterType: string
+}
+
 export type PreviewArtifact = {
   id: string
   artifactId: string
@@ -449,6 +465,38 @@ export async function listTaskRunDiffs(
   }
 
   return (await response.json()) as DiffArtifact[]
+}
+
+export async function createTaskRunReview(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<ReviewArtifact> {
+  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/review`), {
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error("Could not create review")
+  }
+
+  return (await response.json()) as ReviewArtifact
+}
+
+export async function listTaskRunReviews(
+  backendUrl: string,
+  taskRunId: string,
+  fetcher: Fetcher = fetch,
+): Promise<ReviewArtifact[]> {
+  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/reviews`), {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as ReviewArtifact[]
 }
 
 export async function startTaskRunPreview(
