@@ -9,7 +9,8 @@ from sqlmodel import select
 from app.models import Agent, Message, Task
 from app.repositories import create_session_message, list_session_tasks
 
-SUPPORTED_MENTION_ROLES = {"orchestrator", "frontend", "backend", "qa"}
+SUPPORTED_MENTION_ROLES = {"orchestrator", "frontend", "backend", "qa", "review"}
+MENTION_AGENT_ROLE = {"review": "qa"}
 GRAPH_AGENT_ROLES = {"orchestrator", "frontend", "qa"}
 GRAPH_EXPECTED_ARTIFACTS = {"plan", "diff", "review"}
 GRAPH_ALLOWED_FILES = {"apps/demo/src/App.tsx", "apps/demo/src/styles.css"}
@@ -90,9 +91,10 @@ def parse_mentions(db: DbSession, content: str) -> ParsedMentions:
         role = raw_role.lower()
         mention = f"@{raw_role}"
         if role not in SUPPORTED_MENTION_ROLES:
-            raise MentionParseError(f"Unknown mention {mention}. Supported mentions are @orchestrator, @frontend, @backend, and @qa.")
+            raise MentionParseError(f"Unknown mention {mention}. Supported mentions are @orchestrator, @frontend, @backend, @qa, and @review.")
 
-        agent = db.exec(select(Agent).where(Agent.role == role)).first()
+        agent_role = MENTION_AGENT_ROLE.get(role, role)
+        agent = db.exec(select(Agent).where(Agent.role == agent_role)).first()
         if agent is None or not agent.enabled:
             raise MentionParseError(f"Mention {mention} is disabled or unavailable.")
 
@@ -109,6 +111,15 @@ def plan_for_message(
 ) -> list[Task]:
     parsed = parse_mentions(db, content)
     existing_tasks = list_session_tasks(db, message.session_id)
+    routed_role = parsed.roles[0] if parsed.roles else "orchestrator"
+
+    if routed_role in {"frontend", "backend", "qa", "review"}:
+        return _create_direct_assignment_tasks(
+            db,
+            message,
+            routed_role,
+            existing_tasks=existing_tasks,
+        )
 
     bounded_intent = parse_frontend_intent(content)
     if bounded_intent is not None and existing_tasks:
@@ -117,18 +128,23 @@ def plan_for_message(
             message,
             bounded_intent,
             existing_tasks=existing_tasks,
+            auto_start=True,
         )
-
-    if "orchestrator" not in parsed.roles:
-        return []
 
     if existing_tasks:
         return []
 
     if "login page" not in content.lower() or "demo app" not in content.lower():
         if bounded_intent is None:
+            if _is_safe_demo_frontend_request(content):
+                return _create_orchestrator_demo_frontend_task(db, message)
+            _create_orchestrator_boundary_message(
+                db,
+                message,
+                "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
+            )
             return []
-        return _create_dynamic_frontend_tasks(db, message, bounded_intent)
+        return _create_dynamic_frontend_tasks(db, message, bounded_intent, auto_start=True)
 
     return _create_login_page_plan(db, message)
 
@@ -326,6 +342,7 @@ def _create_dynamic_frontend_tasks(
     message: Message,
     intent: FrontendIntent,
     existing_tasks: Optional[list[Task]] = None,
+    auto_start: bool = False,
 ) -> list[Task]:
     existing_tasks = existing_tasks or []
     frontend = db.exec(select(Agent).where(Agent.role == "frontend")).first()
@@ -408,10 +425,14 @@ def _create_dynamic_frontend_tasks(
             **spec.plan,
             "planner": "dynamic_manager_v1",
             "goal": message.content_md,
+            "originalRequest": message.content_md,
             "intent": intent.intent,
             "expectedArtifactTypes": spec.expected_artifact_types,
             "taskGraph": graph,
         }
+        if auto_start and spec.intent_type == "frontend_change":
+            plan["autoStart"] = True
+            plan["safeTarget"] = "apps/demo/src"
         task = Task(
             session_id=message.session_id,
             created_by_message_id=message.id,
@@ -442,6 +463,210 @@ def _create_dynamic_frontend_tasks(
         create_session_message(db, _session_for_message(db, message), summary)
 
     return tasks
+
+
+def _create_direct_assignment_tasks(
+    db: DbSession,
+    message: Message,
+    role: str,
+    *,
+    existing_tasks: list[Task],
+) -> list[Task]:
+    if role == "backend":
+        _create_orchestrator_boundary_message(
+            db,
+            message,
+            "Backend Agent execution needs a safe demo backend target first. P6-4 will add that target; I did not create an unrestricted AgentHub backend task.",
+        )
+        return []
+
+    if role == "frontend":
+        if not _is_safe_demo_frontend_request(message.content_md):
+            _create_orchestrator_boundary_message(
+                db,
+                message,
+                "That frontend assignment is too broad for the current safe demo target. Please bound it to the demo app UI.",
+            )
+            return []
+        frontend = _enabled_agent_or_raise(db, "frontend")
+        return [
+            _create_single_task(
+                db,
+                message,
+                agent=frontend,
+                title=_task_title("Frontend", message.content_md),
+                intent_type="frontend_change",
+                priority=_next_priority(existing_tasks),
+                depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
+                plan={
+                    "planner": "direct_assignment_v1",
+                    "routing": "direct_mention",
+                    "assignedRole": "frontend",
+                    "target": "demo_frontend_request",
+                    "safeTarget": "apps/demo/src",
+                    "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+                    "originalRequest": message.content_md,
+                    "expectedArtifactTypes": ["diff", "review"],
+                    "autoStart": False,
+                },
+            )
+        ]
+
+    qa = _enabled_agent_or_raise(db, "qa")
+    review_role = "review" if role == "review" else "qa"
+    return [
+        _create_single_task(
+            db,
+            message,
+            agent=qa,
+            title=_task_title("Review" if review_role == "review" else "QA", message.content_md),
+            intent_type="review" if review_role == "review" else "qa_review",
+            priority=_next_priority(existing_tasks),
+            depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
+            plan={
+                "planner": "direct_assignment_v1",
+                "routing": "direct_mention",
+                "assignedRole": review_role,
+                "target": "session_review_request",
+                "originalRequest": message.content_md,
+                "expectedArtifactTypes": ["review"],
+                "autoStart": False,
+            },
+        )
+    ]
+
+
+def _create_orchestrator_demo_frontend_task(
+    db: DbSession,
+    message: Message,
+) -> list[Task]:
+    frontend = _enabled_agent_or_raise(db, "frontend")
+    task = _create_single_task(
+        db,
+        message,
+        agent=frontend,
+        title=_task_title("Frontend", message.content_md),
+        intent_type="frontend_change",
+        priority=0,
+        depends_on=[],
+        plan={
+            "planner": "orchestrator_auto_run_v1",
+            "routing": "orchestrator_default",
+            "assignedRole": "frontend",
+            "target": "demo_frontend_request",
+            "safeTarget": "apps/demo/src",
+            "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+            "originalRequest": message.content_md,
+            "expectedArtifactTypes": ["diff", "review"],
+            "autoStart": True,
+        },
+    )
+    _create_orchestrator_boundary_message(
+        db,
+        message,
+        "I routed this to the Frontend Agent as a safe demo-app task and started it automatically.",
+    )
+    return [task]
+
+
+def _create_single_task(
+    db: DbSession,
+    message: Message,
+    *,
+    agent: Agent,
+    title: str,
+    intent_type: str,
+    priority: int,
+    depends_on: list[str],
+    plan: dict,
+) -> Task:
+    task = Task(
+        session_id=message.session_id,
+        created_by_message_id=message.id,
+        title=title,
+        intent_type=intent_type,
+        status="pending",
+        priority=priority,
+        plan_json=json.dumps(plan, separators=(",", ":")),
+        depends_on_task_ids=json.dumps(depends_on, separators=(",", ":")),
+        assigned_agent_id=agent.id,
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def _enabled_agent_or_raise(db: DbSession, role: str) -> Agent:
+    agent = db.exec(select(Agent).where(Agent.role == role)).first()
+    if agent is None or not agent.enabled:
+        raise MentionParseError(f"Mention @{role} is disabled or unavailable.")
+    return agent
+
+
+def _next_priority(existing_tasks: list[Task]) -> int:
+    return max((task.priority for task in existing_tasks), default=-1) + 1
+
+
+def _task_title(prefix: str, content: str) -> str:
+    request = MENTION_PATTERN.sub("", content).strip()
+    request = re.sub(r"\s+", " ", request)
+    if len(request) > 90:
+        request = f"{request[:87].rstrip()}..."
+    return f"{prefix}: {request or 'Handle requested task'}"
+
+
+def _is_safe_demo_frontend_request(content: str) -> bool:
+    normalized = MENTION_PATTERN.sub("", content).lower()
+    if _is_unsupported_broad_request(normalized):
+        return False
+    safe_signals = [
+        "demo app",
+        "apps/demo",
+        "current demo",
+        "当前 demo",
+        "演示应用",
+        "frontend",
+        "前端",
+        "dashboard",
+        "统计卡片",
+        "最近活动",
+        "hero",
+    ]
+    return any(signal in normalized for signal in safe_signals)
+
+
+def _is_unsupported_broad_request(content: str) -> bool:
+    blocked_signals = [
+        "whole app",
+        "entire app",
+        "full app",
+        "agenthub platform",
+        "apps/api",
+        "production deploy",
+        "payment",
+        "multi-tenant",
+        "多租户",
+        "生产部署",
+    ]
+    return any(signal in content for signal in blocked_signals)
+
+
+def _create_orchestrator_boundary_message(
+    db: DbSession,
+    message: Message,
+    content: str,
+) -> None:
+    orchestrator = db.exec(select(Agent).where(Agent.role == "orchestrator")).first()
+    summary = Message(
+        session_id=message.session_id,
+        sender_type="orchestrator",
+        sender_id=orchestrator.id if orchestrator is not None else None,
+        content_md=content,
+        message_kind="chat",
+        parent_message_id=message.id,
+    )
+    create_session_message(db, _session_for_message(db, message), summary)
 
 
 def _coding_title_for(intent: FrontendIntent) -> str:

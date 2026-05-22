@@ -3,6 +3,60 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P6 Status
+
+### P6-1 Orchestrator Autonomy Spike
+
+P6-1 completed on 2026-05-22.
+
+AgentHub now has the first P6 message routing and execution autonomy slice:
+
+- normal user messages without explicit role mentions route to Orchestrator /
+  Manager by default;
+- `@orchestrator` also routes to Orchestrator / Manager;
+- `@frontend`, `@backend`, `@qa`, and `@review` are explicit assignment modes
+  for advanced users;
+- Orchestrator-created safe demo frontend tasks can auto-start through the
+  existing TaskRun path;
+- generic demo frontend instructions preserve the original user request and
+  allow broader changes inside `apps/demo/src` instead of reducing every task
+  to login-page/button/title templates.
+
+The first auto-run path is intentionally narrow. P6-1 auto-starts only safe
+demo frontend tasks marked with `autoStart` and `safeTarget=apps/demo/src`.
+Backend execution does not auto-start because the safe demo backend target is
+not available yet; direct `@backend` requests now receive a clear missing-target
+response instead of creating an unrestricted task against the AgentHub platform
+backend.
+
+Routing behavior:
+
+- no explicit mention: Orchestrator decides whether to create a task, ask for a
+  bounded demo target, or reject unsupported requests honestly;
+- `@frontend`: creates a pending frontend task when the request is bounded to
+  the demo app UI;
+- `@backend`: reports that a safe demo backend target is required first;
+- `@qa`: creates a QA review-style task assigned to the QA agent;
+- `@review`: creates a read-only review task assigned to the QA-backed review
+  path.
+
+P6-1 keeps the existing `CodexAdapter`, `ClaudeCodeAdapter`, and
+`ScriptedMockAdapter` execution path. It does not add a full approval/risk
+engine, Manager/Worker scheduler, full-stack app generation, multi-user IM,
+provider marketplace, production deploy, or PR creation.
+
+Validation passed:
+
+- `pnpm check`
+- `pnpm test` (36 web tests, 121 API tests)
+- `git diff --check`
+- `openspec validate agenthub-p6-agent-execution-upgrade --strict`
+
+Manual browser smoke was not run in P6-1. The auto-run behavior was verified
+through API tests that confirm a no-mention demo dashboard request creates a
+frontend task and queued TaskRun with the configured adapter. Real Claude/Codex
+success was not claimed or re-run in this task.
+
 ## P5 Status
 
 ### P5-7 E2E Rehearsal And Freeze Review

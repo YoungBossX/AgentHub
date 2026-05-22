@@ -232,6 +232,37 @@ def test_agent_run_request_bounds_followup_heading_instruction(
     assert "dependency install" in request.instruction
 
 
+def test_agent_run_request_preserves_generic_demo_frontend_request(
+    client: TestClient,
+) -> None:
+    original_request = "帮我把当前 demo app 改成一个 dashboard，有三张统计卡片和一个最近活动列表"
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.title = "Frontend: dashboard request"
+        task.plan_json = json.dumps(
+            {
+                "target": "demo_frontend_request",
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+                "originalRequest": original_request,
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert original_request in request.instruction
+    assert "Work only inside apps/demo/src" in request.instruction
+    assert "apps/demo/src/App.tsx" in request.instruction
+    assert "node_modules" in request.instruction
+    assert "production deploy" in request.instruction
+    assert "login-page-slot" not in request.instruction
+    assert request.plan_context["originalRequest"] == original_request
+
+
 def test_transition_helper_rejects_unknown_states(client: TestClient) -> None:
     run = client.post(f"/tasks/{task_id()}/runs").json()
 

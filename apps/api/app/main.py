@@ -356,6 +356,7 @@ def read_session_messages(
 def create_message(
     session_id: str,
     request: MessageCreateRequest,
+    background_tasks: BackgroundTasks,
     db: DbSession = Depends(get_db),
 ) -> Message:
     session = get_session(db, session_id)
@@ -374,7 +375,8 @@ def create_message(
     created = create_session_message(db, session, message)
     if created.sender_type == "user":
         try:
-            plan_for_message(db, created, created.content_md)
+            planned_tasks = plan_for_message(db, created, created.content_md)
+            auto_start_safe_tasks(db, planned_tasks, background_tasks)
         except MentionParseError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -383,6 +385,43 @@ def create_message(
 
     refresh_session_ledger(db, session.id)
     return created
+
+
+def auto_start_safe_tasks(
+    db: DbSession,
+    tasks: list[Task],
+    background_tasks: BackgroundTasks,
+) -> None:
+    for task in tasks:
+        try:
+            plan = json.loads(task.plan_json)
+        except json.JSONDecodeError:
+            continue
+        if not _should_auto_start_task(task, plan):
+            continue
+        task_run = create_task_run(db, task.id)
+        adapter_type = adapter_type_for_run(db, task_run)
+        background_tasks.add_task(
+            _background_execute_task_run,
+            task_run.id,
+            adapter_type,
+        )
+
+
+def _should_auto_start_task(task: Task, plan: dict[str, Any]) -> bool:
+    if not plan.get("autoStart"):
+        return False
+    if task.intent_type != "frontend_change":
+        return False
+    if plan.get("safeTarget") != "apps/demo/src":
+        return False
+    files = plan.get("files", [])
+    if not isinstance(files, list) or not files:
+        return False
+    return all(
+        isinstance(path, str) and path.startswith("apps/demo/src/")
+        for path in files
+    )
 
 
 def ledger_response(
@@ -481,6 +520,10 @@ def agent_run_request_for(
     session = db.get(AgentHubSession, task.session_id)
     if session is None:
         raise TaskRunLifecycleError(f"Session not found: {task.session_id}")
+    task_plan = plan_json_for_task(task)
+    merged_plan_context = dict(task_plan)
+    if plan_context:
+        merged_plan_context.update(plan_context)
     return AgentRunRequest(
         taskRunId=task_run.id,
         sessionId=session.id,
@@ -489,18 +532,23 @@ def agent_run_request_for(
         agentId=task_run.agent_id,
         adapterType=adapter_type,
         instruction=instruction_for_task(task),
-        planContext=plan_context or {},
+        planContext=merged_plan_context,
         permissionProfile={"network": "off"},
         demoMode=True,
         fallbackPolicy="scripted_mock" if adapter_type == "scripted_mock" else "none",
     )
 
 
-def instruction_for_task(task: Task) -> str:
+def plan_json_for_task(task: Task) -> dict[str, Any]:
     try:
         plan = json.loads(task.plan_json)
     except json.JSONDecodeError:
-        plan = {}
+        return {}
+    return plan if isinstance(plan, dict) else {}
+
+
+def instruction_for_task(task: Task) -> str:
+    plan = plan_json_for_task(task)
 
     if (
         task.intent_type == "frontend_change"
@@ -602,6 +650,26 @@ def instruction_for_task(task: Task) -> str:
             "existing component structure and deterministic targets intact, "
             "do not edit unrelated files, do not read the OpenSpec change, and "
             "do not run setup or dependency install commands."
+        )
+
+    if (
+        task.intent_type == "frontend_change"
+        and isinstance(plan, dict)
+        and plan.get("target") == "demo_frontend_request"
+    ):
+        original_request = str(plan.get("originalRequest") or task.title).strip()
+        files = plan.get("files")
+        file_list = ", ".join(files) if isinstance(files, list) else "apps/demo/src"
+        return (
+            "You are the Frontend Agent for AgentHub's demo app. "
+            f"Original user request: {original_request}\n\n"
+            "Implement a meaningful, bounded frontend change for that request. "
+            "Work only inside apps/demo/src, preferably in the existing React "
+            f"demo files: {file_list}. Preserve the existing Vite React demo "
+            "app boundary. Do not edit .env files, secrets, node_modules, "
+            "OpenSpec files, or AgentHub platform backend code. Do not run "
+            "setup, dependency install, production deploy, or arbitrary host "
+            "commands. Keep the diff focused and previewable."
         )
 
     return task.title

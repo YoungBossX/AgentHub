@@ -100,7 +100,8 @@ def test_messages_are_persisted_and_scoped_to_selected_session(
     session_two_messages = client.get(f"/sessions/{session_two.id}/messages")
 
     assert [message["contentMd"] for message in session_one_messages.json()] == [
-        "@orchestrator build a login page"
+        "@orchestrator build a login page",
+        "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
     ]
     assert [message["contentMd"] for message in session_two_messages.json()] == [
         "separate thread"
@@ -109,9 +110,12 @@ def test_messages_are_persisted_and_scoped_to_selected_session(
     with next(db_from_override()) as db:
         stored_session = db.get(Session, session_one.id)
         stored_message = db.exec(
-            select(Message).where(Message.session_id == session_one.id)
-        ).one()
+            select(Message)
+            .where(Message.session_id == session_one.id)
+            .order_by(Message.created_at.desc())
+        ).first()
         assert stored_session is not None
+        assert stored_message is not None
         assert stored_session.last_message_at == stored_message.created_at
 
 

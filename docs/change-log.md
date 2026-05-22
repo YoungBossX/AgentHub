@@ -1,5 +1,64 @@
 # AgentHub Change Log
 
+## P6-1 Orchestrator Autonomy Spike
+
+**Date:** 2026-05-22
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Added default Orchestrator routing, explicit direct assignment routing, safe demo frontend task creation, backend missing-target response, and `@review` routing through QA-backed review tasks. |
+| `apps/api/app/main.py` | Added safe demo task auto-start after message planning and a generic demo frontend instruction that preserves the original user request. |
+| `apps/api/tests/test_planning.py` | Added coverage for no-mention Orchestrator routing, auto-started demo frontend tasks, direct `@frontend`, `@backend`, and `@review` behavior. |
+| `apps/api/tests/test_task_runs.py` | Added coverage for generic demo frontend instructions and plan context preservation. |
+| `apps/api/tests/test_chat_events.py` | Updated message scoping expectations for Orchestrator boundary responses. |
+| `docs/project-state.md` | Recorded P6-1 behavior, validation, and limitations. |
+| `docs/change-log.md` | Recorded this P6-1 implementation. |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/proposal.md` | Updated P6-1 wording for Orchestrator auto-run. |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/design.md` | Documented the narrow auto-run spike decision and boundaries. |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/specs/agent-execution/spec.md` | Added the auto-run requirement scenario for Orchestrator-created safe demo coding tasks. |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-1 complete after validation. |
+
+### What Changed
+
+Implemented P6-1 as a narrow Orchestrator autonomy spike. Normal user messages
+without explicit role mentions now route to Orchestrator / Manager by default.
+When Orchestrator can map a request to a safe demo frontend target, it creates
+a frontend task and automatically starts a TaskRun through the existing
+execution path.
+
+Explicit mentions now act as assignment shortcuts:
+
+- `@frontend` creates a pending frontend task for bounded demo UI requests;
+- `@backend` reports that a safe demo backend target is required before backend
+  execution can run;
+- `@qa` creates a QA review-style task;
+- `@review` creates a read-only review task backed by the QA agent path.
+
+Generic demo frontend instructions now preserve the original user request and
+allow broader edits inside `apps/demo/src`, while still blocking `.env`,
+secrets, `node_modules`, production deploy, dependency installation, arbitrary
+host commands, and AgentHub platform backend edits.
+
+P6-1 does not add a full approval/risk engine, Manager/Worker scheduler,
+full-stack app generation, production deploy, multi-user IM, provider
+marketplace, Docker sandbox, or PR creation.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests and 121 API tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+
+Manual browser smoke was not run for P6-1. No real Claude/Codex success was
+claimed in this task.
+
+---
+
 ## P5-7 E2E Rehearsal And Freeze Review
 
 **Date:** 2026-05-22

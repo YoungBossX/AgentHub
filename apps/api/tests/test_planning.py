@@ -69,9 +69,9 @@ def db_from_override() -> Iterator[DbSession]:
 
 def test_parse_mentions_resolves_supported_enabled_agents(client: TestClient) -> None:
     with next(db_from_override()) as db:
-        parsed = parse_mentions(db, "@orchestrator please ask @frontend and @qa")
+        parsed = parse_mentions(db, "@orchestrator please ask @frontend and @review")
 
-    assert parsed.roles == ["orchestrator", "frontend", "qa"]
+    assert parsed.roles == ["orchestrator", "frontend", "review"]
 
 
 def test_parse_mentions_rejects_unknown_or_disabled_agents(client: TestClient) -> None:
@@ -297,6 +297,125 @@ def test_orchestrator_supported_frontend_intent_creates_dynamic_task_graph(
     assert "bounded dynamic plan" in messages[0].content_md
 
 
+def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "帮我把当前 demo app 改成一个 dashboard，有三张统计卡片和一个最近活动列表"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["assignedAgentRole"] == "frontend"
+    assert task["intentType"] == "frontend_change"
+    assert task["status"] == "running"
+    assert task["title"].startswith("Frontend:")
+    assert task["planJson"]["planner"] == "orchestrator_auto_run_v1"
+    assert task["planJson"]["routing"] == "orchestrator_default"
+    assert task["planJson"]["originalRequest"] == (
+        "帮我把当前 demo app 改成一个 dashboard，有三张统计卡片和一个最近活动列表"
+    )
+    assert task["planJson"]["safeTarget"] == "apps/demo/src"
+    assert task["taskRuns"]
+    assert task["taskRuns"][0]["adapterType"] == "codex"
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message).where(
+                Message.session_id == session_id,
+                Message.sender_type == "orchestrator",
+            )
+        ).all()
+
+    assert len(messages) == 1
+    assert "started it automatically" in messages[0].content_md
+
+
+def test_direct_frontend_mention_creates_assignment_task_without_auto_start(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@frontend update the demo app hero copy"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["assignedAgentRole"] == "frontend"
+    assert task["intentType"] == "frontend_change"
+    assert task["status"] == "pending"
+    assert task["taskRuns"] == []
+    assert task["planJson"]["planner"] == "direct_assignment_v1"
+    assert task["planJson"]["routing"] == "direct_mention"
+    assert task["planJson"]["originalRequest"] == "@frontend update the demo app hero copy"
+
+
+def test_backend_mention_reports_missing_demo_backend_target(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@backend add a contacts endpoint"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message).where(
+                Message.session_id == session_id,
+                Message.sender_type == "orchestrator",
+            )
+        ).all()
+
+    assert len(messages) == 1
+    assert "safe demo backend target" in messages[0].content_md
+    assert "did not create an unrestricted AgentHub backend task" in messages[0].content_md
+
+
+def test_review_mention_creates_read_only_review_assignment(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@review check the latest diff"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["assignedAgentRole"] == "qa"
+    assert task["intentType"] == "review"
+    assert task["planJson"]["assignedRole"] == "review"
+    assert task["planJson"]["expectedArtifactTypes"] == ["review"]
+
+
 def test_followup_message_creates_frontend_and_review_tasks_in_same_session(
     client: TestClient,
 ) -> None:
@@ -364,7 +483,9 @@ def test_unsupported_orchestrator_request_falls_back_without_claiming_support(
     assert client.get(f"/sessions/{session_id}/tasks").json() == []
 
 
-def test_followup_message_without_existing_plan_is_ignored(client: TestClient) -> None:
+def test_no_mention_bounded_request_without_existing_plan_uses_orchestrator_default(
+    client: TestClient,
+) -> None:
     with next(db_from_override()) as db:
         session = db.exec(select(Session).where(Session.title == "Planning session")).one()
         session_id = session.id
@@ -375,4 +496,11 @@ def test_followup_message_without_existing_plan_is_ignored(client: TestClient) -
     )
 
     assert response.status_code == 201
-    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert [task["assignedAgentRole"] for task in tasks] == [
+        "orchestrator",
+        "frontend",
+        "qa",
+    ]
+    assert tasks[1]["planJson"]["autoStart"] is True
+    assert tasks[1]["taskRuns"]
