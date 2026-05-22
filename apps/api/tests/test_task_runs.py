@@ -470,7 +470,7 @@ def test_context_pack_includes_latest_artifact_preview_and_deploy_metadata(
     assert context["ledger"]["latestChangedFiles"] == ["apps/demo/src/App.tsx"]
 
 
-def test_backend_instruction_handles_missing_demo_backend_target_honestly(
+def test_backend_instruction_targets_demo_backend_without_platform_api_access(
     client: TestClient,
 ) -> None:
     with db_from_override() as db:
@@ -498,9 +498,12 @@ def test_backend_instruction_handles_missing_demo_backend_target_honestly(
 
         request = agent_run_request_for(db, task_run, adapter_type="codex")
 
-    assert "apps/demo-api is not available yet" in request.instruction
+    assert "apps/demo-api exists" in request.instruction
+    assert "Work only inside apps/demo-api" in request.instruction
+    assert "GET /health" in request.instruction
+    assert "POST /contacts" in request.instruction
     assert "Do not edit apps/api" in request.instruction
-    assert "do not pretend backend execution is possible" in request.instruction
+    assert "not available yet" not in request.instruction
     assert request.plan_context["sessionContext"]["safeTargetPaths"] == ["apps/demo-api"]
 
 
@@ -559,6 +562,103 @@ def test_review_instruction_includes_reviewable_diff_context(
     assert diff_artifact.id in request.instruction
     assert "apps/demo/src/App.tsx" in request.instruction
     assert request.plan_context["sessionContext"]["latestDiff"]["artifactId"] == diff_artifact.id
+
+
+def test_contract_aware_role_instructions_reference_same_contract(
+    client: TestClient,
+) -> None:
+    contract = {
+        "contractId": "contract-mini_crm_contacts",
+        "appName": "Mini CRM Contacts",
+        "appType": "mini_crm_contacts",
+        "userGoal": "帮我做一个 mini CRM，包含联系人和备注",
+        "backendTarget": "apps/demo-api",
+        "frontendTarget": "apps/demo",
+        "apiRoutes": [
+            {"method": "GET", "path": "/contacts"},
+            {"method": "POST", "path": "/contacts"},
+        ],
+    }
+    with db_from_override() as db:
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        backend_agent = db.exec(select(Agent).where(Agent.role == "backend")).one()
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        qa_agent = db.exec(select(Agent).where(Agent.role == "qa")).one()
+        backend_task = Task(
+            session_id=session_id,
+            title="Implement CRM backend",
+            intent_type="backend_change",
+            status="pending",
+            assigned_agent_id=backend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "backend",
+                    "safeTarget": "apps/demo-api",
+                    "appContract": contract,
+                    "contractId": contract["contractId"],
+                    "originalRequest": contract["userGoal"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        frontend_task = Task(
+            session_id=session_id,
+            title="Implement CRM frontend",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "frontend",
+                    "safeTarget": "apps/demo/src",
+                    "frontendTarget": "apps/demo",
+                    "files": ["apps/demo/src/App.tsx"],
+                    "appContract": contract,
+                    "contractId": contract["contractId"],
+                    "originalRequest": contract["userGoal"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        review_task = Task(
+            session_id=session_id,
+            title="Review CRM contract work",
+            intent_type="review",
+            status="pending",
+            assigned_agent_id=qa_agent.id,
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "review",
+                    "target": "contract_review",
+                    "appContract": contract,
+                    "contractId": contract["contractId"],
+                    "originalRequest": contract["userGoal"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(backend_task)
+        db.add(frontend_task)
+        db.add(review_task)
+        db.commit()
+        db.refresh(backend_task)
+        db.refresh(frontend_task)
+        db.refresh(review_task)
+        backend_run = create_task_run(db, backend_task.id)
+        frontend_run = create_task_run(db, frontend_task.id)
+        review_run = create_task_run(db, review_task.id)
+
+        backend_request = agent_run_request_for(db, backend_run, adapter_type="codex")
+        frontend_request = agent_run_request_for(db, frontend_run, adapter_type="codex")
+        review_request = agent_run_request_for(db, review_run, adapter_type="scripted_mock")
+
+    for request in [backend_request, frontend_request, review_request]:
+        assert "contract-mini_crm_contacts" in request.instruction
+        assert request.plan_context["sessionContext"]["appContract"] == contract
+
+    assert "targeting apps/demo-api" in backend_request.instruction
+    assert "targeting apps/demo/src" in frontend_request.instruction
+    assert "Review backend and frontend work" in review_request.instruction
 
 
 def test_transition_helper_rejects_unknown_states(client: TestClient) -> None:

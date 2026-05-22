@@ -1,6 +1,7 @@
 import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 from sqlmodel import Session as DbSession
@@ -11,9 +12,14 @@ from app.repositories import create_session_message, list_session_tasks
 
 SUPPORTED_MENTION_ROLES = {"orchestrator", "frontend", "backend", "qa", "review"}
 MENTION_AGENT_ROLE = {"review": "qa"}
-GRAPH_AGENT_ROLES = {"orchestrator", "frontend", "qa"}
+GRAPH_AGENT_ROLES = {"orchestrator", "backend", "frontend", "qa"}
 GRAPH_EXPECTED_ARTIFACTS = {"plan", "diff", "review"}
-GRAPH_ALLOWED_FILES = {"apps/demo/src/App.tsx", "apps/demo/src/styles.css"}
+GRAPH_ALLOWED_FILES = {
+    "apps/demo-api/app/main.py",
+    "apps/demo-api/tests/test_contacts.py",
+    "apps/demo/src/App.tsx",
+    "apps/demo/src/styles.css",
+}
 MENTION_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9_-]*)")
 CHANGE_TO_PATTERN = re.compile(
     r"(?:change\s+(?:the\s+)?(?:primary\s+)?(?:login\s+page\s+)?"
@@ -76,6 +82,13 @@ class FrontendIntent:
 
 
 @dataclass(frozen=True)
+class AppContractIntent:
+    app_type: str
+    app_name: str
+    summary: str
+
+
+@dataclass(frozen=True)
 class TaskSpec:
     title: str
     intent_type: str
@@ -121,7 +134,13 @@ def plan_for_message(
             existing_tasks=existing_tasks,
         )
 
+    contract_intent = parse_app_contract_intent(content)
     bounded_intent = parse_frontend_intent(content)
+    if contract_intent is not None and not existing_tasks:
+        return _create_contract_first_plan(db, message, contract_intent)
+    if contract_intent is not None and existing_tasks:
+        return []
+
     if bounded_intent is not None and existing_tasks:
         return _create_dynamic_frontend_tasks(
             db,
@@ -315,6 +334,31 @@ def parse_frontend_intent(content: str) -> Optional[FrontendIntent]:
     return None
 
 
+def parse_app_contract_intent(content: str) -> Optional[AppContractIntent]:
+    normalized = MENTION_PATTERN.sub("", content).lower()
+    if _is_unsupported_broad_request(normalized):
+        return None
+    if any(signal in normalized for signal in ["mini crm", "crm", "联系人", "contacts"]):
+        return AppContractIntent(
+            app_type="mini_crm_contacts",
+            app_name="Mini CRM Contacts",
+            summary="Mini CRM contacts app with contacts and notes.",
+        )
+    if any(signal in normalized for signal in ["todo", "to-do", "待办", "任务清单"]):
+        return AppContractIntent(
+            app_type="todo",
+            app_name="Todo App",
+            summary="Todo app with items, completion state, and simple filtering.",
+        )
+    if any(signal in normalized for signal in ["notes", "note app", "笔记", "备注"]):
+        return AppContractIntent(
+            app_type="notes",
+            app_name="Notes App",
+            summary="Notes app with note title, body, and timestamps.",
+        )
+    return None
+
+
 def parse_followup_change(content: str) -> Optional[FollowupChange]:
     normalized = MENTION_PATTERN.sub("", content).strip()
     match = CHANGE_TO_PATTERN.search(normalized)
@@ -335,6 +379,221 @@ def _clean_target_text(value: str) -> str:
     cleaned = value.strip().strip("\"'“”‘’")
     cleaned = re.sub(r"[。.!?]+$", "", cleaned).strip()
     return cleaned[:60]
+
+
+def _create_contract_first_plan(
+    db: DbSession,
+    message: Message,
+    intent: AppContractIntent,
+) -> list[Task]:
+    agents = {
+        agent.role: agent
+        for agent in db.exec(select(Agent).where(Agent.role.in_({"orchestrator", "backend", "frontend", "qa"}))).all()
+        if agent.enabled
+    }
+    missing = [
+        role
+        for role in ["orchestrator", "backend", "frontend", "qa"]
+        if role not in agents
+    ]
+    if missing:
+        raise MentionParseError(f"Contract-first planning requires enabled agents: {', '.join(missing)}.")
+    if not _demo_backend_target_exists():
+        _create_orchestrator_boundary_message(
+            db,
+            message,
+            "Contract-first planning needs the safe demo backend target apps/demo-api first. I did not create unrestricted backend tasks.",
+        )
+        return []
+
+    contract = _app_contract_for(message.content_md, intent)
+    task_specs = [
+        TaskSpec(
+            title=f"Create {intent.app_name} contract",
+            intent_type="planning",
+            role="orchestrator",
+            priority=0,
+            plan={
+                "target": "app_contract",
+                "summary": intent.summary,
+                "parallelGroup": None,
+            },
+            expected_artifact_types=["plan"],
+        ),
+        TaskSpec(
+            title=f"Implement {intent.app_name} backend scaffold",
+            intent_type="backend_change",
+            role="backend",
+            priority=1,
+            plan={
+                "target": "demo_backend_contract",
+                "safeTarget": "apps/demo-api",
+                "files": [
+                    "apps/demo-api/app/main.py",
+                    "apps/demo-api/tests/test_contacts.py",
+                ],
+                "parallelGroup": None,
+            },
+            expected_artifact_types=["diff", "review"],
+        ),
+        TaskSpec(
+            title=f"Implement {intent.app_name} frontend scaffold",
+            intent_type="frontend_change",
+            role="frontend",
+            priority=2,
+            plan={
+                "target": "demo_frontend_contract",
+                "safeTarget": "apps/demo/src",
+                "frontendTarget": "apps/demo",
+                "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+                "parallelGroup": None,
+            },
+            expected_artifact_types=["diff", "review"],
+        ),
+        TaskSpec(
+            title=f"Review {intent.app_name} contract implementation",
+            intent_type="review",
+            role="qa",
+            priority=3,
+            plan={
+                "target": "contract_review",
+                "checks": [
+                    "backend and frontend reference the same contract",
+                    "apps/api remains untouched",
+                    "preview remains eligible",
+                ],
+                "parallelGroup": None,
+            },
+            expected_artifact_types=["review"],
+        ),
+    ]
+    _validate_task_graph(task_specs)
+    graph = _graph_metadata(
+        goal=message.content_md,
+        intent=intent.app_type,
+        planner="contract_first_v1",
+        task_specs=task_specs,
+    )
+    contract["taskGraph"] = graph
+
+    tasks: list[Task] = []
+    for index, spec in enumerate(task_specs):
+        depends_on = [tasks[index - 1].id] if index > 0 else []
+        plan = {
+            **spec.plan,
+            "planner": "contract_first_v1",
+            "goal": message.content_md,
+            "originalRequest": message.content_md,
+            "intent": intent.app_type,
+            "appContract": contract,
+            "contractId": contract["contractId"],
+            "expectedArtifactTypes": spec.expected_artifact_types,
+            "taskGraph": graph,
+            "autoStart": False,
+        }
+        task = Task(
+            session_id=message.session_id,
+            created_by_message_id=message.id,
+            title=spec.title,
+            intent_type=spec.intent_type,
+            status="pending",
+            priority=spec.priority,
+            plan_json=json.dumps(plan, separators=(",", ":")),
+            depends_on_task_ids=json.dumps(depends_on, separators=(",", ":")),
+            assigned_agent_id=agents[spec.role].id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        tasks.append(task)
+
+    summary = Message(
+        session_id=message.session_id,
+        sender_type="orchestrator",
+        sender_id=agents["orchestrator"].id,
+        content_md=(
+            f"I created a contract-first plan for {intent.app_name} with shared "
+            f"contract `{contract['contractId']}` across backend, frontend, and review tasks."
+        ),
+        message_kind="plan",
+        parent_message_id=message.id,
+    )
+    create_session_message(db, _session_for_message(db, message), summary)
+    return tasks
+
+
+def _app_contract_for(
+    user_goal: str,
+    intent: AppContractIntent,
+) -> dict:
+    fields_by_type = {
+        "todo": [
+            {"name": "id", "type": "string", "required": True},
+            {"name": "title", "type": "string", "required": True},
+            {"name": "completed", "type": "boolean", "required": True},
+            {"name": "priority", "type": "string", "required": False},
+        ],
+        "notes": [
+            {"name": "id", "type": "string", "required": True},
+            {"name": "title", "type": "string", "required": True},
+            {"name": "body", "type": "string", "required": True},
+            {"name": "updatedAt", "type": "string", "required": False},
+        ],
+        "mini_crm_contacts": [
+            {"name": "id", "type": "string", "required": True},
+            {"name": "name", "type": "string", "required": True},
+            {"name": "email", "type": "string", "required": True},
+            {"name": "company", "type": "string", "required": False},
+            {"name": "status", "type": "string", "required": False},
+            {"name": "notes", "type": "string", "required": False},
+        ],
+    }
+    entity_by_type = {
+        "todo": "TodoItem",
+        "notes": "Note",
+        "mini_crm_contacts": "Contact",
+    }
+    route_base_by_type = {
+        "todo": "/todos",
+        "notes": "/notes",
+        "mini_crm_contacts": "/contacts",
+    }
+    page_by_type = {
+        "todo": "Todo board",
+        "notes": "Notes workspace",
+        "mini_crm_contacts": "Contacts workspace",
+    }
+    entity = entity_by_type[intent.app_type]
+    route_base = route_base_by_type[intent.app_type]
+    return {
+        "contractId": f"contract-{intent.app_type}",
+        "appName": intent.app_name,
+        "appType": intent.app_type,
+        "userGoal": user_goal,
+        "entities": [{"name": entity, "fields": fields_by_type[intent.app_type]}],
+        "fields": fields_by_type[intent.app_type],
+        "apiRoutes": [
+            {"method": "GET", "path": "/health", "description": "Health check"},
+            {"method": "GET", "path": route_base, "description": f"List {entity} records"},
+            {"method": "POST", "path": route_base, "description": f"Create a {entity} record"},
+        ],
+        "frontendPages": [
+            {
+                "name": page_by_type[intent.app_type],
+                "target": "apps/demo",
+                "states": ["list", "create", "empty"],
+            }
+        ],
+        "backendTarget": "apps/demo-api",
+        "frontendTarget": "apps/demo",
+        "validationExpectations": [
+            "Backend task must stay in apps/demo-api.",
+            "Frontend task must stay in apps/demo/src.",
+            "Do not modify apps/api.",
+            "Review is advisory and non-blocking.",
+            "Preview and mock deploy remain existing local demo evidence.",
+        ],
+    }
 
 
 def _create_dynamic_frontend_tasks(
@@ -473,12 +732,39 @@ def _create_direct_assignment_tasks(
     existing_tasks: list[Task],
 ) -> list[Task]:
     if role == "backend":
-        _create_orchestrator_boundary_message(
-            db,
-            message,
-            "Backend Agent execution needs a safe demo backend target first. P6-4 will add that target; I did not create an unrestricted AgentHub backend task.",
-        )
-        return []
+        if not _demo_backend_target_exists():
+            _create_orchestrator_boundary_message(
+                db,
+                message,
+                "Backend Agent execution needs a safe demo backend target first. P6-4 will add that target; I did not create an unrestricted AgentHub backend task.",
+            )
+            return []
+        backend = _enabled_agent_or_raise(db, "backend")
+        return [
+            _create_single_task(
+                db,
+                message,
+                agent=backend,
+                title=_task_title("Backend", message.content_md),
+                intent_type="backend_change",
+                priority=_next_priority(existing_tasks),
+                depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
+                plan={
+                    "planner": "direct_assignment_v1",
+                    "routing": "direct_mention",
+                    "assignedRole": "backend",
+                    "target": "demo_backend_request",
+                    "safeTarget": "apps/demo-api",
+                    "files": [
+                        "apps/demo-api/app/main.py",
+                        "apps/demo-api/tests/test_contacts.py",
+                    ],
+                    "originalRequest": message.content_md,
+                    "expectedArtifactTypes": ["diff", "review"],
+                    "autoStart": False,
+                },
+            )
+        ]
 
     if role == "frontend":
         if not _is_safe_demo_frontend_request(message.content_md):
@@ -652,6 +938,14 @@ def _is_unsupported_broad_request(content: str) -> bool:
     return any(signal in content for signal in blocked_signals)
 
 
+def _demo_backend_target_exists() -> bool:
+    return (_repo_root() / "apps/demo-api/app/main.py").exists()
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
 def _create_orchestrator_boundary_message(
     db: DbSession,
     message: Message,
@@ -710,7 +1004,7 @@ def _graph_metadata(
 
 
 def _validate_task_graph(task_specs: list[TaskSpec]) -> None:
-    if not 1 <= len(task_specs) <= 3:
+    if not 1 <= len(task_specs) <= 4:
         raise MentionParseError("Manager planner generated too many tasks.")
 
     for spec in task_specs:

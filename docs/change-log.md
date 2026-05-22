@@ -1,5 +1,114 @@
 # AgentHub Change Log
 
+## P6-5 Target-Aware Contract-First Orchestrator
+
+**Date:** 2026-05-22
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Added bounded app intent detection and contract-first task graph generation for todo, notes, and mini CRM contacts apps. |
+| `apps/api/app/context_pack.py` | Added explicit `appContract` context in session context packs. |
+| `apps/api/app/instruction_builder.py` | Added contract-aware role guidance for Manager, Backend, Frontend, and QA/Review instructions. |
+| `apps/api/tests/test_planning.py` | Added coverage for bounded app parsing, no-mention mini CRM contract planning, target mapping, and unsupported SaaS boundaries. |
+| `apps/api/tests/test_task_runs.py` | Added coverage that backend, frontend, and review instructions reference the same shared contract. |
+| `docs/project-state.md` | Recorded P6-5 behavior, targets, and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-5 complete after validation. |
+
+### What Changed
+
+Orchestrator can now recognize bounded full-stack mini app requests for todo,
+notes, and mini CRM contacts. For those requests, it generates a shared
+`appContract` plan payload and creates a serial task graph:
+
+```text
+Manager / Contract task -> Backend Agent task -> Frontend Agent task -> QA / Review task
+```
+
+The contract contains app name/type, user goal, entities, fields, API routes,
+frontend pages, `backendTarget: apps/demo-api`, `frontendTarget: apps/demo`,
+validation expectations, and the task graph. Backend, frontend, and review
+tasks all reference the same `contractId` and `appContract`.
+
+P6-5 keeps the generated tasks pending by default. It does not implement actual
+full-stack app generation, contract artifact persistence, production deploy,
+auth, payments, multi-tenancy, Docker, provider marketplace, PR creation, or
+permission for app backend tasks to edit `apps/api`.
+
+Existing login-page, bounded frontend, no-mention dashboard auto-run, direct
+`@frontend`, and direct `@backend` paths remain intact.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pytest tests/test_planning.py tests/test_task_runs.py -q` | Pass: 41 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+
+Manual real Claude/Codex execution was not run for P6-5. The task is scoped to
+contract-first planning and contract-aware instruction generation.
+
+---
+
+## P6-4 Safe Demo Backend Target Scaffold
+
+**Date:** 2026-05-22
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/demo-api/app/main.py` | Added isolated FastAPI demo backend with health and contacts endpoints. |
+| `apps/demo-api/tests/test_contacts.py` | Added demo backend endpoint tests. |
+| `apps/demo-api/README.md` | Documented demo backend purpose, endpoints, and commands. |
+| `scripts/check-demo-api.sh` | Added compile check wrapper for the demo backend. |
+| `scripts/test-demo-api.sh` | Added pytest wrapper for the demo backend. |
+| `scripts/dev-demo-api.sh` | Added local uvicorn dev wrapper for the demo backend. |
+| `package.json` | Added `check:demo-api`, `demo:api:test`, and `demo:api:dev`; included demo-api checks/tests in root validation. |
+| `apps/api/app/planning.py` | Updated direct `@backend` assignment to create a safe `apps/demo-api` task when the scaffold exists. |
+| `apps/api/app/instruction_builder.py` | Updated Backend Agent instructions to target `apps/demo-api` and keep `apps/api` protected. |
+| `apps/api/tests/test_planning.py` | Updated direct backend mention coverage for safe demo backend task creation. |
+| `apps/api/tests/test_task_runs.py` | Updated backend instruction coverage for the available demo backend target. |
+| `AGENTS.md` | Added demo-api commands and scaffold description to project guardrails. |
+| `docs/project-state.md` | Recorded P6-4 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-4 complete after validation. |
+
+### What Changed
+
+Added `apps/demo-api` as a safe application backend target for Backend Agent
+work. The scaffold is intentionally small: a FastAPI contacts API with
+in-memory data and `GET /health`, `GET /contacts`, and `POST /contacts`.
+
+Direct `@backend` requests now create a pending `backend_change` task assigned
+to the Backend Agent when `apps/demo-api` exists. The task is bounded to
+`apps/demo-api` files and does not auto-start in P6-4. AgentHub platform
+backend files under `apps/api` remain protected by instruction and planning
+metadata.
+
+P6-4 does not implement contract-first orchestration, full-stack generation,
+production deploy, Docker, cloud database, auth, payments, multi-tenancy, or
+automatic frontend integration with the demo API.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check:demo-api` | Pass |
+| `pnpm demo:api:test` | Pass: 4 tests. |
+| `pytest tests/test_planning.py tests/test_task_runs.py -q` | Pass: 37 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+
+---
+
 ## P6-2 / P6-3 Session Context Pack And Role-Based Instructions
 
 **Date:** 2026-05-22

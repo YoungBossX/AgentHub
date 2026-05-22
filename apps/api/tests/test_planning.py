@@ -11,6 +11,7 @@ from app.main import app, get_db
 from app.models import Agent, Message, Session, Task, Workspace
 from app.planning import (
     MentionParseError,
+    parse_app_contract_intent,
     parse_followup_change,
     parse_frontend_intent,
     parse_mentions,
@@ -242,6 +243,19 @@ def test_parse_frontend_intent_supports_bounded_p5_dynamic_intents() -> None:
     assert layout_copy.target == "layout_copy"
 
 
+def test_parse_app_contract_intent_supports_bounded_app_types() -> None:
+    todo = parse_app_contract_intent("build a todo app")
+    notes = parse_app_contract_intent("帮我做一个笔记应用")
+    crm = parse_app_contract_intent("帮我做一个 mini CRM，包含联系人和备注")
+
+    assert todo is not None
+    assert todo.app_type == "todo"
+    assert notes is not None
+    assert notes.app_type == "notes"
+    assert crm is not None
+    assert crm.app_type == "mini_crm_contacts"
+
+
 def test_orchestrator_supported_frontend_intent_creates_dynamic_task_graph(
     client: TestClient,
 ) -> None:
@@ -339,6 +353,87 @@ def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
     assert "started it automatically" in messages[0].content_md
 
 
+def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "帮我做一个 mini CRM，包含联系人和备注"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert len(tasks) == 4
+    assert [task["assignedAgentRole"] for task in tasks] == [
+        "orchestrator",
+        "backend",
+        "frontend",
+        "qa",
+    ]
+    assert [task["intentType"] for task in tasks] == [
+        "planning",
+        "backend_change",
+        "frontend_change",
+        "review",
+    ]
+    assert [task["status"] for task in tasks] == ["pending"] * 4
+    assert tasks[0]["dependsOnTaskIds"] == []
+    assert tasks[1]["dependsOnTaskIds"] == [tasks[0]["id"]]
+    assert tasks[2]["dependsOnTaskIds"] == [tasks[1]["id"]]
+    assert tasks[3]["dependsOnTaskIds"] == [tasks[2]["id"]]
+
+    contract = tasks[0]["planJson"]["appContract"]
+    contract_id = contract["contractId"]
+    assert contract["appName"] == "Mini CRM Contacts"
+    assert contract["appType"] == "mini_crm_contacts"
+    assert contract["userGoal"] == "帮我做一个 mini CRM，包含联系人和备注"
+    assert contract["backendTarget"] == "apps/demo-api"
+    assert contract["frontendTarget"] == "apps/demo"
+    assert contract["apiRoutes"] == [
+        {"method": "GET", "path": "/health", "description": "Health check"},
+        {"method": "GET", "path": "/contacts", "description": "List Contact records"},
+        {"method": "POST", "path": "/contacts", "description": "Create a Contact record"},
+    ]
+    assert "notes" in [field["name"] for field in contract["fields"]]
+
+    for task in tasks:
+        assert task["taskRuns"] == []
+        assert task["planJson"]["planner"] == "contract_first_v1"
+        assert task["planJson"]["contractId"] == contract_id
+        assert task["planJson"]["appContract"] == contract
+        assert task["planJson"]["taskGraph"]["planner"] == "contract_first_v1"
+
+    backend = tasks[1]
+    frontend = tasks[2]
+    review = tasks[3]
+    assert backend["planJson"]["safeTarget"] == "apps/demo-api"
+    assert backend["planJson"]["files"] == [
+        "apps/demo-api/app/main.py",
+        "apps/demo-api/tests/test_contacts.py",
+    ]
+    assert frontend["planJson"]["frontendTarget"] == "apps/demo"
+    assert frontend["planJson"]["safeTarget"] == "apps/demo/src"
+    assert review["planJson"]["target"] == "contract_review"
+    assert review["planJson"]["appContract"]["contractId"] == contract_id
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message).where(
+                Message.session_id == session_id,
+                Message.sender_type == "orchestrator",
+            )
+        ).all()
+
+    assert len(messages) == 1
+    assert "contract-first plan" in messages[0].content_md
+    assert contract_id in messages[0].content_md
+
+
 def test_direct_frontend_mention_creates_assignment_task_without_auto_start(
     client: TestClient,
 ) -> None:
@@ -365,7 +460,7 @@ def test_direct_frontend_mention_creates_assignment_task_without_auto_start(
     assert task["planJson"]["originalRequest"] == "@frontend update the demo app hero copy"
 
 
-def test_backend_mention_reports_missing_demo_backend_target(
+def test_backend_mention_creates_safe_demo_backend_task(
     client: TestClient,
 ) -> None:
     with next(db_from_override()) as db:
@@ -378,19 +473,23 @@ def test_backend_mention_reports_missing_demo_backend_target(
     )
 
     assert response.status_code == 201
-    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
 
-    with next(db_from_override()) as db:
-        messages = db.exec(
-            select(Message).where(
-                Message.session_id == session_id,
-                Message.sender_type == "orchestrator",
-            )
-        ).all()
-
-    assert len(messages) == 1
-    assert "safe demo backend target" in messages[0].content_md
-    assert "did not create an unrestricted AgentHub backend task" in messages[0].content_md
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["assignedAgentRole"] == "backend"
+    assert task["intentType"] == "backend_change"
+    assert task["status"] == "pending"
+    assert task["taskRuns"] == []
+    assert task["planJson"]["planner"] == "direct_assignment_v1"
+    assert task["planJson"]["routing"] == "direct_mention"
+    assert task["planJson"]["assignedRole"] == "backend"
+    assert task["planJson"]["safeTarget"] == "apps/demo-api"
+    assert task["planJson"]["files"] == [
+        "apps/demo-api/app/main.py",
+        "apps/demo-api/tests/test_contacts.py",
+    ]
+    assert task["planJson"]["originalRequest"] == "@backend add a contacts endpoint"
 
 
 def test_review_mention_creates_read_only_review_assignment(
@@ -481,6 +580,32 @@ def test_unsupported_orchestrator_request_falls_back_without_claiming_support(
 
     assert response.status_code == 201
     assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+
+def test_unsupported_broad_saas_request_is_handled_honestly(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "帮我做一个生产级 SaaS，带支付、认证和多租户"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message).where(
+                Message.session_id == session_id,
+                Message.sender_type == "orchestrator",
+            )
+        ).all()
+
+    assert len(messages) == 1
+    assert "could not safely turn that into a demo-target task" in messages[0].content_md
 
 
 def test_no_mention_bounded_request_without_existing_plan_uses_orchestrator_default(

@@ -15,6 +15,7 @@ def build_role_instruction(
     original_request = str(context_pack.get("originalUserRequest") or task.title).strip()
     sections = [
         _role_body(role, task, plan, original_request),
+        _contract_guidance(role, plan),
         _context_section(context_pack),
         _guardrails(role),
     ]
@@ -150,19 +151,26 @@ def _frontend_body(
 
 
 def _backend_body(original_request: str) -> str:
-    target_exists = Path("apps/demo-api").exists()
-    availability = (
-        "The safe demo backend target apps/demo-api exists."
-        if target_exists
-        else "The safe demo backend target apps/demo-api is not available yet."
-    )
+    target_exists = _demo_backend_target_exists()
+    if target_exists:
+        availability = (
+            "The safe demo backend target apps/demo-api exists. Work only inside "
+            "apps/demo-api for backend application code. Current scaffold is a "
+            "minimal FastAPI contacts API with GET /health, GET /contacts, and "
+            "POST /contacts."
+        )
+    else:
+        availability = (
+            "The safe demo backend target apps/demo-api is not available yet. "
+            "If apps/demo-api is missing, do not pretend backend execution is "
+            "possible. Report that backend execution is blocked until P6-4 adds "
+            "the safe demo backend target."
+        )
     return (
         "You are the Backend Agent for AgentHub's demo app.\n"
         f"Original user request: {original_request}\n"
         f"{availability} Do not edit apps/api; that is the AgentHub platform "
-        "backend/control plane. If apps/demo-api is missing, do not pretend "
-        "backend execution is possible. Report that backend execution is "
-        "blocked until P6-4 adds the safe demo backend target."
+        "backend/control plane."
     )
 
 
@@ -195,6 +203,37 @@ def _context_section(context_pack: dict[str, Any]) -> str:
         f"{json.dumps(context_pack, ensure_ascii=True, sort_keys=True, indent=2)}\n"
         "```"
     )
+
+
+def _contract_guidance(role: str, plan: dict[str, Any]) -> str:
+    contract = plan.get("appContract")
+    if not isinstance(contract, dict):
+        return ""
+    contract_id = str(contract.get("contractId") or "shared contract")
+    app_name = str(contract.get("appName") or "the bounded app")
+    if role == "backend":
+        return (
+            f"Shared App Contract: Use `{contract_id}` for {app_name}. "
+            "Implement only backend API behavior described by the contract, "
+            "targeting apps/demo-api."
+        )
+    if role == "frontend":
+        return (
+            f"Shared App Contract: Use `{contract_id}` for {app_name}. "
+            "Implement only frontend UI behavior described by the contract, "
+            "targeting apps/demo/src and integrating with the demo API shape."
+        )
+    if role in {"qa", "review"}:
+        return (
+            f"Shared App Contract: Review backend and frontend work against "
+            f"`{contract_id}` for {app_name}. Treat findings as advisory in v1."
+        )
+    if role == "orchestrator":
+        return (
+            f"Shared App Contract: Maintain `{contract_id}` for {app_name} and "
+            "keep backend, frontend, and review tasks aligned to it."
+        )
+    return f"Shared App Contract: Use `{contract_id}` for {app_name}."
 
 
 def _guardrails(role: str) -> str:
@@ -236,3 +275,11 @@ def _task_plan(context_pack: dict[str, Any]) -> dict[str, Any]:
         return {}
     plan = current_task.get("plan")
     return plan if isinstance(plan, dict) else {}
+
+
+def _demo_backend_target_exists() -> bool:
+    return (_repo_root() / "apps/demo-api/app/main.py").exists()
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]

@@ -90,7 +90,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p6-agent-execution-upgrade --strict`.
 
-- [ ] 1.4 P6-4 Demo Backend Target Scaffold.
+- [x] 1.4 P6-4 Demo Backend Target Scaffold.
   - Objective: Add or finalize a safe backend target such as `apps/demo-api`
     for Backend Agent execution.
   - Scope:
@@ -115,7 +115,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p6-agent-execution-upgrade --strict`.
 
-- [ ] 1.5 P6-5 Contract-first Orchestrator.
+- [x] 1.5 P6-5 Contract-first Orchestrator.
   - Objective: Create a structured app contract before bounded full-stack
     implementation tasks.
   - Scope:

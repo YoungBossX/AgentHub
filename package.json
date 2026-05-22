@@ -6,18 +6,21 @@
     "dev": "pnpm --parallel dev",
     "dev:web": "pnpm --filter @agenthub/web dev",
     "dev:api": "bash scripts/dev-api.sh",
-    "check": "pnpm check:web && pnpm check:api && pnpm check:demo",
+    "check": "pnpm check:web && pnpm check:api && pnpm check:demo && pnpm check:demo-api",
     "check:web": "pnpm --filter @agenthub/web check",
     "check:api": "bash scripts/check-api.sh",
     "check:demo": "pnpm --filter @agenthub/demo check",
-    "test": "pnpm test:web && pnpm test:api",
+    "check:demo-api": "bash scripts/check-demo-api.sh",
+    "test": "pnpm test:web && pnpm test:api && pnpm demo:api:test",
     "test:web": "pnpm --filter @agenthub/web test",
     "test:api": "bash scripts/test-api.sh",
     "db:init": "bash scripts/init-db.sh",
     "db:seed": "bash scripts/seed-db.sh",
     "demo:reset": "bash scripts/demo-reset.sh",
     "demo:setup": "pnpm --filter @agenthub/demo install",
-    "demo:dev": "pnpm --filter @agenthub/demo dev --host 127.0.0.1 --port ${AGENTHUB_DEMO_PORT:-5173}"
+    "demo:dev": "pnpm --filter @agenthub/demo dev --host 127.0.0.1 --port ${AGENTHUB_DEMO_PORT:-5173}",
+    "demo:api:dev": "bash scripts/dev-demo-api.sh",
+    "demo:api:test": "bash scripts/test-demo-api.sh"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

@@ -46,6 +46,7 @@ def build_session_context_pack(
     latest_deployment = _latest_deployment_context(db, task_runs)
     original_request = _original_request_for_task(db, task, merged_context)
     selected_artifact = _selected_artifact_context(db, task.session_id, merged_context)
+    app_contract = _app_contract_context(merged_context)
 
     return {
         "version": "session_context_pack_v1",
@@ -82,6 +83,7 @@ def build_session_context_pack(
         "latestPreview": latest_preview,
         "latestDeployment": latest_deployment,
         "selectedArtifact": selected_artifact,
+        "appContract": app_contract,
         "safeTargetPaths": _safe_target_paths(task, merged_context),
         "validationExpectations": _validation_expectations(task, merged_context),
     }
@@ -282,6 +284,13 @@ def _selected_artifact_id(context: dict[str, Any]) -> Optional[str]:
     return None
 
 
+def _app_contract_context(context: dict[str, Any]) -> Optional[dict[str, Any]]:
+    contract = context.get("appContract")
+    if isinstance(contract, dict):
+        return contract
+    return None
+
+
 def _original_request_for_task(
     db: DbSession,
     task: Task,
@@ -321,6 +330,8 @@ def _safe_target_paths(task: Task, context: dict[str, Any]) -> list[str]:
 
 def _validation_expectations(task: Task, context: dict[str, Any]) -> list[str]:
     expectations = ["Keep the existing P4/P5 diff, review, preview, and mock deploy flow intact."]
+    if isinstance(context.get("appContract"), dict):
+        expectations.append("Use the shared app contract for backend, frontend, and review decisions.")
     expected_artifacts = context.get("expectedArtifactTypes")
     if isinstance(expected_artifacts, list) and "diff" in expected_artifacts:
         expectations.append("Produce a focused git diff in the assigned safe target.")

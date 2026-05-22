@@ -5,6 +5,99 @@ reference instead of repeating long context blocks.
 
 ## P6 Status
 
+### P6-5 Target-Aware Contract-First Orchestrator
+
+P6-5 completed on 2026-05-22.
+
+AgentHub now has contract-first Orchestrator planning for bounded full-stack
+mini app requests. This is a planning upgrade only; it does not run real
+Claude/Codex full-stack generation yet.
+
+Supported app types:
+
+- todo app;
+- notes app;
+- mini CRM contacts app.
+
+When a normal no-mention or `@orchestrator` message asks for one of those app
+types, Orchestrator creates a shared `appContract` plan payload with:
+
+- `appName`;
+- `appType`;
+- `userGoal`;
+- `entities` and `fields`;
+- `apiRoutes`;
+- `frontendPages`;
+- `backendTarget: apps/demo-api`;
+- `frontendTarget: apps/demo`;
+- `validationExpectations`;
+- `taskGraph`.
+
+The generated task graph is serial and target-aware:
+
+```text
+Manager / Contract task -> Backend Agent task -> Frontend Agent task -> QA / Review task
+```
+
+Each task stores the same `contractId` and `appContract` in `planJson`.
+Backend tasks target `apps/demo-api`, frontend tasks target `apps/demo/src`
+inside the `apps/demo` frontend, and review tasks validate that backend and
+frontend work reference the same contract. The tasks are pending by default and
+do not auto-start in P6-5.
+
+Role instructions now surface the shared app contract explicitly:
+
+- Backend Agent instructions reference the contract and target `apps/demo-api`;
+- Frontend Agent instructions reference the same contract and target
+  `apps/demo/src`;
+- QA / Review instructions review backend and frontend work against the shared
+  contract.
+
+Existing login-page, bounded frontend planner, no-mention dashboard auto-run,
+direct `@frontend`, and direct `@backend` paths remain intact.
+
+Unsupported broad SaaS requests, such as production SaaS with payments,
+authentication, or multi-tenancy, still create no unrestricted task and receive
+an honest boundary response.
+
+P6-5 does not implement actual full-stack app generation, production deploy,
+auth, payments, multi-tenancy, Docker, cloud database, provider marketplace, PR
+creation, or any permission to modify `apps/api` as app backend code.
+
+### P6-4 Safe Demo Backend Target Scaffold
+
+P6-4 completed on 2026-05-22.
+
+AgentHub now has an isolated demo backend target under `apps/demo-api` so
+Backend Agent work can target application backend code without modifying the
+AgentHub platform backend in `apps/api`.
+
+Demo backend scaffold:
+
+- framework: minimal FastAPI app;
+- persistence: in-memory contacts for the first scaffold;
+- endpoints:
+  - `GET /health`;
+  - `GET /contacts`;
+  - `POST /contacts`;
+- local dev command: `pnpm demo:api:dev`;
+- test command: `pnpm demo:api:test`;
+- check command: `pnpm check:demo-api`.
+
+`@backend` direct mentions now create a pending `backend_change` task assigned
+to the Backend Agent when `apps/demo-api` exists. The task is bounded to
+`apps/demo-api` and includes `apps/demo-api/app/main.py` and
+`apps/demo-api/tests/test_contacts.py` as the first scaffold files. It does not
+auto-start in P6-4.
+
+Backend role instructions now state that `apps/demo-api` exists, mention the
+contacts API scaffold, and continue to forbid editing `apps/api`, which remains
+the AgentHub control-plane backend.
+
+P6-4 does not implement contract-first orchestration, full-stack app
+generation, production deploy, Docker, auth, payment, cloud database,
+multi-tenant behavior, or automatic frontend integration with the demo API.
+
 ### P6-2 / P6-3 Context Pack And Role-Based Instructions
 
 P6-2 and P6-3 completed on 2026-05-22.
