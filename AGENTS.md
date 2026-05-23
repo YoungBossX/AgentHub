@@ -128,12 +128,15 @@ Currently allowed project commands:
 
 ```bash
 pnpm check
+pnpm check:demo-api
 pnpm test
 pnpm db:init
 pnpm dev:api
 pnpm dev:web
 pnpm demo:reset
 pnpm demo:setup
+pnpm demo:api:dev
+pnpm demo:api:test
 pnpm demo:dev
 ```
 
@@ -175,12 +178,15 @@ Use these commands from the repo root:
 
 ```bash
 pnpm check
+pnpm check:demo-api
 pnpm test
 pnpm db:init
 pnpm dev:api
 pnpm dev:web
 pnpm demo:reset
 pnpm demo:setup
+pnpm demo:api:dev
+pnpm demo:api:test
 pnpm demo:dev
 ```
 
@@ -189,6 +195,7 @@ The current scaffold has:
 - `apps/web`: Next.js App Router UI that calls the backend health endpoint.
 - `apps/api`: FastAPI app with `/health` and SQLModel-backed SQLite
   initialization.
+- `apps/demo-api`: isolated FastAPI demo backend target for Backend Agent work.
 - `apps/demo`: Vite React demo app used for later adapter mutations.
 - `scripts`: developer wrappers for API dev, API checks, API tests, and DB init.
 

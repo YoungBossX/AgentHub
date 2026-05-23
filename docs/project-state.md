@@ -5,6 +5,67 @@ reference instead of repeating long context blocks.
 
 ## P6 Status
 
+### P6-6 Mini CRM Full-stack Vertical Slice
+
+P6-6 completed on 2026-05-22 as an API-driven full-stack vertical slice smoke.
+
+Smoke request:
+
+```text
+帮我做一个 mini CRM，包含联系人和备注
+```
+
+Result: a normal no-mention request routed through Orchestrator, generated the
+shared `contract-mini_crm_contacts` app contract, created target-aware Backend
+Agent and Frontend Agent tasks, ran both coding tasks with
+`ClaudeCodeAdapter`, produced a final accumulated diff covering both demo
+backend and demo frontend targets, generated review artifacts, created a
+preview artifact, and created a mock deployment artifact.
+
+Evidence:
+
+- session ID: `ad122cf7-afe7-4921-bbd9-b7e815539427`;
+- contract ID: `contract-mini_crm_contacts`;
+- backend task / run: `590cb06b-4a47-422e-b68f-79a873d4c84a`,
+  `d6779d0f-afa3-4124-9117-c40b651dd79a`;
+- frontend task / run: `12ffc19d-f483-4f8d-a541-4c5b935a49b4`,
+  `ade5c49c-097d-448e-831c-d10c6bdc3a71`;
+- adapter type for both coding runs: `claude_code`;
+- final diff artifact ID: `db403329-7f0c-4b2c-9134-d2d7ee652564`;
+- final review artifact ID: `1782b85d-c7f9-4d93-b699-27bd27a05ef7`;
+- preview ID / URL / health: `79bfff4f-4991-470b-8862-eb43e7dac852`,
+  `http://127.0.0.1:55592`, healthy at creation;
+- mock deployment ID / provider / status:
+  `e7b676d6-1505-43f8-be78-7120bfaef831`, `mock`, `ready`.
+
+Changed files in the session worktree:
+
+- `apps/demo-api/app/main.py`;
+- `apps/demo-api/tests/test_contacts.py`;
+- `apps/demo/src/App.tsx`;
+- `apps/demo/src/styles.css`.
+
+The final review artifact passed with low risk and verified contract
+consistency for `contract-mini_crm_contacts`: the accumulated diff included
+both backend target changes under `apps/demo-api` and frontend target changes
+under `apps/demo/src`.
+
+The demo backend tests in the smoke worktree passed from the correct
+`apps/demo-api` working directory: `6 passed`.
+
+Caveats:
+
+- this was API-driven rehearsal, not browser click rehearsal;
+- the review artifact used deterministic `scripted_mock` review behavior;
+- the planned QA/Review task remained pending because the automatic post-diff
+  review artifact supplied the contract consistency evidence;
+- the preview artifact was healthy at creation, but a later `curl` to the
+  recorded preview URL failed after the one-shot TestClient smoke process
+  exited. Long-lived preview availability should be checked under persistent
+  `pnpm dev:api` during P6-7.
+
+Detailed evidence is recorded in `docs/p6-mini-crm-vertical-slice.md`.
+
 ### P6-5 Target-Aware Contract-First Orchestrator
 
 P6-5 completed on 2026-05-22.

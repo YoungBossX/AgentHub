@@ -6,7 +6,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
-from app.models import Artifact, Diff, Review, utc_now
+from app.models import Artifact, Diff, Review, Task, TaskRun, utc_now
 
 
 SCRIPTED_REVIEW_ADAPTER = "scripted_mock"
@@ -64,10 +64,15 @@ def create_scripted_review_for_diff(
         raise ReviewError(f"Diff record not found for artifact: {diff_artifact.id}")
 
     files_reviewed = _json_list(diff.changed_files_json)
-    findings, suggested_changes = _scripted_findings(files_reviewed, diff.patch_text)
+    contract = _contract_for_diff_artifact(db, diff_artifact)
+    findings, suggested_changes = _scripted_findings(
+        files_reviewed,
+        diff.patch_text,
+        contract=contract,
+    )
     status = "passed" if not findings else "warning"
     risk_level = "low" if status == "passed" else "medium"
-    summary = _summary_for(status, risk_level, files_reviewed, findings)
+    summary = _summary_for(status, risk_level, files_reviewed, findings, contract=contract)
     now = utc_now()
 
     artifact = Artifact(
@@ -81,6 +86,7 @@ def create_scripted_review_for_diff(
                 "status": status,
                 "riskLevel": risk_level,
                 "adapterType": SCRIPTED_REVIEW_ADAPTER,
+                "contractId": contract.get("contractId") if contract else None,
             },
             separators=(",", ":"),
         ),
@@ -176,6 +182,8 @@ def _latest_diff_artifact(db: DbSession, task_run_id: str) -> Optional[Artifact]
 def _scripted_findings(
     files_reviewed: list[str],
     patch_text: str,
+    *,
+    contract: Optional[dict[str, Any]] = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     findings: list[dict[str, Any]] = []
     suggested_changes: list[str] = []
@@ -199,6 +207,51 @@ def _scripted_findings(
         )
         suggested_changes.append("Remove temporary console logging before a production path.")
 
+    if contract is not None:
+        contract_findings, contract_suggestions = _contract_consistency_findings(
+            files_reviewed,
+            contract,
+        )
+        findings.extend(contract_findings)
+        suggested_changes.extend(contract_suggestions)
+
+    return findings, suggested_changes
+
+
+def _contract_consistency_findings(
+    files_reviewed: list[str],
+    contract: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    findings: list[dict[str, Any]] = []
+    suggested_changes: list[str] = []
+    contract_id = str(contract.get("contractId") or "shared contract")
+    backend_target = str(contract.get("backendTarget") or "apps/demo-api")
+    frontend_target = str(contract.get("frontendTarget") or "apps/demo")
+    frontend_prefix = "apps/demo/src" if frontend_target == "apps/demo" else frontend_target
+
+    has_backend_change = any(path.startswith(f"{backend_target}/") for path in files_reviewed)
+    has_frontend_change = any(path.startswith(f"{frontend_prefix}/") for path in files_reviewed)
+
+    if not has_backend_change:
+        findings.append(
+            {
+                "severity": "medium",
+                "file": None,
+                "message": f"Contract {contract_id} expected backend changes under {backend_target}.",
+            }
+        )
+        suggested_changes.append(f"Add or verify backend implementation under {backend_target}.")
+
+    if not has_frontend_change:
+        findings.append(
+            {
+                "severity": "medium",
+                "file": None,
+                "message": f"Contract {contract_id} expected frontend changes under {frontend_prefix}.",
+            }
+        )
+        suggested_changes.append(f"Add or verify frontend implementation under {frontend_prefix}.")
+
     return findings, suggested_changes
 
 
@@ -207,8 +260,17 @@ def _summary_for(
     risk_level: str,
     files_reviewed: list[str],
     findings: list[dict[str, Any]],
+    *,
+    contract: Optional[dict[str, Any]] = None,
 ) -> str:
     file_count = len(files_reviewed)
+    if contract is not None and status == "passed":
+        contract_id = str(contract.get("contractId") or "shared contract")
+        return (
+            f"Scripted Review Agent passed {file_count} changed file"
+            f"{'' if file_count == 1 else 's'} with low risk and verified "
+            f"contract consistency for {contract_id}."
+        )
     if status == "passed":
         return (
             f"Scripted Review Agent passed {file_count} changed file"
@@ -218,6 +280,26 @@ def _summary_for(
         f"Scripted Review Agent found {len(findings)} advisory finding"
         f"{'' if len(findings) == 1 else 's'} with {risk_level} risk."
     )
+
+
+def _contract_for_diff_artifact(
+    db: DbSession,
+    diff_artifact: Artifact,
+) -> Optional[dict[str, Any]]:
+    task_run = db.get(TaskRun, diff_artifact.task_run_id)
+    if task_run is None:
+        return None
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        return None
+    try:
+        plan = json.loads(task.plan_json)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(plan, dict):
+        return None
+    contract = plan.get("appContract")
+    return contract if isinstance(contract, dict) else None
 
 
 def _first_file(files_reviewed: list[str]) -> Optional[str]:

@@ -142,7 +142,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p6-agent-execution-upgrade --strict`.
 
-- [ ] 1.6 P6-6 Mini App Generation Vertical Slice.
+- [x] 1.6 P6-6 Mini App Generation Vertical Slice.
   - Objective: Verify a bounded full-stack mini app path using the upgraded
     execution capability.
   - Scope:

@@ -1,5 +1,82 @@
 # AgentHub Change Log
 
+## P6-6 Mini CRM Full-stack Vertical Slice
+
+**Date:** 2026-05-22
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/reviews.py` | Added contract-aware scripted review checks so review artifacts can verify that final full-stack diffs include both backend and frontend contract targets. |
+| `apps/api/tests/test_task_runs.py` | Added coverage for contract-aware review validation of backend and frontend changed files. |
+| `docs/p6-mini-crm-vertical-slice.md` | Recorded P6-6 smoke evidence, IDs, changed files, validation notes, and caveats. |
+| `docs/project-state.md` | Recorded the P6-6 vertical slice result and remaining caveats. |
+| `docs/change-log.md` | Recorded this implementation and rehearsal. |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-6 complete after validation. |
+
+### What Changed
+
+P6-6 verified a bounded mini CRM full-stack vertical slice with the request:
+
+```text
+帮我做一个 mini CRM，包含联系人和备注
+```
+
+Orchestrator generated the shared `contract-mini_crm_contacts` app contract.
+The Backend Agent task targeted `apps/demo-api`, the Frontend Agent task
+targeted `apps/demo/src`, and both coding TaskRuns used `ClaudeCodeAdapter`.
+
+The final accumulated diff covered:
+
+- `apps/demo-api/app/main.py`;
+- `apps/demo-api/tests/test_contacts.py`;
+- `apps/demo/src/App.tsx`;
+- `apps/demo/src/styles.css`.
+
+The final automatic review artifact passed with low risk and verified contract
+consistency for `contract-mini_crm_contacts`. The preview artifact was healthy
+at creation and the deploy artifact remained mock-labeled.
+
+### Evidence
+
+| Field | Value |
+|---|---|
+| Session ID | `ad122cf7-afe7-4921-bbd9-b7e815539427` |
+| Contract ID | `contract-mini_crm_contacts` |
+| Backend task / run | `590cb06b-4a47-422e-b68f-79a873d4c84a`, `d6779d0f-afa3-4124-9117-c40b651dd79a` |
+| Frontend task / run | `12ffc19d-f483-4f8d-a541-4c5b935a49b4`, `ade5c49c-097d-448e-831c-d10c6bdc3a71` |
+| Adapter type | `claude_code` for both coding runs |
+| Final diff artifact | `db403329-7f0c-4b2c-9134-d2d7ee652564` |
+| Final review artifact | `1782b85d-c7f9-4d93-b699-27bd27a05ef7` |
+| Preview | `79bfff4f-4991-470b-8862-eb43e7dac852`, `http://127.0.0.1:55592`, healthy at creation |
+| Mock deployment | `e7b676d6-1505-43f8-be78-7120bfaef831`, `mock`, `ready` |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pytest tests/test_task_runs.py -q` | Pass: 24 tests. |
+| smoke worktree `apps/demo-api` tests | Pass: 6 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 130 API tests, 4 demo-api tests. |
+| `pnpm demo:api:test` | Pass: 4 tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+
+### Caveats
+
+- This was API-driven rehearsal, not browser click rehearsal.
+- The review path used deterministic `ScriptedMockAdapter` review behavior.
+- The planned QA/Review task remained pending because the automatic post-diff
+  review artifact supplied contract consistency evidence.
+- A later `curl` to the recorded preview URL could not connect after the
+  one-shot TestClient process exited, so long-lived preview availability should
+  be checked under persistent `pnpm dev:api` during P6-7.
+- Mock deploy remained mock-labeled and did not perform production deployment.
+
+---
+
 ## P6-5 Target-Aware Contract-First Orchestrator
 
 **Date:** 2026-05-22
