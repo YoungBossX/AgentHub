@@ -1,5 +1,47 @@
 # AgentHub Change Log
 
+## P9-1 External Workspace Registration
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/models.py` | Added persisted `ExternalProjectTarget` model for external workspace target registration. |
+| `apps/api/app/external_workspaces.py` | Added registration service, root/path validation, denied-path defaults, and list/read helpers. |
+| `apps/api/app/schemas.py` | Added external target create and response schemas. |
+| `apps/api/app/main.py` | Added workspace-scoped create/list/read APIs for external targets. |
+| `apps/api/tests/test_external_workspaces.py` | Added registration, unsafe-root, bounded-path, and built-in registry regression tests. |
+| `apps/api/tests/test_models.py` | Updated model boundary expectations for the new external target table. |
+| `docs/project-state.md` | Recorded P9-1 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-1 complete after validation. |
+
+### What Changed
+
+P9-1 adds the external workspace registration layer without changing execution
+semantics:
+
+- local external project roots can be registered as workspace-scoped external
+  targets;
+- registration stores target metadata, commands, package manager, detected
+  framework, allowed paths, and denied paths;
+- unsafe broad roots and unbounded allowed paths are rejected;
+- built-in P7/P8 target registry entries remain unchanged.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted external workspace tests | Pass: 18 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+
+---
+
 ## P8-6 P8 E2E Rehearsal And Freeze Review
 
 **Date:** 2026-05-24

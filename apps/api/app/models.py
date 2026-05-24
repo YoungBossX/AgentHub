@@ -30,6 +30,27 @@ class Workspace(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
 
 
+class ExternalProjectTarget(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    workspace_id: str = Field(foreign_key="workspace.id", index=True)
+    target_id: str = Field(index=True, unique=True)
+    name: str
+    root_path: str
+    project_type: str = "unknown"
+    allowed_paths_json: str = "[]"
+    denied_paths_json: str = "[]"
+    dev_command: Optional[str] = None
+    test_command: Optional[str] = None
+    check_command: Optional[str] = None
+    build_command: Optional[str] = None
+    preview_command: Optional[str] = None
+    package_manager: Optional[str] = None
+    detected_framework: Optional[str] = None
+    analysis_status: str = "manual"
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
 class Session(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     workspace_id: str = Field(foreign_key="workspace.id", index=True)

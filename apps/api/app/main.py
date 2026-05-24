@@ -18,6 +18,15 @@ from app.db import engine, init_database
 from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
 from app.diffs import DiffCollectionError, StoredDiffArtifact, collect_task_run_diff, list_task_run_diffs
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
+from app.external_workspaces import (
+    ExternalWorkspaceRegistration,
+    ExternalWorkspaceRegistrationError,
+    allowed_paths_for,
+    denied_paths_for,
+    get_external_project_target,
+    list_external_project_targets,
+    register_external_project_target,
+)
 from app.guardrails import approve_task_run, deny_task_run
 from app.instruction_builder import build_role_instruction
 from app.ledger import (
@@ -62,6 +71,8 @@ from app.schemas import (
     HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
+    ExternalProjectTargetCreateRequest,
+    ExternalProjectTargetResponse,
     MessageCreateRequest,
     MessageResponse,
     PreviewResponse,
@@ -219,6 +230,110 @@ def health() -> HealthResponse:
 @app.get("/workspaces/demo", response_model=WorkspaceResponse)
 def read_demo_workspace(db: DbSession = Depends(get_db)) -> WorkspaceResponse:
     return get_demo_workspace(db)
+
+
+def external_target_response(
+    target: "ExternalProjectTarget",
+) -> ExternalProjectTargetResponse:
+    return ExternalProjectTargetResponse(
+        id=target.id,
+        workspaceId=target.workspace_id,
+        targetId=target.target_id,
+        name=target.name,
+        rootPath=target.root_path,
+        projectType=target.project_type,
+        allowedPaths=allowed_paths_for(target),
+        deniedPaths=denied_paths_for(target),
+        devCommand=target.dev_command,
+        testCommand=target.test_command,
+        checkCommand=target.check_command,
+        buildCommand=target.build_command,
+        previewCommand=target.preview_command,
+        packageManager=target.package_manager,
+        detectedFramework=target.detected_framework,
+        analysisStatus=target.analysis_status,
+        createdAt=target.created_at,
+        updatedAt=target.updated_at,
+    )
+
+
+@app.post(
+    "/workspaces/{workspace_id}/external-targets",
+    response_model=ExternalProjectTargetResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_external_target(
+    workspace_id: str,
+    request: ExternalProjectTargetCreateRequest,
+    db: DbSession = Depends(get_db),
+) -> ExternalProjectTargetResponse:
+    workspace = get_workspace(db, workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+
+    try:
+        target = register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id=request.target_id,
+                name=request.name,
+                root_path=request.root_path,
+                project_type=request.project_type,
+                allowed_paths=request.allowed_paths,
+                denied_paths=request.denied_paths,
+                dev_command=request.dev_command,
+                test_command=request.test_command,
+                check_command=request.check_command,
+                build_command=request.build_command,
+                preview_command=request.preview_command,
+                package_manager=request.package_manager,
+                detected_framework=request.detected_framework,
+            ),
+        )
+    except ExternalWorkspaceRegistrationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return external_target_response(target)
+
+
+@app.get(
+    "/workspaces/{workspace_id}/external-targets",
+    response_model=list[ExternalProjectTargetResponse],
+)
+def read_external_targets(
+    workspace_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[ExternalProjectTargetResponse]:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return [
+        external_target_response(target)
+        for target in list_external_project_targets(db, workspace_id)
+    ]
+
+
+@app.get(
+    "/workspaces/{workspace_id}/external-targets/{target_id}",
+    response_model=ExternalProjectTargetResponse,
+)
+def read_external_target(
+    workspace_id: str,
+    target_id: str,
+    db: DbSession = Depends(get_db),
+) -> ExternalProjectTargetResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+
+    target = get_external_project_target(db, workspace_id, target_id)
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="External target not found",
+        )
+    return external_target_response(target)
 
 
 def agent_contact_response(agent: Agent) -> AgentContactResponse:

@@ -3,6 +3,34 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P9 Status
+
+### P9-1 External Workspace Registration
+
+P9-1 completed on 2026-05-24 as the first implementation step of
+`agenthub-p9-external-project-workspace-mode`.
+
+AgentHub now has a persisted registration boundary for external local project
+targets:
+
+- external targets are stored per workspace with target ID, name, resolved root
+  path, project type, allowed paths, denied paths, commands, package manager,
+  detected framework, and analysis status;
+- registration requires explicit bounded allowed paths and rejects whole-root,
+  parent traversal, absolute allowed paths, missing roots, filesystem root, home
+  directory, and common system directories;
+- default denied paths include `.env`, `.env.*`, `secrets`, `.git`,
+  `node_modules`, `.venv`, dependency directories, cache directories, and build
+  output directories;
+- backend APIs can create, list, and read registered external targets under a
+  workspace;
+- built-in `demo-frontend`, `demo-backend`, and `agenthub-platform` registry
+  targets remain unchanged.
+
+Current limitation: P9-1 only registers external targets. Planner,
+instruction-builder, scheduler, adapter execution, evidence, and review
+integration remain P9-3 through P9-7.
+
 ## P8 Status
 
 ### P8-6 P8 E2E Rehearsal And Freeze Review

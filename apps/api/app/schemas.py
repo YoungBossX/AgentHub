@@ -23,6 +23,45 @@ class WorkspaceResponse(ApiModel):
     created_at: datetime = Field(alias="createdAt")
 
 
+class ExternalProjectTargetCreateRequest(BaseModel):
+    target_id: Optional[str] = Field(default=None, alias="targetId")
+    name: str
+    root_path: str = Field(alias="rootPath")
+    project_type: str = Field(default="unknown", alias="projectType")
+    allowed_paths: list[str] = Field(alias="allowedPaths")
+    denied_paths: list[str] = Field(default_factory=list, alias="deniedPaths")
+    dev_command: Optional[str] = Field(default=None, alias="devCommand")
+    test_command: Optional[str] = Field(default=None, alias="testCommand")
+    check_command: Optional[str] = Field(default=None, alias="checkCommand")
+    build_command: Optional[str] = Field(default=None, alias="buildCommand")
+    preview_command: Optional[str] = Field(default=None, alias="previewCommand")
+    package_manager: Optional[str] = Field(default=None, alias="packageManager")
+    detected_framework: Optional[str] = Field(default=None, alias="detectedFramework")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ExternalProjectTargetResponse(ApiModel):
+    id: str
+    workspace_id: str = Field(alias="workspaceId")
+    target_id: str = Field(alias="targetId")
+    name: str
+    root_path: str = Field(alias="rootPath")
+    project_type: str = Field(alias="projectType")
+    allowed_paths: list[str] = Field(alias="allowedPaths")
+    denied_paths: list[str] = Field(alias="deniedPaths")
+    dev_command: Optional[str] = Field(alias="devCommand")
+    test_command: Optional[str] = Field(alias="testCommand")
+    check_command: Optional[str] = Field(alias="checkCommand")
+    build_command: Optional[str] = Field(alias="buildCommand")
+    preview_command: Optional[str] = Field(alias="previewCommand")
+    package_manager: Optional[str] = Field(alias="packageManager")
+    detected_framework: Optional[str] = Field(alias="detectedFramework")
+    analysis_status: str = Field(alias="analysisStatus")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
 class AgentContactResponse(ApiModel):
     id: str
     display_name: str = Field(alias="displayName")
