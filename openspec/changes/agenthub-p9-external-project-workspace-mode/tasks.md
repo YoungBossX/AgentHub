@@ -29,7 +29,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p9-external-project-workspace-mode --strict`.
 
-- [ ] 1.2 P9-2 Project Analyzer.
+- [x] 1.2 P9-2 Project Analyzer.
   - Objective: Infer external project shape and safe defaults without running
     arbitrary commands.
   - Scope:

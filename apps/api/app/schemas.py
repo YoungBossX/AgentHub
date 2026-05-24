@@ -41,6 +41,29 @@ class ExternalProjectTargetCreateRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class ExternalProjectAnalysisRequest(BaseModel):
+    root_path: str = Field(alias="rootPath")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ExternalProjectAnalysisResponse(ApiModel):
+    root_path: str = Field(alias="rootPath")
+    project_type: str = Field(alias="projectType")
+    detected_framework: str = Field(alias="detectedFramework")
+    package_manager: str = Field(alias="packageManager")
+    allowed_paths: list[str] = Field(alias="allowedPaths")
+    denied_paths: list[str] = Field(alias="deniedPaths")
+    dev_command: Optional[str] = Field(alias="devCommand")
+    test_command: Optional[str] = Field(alias="testCommand")
+    check_command: Optional[str] = Field(alias="checkCommand")
+    build_command: Optional[str] = Field(alias="buildCommand")
+    preview_command: Optional[str] = Field(alias="previewCommand")
+    analysis_status: str = Field(alias="analysisStatus")
+    analysis_warnings: list[str] = Field(alias="analysisWarnings")
+    confidence: str
+
+
 class ExternalProjectTargetResponse(ApiModel):
     id: str
     workspace_id: str = Field(alias="workspaceId")

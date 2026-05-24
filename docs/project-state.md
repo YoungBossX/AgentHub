@@ -5,6 +5,29 @@ reference instead of repeating long context blocks.
 
 ## P9 Status
 
+### P9-2 Project Analyzer
+
+P9-2 completed on 2026-05-24.
+
+AgentHub now has a read-only external project analyzer for local registered
+workspace candidates:
+
+- detects representative Vite React, Next.js, FastAPI, Node API, and Python
+  package projects from project files without installing dependencies or
+  running commands;
+- infers package manager from lockfiles and project markers;
+- infers safe source/test allowed paths from existing directories;
+- infers candidate dev, test, check, build, and preview commands from package
+  scripts or Python/FastAPI conventions;
+- always returns the external denied-path baseline used by registration;
+- marks unknown or incomplete projects as `needs_confirmation` with warnings;
+- exposes workspace-scoped analysis API for future registration and selection
+  flows.
+
+Current limitation: analyzer output is not yet merged into the Target Registry
+or execution path. P9-3 and later tasks will consume analyzer/registration
+metadata for planning, instructions, locks, evidence, and review.
+
 ### P9-1 External Workspace Registration
 
 P9-1 completed on 2026-05-24 as the first implementation step of

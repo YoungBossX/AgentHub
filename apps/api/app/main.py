@@ -41,6 +41,7 @@ from app.models import SessionExecutionLedger
 from app.models import TaskRunEvent
 from app.models import utc_now
 from app.planning import MentionParseError, plan_for_message
+from app.project_analyzer import ProjectAnalysisResult, analyze_external_project
 from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
 from app.repositories import (
     create_session_message,
@@ -71,6 +72,8 @@ from app.schemas import (
     HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
+    ExternalProjectAnalysisRequest,
+    ExternalProjectAnalysisResponse,
     ExternalProjectTargetCreateRequest,
     ExternalProjectTargetResponse,
     MessageCreateRequest,
@@ -254,6 +257,43 @@ def external_target_response(
         analysisStatus=target.analysis_status,
         createdAt=target.created_at,
         updatedAt=target.updated_at,
+    )
+
+
+def external_project_analysis_response(
+    analysis: ProjectAnalysisResult,
+) -> ExternalProjectAnalysisResponse:
+    return ExternalProjectAnalysisResponse(
+        rootPath=analysis.root_path,
+        projectType=analysis.project_type,
+        detectedFramework=analysis.detected_framework,
+        packageManager=analysis.package_manager,
+        allowedPaths=list(analysis.allowed_paths),
+        deniedPaths=list(analysis.denied_paths),
+        devCommand=analysis.dev_command,
+        testCommand=analysis.test_command,
+        checkCommand=analysis.check_command,
+        buildCommand=analysis.build_command,
+        previewCommand=analysis.preview_command,
+        analysisStatus=analysis.analysis_status,
+        analysisWarnings=list(analysis.analysis_warnings),
+        confidence=analysis.confidence,
+    )
+
+
+@app.post(
+    "/workspaces/{workspace_id}/external-targets/analyze",
+    response_model=ExternalProjectAnalysisResponse,
+)
+def analyze_external_target(
+    workspace_id: str,
+    request: ExternalProjectAnalysisRequest,
+    db: DbSession = Depends(get_db),
+) -> ExternalProjectAnalysisResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return external_project_analysis_response(
+        analyze_external_project(request.root_path)
     )
 
 

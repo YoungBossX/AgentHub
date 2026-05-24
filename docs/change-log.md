@@ -1,5 +1,45 @@
 # AgentHub Change Log
 
+## P9-2 Project Analyzer
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/project_analyzer.py` | Added read-only analyzer for common JS/Python project shapes, safe path inference, command inference, denied-path defaults, and uncertainty status. |
+| `apps/api/app/schemas.py` | Added external project analysis request/response schemas. |
+| `apps/api/app/main.py` | Added workspace-scoped external target analysis API. |
+| `apps/api/tests/test_project_analyzer.py` | Added Vite React, Next.js, FastAPI, Node API, Python package, unknown-project, and API response tests. |
+| `docs/project-state.md` | Recorded P9-2 behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-2 complete after validation. |
+
+### What Changed
+
+P9-2 adds project analysis without granting execution permissions:
+
+- analyzes `package.json`, lockfiles, Vite/Next config, Python project files,
+  FastAPI entry points, and source/test directories;
+- infers project type, package manager, detected framework, allowed paths,
+  denied paths, and command candidates;
+- returns `needs_confirmation` with warnings for unknown or incomplete
+  projects;
+- never installs dependencies or runs arbitrary commands.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted analyzer tests | Pass: 11 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+
+---
+
 ## P9-1 External Workspace Registration
 
 **Date:** 2026-05-24
