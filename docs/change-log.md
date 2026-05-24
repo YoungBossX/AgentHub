@@ -1,5 +1,47 @@
 # AgentHub Change Log
 
+## P7-1 Target Project Registry
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/target_registry.py` | Added a static Target Project Registry with demo frontend, demo backend, and AgentHub platform target records. |
+| `apps/api/tests/test_target_registry.py` | Added registry coverage for target metadata, related backend lookup, denied paths, and platform approval requirements. |
+| `docs/project-state.md` | Recorded P7-1 target registry baseline and remaining migration caveat. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-1 complete after focused registry validation. |
+
+### What Changed
+
+P7-1 creates a single backend registry boundary for target metadata:
+
+- `demo-frontend` maps to `apps/demo`, allows frontend app work under
+  `apps/demo/src`, and relates to `demo-backend`;
+- `demo-backend` maps to `apps/demo-api`, exposes
+  `http://127.0.0.1:5174` as the demo backend base URL, and denies `apps/api`;
+- `agenthub-platform` represents AgentHub platform maintenance and requires
+  explicit platform mode plus approval.
+
+Default denied paths include `.env*`, `node_modules`, `.git`, and `secrets`.
+P7-1 does not yet migrate planner, instruction builder, or review logic to
+consume the registry; that starts in P7-2 and P7-3/P7-4.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pytest tests/test_target_registry.py -q` | Pass: 7 tests. |
+| `bash scripts/check-api.sh` | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 138 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+
+---
+
 ## P6-7 Final Full-stack Rehearsal And Freeze Review
 
 **Date:** 2026-05-23

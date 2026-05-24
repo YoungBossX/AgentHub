@@ -3,6 +3,32 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P7 Status
+
+### P7-1 Target Project Registry
+
+P7-1 completed on 2026-05-24 as the first step of
+`agenthub-p7-target-registry-permissioned-execution`.
+
+AgentHub now has a static backend Target Project Registry boundary with three
+initial targets:
+
+- `demo-frontend`: `apps/demo`, frontend app target, allowed writes under
+  `apps/demo/src`, related to `demo-backend`;
+- `demo-backend`: `apps/demo-api`, backend app target, base URL
+  `http://127.0.0.1:5174`, validation command `pnpm demo:api:test`;
+- `agenthub-platform`: AgentHub maintenance target, requires explicit platform
+  mode and approval, with stricter validation through `pnpm check && pnpm test`.
+
+The registry also centralizes default denied paths such as `.env*`,
+`node_modules`, `.git`, and `secrets`, and ordinary demo app targets deny
+cross-target mutations such as `apps/api`.
+
+Current limitation: P7-1 only introduces and tests the registry boundary.
+Planner, instruction builder, context pack, review, and platform-maintenance
+routing still use their existing P6 behavior until P7-2 through P7-5 migrate
+them to consume registry metadata.
+
 ## P6 Status
 
 ### P6-7 Final Full-stack Rehearsal And Freeze Review
