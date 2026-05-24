@@ -8,7 +8,10 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
-from app.models import Artifact, Diff, TaskRun, utc_now
+from app.models import Artifact, Diff, Task, TaskRun
+from app.models import Session as AgentHubSession
+from app.models import utc_now
+from app.target_registry import TargetRegistryError, get_target_for_workspace
 
 
 class DiffCollectionError(ValueError):
@@ -30,7 +33,22 @@ class StoredDiffArtifact:
     stats: dict[str, Any]
 
 
-def git_diff_pathspec() -> list[str]:
+def git_diff_pathspec(
+    *,
+    allowed_paths: Optional[list[str]] = None,
+    denied_paths: Optional[list[str]] = None,
+) -> list[str]:
+    roots = allowed_paths if allowed_paths else ["."]
+    pathspec = list(roots)
+    denied = denied_paths or []
+    for denied_path in ["node_modules", "node_modules/**", "**/node_modules/**", *denied]:
+        pathspec.append(f":(exclude){denied_path}")
+        if not denied_path.endswith("/**") and not denied_path.endswith("*"):
+            pathspec.append(f":(exclude){denied_path}/**")
+    return pathspec
+
+
+def _default_git_diff_pathspec() -> list[str]:
     return [
         ".",
         ":(exclude)node_modules",
@@ -59,9 +77,10 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
     if base_ref is None:
         raise DiffCollectionError("TaskRun does not have a usable baseRef.")
 
-    patch_text = _run_git(worktree_path, ["diff", "-p", base_ref, "--", *git_diff_pathspec()])
-    changed_files = _changed_files(worktree_path, base_ref)
-    stats = _diff_stats(worktree_path, base_ref)
+    pathspec = git_diff_pathspec(**_external_diff_policy(db, task_run))
+    patch_text = _run_git(worktree_path, ["diff", "-p", base_ref, "--", *pathspec])
+    changed_files = _changed_files(worktree_path, base_ref, pathspec)
+    stats = _diff_stats(worktree_path, base_ref, pathspec)
     head_ref = _head_ref(worktree_path, has_worktree_changes=bool(patch_text))
 
     now = utc_now()
@@ -138,13 +157,13 @@ def list_task_run_diffs(db: DbSession, task_run_id: str) -> list[StoredDiffArtif
     return stored
 
 
-def _changed_files(worktree_path: Path, base_ref: str) -> list[str]:
-    output = _run_git(worktree_path, ["diff", "--name-only", base_ref, "--", *git_diff_pathspec()])
+def _changed_files(worktree_path: Path, base_ref: str, pathspec: list[str]) -> list[str]:
+    output = _run_git(worktree_path, ["diff", "--name-only", base_ref, "--", *pathspec])
     return [line for line in output.splitlines() if line]
 
 
-def _diff_stats(worktree_path: Path, base_ref: str) -> dict[str, Any]:
-    output = _run_git(worktree_path, ["diff", "--numstat", base_ref, "--", *git_diff_pathspec()])
+def _diff_stats(worktree_path: Path, base_ref: str, pathspec: list[str]) -> dict[str, Any]:
+    output = _run_git(worktree_path, ["diff", "--numstat", base_ref, "--", *pathspec])
     files: list[dict[str, Any]] = []
     additions = 0
     deletions = 0
@@ -194,6 +213,30 @@ def _run_git(worktree_path: Path, args: list[str]) -> str:
         message = result.stderr.strip() or result.stdout.strip() or "Git command failed."
         raise DiffCollectionError(message)
     return result.stdout
+
+
+def _external_diff_policy(db: DbSession, task_run: TaskRun) -> dict[str, list[str]]:
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        return {}
+    session = db.get(AgentHubSession, task.session_id)
+    if session is None:
+        return {}
+    try:
+        plan = json.loads(task.plan_json)
+    except json.JSONDecodeError:
+        return {}
+    target_id = plan.get("targetId") if isinstance(plan, dict) else None
+    if not isinstance(target_id, str) or not target_id.startswith("external-"):
+        return {}
+    try:
+        target = get_target_for_workspace(db, session.workspace_id, target_id)
+    except TargetRegistryError:
+        return {}
+    return {
+        "allowed_paths": list(target.allowed_paths),
+        "denied_paths": list(target.denied_paths),
+    }
 
 
 def _to_stored_diff(artifact: Artifact, diff: Diff) -> StoredDiffArtifact:

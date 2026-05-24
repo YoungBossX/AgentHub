@@ -27,6 +27,12 @@ from app.external_workspaces import (
     list_external_project_targets,
     register_external_project_target,
 )
+from app.external_evidence import (
+    ExternalEvidenceError,
+    StoredCommandEvidence,
+    list_task_run_command_evidence,
+    record_command_evidence,
+)
 from app.guardrails import approve_task_run, deny_task_run
 from app.instruction_builder import build_role_instruction
 from app.ledger import (
@@ -75,6 +81,8 @@ from app.schemas import (
     AgentContactResponse,
     ApprovalDecisionRequest,
     ApprovalRequestResponse,
+    CommandEvidenceCreateRequest,
+    CommandEvidenceResponse,
     HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
@@ -1111,6 +1119,23 @@ def deployment_response(deployment: StoredDeploymentArtifact) -> DeploymentRespo
     )
 
 
+def command_evidence_response(evidence: StoredCommandEvidence) -> CommandEvidenceResponse:
+    return CommandEvidenceResponse(
+        id=evidence.id,
+        artifactId=evidence.artifact_id,
+        taskRunId=evidence.task_run_id,
+        artifactType=evidence.artifact_type,
+        title=evidence.title,
+        status=evidence.status,
+        commandType=evidence.command_type,
+        command=evidence.command,
+        exitCode=evidence.exit_code,
+        stdout=evidence.stdout,
+        stderr=evidence.stderr,
+        createdAt=evidence.created_at,
+    )
+
+
 def task_response(db: DbSession, task: Task) -> TaskResponse:
     assigned_role = None
     if task.assigned_agent_id is not None:
@@ -1342,6 +1367,47 @@ def read_task_run_reviews(
     if db.get(TaskRun, task_run_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
     return [review_response(review) for review in list_task_run_reviews(db, task_run_id)]
+
+
+@app.post(
+    "/task-runs/{task_run_id}/command-evidence",
+    response_model=CommandEvidenceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_command_evidence_for_task_run(
+    task_run_id: str,
+    request: CommandEvidenceCreateRequest,
+    db: DbSession = Depends(get_db),
+) -> CommandEvidenceResponse:
+    try:
+        evidence = record_command_evidence(
+            db,
+            task_run_id,
+            command_type=request.command_type,
+            command=request.command,
+            exit_code=request.exit_code,
+            stdout=request.stdout,
+            stderr=request.stderr,
+        )
+    except ExternalEvidenceError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return command_evidence_response(evidence)
+
+
+@app.get(
+    "/task-runs/{task_run_id}/command-evidence",
+    response_model=list[CommandEvidenceResponse],
+)
+def read_task_run_command_evidence(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[CommandEvidenceResponse]:
+    if db.get(TaskRun, task_run_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    return [
+        command_evidence_response(evidence)
+        for evidence in list_task_run_command_evidence(db, task_run_id)
+    ]
 
 
 @app.post(

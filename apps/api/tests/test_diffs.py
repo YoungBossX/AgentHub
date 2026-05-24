@@ -17,6 +17,10 @@ from app.diffs import (
     collect_task_run_diff,
     git_diff_pathspec,
 )
+from app.external_workspaces import (
+    ExternalWorkspaceRegistration,
+    register_external_project_target,
+)
 from app.main import app, get_db
 from app.models import Agent, Artifact, Diff, Review, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.task_runs import create_task_run
@@ -158,6 +162,77 @@ def test_collect_task_run_diff_stores_git_patch_and_excludes_node_modules(
     assert json.loads(stored_diff.changed_files_json) == ["apps/demo/src/App.tsx"]
     assert json.loads(stored_diff.stats_json)["filesChanged"] == 1
     assert json.loads(event.payload_json)["artifactId"] == artifact.id
+
+
+def test_external_task_run_diff_uses_allowed_paths_and_excludes_denied(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    external_root = tmp_path / "external-app"
+    (external_root / "src").mkdir(parents=True)
+    (external_root / "src" / "App.tsx").write_text("export default 'before'\n")
+    subprocess.run(["git", "init"], cwd=external_root, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=external_root, check=True)
+    subprocess.run(["git", "config", "user.name", "AgentHub Test"], cwd=external_root, check=True)
+    subprocess.run(["git", "add", "."], cwd=external_root, check=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=external_root, check=True, capture_output=True)
+
+    workspace = Workspace(
+        name="AgentHub Demo",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="External diff session",
+        bound_branch="main",
+        worktree_path=".worktrees/external-diff-session",
+    )
+    agent = Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local")
+    db.add(workspace)
+    db.add(session)
+    db.add(agent)
+    db.commit()
+    db.refresh(workspace)
+    register_external_project_target(
+        db,
+        workspace,
+        ExternalWorkspaceRegistration(
+            target_id="external-diff-app",
+            name="External Diff App",
+            root_path=str(external_root),
+            project_type="vite-react",
+            allowed_paths=["src"],
+        ),
+    )
+    task = Task(
+        session_id=session.id,
+        title="External frontend change",
+        intent_type="frontend_change",
+        assigned_agent_id=agent.id,
+        plan_json=json.dumps(
+            {
+                "targetId": "external-diff-app",
+                "safeTarget": "src",
+                "files": ["src/App.tsx"],
+            },
+            separators=(",", ":"),
+        ),
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    task_run = create_task_run(db, task.id)
+    (external_root / "src" / "App.tsx").write_text("export default 'after'\n")
+    (external_root / ".env").write_text("SECRET=hidden\n")
+
+    diff_artifact = collect_task_run_diff(db, task_run.id)
+
+    assert task_run.worktree_path == str(external_root.resolve())
+    assert diff_artifact.changed_files == ["src/App.tsx"]
+    assert ".env" not in diff_artifact.patch_text
+    assert "export default 'after'" in diff_artifact.patch_text
 
 
 def test_diff_api_returns_stored_diff_artifacts(

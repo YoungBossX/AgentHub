@@ -312,3 +312,28 @@ class DeploymentResponse(ApiModel):
     deploy_log_uri: Optional[str] = Field(alias="deployLogUri")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
+
+
+class CommandEvidenceCreateRequest(BaseModel):
+    command_type: str = Field(alias="commandType")
+    command: str
+    exit_code: int = Field(alias="exitCode")
+    stdout: str = ""
+    stderr: str = ""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class CommandEvidenceResponse(ApiModel):
+    id: str
+    artifact_id: str = Field(alias="artifactId")
+    task_run_id: str = Field(alias="taskRunId")
+    artifact_type: str = Field(alias="artifactType")
+    title: str
+    status: str
+    command_type: str = Field(alias="commandType")
+    command: str
+    exit_code: int = Field(alias="exitCode")
+    stdout: str
+    stderr: str
+    created_at: datetime = Field(alias="createdAt")

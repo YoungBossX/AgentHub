@@ -5,6 +5,28 @@ reference instead of repeating long context blocks.
 
 ## P9 Status
 
+### P9-6 External Evidence Pipeline
+
+P9-6 completed on 2026-05-24.
+
+External project TaskRuns now have a capability-based evidence path:
+
+- external git diffs use target registry allowed paths and denied paths when
+  collecting changed files and patch text;
+- command evidence artifacts can record configured check, test, and build
+  command output;
+- command evidence preserves exit code and records failed commands as
+  `failed` instead of converting them into success;
+- command evidence is emitted as `command_evidence` artifacts with TaskRun
+  events and list/read API support;
+- session context packs include latest command evidence metadata for later
+  review and instruction use;
+- targets without preview command can still carry diff and command evidence.
+
+Current limitation: P9-6 records command evidence supplied by the controlled
+pipeline/API; it does not yet execute arbitrary external commands. Review
+policy over command evidence is P9-7.
+
 ### P9-5 External Project Task Execution
 
 P9-5 completed on 2026-05-24.

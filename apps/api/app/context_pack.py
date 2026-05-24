@@ -52,6 +52,7 @@ def build_session_context_pack(
     latest_review = _latest_review_context(db, task_runs)
     latest_preview = _latest_preview_context(db, task_runs)
     latest_deployment = _latest_deployment_context(db, task_runs)
+    latest_command_evidence = _latest_command_evidence_context(db, task_runs)
     original_request = _original_request_for_task(db, task, merged_context)
     selected_artifact = _selected_artifact_context(db, task.session_id, merged_context)
     app_contract = _app_contract_context(merged_context)
@@ -90,6 +91,7 @@ def build_session_context_pack(
         "latestReview": latest_review,
         "latestPreview": latest_preview,
         "latestDeployment": latest_deployment,
+        "latestCommandEvidence": latest_command_evidence,
         "selectedArtifact": selected_artifact,
         "appContract": app_contract,
         "targetProject": _target_project_context(db, task, merged_context),
@@ -232,6 +234,24 @@ def _latest_deployment_context(
         "provider": deployment.provider,
         "environment": deployment.environment,
         "url": deployment.url,
+    }
+
+
+def _latest_command_evidence_context(
+    db: DbSession,
+    task_runs: list[TaskRun],
+) -> Optional[dict[str, Any]]:
+    artifact = _latest_artifact(db, task_runs, "command_evidence")
+    if artifact is None:
+        return None
+    meta = _json_dict(artifact.meta_json)
+    return {
+        "artifactId": artifact.id,
+        "taskRunId": artifact.task_run_id,
+        "status": artifact.status,
+        "commandType": meta.get("commandType"),
+        "command": meta.get("command"),
+        "exitCode": meta.get("exitCode"),
     }
 
 

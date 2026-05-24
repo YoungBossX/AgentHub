@@ -135,7 +135,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p9-external-project-workspace-mode --strict`.
 
-- [ ] 1.6 P9-6 External Evidence Pipeline.
+- [x] 1.6 P9-6 External Evidence Pipeline.
   - Objective: Record external project evidence according to target
     capabilities.
   - Scope:

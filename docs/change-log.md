@@ -1,5 +1,46 @@
 # AgentHub Change Log
 
+## P9-6 External Evidence Pipeline
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/diffs.py` | Scoped external diff collection to target allowed paths while excluding denied/dependency paths. |
+| `apps/api/app/external_evidence.py` | Added command evidence artifact recording for check/test/build output. |
+| `apps/api/app/schemas.py` | Added command evidence request/response schemas. |
+| `apps/api/app/main.py` | Added create/list API endpoints for command evidence artifacts. |
+| `apps/api/app/context_pack.py` | Added latest command evidence metadata to session context packs. |
+| `apps/api/tests/test_diffs.py` | Added external diff path policy coverage. |
+| `apps/api/tests/test_external_evidence.py` | Added command evidence service/API tests for passed and failed outputs. |
+| `docs/project-state.md` | Recorded P9-6 behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-6 complete after validation. |
+
+### What Changed
+
+P9-6 adds capability-based external evidence:
+
+- external diffs respect target path policy;
+- check/test/build command outputs can be stored as `command_evidence`
+  artifacts;
+- failed command exits remain failed evidence;
+- preview remains optional for external targets.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted external evidence/diff tests | Pass: 41 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+
+---
+
 ## P9-5 External Project Task Execution
 
 **Date:** 2026-05-24
