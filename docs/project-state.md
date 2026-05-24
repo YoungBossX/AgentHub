@@ -5,6 +5,30 @@ reference instead of repeating long context blocks.
 
 ## P10 Status
 
+### P10-3 Pre-run Snapshot / Checkpoint
+
+P10-3 completed on 2026-05-24.
+
+Write TaskRuns now record a pre-run checkpoint in
+`metrics_json.preRunCheckpoint` and emit a `task.checkpoint.created` event.
+The checkpoint records:
+
+- target ID and target root;
+- Target Registry allowed and denied paths;
+- base commit when available;
+- git status availability and scoped dirty files;
+- planned files from the task plan;
+- app contract ID and deterministic contract hash when present;
+- checkpoint creation timestamp.
+
+External target checkpoints use the registered external target root and path
+policy. Checkpoint metadata records file paths and git status only; it does not
+store file contents or denied-path contents.
+
+Current limitation: P10-3 records checkpoint metadata only. Retry idempotency,
+dirty worktree retry blocking, conflict detection, and recovery actions consume
+this metadata in P10-4 through P10-7.
+
 ### P10-2 Stale Target Lock Cleanup
 
 P10-2 completed on 2026-05-24.

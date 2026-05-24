@@ -1,5 +1,40 @@
 # AgentHub Change Log
 
+## P10-3 Pre-run Snapshot / Checkpoint
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/task_runs.py` | Added pre-run checkpoint creation for write TaskRuns and checkpoint audit events. |
+| `apps/api/tests/test_task_runs.py` | Added demo and external target checkpoint coverage. |
+| `docs/project-state.md` | Recorded P10-3 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-3 complete after validation. |
+
+### What Changed
+
+Write TaskRuns now store `metrics_json.preRunCheckpoint` and emit
+`task.checkpoint.created` before execution. Checkpoints include target metadata,
+Target Registry path policy, base commit when available, scoped dirty files,
+planned files, contract ID/hash, and creation time. External targets use their
+registered root and path policy.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted checkpoint tests | Pass: 2 tests. |
+| Targeted task-run/scheduler liveness and lock tests | Pass: 16 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+
+---
+
 ## P10-2 Stale Target Lock Cleanup
 
 **Date:** 2026-05-24

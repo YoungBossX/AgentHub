@@ -46,7 +46,7 @@
     - Run `git diff --check`.
     - Run `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`.
 
-- [ ] 1.3 P10-3 Pre-run Snapshot / Checkpoint.
+- [x] 1.3 P10-3 Pre-run Snapshot / Checkpoint.
   - Objective: capture the target state before write execution so retry and
     recovery can reason from a known baseline.
   - Scope:

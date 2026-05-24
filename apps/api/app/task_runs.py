@@ -1,6 +1,9 @@
 import json
 import os
+import hashlib
+import subprocess
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -65,6 +68,8 @@ def create_task_run(
     _ensure_target_write_lock_available(db, task)
 
     now = utc_now()
+    worktree_path = _worktree_path_for_task(db, task, session)
+    base_ref = capture_base_ref_for_worktree(worktree_path)
     metrics = {
         "adapterType": selected_adapter,
     }
@@ -72,12 +77,21 @@ def create_task_run(
         metrics["retryOfRunId"] = retry_of_run_id
     if fallback_from_run_id is not None:
         metrics["fallbackFromRunId"] = fallback_from_run_id
+    checkpoint = _pre_run_checkpoint_for_task(
+        db,
+        task,
+        session,
+        worktree_path=worktree_path,
+        base_ref=base_ref,
+        now=now,
+    )
+    if checkpoint is not None:
+        metrics["preRunCheckpoint"] = checkpoint
 
     approval_payload = _platform_approval_payload(task)
     initial_state = "waiting_approval" if approval_payload is not None else "queued"
     task.status = _task_status_for_run_state(initial_state)
     task.updated_at = now
-    worktree_path = _worktree_path_for_task(db, task, session)
     runner_id = _new_runner_id()
     task_run = TaskRun(
         task_id=task.id,
@@ -87,7 +101,7 @@ def create_task_run(
         last_heartbeat_at=now,
         lease_expires_at=_lease_expires_at(now),
         worktree_path=worktree_path,
-        base_ref=capture_base_ref_for_worktree(worktree_path),
+        base_ref=base_ref,
         metrics_json=json.dumps(metrics, separators=(",", ":")),
         created_at=now,
         updated_at=now,
@@ -98,6 +112,16 @@ def create_task_run(
     db.refresh(task_run)
 
     _append_state_event(db, task_run, initial_state, {"adapterType": selected_adapter})
+    if checkpoint is not None:
+        append_task_run_event(
+            db,
+            task_run_id=task_run.id,
+            event_type="task.checkpoint.created",
+            payload_json=json.dumps(
+                {"checkpoint": checkpoint},
+                separators=(",", ":"),
+            ),
+        )
     if approval_payload is not None:
         append_task_run_event(
             db,
@@ -506,6 +530,147 @@ def _plan_json(task: Task) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return value if isinstance(value, dict) else {}
+
+
+def _pre_run_checkpoint_for_task(
+    db: DbSession,
+    task: Task,
+    session: AgentHubSession,
+    *,
+    worktree_path: str,
+    base_ref: Optional[str],
+    now: datetime,
+) -> Optional[dict[str, Any]]:
+    from app.scheduler import target_id_for_task, write_lock_required_for_task
+
+    if not write_lock_required_for_task(task):
+        return None
+
+    target_id = target_id_for_task(task, db)
+    if target_id is None:
+        return None
+
+    try:
+        target = get_target_for_workspace(db, session.workspace_id, target_id)
+    except TargetRegistryError:
+        return None
+
+    plan = _plan_json(task)
+    planned_files = [
+        path for path in plan.get("files", []) if isinstance(path, str) and path
+    ]
+    contract = plan.get("appContract")
+    contract_id = plan.get("contractId")
+    if not isinstance(contract_id, str) and isinstance(contract, dict):
+        contract_id = contract.get("contractId")
+
+    git_status = _git_status_checkpoint(
+        Path(worktree_path),
+        allowed_paths=list(target.allowed_paths),
+        denied_paths=list(target.denied_paths),
+    )
+    return {
+        "targetId": target.target_id,
+        "targetRoot": target.root,
+        "allowedPaths": list(target.allowed_paths),
+        "deniedPaths": list(target.denied_paths),
+        "baseCommit": base_ref,
+        "gitStatus": git_status,
+        "dirtyFiles": git_status["dirtyFiles"],
+        "plannedFiles": planned_files,
+        "contractId": contract_id if isinstance(contract_id, str) else None,
+        "contractHash": _contract_hash(contract),
+        "createdAt": now.isoformat(),
+    }
+
+
+def _git_status_checkpoint(
+    worktree_path: Path,
+    *,
+    allowed_paths: list[str],
+    denied_paths: list[str],
+) -> dict[str, Any]:
+    if not worktree_path.exists():
+        return {
+            "available": False,
+            "reason": "worktree_not_found",
+            "dirtyFiles": [],
+        }
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        return {
+            "available": False,
+            "reason": str(exc),
+            "dirtyFiles": [],
+        }
+    if result.returncode != 0:
+        return {
+            "available": False,
+            "reason": result.stderr.strip() or result.stdout.strip() or "git_status_failed",
+            "dirtyFiles": [],
+        }
+
+    dirty_files = _parse_porcelain_dirty_files(result.stdout)
+    scoped_dirty_files = [
+        path
+        for path in dirty_files
+        if _matches_any_path(path, allowed_paths) and not _matches_any_path(path, denied_paths)
+    ]
+    return {
+        "available": True,
+        "dirtyFiles": scoped_dirty_files,
+    }
+
+
+def _parse_porcelain_dirty_files(output: str) -> list[str]:
+    files: list[str] = []
+    for line in output.splitlines():
+        if not line:
+            continue
+        path = line[3:] if len(line) > 3 else line
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        path = path.strip()
+        if path:
+            files.append(path)
+    return files
+
+
+def _contract_hash(contract: Any) -> Optional[str]:
+    if not isinstance(contract, dict):
+        return None
+    normalized = json.dumps(contract, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def _matches_any_path(path: str, patterns: list[str]) -> bool:
+    normalized = _normalize_path(path)
+    return any(_matches_path_pattern(normalized, pattern) for pattern in patterns)
+
+
+def _matches_path_pattern(path: str, pattern: str) -> bool:
+    normalized_pattern = _normalize_path(pattern)
+    if not normalized_pattern:
+        return False
+    if normalized_pattern.endswith("*"):
+        return path.startswith(normalized_pattern[:-1])
+    if "/" not in normalized_pattern:
+        return normalized_pattern in path.split("/")
+    return path == normalized_pattern or path.startswith(f"{normalized_pattern}/")
+
+
+def _normalize_path(path: str) -> str:
+    normalized = path.replace("\\", "/").strip()
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized.rstrip("/")
 
 
 def _task_or_raise(db: DbSession, task_id: str) -> Task:

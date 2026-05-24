@@ -1,6 +1,8 @@
 import json
+import subprocess
 from collections.abc import Iterator
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -230,6 +232,108 @@ def test_mark_stale_task_runs_ignores_unexpired_active_run(client: TestClient) -
         assert stored.state == "queued"
         assert stored.stale_detected_at is None
         assert stored.stale_reason is None
+
+
+def test_write_task_run_records_pre_run_checkpoint_for_demo_target(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        contract = {"contractId": "contract-demo-dashboard", "version": 1}
+        task.plan_json = json.dumps(
+            {
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+                "contractId": contract["contractId"],
+                "appContract": contract,
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+
+        task_run = create_task_run(db, task.id)
+
+        checkpoint = json.loads(task_run.metrics_json)["preRunCheckpoint"]
+        event = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .where(TaskRunEvent.event_type == "task.checkpoint.created")
+        ).one()
+        payload = json.loads(event.payload_json)
+
+        assert checkpoint["targetId"] == DEMO_FRONTEND_TARGET_ID
+        assert checkpoint["targetRoot"] == "apps/demo"
+        assert checkpoint["allowedPaths"] == ["apps/demo/src"]
+        assert "node_modules" in checkpoint["deniedPaths"]
+        assert checkpoint["plannedFiles"] == ["apps/demo/src/App.tsx"]
+        assert checkpoint["contractId"] == "contract-demo-dashboard"
+        assert checkpoint["contractHash"] is not None
+        assert "gitStatus" in checkpoint
+        assert payload["checkpoint"]["targetId"] == DEMO_FRONTEND_TARGET_ID
+
+
+def test_external_write_task_run_checkpoint_uses_target_registry_policy(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    external_root = tmp_path / "external-app"
+    (external_root / "src").mkdir(parents=True)
+    (external_root / "src" / "App.tsx").write_text("export default function App() {}\n")
+    (external_root / ".env").write_text("SECRET=do-not-expose\n")
+    subprocess.run(["git", "init"], cwd=external_root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=external_root,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=external_root,
+        check=True,
+    )
+    subprocess.run(["git", "add", "src/App.tsx"], cwd=external_root, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=external_root, check=True)
+    (external_root / "src" / "App.tsx").write_text("export default function App() { return null }\n")
+
+    with db_from_override() as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-checkpoint-app",
+                name="External Checkpoint App",
+                root_path=str(external_root),
+                project_type="vite-react",
+                allowed_paths=["src"],
+                denied_paths=[".env", "node_modules", ".git"],
+            ),
+        )
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "targetId": "external-checkpoint-app",
+                "safeTarget": "src",
+                "files": ["src/App.tsx"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+
+        task_run = create_task_run(db, task.id)
+
+        checkpoint = json.loads(task_run.metrics_json)["preRunCheckpoint"]
+
+        assert checkpoint["targetId"] == "external-checkpoint-app"
+        assert checkpoint["targetRoot"] == str(external_root.resolve())
+        assert checkpoint["allowedPaths"] == ["src"]
+        assert ".env" in checkpoint["deniedPaths"]
+        assert checkpoint["plannedFiles"] == ["src/App.tsx"]
+        assert checkpoint["dirtyFiles"] == ["src/App.tsx"]
+        assert "do-not-expose" not in json.dumps(checkpoint)
 
 
 def test_default_code_adapter_env_selects_claude_code_for_frontend_task(
