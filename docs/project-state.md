@@ -3,6 +3,28 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P11 Status
+
+### P11-1 Deploy Provider Abstraction
+
+P11-1 completed on 2026-05-25.
+
+AgentHub now has a narrow deploy provider abstraction for the existing deploy
+path. `DeployService.create_deployment()` selects a provider by ID, rejects
+unknown providers honestly, rejects failed provider results without creating a
+successful deployment artifact, and keeps `create_mock_deployment()` as a
+backward-compatible wrapper around the provider-compatible mock path.
+
+The mock provider still produces the existing mock deployment URL and artifact
+shape, while deployment artifact metadata now includes a standard
+`providerResult` payload with provider ID, provider type, target ID, build
+command, deploy command, output URL, status, logs, and environment.
+
+Current limitation: P11-1 only introduces the provider abstraction and mock
+compatibility. Target-aware staging config, local static serving, deploy logs
+UI/status expansion, deploy gates, and real staging rehearsal remain later P11
+tasks.
+
 ## P10 Status
 
 ### P10-8 Robustness Rehearsal And Freeze Review

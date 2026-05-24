@@ -1,5 +1,38 @@
 # AgentHub Change Log
 
+## P11-1 Deploy Provider Abstraction
+
+**Date:** 2026-05-25
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/deployments.py` | Added a deploy provider result contract, provider selection, mock provider compatibility path, and failed/unknown provider handling. |
+| `apps/api/tests/test_deployments.py` | Added deploy provider abstraction tests for metadata, provider selection, unknown provider rejection, failed provider results, and mock compatibility. |
+| `docs/project-state.md` | Recorded P11-1 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-1 complete after targeted verification. |
+
+### What Changed
+
+P11-1 introduces the first deploy provider abstraction without changing the
+current runtime deploy semantics. Existing mock deploy behavior remains
+available through `create_mock_deployment()`, while the newer
+`create_deployment()` path selects a provider by ID and records standardized
+provider metadata in the deployment artifact.
+
+Unknown providers are rejected before artifact creation. Failed provider
+results are reported honestly and do not create ready deployment artifacts.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted deployment tests | Pass: 9 tests. |
+
+---
+
 ## P10-8 Robustness Rehearsal And Freeze Review
 
 **Date:** 2026-05-24

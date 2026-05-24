@@ -8,7 +8,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
 import pytest
-from app.deployments import DeployError, DeployService
+from app.deployments import DeployError, DeployProviderResult, DeployService
 from app.main import app, get_db
 from app.models import (
     Agent,
@@ -122,6 +122,76 @@ def test_mock_deploy_persists_deployment_artifact_and_ready_event(tmp_path: Path
         assert deployment.url == f"https://mock.agenthub.local/deployments/{deployment.id}"
         assert deployment.deploy_log_uri == f"mock://deployments/{deployment.id}/logs"
         assert json.loads(event.payload_json)["deploymentId"] == deployment.id
+
+
+def test_deploy_provider_result_records_standard_metadata(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
+        service = DeployService()
+
+        stored = service.create_deployment(db, preview_id, provider_id="mock")
+        artifact = db.get(Artifact, stored.artifact_id)
+
+        assert artifact is not None
+        metadata = json.loads(artifact.meta_json)
+        provider_result = metadata["providerResult"]
+
+        assert provider_result["providerId"] == "mock"
+        assert provider_result["providerType"] == "mock"
+        assert provider_result["targetId"] == "demo-frontend"
+        assert provider_result["buildCommand"] is None
+        assert provider_result["deployCommand"] == "mock deploy preview"
+        assert provider_result["outputUrl"] == stored.url
+        assert provider_result["status"] == "ready"
+        assert provider_result["logs"]
+
+
+def test_deploy_service_rejects_unknown_provider(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
+        service = DeployService()
+
+        with pytest.raises(DeployError, match="Unknown deploy provider"):
+            service.create_deployment(db, preview_id, provider_id="missing-provider")
+
+
+def test_deploy_service_rejects_failed_provider_result_without_success_artifact(
+    tmp_path: Path,
+) -> None:
+    class FailedProvider:
+        provider_id = "failed-provider"
+        provider_type = "test"
+
+        def deploy(
+            self,
+            *,
+            preview: Preview,
+            task_run: TaskRun,
+            deployment_id: str,
+        ) -> DeployProviderResult:
+            return DeployProviderResult(
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+                target_id="demo-frontend",
+                build_command=None,
+                deploy_command="fail deliberately",
+                output_url=None,
+                status="failed",
+                logs=("provider failed deliberately",),
+                environment="staging",
+            )
+
+    with next(db_fixture()) as db:
+        preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
+        service = DeployService(providers=(FailedProvider(),))
+
+        with pytest.raises(DeployError, match="failed-provider failed"):
+            service.create_deployment(db, preview_id, provider_id="failed-provider")
+
+        deployments = db.exec(select(Deployment)).all()
+        artifacts = db.exec(select(Artifact).where(Artifact.artifact_type == "deployment")).all()
+        assert deployments == []
+        assert artifacts == []
 
 
 def test_deploy_api_creates_and_lists_mock_deployments(tmp_path: Path) -> None:
