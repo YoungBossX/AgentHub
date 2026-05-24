@@ -132,7 +132,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict`.
 
-- [ ] 1.6 P8-6 P8 E2E Rehearsal And Freeze Review.
+- [x] 1.6 P8-6 P8 E2E Rehearsal And Freeze Review.
   - Objective: Verify that P8 adds scheduler behavior without regressing
     P6/P7.
   - Scope:

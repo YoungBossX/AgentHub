@@ -5,6 +5,48 @@ reference instead of repeating long context blocks.
 
 ## P8 Status
 
+### P8-6 P8 E2E Rehearsal And Freeze Review
+
+P8-6 completed on 2026-05-24.
+
+Result: P8 is ready to freeze as Dependency-aware Scheduler and Target Locks
+for the local single-user AgentHub workspace.
+
+The freeze rehearsal used a temporary git worktree and controlled local fake
+adapter, not a fresh real Claude/Codex mutation. P6 remains the latest real
+`ClaudeCodeAdapter` mini CRM execution evidence.
+
+P8 rehearsal evidence:
+
+- session ID: `3fad4108-f0ea-4134-8b31-fb2ab911fadd`;
+- contract ID: `contract-mini_crm_contacts`;
+- backend task / run:
+  `e7f85f87-fa8a-4203-a33f-682e568a6d50`,
+  `72cf0f92-1c65-460e-b697-4e37cbcefed0`;
+- frontend task / run:
+  `e37a46b0-834b-4396-b703-8ecdfd1bf27b`,
+  `bb28106d-d1f8-4431-8245-d40db304edfa`;
+- review task: `336a0c82-6caf-4d84-b421-4ccfcdd17ad7`;
+- diff artifacts:
+  `104f1a7b-fa6f-4842-9152-a8e2acc0bbce`,
+  `e92f2e27-c463-4a41-8dad-c7fce2eb87ce`;
+- preview: `56d01fc3-affb-4f6a-bf46-973469a81e1d`, `healthy`;
+- mock deploy: `d94dade3-8b3e-4ea0-a0a9-61b2b085ce9e`, provider `mock`;
+- target lock evidence: waiting task
+  `7e507b15-3cd6-4be3-89d1-893e3777045a`, holder run
+  `3c241653-2a4e-4782-b58c-729cdc98d1bf`;
+- failed dependency evidence: failed task
+  `39d5151f-888a-4790-bd66-9044f6328053`, blocked downstream task
+  `84e11005-0148-4926-993c-6c002555507b`;
+- platform protection evidence: platform task / run
+  `4ed028eb-998c-4ca4-8aa0-e0c2dd9dd2f8`,
+  `ca3f70d9-d4aa-49ed-9e47-c757c432bde5`, state `waiting_approval`.
+
+See `docs/p8-freeze-review.md` for the full evidence record and caveats.
+
+Recommended freeze tag:
+`p8-dependency-scheduler-target-locks-freeze`.
+
 ### P8-5 Scheduler UI Trace
 
 P8-5 completed on 2026-05-24.

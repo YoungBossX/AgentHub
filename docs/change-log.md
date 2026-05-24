@@ -1,5 +1,60 @@
 # AgentHub Change Log
 
+## P8-6 P8 E2E Rehearsal And Freeze Review
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p8-freeze-review.md` | Added P8 freeze evidence, scheduler rehearsal IDs, validation notes, caveats, and recommended tag. |
+| `docs/project-state.md` | Recorded P8-6 freeze result and recommended tag. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-6 complete after validation. |
+
+### Review Result
+
+P8 is ready to freeze as Dependency-aware Scheduler and Target Locks.
+
+P8 did not run a fresh real Claude/Codex mutation. It used a temporary git
+worktree and controlled local fake adapter to verify scheduler order, target
+locks, failed dependency blocking, review artifact creation, healthy preview
+plumbing, and mock deploy plumbing. P6 remains the latest real
+`ClaudeCodeAdapter` mini CRM execution evidence.
+
+### P8 Rehearsal Evidence
+
+| Field | Value |
+|---|---|
+| Session ID | `3fad4108-f0ea-4134-8b31-fb2ab911fadd` |
+| Contract ID | `contract-mini_crm_contacts` |
+| Backend task / run | `e7f85f87-fa8a-4203-a33f-682e568a6d50`, `72cf0f92-1c65-460e-b697-4e37cbcefed0` |
+| Frontend task / run | `e37a46b0-834b-4396-b703-8ecdfd1bf27b`, `bb28106d-d1f8-4431-8245-d40db304edfa` |
+| Review task | `336a0c82-6caf-4d84-b421-4ccfcdd17ad7` |
+| Diff artifacts | `104f1a7b-fa6f-4842-9152-a8e2acc0bbce`, `e92f2e27-c463-4a41-8dad-c7fce2eb87ce` |
+| Preview / health | `56d01fc3-affb-4f6a-bf46-973469a81e1d`, `healthy` |
+| Mock deploy / provider | `d94dade3-8b3e-4ea0-a0a9-61b2b085ce9e`, `mock` |
+| Target lock evidence | waiting task `7e507b15-3cd6-4be3-89d1-893e3777045a`, holder run `3c241653-2a4e-4782-b58c-729cdc98d1bf` |
+| Failed dependency evidence | failed task `39d5151f-888a-4790-bd66-9044f6328053`, blocked task `84e11005-0148-4926-993c-6c002555507b` |
+| Platform protection | task `4ed028eb-998c-4ca4-8aa0-e0c2dd9dd2f8`, run `ca3f70d9-d4aa-49ed-9e47-c757c432bde5`, state `waiting_approval` |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P8 temporary API rehearsal | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 37 web tests, 155 API tests, 5 demo-api tests. |
+| `pnpm demo:api:test` | Pass: 5 tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+
+Recommended freeze tag:
+`p8-dependency-scheduler-target-locks-freeze`.
+
+---
+
 ## P8-5 Scheduler UI Trace
 
 **Date:** 2026-05-24
