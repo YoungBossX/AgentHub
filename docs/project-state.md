@@ -5,6 +5,30 @@ reference instead of repeating long context blocks.
 
 ## P8 Status
 
+### P8-3 Auto-run Pipeline
+
+P8-3 completed on 2026-05-24.
+
+Contract-first full-stack plans now participate in automatic pipeline
+progression:
+
+- mini CRM / todo / notes contract-first backend and frontend tasks include
+  `autoStart: true`;
+- the initial backend task auto-starts through the existing TaskRun path once
+  the synthetic contract task is completed;
+- when a coding TaskRun completes, AgentHub collects diff, creates the scripted
+  review artifact, refreshes ledger state, and starts the next runnable
+  contract-first coding task;
+- ready contract review / QA tasks are marked completed from the generated
+  review artifact instead of running a mutating QA adapter;
+- completed contract-first frontend runs attempt the existing Vite preview path
+  and create a mock deployment only when the preview is healthy and the demo
+  app root exists.
+
+Current limitation: P8-3 still uses the existing local adapter execution path;
+if Claude/Codex fails, downstream pipeline steps remain governed by P8-1/P8-2
+dependency and lock states. Rich retry/fallback scheduler states remain P8-4.
+
 ### P8-2 Target Write Locks
 
 P8-2 completed on 2026-05-24.

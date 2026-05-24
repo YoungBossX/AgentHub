@@ -523,7 +523,7 @@ def _create_contract_first_plan(
             "contractId": contract["contractId"],
             "expectedArtifactTypes": spec.expected_artifact_types,
             "taskGraph": graph,
-            "autoStart": False,
+            "autoStart": spec.intent_type in {"backend_change", "frontend_change"},
         }
         task = Task(
             session_id=message.session_id,

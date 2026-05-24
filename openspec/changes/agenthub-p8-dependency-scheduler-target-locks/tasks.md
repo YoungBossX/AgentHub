@@ -51,7 +51,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict`.
 
-- [ ] 1.3 P8-3 Auto-run Pipeline.
+- [x] 1.3 P8-3 Auto-run Pipeline.
   - Objective: Automatically progress bounded full-stack app pipelines through
     existing execution and artifact paths.
   - Scope:

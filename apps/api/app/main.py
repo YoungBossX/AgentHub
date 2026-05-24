@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import json
+from pathlib import Path
 from typing import Any, AsyncIterator, Iterator, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
@@ -53,6 +54,7 @@ from app.reviews import (
 from app.scheduler import complete_synthetic_planning_tasks
 from app.scheduler import evaluate_and_apply_scheduler_readiness
 from app.scheduler import refresh_session_scheduler_state
+from app.target_registry import DEMO_BACKEND_TARGET_ID, DEMO_FRONTEND_TARGET_ID
 from app.schemas import (
     AgentContactResponse,
     ApprovalDecisionRequest,
@@ -421,17 +423,28 @@ def auto_start_safe_tasks(
 def _should_auto_start_task(task: Task, plan: dict[str, Any]) -> bool:
     if not plan.get("autoStart"):
         return False
-    if task.intent_type != "frontend_change":
-        return False
-    if plan.get("safeTarget") != "apps/demo/src":
-        return False
     files = plan.get("files", [])
     if not isinstance(files, list) or not files:
         return False
-    return all(
-        isinstance(path, str) and path.startswith("apps/demo/src/")
-        for path in files
-    )
+    if task.intent_type == "frontend_change":
+        if plan.get("targetId") not in {None, DEMO_FRONTEND_TARGET_ID}:
+            return False
+        if plan.get("safeTarget") != "apps/demo/src":
+            return False
+        return all(
+            isinstance(path, str) and path.startswith("apps/demo/src/")
+            for path in files
+        )
+    if task.intent_type == "backend_change":
+        if plan.get("targetId") != DEMO_BACKEND_TARGET_ID:
+            return False
+        if plan.get("safeTarget") != "apps/demo-api":
+            return False
+        return all(
+            isinstance(path, str) and path.startswith("apps/demo-api/")
+            for path in files
+        )
+    return False
 
 
 def ledger_response(
@@ -602,8 +615,116 @@ async def execute_task_run(
         collect_task_run_diff(db, task_run.id)
         create_scripted_review_for_task_run(db, task_run.id)
         refresh_session_ledger_for_task_run(db, task_run.id)
+        _complete_ready_pipeline_review_tasks(db, task_run.task_id)
+        _maybe_auto_preview_and_mock_deploy(db, task_run)
+        await _auto_start_next_pipeline_task(db, task_run.task_id)
         db.refresh(task_run)
     return task_run
+
+
+async def _auto_start_next_pipeline_task(
+    db: DbSession,
+    completed_task_id: str,
+) -> Optional[TaskRun]:
+    completed_task = db.get(Task, completed_task_id)
+    if completed_task is None:
+        return None
+    for task in list_session_tasks(db, completed_task.session_id):
+        if not _is_auto_pipeline_task(task):
+            continue
+        if _has_task_run(db, task.id):
+            continue
+        decision = evaluate_and_apply_scheduler_readiness(db, task)
+        if not decision.runnable:
+            continue
+        task_run = create_task_run(db, task.id)
+        adapter_type = adapter_type_for_run(db, task_run)
+        adapter = adapter_for_type(
+            adapter_type,
+            codex_adapter=CodexAdapter(),
+            claude_code_adapter=ClaudeCodeAdapter(),
+            scripted_mock_adapter=ScriptedMockAdapter(),
+        )
+        return await execute_task_run(
+            db,
+            task_run,
+            adapter_type=adapter_type,
+            adapter=adapter,
+        )
+    return None
+
+
+def _complete_ready_pipeline_review_tasks(
+    db: DbSession,
+    completed_task_id: str,
+) -> list[Task]:
+    completed_task = db.get(Task, completed_task_id)
+    if completed_task is None:
+        return []
+
+    completed: list[Task] = []
+    for task in list_session_tasks(db, completed_task.session_id):
+        if task.intent_type not in {"review", "qa_review"}:
+            continue
+        if task.status not in {"pending", "waiting_dependency"}:
+            continue
+        plan = plan_json_for_task(task)
+        if plan.get("planner") != "contract_first_v1":
+            continue
+        decision = evaluate_and_apply_scheduler_readiness(db, task)
+        if not decision.runnable:
+            continue
+        plan = plan_json_for_task(task)
+        scheduler = dict(plan.get("scheduler") or {})
+        scheduler.update(
+            {
+                "state": "completed",
+                "runnable": False,
+                "reason": "Contract review was satisfied by the generated review artifact.",
+            }
+        )
+        plan["scheduler"] = scheduler
+        task.plan_json = json.dumps(plan, separators=(",", ":"))
+        task.status = "completed"
+        task.updated_at = utc_now()
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        completed.append(task)
+    return completed
+
+
+def _maybe_auto_preview_and_mock_deploy(db: DbSession, task_run: TaskRun) -> None:
+    task = db.get(Task, task_run.task_id)
+    if task is None or task.intent_type != "frontend_change":
+        return
+    plan = plan_json_for_task(task)
+    if plan.get("planner") != "contract_first_v1":
+        return
+    demo_root = Path(task_run.worktree_path) / "apps/demo"
+    if not demo_root.exists():
+        return
+    try:
+        preview = _preview_service.start_task_run_preview(db, task_run.id)
+        if preview.health_status != "healthy":
+            return
+        _deploy_service.create_mock_deployment(db, preview.id)
+        refresh_session_ledger_for_task_run(db, task_run.id)
+    except (PreviewError, DeployError):
+        return
+
+
+def _is_auto_pipeline_task(task: Task) -> bool:
+    plan = plan_json_for_task(task)
+    return (
+        plan.get("planner") == "contract_first_v1"
+        and plan.get("autoStart") is True
+        and task.intent_type in {"backend_change", "frontend_change"}
+    )
+
+
+def _has_task_run(db: DbSession, task_id: str) -> bool:
+    return bool(list_task_runs(db, task_id))
 
 
 async def _background_execute_task_run(

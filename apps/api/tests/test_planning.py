@@ -397,7 +397,7 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     ]
     assert [task["status"] for task in tasks] == [
         "completed",
-        "pending",
+        "running",
         "waiting_dependency",
         "waiting_dependency",
     ]
@@ -408,6 +408,8 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     assert tasks[0]["planJson"]["scheduler"]["state"] == "completed"
     assert tasks[1]["planJson"]["scheduler"]["state"] == "ready"
     assert tasks[1]["planJson"]["scheduler"]["blockingDependencyIds"] == []
+    assert len(tasks[1]["taskRuns"]) == 1
+    assert tasks[1]["taskRuns"][0]["state"] == "queued"
     assert tasks[2]["planJson"]["scheduler"]["state"] == "waiting_dependency"
     assert tasks[2]["planJson"]["scheduler"]["blockingDependencyIds"] == [tasks[1]["id"]]
     assert tasks[3]["planJson"]["scheduler"]["state"] == "waiting_dependency"
@@ -437,8 +439,9 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     )
     assert "notes" in [field["name"] for field in contract["fields"]]
 
-    for task in tasks:
-        assert task["taskRuns"] == []
+    for index, task in enumerate(tasks):
+        if index != 1:
+            assert task["taskRuns"] == []
         assert task["planJson"]["planner"] == "contract_first_v1"
         assert task["planJson"]["contractId"] == contract_id
         assert task["planJson"]["appContract"] == contract
@@ -448,6 +451,7 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     frontend = tasks[2]
     review = tasks[3]
     assert backend["planJson"]["targetId"] == DEMO_BACKEND_TARGET_ID
+    assert backend["planJson"]["autoStart"] is True
     assert backend["planJson"]["backendTargetId"] == DEMO_BACKEND_TARGET_ID
     assert backend["planJson"]["frontendTargetId"] == DEMO_FRONTEND_TARGET_ID
     assert backend["planJson"]["safeTarget"] == "apps/demo-api"
@@ -456,6 +460,7 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
         "apps/demo-api/tests/test_contacts.py",
     ]
     assert frontend["planJson"]["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert frontend["planJson"]["autoStart"] is True
     assert frontend["planJson"]["frontendTargetId"] == DEMO_FRONTEND_TARGET_ID
     assert frontend["planJson"]["backendTargetId"] == DEMO_BACKEND_TARGET_ID
     assert frontend["planJson"]["frontendTarget"] == "apps/demo"

@@ -1,5 +1,46 @@
 # AgentHub Change Log
 
+## P8-3 Auto-run Pipeline
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Marks contract-first backend/frontend tasks as auto-startable. |
+| `apps/api/app/main.py` | Extends safe auto-start to demo backend tasks and adds contract-first pipeline progression after coding TaskRun completion. |
+| `apps/api/tests/test_planning.py` | Updated mini CRM planning expectations to cover backend auto-start through TaskRun. |
+| `docs/project-state.md` | Recorded P8-3 pipeline behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-3 complete after validation. |
+
+### What Changed
+
+P8-3 wires the bounded contract-first pipeline into existing execution paths:
+
+- backend and frontend contract-first tasks can auto-start when dependencies
+  and locks allow;
+- backend completion can trigger the frontend coding task;
+- coding completion still uses existing diff collection, scripted review, and
+  ledger refresh;
+- ready contract review / QA tasks are completed from generated review
+  artifacts instead of running a mutating QA adapter;
+- frontend completion attempts existing Vite preview and creates mock deploy
+  only from a healthy preview.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted mini CRM planning / scheduler tests | Pass: 11 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 152 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+
+---
+
 ## P8-2 Target Write Locks
 
 **Date:** 2026-05-24
