@@ -5,6 +5,26 @@ reference instead of repeating long context blocks.
 
 ## P9 Status
 
+### P9-4 External Target Instruction Builder
+
+P9-4 completed on 2026-05-24.
+
+Role instructions now use registered external target metadata instead of
+assuming built-in demo paths:
+
+- external frontend instructions include target root, allowed paths, denied
+  paths, project type, detected framework, package manager, and configured
+  validation/evidence commands;
+- external backend instructions use external backend metadata and explicitly
+  preserve the `apps/api` AgentHub platform boundary;
+- external QA/review instructions are read-oriented and require honest handling
+  of diff and check/test/build evidence;
+- built-in demo frontend/backend/review instructions remain compatible with
+  P4/P5/P6/P7/P8 paths.
+
+Current limitation: instructions are external-target aware, but routing and
+TaskRun execution against selected external targets are still P9-5.
+
 ### P9-3 External Target Registry Integration
 
 P9-3 completed on 2026-05-24.

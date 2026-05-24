@@ -582,6 +582,121 @@ def test_external_target_context_reaches_instruction_builder(
     assert f"root: {external_root.resolve()}" in request.instruction
     assert "packageManager: pnpm" in request.instruction
     assert "detectedFramework: vite-react" in request.instruction
+    assert "registered external AgentHub target" in request.instruction
+    assert "Do not assume apps/demo" in request.instruction
+
+
+def test_external_backend_instruction_uses_external_target_metadata(
+    client: TestClient,
+    tmp_path,
+) -> None:
+    with db_from_override() as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        external_root = tmp_path / "external-api"
+        (external_root / "app").mkdir(parents=True)
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-fastapi",
+                name="External FastAPI",
+                root_path=str(external_root),
+                project_type="fastapi",
+                allowed_paths=["app", "tests"],
+                test_command="pytest",
+                check_command="python -m compileall .",
+                package_manager="pip",
+                detected_framework="fastapi",
+            ),
+        )
+        backend_agent = db.exec(select(Agent).where(Agent.role == "backend")).one()
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        task = Task(
+            session_id=session_id,
+            title="External backend change",
+            intent_type="backend_change",
+            status="pending",
+            assigned_agent_id=backend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "targetId": "external-fastapi",
+                    "safeTarget": "app",
+                    "files": ["app/main.py"],
+                    "originalRequest": "@backend add a status endpoint",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert "Backend Agent for a registered external AgentHub target" in request.instruction
+    assert "targetId: external-fastapi" in request.instruction
+    assert f"root: {external_root.resolve()}" in request.instruction
+    assert "allowedPaths: app, tests" in request.instruction
+    assert "checkCommand: python -m compileall ." in request.instruction
+    assert "testCommand: pytest" in request.instruction
+    assert "Do not edit AgentHub platform backend `apps/api`" in request.instruction
+    assert "safe demo backend target" not in request.instruction
+
+
+def test_external_review_instruction_is_read_oriented_with_command_evidence(
+    client: TestClient,
+    tmp_path,
+) -> None:
+    with db_from_override() as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        external_root = tmp_path / "external-review-app"
+        (external_root / "src").mkdir(parents=True)
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-review-app",
+                name="External Review App",
+                root_path=str(external_root),
+                project_type="vite-react",
+                allowed_paths=["src"],
+                test_command="pnpm test",
+                check_command="pnpm check",
+                package_manager="pnpm",
+                detected_framework="vite-react",
+            ),
+        )
+        qa_agent = db.exec(select(Agent).where(Agent.role == "qa")).one()
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        task = Task(
+            session_id=session_id,
+            title="Review external app diff",
+            intent_type="review",
+            status="pending",
+            assigned_agent_id=qa_agent.id,
+            plan_json=json.dumps(
+                {
+                    "targetId": "external-review-app",
+                    "readOnly": True,
+                    "originalRequest": "@review check the external app diff",
+                    "expectedArtifactTypes": ["review"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="scripted_mock")
+
+    assert "QA / Review Agent for a registered external AgentHub target" in request.instruction
+    assert "Review target `external-review-app`" in request.instruction
+    assert "configured check/test/build evidence" in request.instruction
+    assert "do not claim validation success" in request.instruction
+    assert "Stay read-oriented" in request.instruction
 
 
 def test_review_instruction_includes_reviewable_diff_context(

@@ -80,7 +80,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p9-external-project-workspace-mode --strict`.
 
-- [ ] 1.4 P9-4 External Target Instruction Builder.
+- [x] 1.4 P9-4 External Target Instruction Builder.
   - Objective: Generate meaningful role instructions for registered external
     targets without assuming demo paths.
   - Scope:

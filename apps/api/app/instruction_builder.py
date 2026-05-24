@@ -46,7 +46,7 @@ def _role_body(
     if role == "backend":
         return _backend_body(original_request, target)
     if role in {"qa", "review"}:
-        return _review_body(original_request)
+        return _review_body(original_request, target)
     if role == "orchestrator":
         return _manager_body(original_request)
     return (
@@ -63,6 +63,9 @@ def _frontend_body(
     target: TargetProject,
 ) -> str:
     allowed_path = _primary_allowed_path(target)
+    if target.target_id != DEMO_FRONTEND_TARGET_ID:
+        return _external_frontend_body(original_request, target)
+
     target_kind = plan.get("target")
     if task.intent_type == "frontend_change" and target_kind == "login_page":
         return (
@@ -166,6 +169,9 @@ def _frontend_body(
 
 
 def _backend_body(original_request: str, target: TargetProject) -> str:
+    if target.target_id != DEMO_BACKEND_TARGET_ID:
+        return _external_backend_body(original_request, target)
+
     target_exists = _target_root_exists(target)
     allowed_path = _primary_allowed_path(target)
     if target_exists:
@@ -190,7 +196,19 @@ def _backend_body(original_request: str, target: TargetProject) -> str:
     )
 
 
-def _review_body(original_request: str) -> str:
+def _review_body(original_request: str, target: TargetProject) -> str:
+    if target.target_id.startswith("external-"):
+        return (
+            "You are the QA / Review Agent for a registered external AgentHub target.\n"
+            f"Original user request: {original_request}\n"
+            f"Review target `{target.target_id}` at root `{target.root}`. "
+            "This task is read-oriented by default. Inspect the latest diff, "
+            "changed files, selected artifact, scheduler state, and configured "
+            "check/test/build evidence when present. Verify that changes stay "
+            "inside allowed paths and do not touch denied paths. Report advisory "
+            "findings honestly; do not claim validation success if command "
+            "evidence is missing or failed."
+        )
     return (
         "You are the QA / Review Agent for AgentHub.\n"
         f"Original user request: {original_request}\n"
@@ -198,6 +216,64 @@ def _review_body(original_request: str) -> str:
         "files, ledger, preview, deploy, and prior review context. Produce "
         "advisory findings with status passed, warning, or failed; do not block "
         "preview or mock deploy in v1."
+    )
+
+
+def _external_frontend_body(original_request: str, target: TargetProject) -> str:
+    command_hint = _command_hint(target)
+    return (
+        "You are the Frontend Agent for a registered external AgentHub target.\n"
+        f"Original user request: {original_request}\n"
+        f"Target root: {target.root}\n"
+        f"Allowed paths: {', '.join(target.allowed_paths)}\n"
+        f"Denied paths: {', '.join(target.denied_paths)}\n"
+        f"Project type: {target.project_type or target.type}; "
+        f"framework: {target.detected_framework or 'unknown'}; "
+        f"package manager: {target.package_manager or 'unknown'}.\n"
+        "Implement a meaningful, bounded frontend change for the request inside "
+        "the registered external target only. Preserve the existing framework "
+        "and project structure. Do not assume apps/demo, apps/demo-api, or any "
+        "AgentHub built-in demo path unless the registered target metadata says "
+        "so. "
+        f"{command_hint}"
+    )
+
+
+def _external_backend_body(original_request: str, target: TargetProject) -> str:
+    command_hint = _command_hint(target)
+    return (
+        "You are the Backend Agent for a registered external AgentHub target.\n"
+        f"Original user request: {original_request}\n"
+        f"Target root: {target.root}\n"
+        f"Allowed paths: {', '.join(target.allowed_paths)}\n"
+        f"Denied paths: {', '.join(target.denied_paths)}\n"
+        f"Project type: {target.project_type or target.type}; "
+        f"framework: {target.detected_framework or 'unknown'}; "
+        f"package manager: {target.package_manager or 'unknown'}.\n"
+        "Implement backend/API changes only inside the registered external "
+        "target. Do not edit AgentHub platform backend `apps/api` unless the "
+        "task explicitly targets `agenthub-platform` in platform maintenance "
+        "mode. "
+        f"{command_hint}"
+    )
+
+
+def _command_hint(target: TargetProject) -> str:
+    commands = [
+        command
+        for command in [
+            target.check_command,
+            target.test_command,
+            target.build_command,
+            target.preview_command,
+        ]
+        if command
+    ]
+    if not commands:
+        return "No validation commands are configured; do not invent successful validation."
+    return (
+        "Configured validation/evidence commands: "
+        f"{', '.join(commands)}. Run only configured commands when validation is requested."
     )
 
 

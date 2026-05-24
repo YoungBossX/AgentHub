@@ -1,5 +1,42 @@
 # AgentHub Change Log
 
+## P9-4 External Target Instruction Builder
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/instruction_builder.py` | Added external frontend/backend/review instruction bodies using registered target metadata and configured command evidence. |
+| `apps/api/tests/test_task_runs.py` | Added external frontend, backend, and review instruction coverage. |
+| `docs/project-state.md` | Recorded P9-4 behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-4 complete after validation. |
+
+### What Changed
+
+P9-4 makes role instructions target-aware for registered external projects:
+
+- frontend/backend instructions no longer reduce external targets to demo app
+  paths;
+- target root, allowed paths, denied paths, project type, package manager,
+  detected framework, and configured validation commands are included;
+- review instructions stay read-oriented and call out command evidence honesty;
+- built-in demo instructions are preserved.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted task-run/instruction tests | Pass: 44 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+
+---
+
 ## P9-3 External Target Registry Integration
 
 **Date:** 2026-05-24
