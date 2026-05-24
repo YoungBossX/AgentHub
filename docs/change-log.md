@@ -1,5 +1,46 @@
 # AgentHub Change Log
 
+## P10-1 TaskRun Heartbeat And Lease
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/models.py` | Added TaskRun liveness fields for runner identity, heartbeat, lease expiry, and stale metadata. |
+| `apps/api/app/db.py` | Added SQLite backfill for TaskRun heartbeat/lease/stale columns. |
+| `apps/api/app/task_runs.py` | Added runner lease initialization, heartbeat refresh, stale run detection, and honest stale failure marking. |
+| `apps/api/app/schemas.py` | Exposed TaskRun liveness metadata in API response schema. |
+| `apps/api/app/main.py` | Included liveness metadata in TaskRun API responses. |
+| `apps/api/tests/test_task_runs.py` | Added heartbeat, lease, and stale detection tests. |
+| `apps/api/tests/test_models.py` | Updated model boundary and response alias tests for liveness fields. |
+| `docs/project-state.md` | Recorded P10-1 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-1 complete after validation. |
+
+### What Changed
+
+TaskRuns now have local runner liveness metadata:
+
+- new runs get `runner_id`, `last_heartbeat_at`, and `lease_expires_at`;
+- active runs can refresh heartbeat and lease metadata;
+- expired active leases can be marked failed with `TASK_RUN_STALE`;
+- stale transitions write audit events and do not claim adapter success.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted heartbeat/stale tests | Pass: 4 tests. |
+| Targeted model/task-run tests | Pass: 6 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+
+---
+
 ## P9-8 External Project E2E Rehearsal And Freeze Review
 
 **Date:** 2026-05-24

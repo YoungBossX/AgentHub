@@ -130,6 +130,11 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "state",
             "started_at",
             "ended_at",
+            "runner_id",
+            "last_heartbeat_at",
+            "lease_expires_at",
+            "stale_detected_at",
+            "stale_reason",
             "worktree_path",
             "base_ref",
             "head_ref",
@@ -389,6 +394,11 @@ def test_task_run_response_uses_camelcase_aliases() -> None:
     assert data["taskId"] == "task-1"
     assert data["adapterType"] == "codex"
     assert data["worktreePath"] == "/tmp/wt"
+    assert "runnerId" in data
+    assert "lastHeartbeatAt" in data
+    assert "leaseExpiresAt" in data
+    assert "staleDetectedAt" in data
+    assert "staleReason" in data
     assert data["createdAt"] == "2026-05-17T00:00:00Z"
     assert "task_id" not in data
     assert "created_at" not in data

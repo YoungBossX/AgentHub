@@ -29,7 +29,8 @@ def ensure_demo_schema_columns() -> None:
         return
 
     inspector = inspect(engine)
-    if "session" not in inspector.get_table_names():
+    table_names = set(inspector.get_table_names())
+    if "session" not in table_names:
         return
 
     existing_columns = {column["name"] for column in inspector.get_columns("session")}
@@ -38,12 +39,37 @@ def ensure_demo_schema_columns() -> None:
         for column_name in ("active_frontend_target_id", "active_backend_target_id")
         if column_name not in existing_columns
     ]
-    if not missing_columns:
+    if missing_columns:
+        with engine.begin() as connection:
+            for column_name in missing_columns:
+                connection.execute(
+                    text(f"ALTER TABLE session ADD COLUMN {column_name} TEXT")
+                )
+
+    if "taskrun" not in table_names:
+        return
+
+    task_run_columns = {column["name"] for column in inspector.get_columns("taskrun")}
+    task_run_column_definitions = {
+        "runner_id": "TEXT",
+        "last_heartbeat_at": "DATETIME",
+        "lease_expires_at": "DATETIME",
+        "stale_detected_at": "DATETIME",
+        "stale_reason": "TEXT",
+    }
+    missing_task_run_columns = [
+        (column_name, column_type)
+        for column_name, column_type in task_run_column_definitions.items()
+        if column_name not in task_run_columns
+    ]
+    if not missing_task_run_columns:
         return
 
     with engine.begin() as connection:
-        for column_name in missing_columns:
-            connection.execute(text(f"ALTER TABLE session ADD COLUMN {column_name} TEXT"))
+        for column_name, column_type in missing_task_run_columns:
+            connection.execute(
+                text(f"ALTER TABLE taskrun ADD COLUMN {column_name} {column_type}")
+            )
 
 
 def init_database(seed: bool = True) -> None:

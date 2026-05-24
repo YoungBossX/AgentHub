@@ -116,6 +116,11 @@ class TaskRun(SQLModel, table=True):
     state: str
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
+    runner_id: Optional[str] = None
+    last_heartbeat_at: Optional[datetime] = None
+    lease_expires_at: Optional[datetime] = None
+    stale_detected_at: Optional[datetime] = None
+    stale_reason: Optional[str] = None
     worktree_path: str
     base_ref: Optional[str] = None
     head_ref: Optional[str] = None

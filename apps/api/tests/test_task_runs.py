@@ -1,5 +1,6 @@
 import json
 from collections.abc import Iterator
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,7 +13,7 @@ from app.external_workspaces import (
     ExternalWorkspaceRegistration,
     register_external_project_target,
 )
-from app.main import agent_run_request_for, app, get_db
+from app.main import agent_run_request_for, app, get_db, task_run_response
 from app.guardrails import ApprovalRequestPayload, request_task_run_approval
 from app.reviews import create_scripted_review_for_task_run
 from app.models import (
@@ -30,7 +31,13 @@ from app.models import (
     Workspace,
 )
 from app.models import utc_now
-from app.task_runs import TaskRunLifecycleError, create_task_run, transition_task_run
+from app.task_runs import (
+    TaskRunLifecycleError,
+    create_task_run,
+    mark_stale_task_runs,
+    refresh_task_run_heartbeat,
+    transition_task_run,
+)
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
@@ -133,6 +140,96 @@ def test_create_task_run_persists_queued_state_before_event(client: TestClient) 
         assert event.sequence == 1
         assert event.event_type == "task.state"
         assert json.loads(event.payload_json)["state"] == "queued"
+
+
+def test_create_task_run_records_runner_heartbeat_and_lease(client: TestClient) -> None:
+    with db_from_override() as db:
+        stored = create_task_run(db, task_id())
+        run = task_run_response(db, stored).model_dump(by_alias=True)
+
+        assert run["runnerId"].startswith("local:")
+        assert run["lastHeartbeatAt"] is not None
+        assert run["leaseExpiresAt"] is not None
+        assert run["staleDetectedAt"] is None
+        assert run["staleReason"] is None
+        assert stored.runner_id == run["runnerId"]
+        assert stored.last_heartbeat_at is not None
+        assert stored.lease_expires_at is not None
+        assert stored.lease_expires_at > stored.last_heartbeat_at
+
+
+def test_refresh_task_run_heartbeat_extends_active_lease(client: TestClient) -> None:
+    with db_from_override() as db:
+        task_run = create_task_run(db, task_id())
+        original_heartbeat = task_run.last_heartbeat_at
+        original_lease = task_run.lease_expires_at
+
+        refreshed = refresh_task_run_heartbeat(
+            db,
+            task_run.id,
+            runner_id=task_run.runner_id,
+            lease_seconds=900,
+        )
+
+        assert refreshed.last_heartbeat_at >= original_heartbeat
+        assert refreshed.lease_expires_at > original_lease
+
+        event = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .where(TaskRunEvent.event_type == "task.heartbeat")
+        ).one()
+        payload = json.loads(event.payload_json)
+
+        assert payload["runnerId"] == task_run.runner_id
+        assert payload["leaseExpiresAt"] is not None
+
+
+def test_mark_stale_task_runs_marks_expired_active_run_honestly(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task_run = create_task_run(db, task_id())
+        task_run.lease_expires_at = utc_now() - timedelta(minutes=1)
+        db.add(task_run)
+        db.commit()
+
+        stale_runs = mark_stale_task_runs(db, reason="lease_expired_for_test")
+
+        assert [run.id for run in stale_runs] == [task_run.id]
+
+        stored = db.get(TaskRun, task_run.id)
+        task = db.get(Task, stored.task_id)
+        stale_event = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .where(TaskRunEvent.event_type == "task.stale")
+        ).one()
+        payload = json.loads(stale_event.payload_json)
+
+        assert stored.state == "failed"
+        assert stored.error_code == "TASK_RUN_STALE"
+        assert stored.stale_detected_at is not None
+        assert stored.stale_reason == "lease_expired_for_test"
+        assert stored.ended_at is not None
+        assert task.status == "failed"
+        assert payload["runnerId"] == task_run.runner_id
+        assert payload["reason"] == "lease_expired_for_test"
+        assert "success" not in payload
+
+
+def test_mark_stale_task_runs_ignores_unexpired_active_run(client: TestClient) -> None:
+    with db_from_override() as db:
+        task_run = create_task_run(db, task_id())
+
+        stale_runs = mark_stale_task_runs(db)
+
+        assert stale_runs == []
+
+        stored = db.get(TaskRun, task_run.id)
+        assert stored.state == "queued"
+        assert stored.stale_detected_at is None
+        assert stored.stale_reason is None
 
 
 def test_default_code_adapter_env_selects_claude_code_for_frontend_task(

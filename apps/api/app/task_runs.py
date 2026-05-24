@@ -1,6 +1,8 @@
 import json
 import os
+from datetime import datetime, timedelta
 from typing import Any, Optional
+from uuid import uuid4
 
 from sqlmodel import Session as DbSession
 from sqlmodel import select
@@ -42,6 +44,7 @@ TERMINAL_STATES = {"completed", "failed", "interrupted"}
 DEFAULT_CODE_ADAPTER_ENV = "AGENTHUB_DEFAULT_CODE_ADAPTER"
 CODE_AGENT_ROLES = {"frontend", "backend"}
 SUPPORTED_CODE_ADAPTERS = {"codex", "claude_code"}
+DEFAULT_LEASE_SECONDS = 300
 
 
 class TaskRunLifecycleError(ValueError):
@@ -75,10 +78,14 @@ def create_task_run(
     task.status = _task_status_for_run_state(initial_state)
     task.updated_at = now
     worktree_path = _worktree_path_for_task(db, task, session)
+    runner_id = _new_runner_id()
     task_run = TaskRun(
         task_id=task.id,
         agent_id=agent.id,
         state=initial_state,
+        runner_id=runner_id,
+        last_heartbeat_at=now,
+        lease_expires_at=_lease_expires_at(now),
         worktree_path=worktree_path,
         base_ref=capture_base_ref_for_worktree(worktree_path),
         metrics_json=json.dumps(metrics, separators=(",", ":")),
@@ -120,6 +127,8 @@ def transition_task_run(
     task_run.error_code = error_code
     task_run.error_message = error_message
     task_run.updated_at = now
+    if state in ACTIVE_STATES:
+        _touch_task_run_heartbeat(task_run, now=now)
     if state in {"streaming", "applying_changes"} and task_run.started_at is None:
         task_run.started_at = now
     if state in TERMINAL_STATES:
@@ -155,6 +164,146 @@ def transition_task_run(
         refresh_downstream_scheduler_state(db, task.id)
         refresh_session_scheduler_state(db, task.session_id)
     return task_run
+
+
+def refresh_task_run_heartbeat(
+    db: DbSession,
+    task_run_id: str,
+    *,
+    runner_id: Optional[str] = None,
+    lease_seconds: int = DEFAULT_LEASE_SECONDS,
+) -> TaskRun:
+    task_run = _task_run_or_raise(db, task_run_id)
+    if task_run.state not in ACTIVE_STATES:
+        raise TaskRunLifecycleError("Only active TaskRuns can refresh heartbeat.")
+    if runner_id is not None and task_run.runner_id not in {None, runner_id}:
+        raise TaskRunLifecycleError("Heartbeat runner does not own this TaskRun.")
+
+    now = utc_now()
+    _touch_task_run_heartbeat(
+        task_run,
+        now=now,
+        runner_id=runner_id,
+        lease_seconds=lease_seconds,
+    )
+    db.add(task_run)
+    db.commit()
+    db.refresh(task_run)
+    append_task_run_event(
+        db,
+        task_run_id=task_run.id,
+        event_type="task.heartbeat",
+        payload_json=json.dumps(
+            {
+                "runnerId": task_run.runner_id,
+                "lastHeartbeatAt": task_run.last_heartbeat_at.isoformat()
+                if task_run.last_heartbeat_at is not None
+                else None,
+                "leaseExpiresAt": task_run.lease_expires_at.isoformat()
+                if task_run.lease_expires_at is not None
+                else None,
+            },
+            separators=(",", ":"),
+        ),
+    )
+    return task_run
+
+
+def stale_task_runs(
+    db: DbSession,
+    *,
+    now: Optional[datetime] = None,
+) -> list[TaskRun]:
+    timestamp = now or utc_now()
+    return db.exec(
+        select(TaskRun)
+        .where(TaskRun.state.in_(ACTIVE_STATES))
+        .where(TaskRun.lease_expires_at.is_not(None))
+        .where(TaskRun.lease_expires_at < timestamp)
+        .order_by(TaskRun.updated_at, TaskRun.id)
+    ).all()
+
+
+def mark_stale_task_runs(
+    db: DbSession,
+    *,
+    now: Optional[datetime] = None,
+    reason: str = "lease_expired",
+) -> list[TaskRun]:
+    timestamp = now or utc_now()
+    marked: list[TaskRun] = []
+    for task_run in stale_task_runs(db, now=timestamp):
+        task = _task_or_raise(db, task_run.task_id)
+        previous_state = task_run.state
+        task_run.state = "failed"
+        task_run.error_code = "TASK_RUN_STALE"
+        task_run.error_message = (
+            "TaskRun heartbeat lease expired before completion; adapter success "
+            "was not claimed."
+        )
+        task_run.stale_detected_at = timestamp
+        task_run.stale_reason = reason
+        task_run.ended_at = timestamp
+        task_run.updated_at = timestamp
+        task.status = "failed"
+        task.updated_at = timestamp
+        db.add(task)
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        _append_state_event(
+            db,
+            task_run,
+            "failed",
+            {
+                "previousState": previous_state,
+                "errorCode": task_run.error_code,
+                "errorMessage": task_run.error_message,
+                "runnerId": task_run.runner_id,
+                "leaseExpiresAt": task_run.lease_expires_at.isoformat()
+                if task_run.lease_expires_at is not None
+                else None,
+                "staleDetectedAt": task_run.stale_detected_at.isoformat(),
+                "staleReason": reason,
+            },
+        )
+        append_task_run_event(
+            db,
+            task_run_id=task_run.id,
+            event_type="task.stale",
+            payload_json=json.dumps(
+                {
+                    "previousState": previous_state,
+                    "newState": "failed",
+                    "runnerId": task_run.runner_id,
+                    "leaseExpiresAt": task_run.lease_expires_at.isoformat()
+                    if task_run.lease_expires_at is not None
+                    else None,
+                    "staleDetectedAt": task_run.stale_detected_at.isoformat(),
+                    "reason": reason,
+                    "errorCode": task_run.error_code,
+                    "errorMessage": task_run.error_message,
+                },
+                separators=(",", ":"),
+            ),
+        )
+
+        from app.scheduler import mark_task_run_terminal_scheduler_state
+        from app.scheduler import refresh_downstream_scheduler_state
+        from app.scheduler import refresh_session_scheduler_state
+
+        mark_task_run_terminal_scheduler_state(
+            db,
+            task,
+            run_state="failed",
+            adapter_type=adapter_type_for_run(db, task_run),
+            task_run_id=task_run.id,
+        )
+        refresh_downstream_scheduler_state(db, task.id)
+        refresh_session_scheduler_state(db, task.session_id)
+        marked.append(task_run)
+    return marked
 
 
 def interrupt_task_run(db: DbSession, task_run_id: str) -> TaskRun:
@@ -257,6 +406,29 @@ def _append_state_event(
         event_type="task.state",
         payload_json=json.dumps(event_payload, separators=(",", ":")),
     )
+
+
+def _new_runner_id() -> str:
+    return f"local:{uuid4()}"
+
+
+def _lease_expires_at(now: datetime, lease_seconds: int = DEFAULT_LEASE_SECONDS) -> datetime:
+    return now + timedelta(seconds=lease_seconds)
+
+
+def _touch_task_run_heartbeat(
+    task_run: TaskRun,
+    *,
+    now: datetime,
+    runner_id: Optional[str] = None,
+    lease_seconds: int = DEFAULT_LEASE_SECONDS,
+) -> None:
+    if runner_id is not None:
+        task_run.runner_id = runner_id
+    if task_run.runner_id is None:
+        task_run.runner_id = _new_runner_id()
+    task_run.last_heartbeat_at = now
+    task_run.lease_expires_at = _lease_expires_at(now, lease_seconds)
 
 
 def _task_status_for_run_state(state: str) -> str:

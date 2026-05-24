@@ -237,6 +237,11 @@ class TaskRunResponse(ApiModel):
     state: str
     started_at: Optional[datetime] = Field(alias="startedAt")
     ended_at: Optional[datetime] = Field(alias="endedAt")
+    runner_id: Optional[str] = Field(default=None, alias="runnerId")
+    last_heartbeat_at: Optional[datetime] = Field(default=None, alias="lastHeartbeatAt")
+    lease_expires_at: Optional[datetime] = Field(default=None, alias="leaseExpiresAt")
+    stale_detected_at: Optional[datetime] = Field(default=None, alias="staleDetectedAt")
+    stale_reason: Optional[str] = Field(default=None, alias="staleReason")
     worktree_path: str = Field(alias="worktreePath")
     base_ref: Optional[str] = Field(alias="baseRef")
     head_ref: Optional[str] = Field(alias="headRef")

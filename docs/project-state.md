@@ -3,6 +3,30 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P10 Status
+
+### P10-1 TaskRun Heartbeat And Lease
+
+P10-1 completed on 2026-05-24.
+
+TaskRun execution now records local runner liveness metadata:
+
+- `runner_id` identifies the local runner owner for a TaskRun;
+- `last_heartbeat_at` records the most recent active-run heartbeat;
+- `lease_expires_at` records when the current heartbeat lease expires;
+- `stale_detected_at` and `stale_reason` record honest stale detection.
+
+New TaskRuns receive heartbeat and lease metadata when created. Active
+TaskRuns can refresh their heartbeat through the TaskRun lifecycle service, and
+expired active leases can be marked failed with `TASK_RUN_STALE` without
+claiming adapter success. Stale transitions write `task.state` and
+`task.stale` audit events and refresh downstream scheduler state.
+
+Current limitation: P10-1 introduces liveness metadata and stale marking, but
+does not yet clean stale target locks, create checkpoints, harden retry
+idempotency, detect conflicts, or expose recovery actions. Those remain P10-2
+through P10-7.
+
 ## P9 Status
 
 ### P9-8 External Project E2E Rehearsal And Freeze Review

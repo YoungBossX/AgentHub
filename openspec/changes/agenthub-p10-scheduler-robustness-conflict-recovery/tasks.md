@@ -1,6 +1,6 @@
 ## 1. P10 Scheduler Robustness And Conflict Recovery
 
-- [ ] 1.1 P10-1 TaskRun Heartbeat And Lease.
+- [x] 1.1 P10-1 TaskRun Heartbeat And Lease.
   - Objective: make TaskRun liveness explicit so running work can be
     classified as healthy, stale, timed out, or terminal.
   - Scope:
