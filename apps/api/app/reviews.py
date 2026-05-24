@@ -7,7 +7,9 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
+from app.external_evidence import list_task_run_command_evidence
 from app.models import Artifact, Diff, Review, Task, TaskRun, utc_now
+from app.models import Session as AgentHubSession
 from app.target_registry import (
     DEMO_BACKEND_TARGET_ID,
     DEMO_FRONTEND_TARGET_ID,
@@ -15,6 +17,7 @@ from app.target_registry import (
     TargetRegistryError,
     get_related_backend_target,
     get_target,
+    get_target_for_workspace,
 )
 
 
@@ -75,11 +78,15 @@ def create_scripted_review_for_diff(
     files_reviewed = _json_list(diff.changed_files_json)
     plan = _plan_for_diff_artifact(db, diff_artifact)
     contract = plan.get("appContract") if isinstance(plan.get("appContract"), dict) else None
+    external_target = _external_target_for_plan(db, diff_artifact, plan)
+    command_evidence = list_task_run_command_evidence(db, diff_artifact.task_run_id)
     findings, suggested_changes = _scripted_findings(
         files_reviewed,
         diff.patch_text,
         contract=contract,
         plan=plan,
+        external_target=external_target,
+        command_evidence=command_evidence,
     )
     status, risk_level = _status_and_risk_for(findings)
     summary = _summary_for(status, risk_level, files_reviewed, findings, contract=contract)
@@ -195,6 +202,8 @@ def _scripted_findings(
     *,
     contract: Optional[dict[str, Any]] = None,
     plan: Optional[dict[str, Any]] = None,
+    external_target: Optional[TargetProject] = None,
+    command_evidence: Optional[list] = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     findings: list[dict[str, Any]] = []
     suggested_changes: list[str] = []
@@ -228,6 +237,90 @@ def _scripted_findings(
         findings.extend(contract_findings)
         suggested_changes.extend(contract_suggestions)
 
+    if external_target is not None:
+        external_findings, external_suggestions = _external_target_findings(
+            files_reviewed,
+            external_target,
+            command_evidence or [],
+        )
+        findings.extend(external_findings)
+        suggested_changes.extend(external_suggestions)
+
+    return findings, suggested_changes
+
+
+def _external_target_findings(
+    files_reviewed: list[str],
+    target: TargetProject,
+    command_evidence: list,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    findings: list[dict[str, Any]] = []
+    suggested_changes: list[str] = []
+    for path in files_reviewed:
+        if target.denies_path(path):
+            findings.append(
+                {
+                    "severity": "high",
+                    "file": path,
+                    "message": f"External target {target.target_id} changed denied path {path}.",
+                }
+            )
+            suggested_changes.append(f"Remove denied-path changes from {path}.")
+            continue
+        if not target.allows_path(path):
+            findings.append(
+                {
+                    "severity": "medium",
+                    "file": path,
+                    "message": (
+                        f"External target {target.target_id} changed {path}, "
+                        "which is outside registered allowed paths."
+                    ),
+                }
+            )
+            suggested_changes.append(
+                f"Keep changes inside {', '.join(target.allowed_paths)} for {target.target_id}."
+            )
+
+    evidence_by_type = {
+        str(getattr(evidence, "command_type", "")): evidence
+        for evidence in command_evidence
+    }
+    for command_type, command in [
+        ("check", target.check_command),
+        ("test", target.test_command),
+        ("build", target.build_command),
+    ]:
+        if not command:
+            continue
+        evidence = evidence_by_type.get(command_type)
+        if evidence is None:
+            findings.append(
+                {
+                    "severity": "medium",
+                    "file": None,
+                    "message": (
+                        f"External target {target.target_id} has configured "
+                        f"{command_type} command `{command}` but no evidence was recorded."
+                    ),
+                }
+            )
+            suggested_changes.append(f"Record {command_type} evidence for `{command}`.")
+            continue
+        if getattr(evidence, "exit_code", 0) != 0:
+            findings.append(
+                {
+                    "severity": "medium",
+                    "file": None,
+                    "message": (
+                        f"External target {target.target_id} {command_type} command "
+                        f"`{command}` failed with exit code {evidence.exit_code}."
+                    ),
+                }
+            )
+            suggested_changes.append(
+                f"Fix failing {command_type} evidence before claiming validation success."
+            )
     return findings, suggested_changes
 
 
@@ -503,6 +596,29 @@ def _plan_for_diff_artifact(
     except json.JSONDecodeError:
         return {}
     return plan if isinstance(plan, dict) else {}
+
+
+def _external_target_for_plan(
+    db: DbSession,
+    diff_artifact: Artifact,
+    plan: dict[str, Any],
+) -> Optional[TargetProject]:
+    target_id = _string_value(plan.get("targetId"))
+    if target_id is None or not target_id.startswith("external-"):
+        return None
+    task_run = db.get(TaskRun, diff_artifact.task_run_id)
+    if task_run is None:
+        return None
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        return None
+    session = db.get(AgentHubSession, task.session_id)
+    if session is None:
+        return None
+    try:
+        return get_target_for_workspace(db, session.workspace_id, target_id)
+    except TargetRegistryError:
+        return None
 
 
 def _first_file(files_reviewed: list[str]) -> Optional[str]:

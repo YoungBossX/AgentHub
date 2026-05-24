@@ -159,7 +159,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p9-external-project-workspace-mode --strict`.
 
-- [ ] 1.7 P9-7 External Project Review.
+- [x] 1.7 P9-7 External Project Review.
   - Objective: Review external diffs and evidence against registered target
     policy.
   - Scope:

@@ -1,5 +1,40 @@
 # AgentHub Change Log
 
+## P9-7 External Project Review
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/reviews.py` | Added external target allowed/denied path review and command evidence findings. |
+| `apps/api/tests/test_external_reviews.py` | Added denied-path, outside-allowed-path, failed-evidence, missing-evidence, and clean-pass review tests. |
+| `docs/project-state.md` | Recorded P9-7 behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-7 complete after validation. |
+
+### What Changed
+
+P9-7 makes external reviews policy-aware:
+
+- denied path edits fail or warn explicitly;
+- outside-allowed-path edits produce findings;
+- missing or failed configured check/test/build evidence is reported honestly;
+- clean external target diffs with passing evidence can pass review.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted external review/evidence/diff tests | Pass: 13 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+
+---
+
 ## P9-6 External Evidence Pipeline
 
 **Date:** 2026-05-24

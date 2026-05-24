@@ -5,6 +5,24 @@ reference instead of repeating long context blocks.
 
 ## P9 Status
 
+### P9-7 External Project Review
+
+P9-7 completed on 2026-05-24.
+
+Scripted review now checks registered external target policy and command
+evidence:
+
+- external diffs are reviewed against target allowed paths and denied paths;
+- denied path edits such as `.env` fail review with high risk;
+- edits outside registered allowed paths produce warning findings;
+- configured check/test/build commands are expected to have command evidence;
+- failed command evidence is reported honestly and keeps review at warning or
+  failed status as appropriate;
+- clean external diffs with passing configured evidence can pass review.
+
+Current limitation: P9-7 is deterministic scripted review policy. It does not
+run a real Claude/Codex review; that remains optional evidence for P9-8.
+
 ### P9-6 External Evidence Pipeline
 
 P9-6 completed on 2026-05-24.
