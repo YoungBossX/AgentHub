@@ -51,7 +51,7 @@ from app.reviews import (
     list_task_run_reviews,
 )
 from app.scheduler import complete_synthetic_planning_tasks
-from app.scheduler import evaluate_and_apply_dependency_readiness
+from app.scheduler import evaluate_and_apply_scheduler_readiness
 from app.scheduler import refresh_session_scheduler_state
 from app.schemas import (
     AgentContactResponse,
@@ -406,7 +406,7 @@ def auto_start_safe_tasks(
             continue
         if not _should_auto_start_task(task, plan):
             continue
-        decision = evaluate_and_apply_dependency_readiness(db, task)
+        decision = evaluate_and_apply_scheduler_readiness(db, task)
         if not decision.runnable:
             continue
         task_run = create_task_run(db, task.id)

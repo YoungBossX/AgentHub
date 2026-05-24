@@ -55,6 +55,7 @@ def create_task_run(
     session = _session_or_raise(db, task.session_id)
     agent = _agent_or_raise(db, task.assigned_agent_id)
     selected_adapter = adapter_type or _default_adapter_for_agent(agent)
+    _ensure_target_write_lock_available(db, task)
 
     now = utc_now()
     metrics = {
@@ -136,8 +137,10 @@ def transition_task_run(
     _append_state_event(db, task_run, state, event_payload)
     if state in TERMINAL_STATES:
         from app.scheduler import refresh_downstream_scheduler_state
+        from app.scheduler import refresh_session_scheduler_state
 
         refresh_downstream_scheduler_state(db, task.id)
+        refresh_session_scheduler_state(db, task.session_id)
     return task_run
 
 
@@ -280,6 +283,20 @@ def _platform_approval_payload(task: Task) -> Optional[dict[str, Any]]:
             "expiresAt": None,
         }
     return None
+
+
+def _ensure_target_write_lock_available(db: DbSession, task: Task) -> None:
+    from app.scheduler import (
+        SCHEDULER_BLOCKED,
+        SCHEDULER_WAITING_TARGET_LOCK,
+        apply_scheduler_decision,
+        evaluate_target_lock_readiness,
+    )
+
+    decision = evaluate_target_lock_readiness(db, task)
+    if decision.state in {SCHEDULER_WAITING_TARGET_LOCK, SCHEDULER_BLOCKED}:
+        apply_scheduler_decision(db, task, decision)
+        raise TaskRunLifecycleError(decision.reason)
 
 
 def _plan_json(task: Task) -> dict[str, Any]:

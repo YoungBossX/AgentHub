@@ -1,5 +1,47 @@
 # AgentHub Change Log
 
+## P8-2 Target Write Locks
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/scheduler.py` | Added target ID resolution, write-lock detection, lock-holder metadata, platform target blocking, and combined scheduler readiness. |
+| `apps/api/app/main.py` | Uses combined scheduler readiness before safe task auto-start. |
+| `apps/api/app/task_runs.py` | Enforces target write locks before manual TaskRun creation and refreshes session scheduler state after terminal runs. |
+| `apps/api/tests/test_scheduler.py` | Added frontend/backend lock, lock release, read-only review, and platform lock protection tests. |
+| `docs/project-state.md` | Recorded P8-2 target lock behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-2 complete after validation. |
+
+### What Changed
+
+P8-2 adds target write locks on top of the P8-1 dependency scheduler:
+
+- active same-session write TaskRuns hold a target lock for their resolved
+  `targetId`;
+- another runnable write task for the same target becomes
+  `waiting_target_lock` instead of starting;
+- waiting lock metadata identifies the target and active holder TaskRun IDs;
+- terminal TaskRuns release locks by re-evaluating session scheduler state;
+- read-only Review / QA tasks do not acquire target write locks by default;
+- ordinary app backend tasks cannot acquire an `agenthub-platform` write lock
+  without explicit platform mode and approval.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted scheduler lock tests | Pass: 10 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 152 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+
+---
+
 ## P8-1 Dependency-aware Task Scheduler
 
 **Date:** 2026-05-24

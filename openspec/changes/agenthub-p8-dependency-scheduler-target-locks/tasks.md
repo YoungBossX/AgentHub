@@ -26,7 +26,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict`.
 
-- [ ] 1.2 P8-2 Target Write Locks.
+- [x] 1.2 P8-2 Target Write Locks.
   - Objective: Prevent same-target write conflicts during scheduled execution.
   - Scope:
     - derive task target IDs and read/write mode from P7 registry-aware plans;

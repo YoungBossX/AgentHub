@@ -5,6 +5,30 @@ reference instead of repeating long context blocks.
 
 ## P8 Status
 
+### P8-2 Target Write Locks
+
+P8-2 completed on 2026-05-24.
+
+The scheduler now derives target write-lock requirements from P7 target-aware
+task plans:
+
+- `frontend_change`, `backend_change`, and `platform_maintenance` tasks require
+  a write lock for their resolved `targetId`;
+- same-session write tasks targeting `demo-frontend` or `demo-backend` do not
+  start concurrently;
+- lock-waiting tasks are marked `waiting_target_lock` with
+  `planJson.scheduler.targetId` and `lockHolderTaskRunIds`;
+- terminal TaskRun transitions refresh scheduler state so waiting tasks can
+  return to `pending` / `ready` after the lock holder completes;
+- Review / QA tasks remain read-oriented by default and do not acquire write
+  locks unless explicitly marked as write tasks;
+- ordinary backend tasks that try to target `agenthub-platform` without
+  platform mode and approval are blocked before TaskRun creation.
+
+Current limitation: P8-2 does not yet auto-progress the full Contract ->
+Backend -> Frontend -> Review -> Preview -> Mock Deploy pipeline. That remains
+P8-3.
+
 ### P8-1 Dependency-aware Task Scheduler
 
 P8-1 completed on 2026-05-24 as the first implementation step of
