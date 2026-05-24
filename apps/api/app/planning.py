@@ -9,6 +9,13 @@ from sqlmodel import select
 
 from app.models import Agent, Message, Task
 from app.repositories import create_session_message, list_session_tasks
+from app.target_registry import (
+    DEMO_BACKEND_TARGET_ID,
+    DEMO_FRONTEND_TARGET_ID,
+    TargetProject,
+    get_related_backend_target,
+    get_target,
+)
 
 SUPPORTED_MENTION_ROLES = {"orchestrator", "frontend", "backend", "qa", "review"}
 MENTION_AGENT_ROLE = {"review": "qa"}
@@ -20,7 +27,6 @@ GRAPH_ALLOWED_FILES = {
     "apps/demo/src/App.tsx",
     "apps/demo/src/styles.css",
 }
-DEMO_API_BASE_URL = "http://127.0.0.1:5174"
 MENTION_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9_-]*)")
 CHANGE_TO_PATTERN = re.compile(
     r"(?:change\s+(?:the\s+)?(?:primary\s+)?(?:login\s+page\s+)?"
@@ -407,7 +413,16 @@ def _create_contract_first_plan(
         )
         return []
 
-    contract = _app_contract_for(message.content_md, intent)
+    frontend_target = get_target(DEMO_FRONTEND_TARGET_ID)
+    backend_target = get_related_backend_target(frontend_target.target_id)
+    frontend_allowed_path = _primary_allowed_path(frontend_target)
+    backend_allowed_path = _primary_allowed_path(backend_target)
+    contract = _app_contract_for(
+        message.content_md,
+        intent,
+        frontend_target=frontend_target,
+        backend_target=backend_target,
+    )
     task_specs = [
         TaskSpec(
             title=f"Create {intent.app_name} contract",
@@ -416,6 +431,8 @@ def _create_contract_first_plan(
             priority=0,
             plan={
                 "target": "app_contract",
+                "frontendTargetId": frontend_target.target_id,
+                "backendTargetId": backend_target.target_id,
                 "summary": intent.summary,
                 "parallelGroup": None,
             },
@@ -428,10 +445,13 @@ def _create_contract_first_plan(
             priority=1,
             plan={
                 "target": "demo_backend_contract",
-                "safeTarget": "apps/demo-api",
+                "targetId": backend_target.target_id,
+                "backendTargetId": backend_target.target_id,
+                "frontendTargetId": frontend_target.target_id,
+                "safeTarget": backend_allowed_path,
                 "files": [
-                    "apps/demo-api/app/main.py",
-                    "apps/demo-api/tests/test_contacts.py",
+                    f"{backend_target.root}/app/main.py",
+                    f"{backend_target.root}/tests/test_contacts.py",
                 ],
                 "parallelGroup": None,
             },
@@ -444,9 +464,15 @@ def _create_contract_first_plan(
             priority=2,
             plan={
                 "target": "demo_frontend_contract",
-                "safeTarget": "apps/demo/src",
-                "frontendTarget": "apps/demo",
-                "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+                "targetId": frontend_target.target_id,
+                "frontendTargetId": frontend_target.target_id,
+                "backendTargetId": backend_target.target_id,
+                "safeTarget": frontend_allowed_path,
+                "frontendTarget": frontend_target.root,
+                "files": [
+                    f"{frontend_allowed_path}/App.tsx",
+                    f"{frontend_allowed_path}/styles.css",
+                ],
                 "parallelGroup": None,
             },
             expected_artifact_types=["diff", "review"],
@@ -458,6 +484,9 @@ def _create_contract_first_plan(
             priority=3,
             plan={
                 "target": "contract_review",
+                "targetId": frontend_target.target_id,
+                "frontendTargetId": frontend_target.target_id,
+                "backendTargetId": backend_target.target_id,
                 "checks": [
                     "backend and frontend reference the same contract",
                     "apps/api remains untouched",
@@ -526,6 +555,9 @@ def _create_contract_first_plan(
 def _app_contract_for(
     user_goal: str,
     intent: AppContractIntent,
+    *,
+    frontend_target: TargetProject,
+    backend_target: TargetProject,
 ) -> dict:
     fields_by_type = {
         "todo": [
@@ -566,6 +598,9 @@ def _app_contract_for(
     }
     entity = entity_by_type[intent.app_type]
     route_base = route_base_by_type[intent.app_type]
+    frontend_allowed_path = _primary_allowed_path(frontend_target)
+    backend_allowed_path = _primary_allowed_path(backend_target)
+    backend_base_url = backend_target.base_url or ""
     return {
         "contractId": f"contract-{intent.app_type}",
         "appName": intent.app_name,
@@ -581,17 +616,23 @@ def _app_contract_for(
         "frontendPages": [
             {
                 "name": page_by_type[intent.app_type],
-                "target": "apps/demo",
+                "target": frontend_target.root,
+                "targetId": frontend_target.target_id,
                 "states": ["list", "create", "empty"],
             }
         ],
-        "backendTarget": "apps/demo-api",
-        "frontendTarget": "apps/demo",
-        "demoApiBaseUrl": DEMO_API_BASE_URL,
+        "backendTargetId": backend_target.target_id,
+        "frontendTargetId": frontend_target.target_id,
+        "backendTarget": backend_target.root,
+        "frontendTarget": frontend_target.root,
+        "backendAllowedPaths": list(backend_target.allowed_paths),
+        "frontendAllowedPaths": list(frontend_target.allowed_paths),
+        "backendBaseUrl": backend_base_url,
+        "demoApiBaseUrl": backend_base_url,
         "validationExpectations": [
-            "Backend task must stay in apps/demo-api.",
-            "Frontend task must stay in apps/demo/src.",
-            f"Frontend app data calls must use the demo API base URL {DEMO_API_BASE_URL}.",
+            f"Backend task must stay in {backend_allowed_path}.",
+            f"Frontend task must stay in {frontend_allowed_path}.",
+            f"Frontend app data calls must use the demo API base URL {backend_base_url}.",
             "Do not modify apps/api.",
             "Review is advisory and non-blocking.",
             "Preview and mock deploy remain existing local demo evidence.",
@@ -942,7 +983,12 @@ def _is_unsupported_broad_request(content: str) -> bool:
 
 
 def _demo_backend_target_exists() -> bool:
-    return (_repo_root() / "apps/demo-api/app/main.py").exists()
+    backend_target = get_target(DEMO_BACKEND_TARGET_ID)
+    return (_repo_root() / backend_target.root / "app/main.py").exists()
+
+
+def _primary_allowed_path(target: TargetProject) -> str:
+    return target.allowed_paths[0] if target.allowed_paths else target.root
 
 
 def _repo_root() -> Path:
@@ -1000,6 +1046,7 @@ def _graph_metadata(
                 if index > 0
                 else [],
                 "expectedArtifactTypes": spec.expected_artifact_types,
+                "targetId": spec.plan.get("targetId"),
             }
             for index, spec in enumerate(task_specs)
         ],

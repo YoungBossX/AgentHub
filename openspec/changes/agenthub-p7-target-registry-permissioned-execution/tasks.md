@@ -53,7 +53,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`.
 
-- [ ] 1.3 P7-3 Target-aware Contract Planner.
+- [x] 1.3 P7-3 Target-aware Contract Planner.
   - Objective: Make app contracts and generated tasks target-ID based.
   - Scope:
     - add `frontendTargetId` and `backendTargetId` to app contracts;

@@ -1,5 +1,45 @@
 # AgentHub Change Log
 
+## P7-3 Target-aware Contract Planner
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Updated contract-first planning to derive frontend/backend target IDs, safe paths, raw target compatibility fields, and demo backend base URL from the registry. |
+| `apps/api/tests/test_planning.py` | Added coverage for target IDs, registry-derived contract metadata, and target IDs in generated task graphs. |
+| `docs/project-state.md` | Recorded P7-3 planner behavior. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-3 complete after validation. |
+
+### What Changed
+
+P7-3 keeps the existing P6 mini CRM path compatible while making contract-first
+plans target-aware:
+
+- app contracts now include `frontendTargetId: demo-frontend` and
+  `backendTargetId: demo-backend`;
+- `backendTarget`, `frontendTarget`, `backendAllowedPaths`,
+  `frontendAllowedPaths`, `backendBaseUrl`, and `demoApiBaseUrl` are derived
+  from registry metadata;
+- backend, frontend, and review task plans include target IDs;
+- task graph metadata includes target IDs for target-bound execution steps.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pytest tests/test_planning.py -q` | Pass: 18 tests. |
+| `bash scripts/check-api.sh` | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 139 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+
+---
+
 ## P7-2 Target-aware Instruction Builder
 
 **Date:** 2026-05-24

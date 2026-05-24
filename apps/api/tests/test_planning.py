@@ -16,6 +16,7 @@ from app.planning import (
     parse_frontend_intent,
     parse_mentions,
 )
+from app.target_registry import DEMO_BACKEND_TARGET_ID, DEMO_FRONTEND_TARGET_ID
 
 
 @pytest.fixture
@@ -392,8 +393,13 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     assert contract["appName"] == "Mini CRM Contacts"
     assert contract["appType"] == "mini_crm_contacts"
     assert contract["userGoal"] == "帮我做一个 mini CRM，包含联系人和备注"
+    assert contract["frontendTargetId"] == DEMO_FRONTEND_TARGET_ID
+    assert contract["backendTargetId"] == DEMO_BACKEND_TARGET_ID
     assert contract["backendTarget"] == "apps/demo-api"
     assert contract["frontendTarget"] == "apps/demo"
+    assert contract["backendAllowedPaths"] == ["apps/demo-api"]
+    assert contract["frontendAllowedPaths"] == ["apps/demo/src"]
+    assert contract["backendBaseUrl"] == "http://127.0.0.1:5174"
     assert contract["demoApiBaseUrl"] == "http://127.0.0.1:5174"
     assert contract["apiRoutes"] == [
         {"method": "GET", "path": "/health", "description": "Health check"},
@@ -416,15 +422,26 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     backend = tasks[1]
     frontend = tasks[2]
     review = tasks[3]
+    assert backend["planJson"]["targetId"] == DEMO_BACKEND_TARGET_ID
+    assert backend["planJson"]["backendTargetId"] == DEMO_BACKEND_TARGET_ID
+    assert backend["planJson"]["frontendTargetId"] == DEMO_FRONTEND_TARGET_ID
     assert backend["planJson"]["safeTarget"] == "apps/demo-api"
     assert backend["planJson"]["files"] == [
         "apps/demo-api/app/main.py",
         "apps/demo-api/tests/test_contacts.py",
     ]
+    assert frontend["planJson"]["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert frontend["planJson"]["frontendTargetId"] == DEMO_FRONTEND_TARGET_ID
+    assert frontend["planJson"]["backendTargetId"] == DEMO_BACKEND_TARGET_ID
     assert frontend["planJson"]["frontendTarget"] == "apps/demo"
     assert frontend["planJson"]["safeTarget"] == "apps/demo/src"
+    assert review["planJson"]["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert review["planJson"]["frontendTargetId"] == DEMO_FRONTEND_TARGET_ID
+    assert review["planJson"]["backendTargetId"] == DEMO_BACKEND_TARGET_ID
     assert review["planJson"]["target"] == "contract_review"
     assert review["planJson"]["appContract"]["contractId"] == contract_id
+    assert frontend["planJson"]["taskGraph"]["tasks"][1]["targetId"] == DEMO_BACKEND_TARGET_ID
+    assert frontend["planJson"]["taskGraph"]["tasks"][2]["targetId"] == DEMO_FRONTEND_TARGET_ID
 
     with next(db_from_override()) as db:
         messages = db.exec(

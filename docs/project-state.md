@@ -5,6 +5,27 @@ reference instead of repeating long context blocks.
 
 ## P7 Status
 
+### P7-3 Target-aware Contract Planner
+
+P7-3 completed on 2026-05-24.
+
+Contract-first planning for bounded app requests now resolves targets through
+the Target Project Registry:
+
+- app contracts include `frontendTargetId: demo-frontend` and
+  `backendTargetId: demo-backend`;
+- app contracts keep compatibility fields such as `frontendTarget`,
+  `backendTarget`, and `demoApiBaseUrl`, but those values are derived from
+  registry metadata;
+- generated backend, frontend, and review task plans include target IDs and
+  registry-derived safe paths;
+- task graph metadata includes target IDs where a task maps to a concrete
+  target.
+
+The P6 mini CRM path still creates the same four-task contract-first graph:
+Manager contract, Backend Agent, Frontend Agent, and Review/QA. Unsupported
+broad requests still avoid silent execution.
+
 ### P7-2 Target-aware Instruction Builder
 
 P7-2 completed on 2026-05-24.
