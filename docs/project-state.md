@@ -5,6 +5,26 @@ reference instead of repeating long context blocks.
 
 ## P7 Status
 
+### P7-4 Target-aware Review / QA
+
+P7-4 completed on 2026-05-24.
+
+Scripted review now evaluates contract diffs against Target Project Registry
+policy:
+
+- changed files must be permitted by either the contract frontend target or
+  backend target;
+- denied paths such as `apps/api`, `.env*`, `.git`, `node_modules`, and
+  `secrets` are reported as target policy violations;
+- ordinary app diffs that mutate `apps/api` are reported as `failed` /
+  `high` risk;
+- frontend local API base URLs are compared with the registry-resolved
+  `demo-backend` base URL;
+- task target IDs are checked against contract frontend/backend target IDs.
+
+Review remains advisory in the product flow: warnings or failures are recorded
+as review artifacts and do not introduce a new blocking approval gate in P7-4.
+
 ### P7-3 Target-aware Contract Planner
 
 P7-3 completed on 2026-05-24.

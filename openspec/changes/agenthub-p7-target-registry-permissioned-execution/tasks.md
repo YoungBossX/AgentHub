@@ -79,7 +79,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`.
 
-- [ ] 1.4 P7-4 Target-aware Review / QA.
+- [x] 1.4 P7-4 Target-aware Review / QA.
   - Objective: Review diffs and contracts against target registry policy.
   - Scope:
     - check changed files against target `allowedPaths`;

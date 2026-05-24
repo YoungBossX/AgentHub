@@ -847,6 +847,127 @@ def test_contract_aware_review_warns_on_platform_api_base_mismatch(
     assert any("http://127.0.0.1:5174" in suggestion for suggestion in review.suggested_changes)
 
 
+def test_target_aware_review_fails_on_platform_code_mutation(
+    client: TestClient,
+) -> None:
+    contract = {
+        "contractId": "contract-mini_crm_contacts",
+        "appName": "Mini CRM Contacts",
+        "frontendTargetId": DEMO_FRONTEND_TARGET_ID,
+        "backendTargetId": DEMO_BACKEND_TARGET_ID,
+        "backendTarget": "apps/demo-api",
+        "frontendTarget": "apps/demo",
+        "demoApiBaseUrl": "http://127.0.0.1:5174",
+    }
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "assignedRole": "backend",
+                "targetId": DEMO_BACKEND_TARGET_ID,
+                "backendTargetId": DEMO_BACKEND_TARGET_ID,
+                "frontendTargetId": DEMO_FRONTEND_TARGET_ID,
+                "appContract": contract,
+                "contractId": contract["contractId"],
+                "safeTarget": "apps/demo-api",
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+        transition_task_run(db, task_run.id, "completed")
+        diff_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+            meta_json="{}",
+        )
+        db.add(diff_artifact)
+        db.commit()
+        db.refresh(diff_artifact)
+        diff = Diff(
+            artifact_id=diff_artifact.id,
+            base_ref="base",
+            head_ref="head+worktree",
+            patch_text="diff --git a/apps/api/app/main.py b/apps/api/app/main.py\n",
+            changed_files_json=json.dumps(["apps/api/app/main.py"], separators=(",", ":")),
+            stats_json=json.dumps({"filesChanged": 1}, separators=(",", ":")),
+        )
+        db.add(diff)
+        db.commit()
+
+        review = create_scripted_review_for_task_run(db, task_run.id)
+
+    assert review.status == "failed"
+    assert review.risk_level == "high"
+    assert any("denied target path apps/api/app/main.py" in finding["message"] for finding in review.findings)
+
+
+def test_target_aware_review_detects_task_target_mismatch(
+    client: TestClient,
+) -> None:
+    contract = {
+        "contractId": "contract-mini_crm_contacts",
+        "appName": "Mini CRM Contacts",
+        "frontendTargetId": DEMO_FRONTEND_TARGET_ID,
+        "backendTargetId": DEMO_BACKEND_TARGET_ID,
+        "backendTarget": "apps/demo-api",
+        "frontendTarget": "apps/demo",
+        "demoApiBaseUrl": "http://127.0.0.1:5174",
+    }
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "assignedRole": "backend",
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "backendTargetId": DEMO_BACKEND_TARGET_ID,
+                "frontendTargetId": DEMO_FRONTEND_TARGET_ID,
+                "appContract": contract,
+                "contractId": contract["contractId"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+        transition_task_run(db, task_run.id, "completed")
+        diff_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+            meta_json="{}",
+        )
+        db.add(diff_artifact)
+        db.commit()
+        db.refresh(diff_artifact)
+        diff = Diff(
+            artifact_id=diff_artifact.id,
+            base_ref="base",
+            head_ref="head+worktree",
+            patch_text=(
+                "diff --git a/apps/demo-api/app/main.py b/apps/demo-api/app/main.py\n"
+                "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\n"
+            ),
+            changed_files_json=json.dumps(
+                ["apps/demo-api/app/main.py", "apps/demo/src/App.tsx"],
+                separators=(",", ":"),
+            ),
+            stats_json=json.dumps({"filesChanged": 2}, separators=(",", ":")),
+        )
+        db.add(diff)
+        db.commit()
+
+        review = create_scripted_review_for_task_run(db, task_run.id)
+
+    assert review.status == "failed"
+    assert review.risk_level == "high"
+    assert any("expected task target demo-backend" in finding["message"] for finding in review.findings)
+
+
 def test_transition_helper_rejects_unknown_states(client: TestClient) -> None:
     run = client.post(f"/tasks/{task_id()}/runs").json()
 

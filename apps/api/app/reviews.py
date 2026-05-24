@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -7,6 +8,14 @@ from sqlmodel import select
 
 from app.events import append_task_run_event
 from app.models import Artifact, Diff, Review, Task, TaskRun, utc_now
+from app.target_registry import (
+    DEMO_BACKEND_TARGET_ID,
+    DEMO_FRONTEND_TARGET_ID,
+    TargetProject,
+    TargetRegistryError,
+    get_related_backend_target,
+    get_target,
+)
 
 
 SCRIPTED_REVIEW_ADAPTER = "scripted_mock"
@@ -64,14 +73,15 @@ def create_scripted_review_for_diff(
         raise ReviewError(f"Diff record not found for artifact: {diff_artifact.id}")
 
     files_reviewed = _json_list(diff.changed_files_json)
-    contract = _contract_for_diff_artifact(db, diff_artifact)
+    plan = _plan_for_diff_artifact(db, diff_artifact)
+    contract = plan.get("appContract") if isinstance(plan.get("appContract"), dict) else None
     findings, suggested_changes = _scripted_findings(
         files_reviewed,
         diff.patch_text,
         contract=contract,
+        plan=plan,
     )
-    status = "passed" if not findings else "warning"
-    risk_level = "low" if status == "passed" else "medium"
+    status, risk_level = _status_and_risk_for(findings)
     summary = _summary_for(status, risk_level, files_reviewed, findings, contract=contract)
     now = utc_now()
 
@@ -184,6 +194,7 @@ def _scripted_findings(
     patch_text: str,
     *,
     contract: Optional[dict[str, Any]] = None,
+    plan: Optional[dict[str, Any]] = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     findings: list[dict[str, Any]] = []
     suggested_changes: list[str] = []
@@ -212,6 +223,7 @@ def _scripted_findings(
             files_reviewed,
             contract,
             patch_text,
+            plan=plan or {},
         )
         findings.extend(contract_findings)
         suggested_changes.extend(contract_suggestions)
@@ -223,15 +235,36 @@ def _contract_consistency_findings(
     files_reviewed: list[str],
     contract: dict[str, Any],
     patch_text: str,
+    *,
+    plan: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[str]]:
     findings: list[dict[str, Any]] = []
     suggested_changes: list[str] = []
     contract_id = str(contract.get("contractId") or "shared contract")
-    backend_target = str(contract.get("backendTarget") or "apps/demo-api")
-    frontend_target = str(contract.get("frontendTarget") or "apps/demo")
-    frontend_prefix = "apps/demo/src" if frontend_target == "apps/demo" else frontend_target
+    frontend_target, backend_target = _contract_targets(contract)
+    frontend_prefix = _primary_allowed_path(frontend_target)
+    backend_prefix = _primary_allowed_path(backend_target)
 
-    has_backend_change = any(path.startswith(f"{backend_target}/") for path in files_reviewed)
+    target_findings, target_suggestions = _target_policy_findings(
+        files_reviewed,
+        frontend_target,
+        backend_target,
+        contract_id,
+    )
+    findings.extend(target_findings)
+    suggested_changes.extend(target_suggestions)
+
+    task_target_findings, task_target_suggestions = _task_target_consistency_findings(
+        plan,
+        contract,
+        frontend_target,
+        backend_target,
+        contract_id,
+    )
+    findings.extend(task_target_findings)
+    suggested_changes.extend(task_target_suggestions)
+
+    has_backend_change = any(path.startswith(f"{backend_prefix}/") for path in files_reviewed)
     has_frontend_change = any(path.startswith(f"{frontend_prefix}/") for path in files_reviewed)
 
     if not has_backend_change:
@@ -239,10 +272,10 @@ def _contract_consistency_findings(
             {
                 "severity": "medium",
                 "file": None,
-                "message": f"Contract {contract_id} expected backend changes under {backend_target}.",
+                "message": f"Contract {contract_id} expected backend changes under {backend_prefix}.",
             }
         )
-        suggested_changes.append(f"Add or verify backend implementation under {backend_target}.")
+        suggested_changes.append(f"Add or verify backend implementation under {backend_prefix}.")
 
     if not has_frontend_change:
         findings.append(
@@ -258,6 +291,7 @@ def _contract_consistency_findings(
         files_reviewed,
         contract,
         frontend_prefix,
+        backend_target,
         patch_text,
     )
     findings.extend(api_findings)
@@ -270,6 +304,7 @@ def _api_base_findings(
     files_reviewed: list[str],
     contract: dict[str, Any],
     frontend_prefix: str,
+    backend_target: TargetProject,
     patch_text: str,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     findings: list[dict[str, Any]] = []
@@ -278,18 +313,18 @@ def _api_base_findings(
     if not frontend_files:
         return findings, suggested_changes
 
-    expected_base = str(contract.get("demoApiBaseUrl") or "http://127.0.0.1:5174")
+    expected_base = backend_target.base_url or str(contract.get("demoApiBaseUrl") or "")
     contract_id = str(contract.get("contractId") or "shared contract")
-    platform_api_bases = ["http://localhost:8000", "http://127.0.0.1:8000"]
-    for platform_base in platform_api_bases:
-        if platform_base in patch_text and platform_base != expected_base:
+    local_bases = sorted(set(re.findall(r"http://(?:localhost|127\.0\.0\.1):\d+", patch_text)))
+    for local_base in local_bases:
+        if expected_base and local_base != expected_base:
             findings.append(
                 {
                     "severity": "medium",
                     "file": _first_file(frontend_files),
                     "message": (
                         f"Contract {contract_id} expected demo API base {expected_base}, "
-                        f"but frontend code references AgentHub platform API {platform_base}."
+                        f"but frontend code references {local_base}."
                     ),
                 }
             )
@@ -299,6 +334,131 @@ def _api_base_findings(
             break
 
     return findings, suggested_changes
+
+
+def _contract_targets(contract: dict[str, Any]) -> tuple[TargetProject, TargetProject]:
+    frontend_target_id = _string_value(contract.get("frontendTargetId")) or DEMO_FRONTEND_TARGET_ID
+    backend_target_id = _string_value(contract.get("backendTargetId"))
+    try:
+        frontend_target = get_target(frontend_target_id)
+    except TargetRegistryError:
+        frontend_target = get_target(DEMO_FRONTEND_TARGET_ID)
+    if backend_target_id:
+        try:
+            return frontend_target, get_target(backend_target_id)
+        except TargetRegistryError:
+            pass
+    return frontend_target, get_related_backend_target(frontend_target.target_id)
+
+
+def _target_policy_findings(
+    files_reviewed: list[str],
+    frontend_target: TargetProject,
+    backend_target: TargetProject,
+    contract_id: str,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    findings: list[dict[str, Any]] = []
+    suggested_changes: list[str] = []
+    expected_targets = [frontend_target, backend_target]
+    for path in files_reviewed:
+        permitted_by = [target for target in expected_targets if target.permits_path(path)]
+        if permitted_by:
+            continue
+        denied_by = [target for target in expected_targets if target.denies_path(path)]
+        if denied_by:
+            severity = "high" if path.startswith("apps/api/") else "medium"
+            findings.append(
+                {
+                    "severity": severity,
+                    "file": path,
+                    "message": (
+                        f"Contract {contract_id} changed denied target path {path}. "
+                        "Ordinary app work must stay inside demo frontend/backend targets."
+                    ),
+                }
+            )
+            suggested_changes.append(
+                f"Move or remove changes outside target policy for {contract_id}: {path}."
+            )
+            continue
+        findings.append(
+            {
+                "severity": "medium",
+                "file": path,
+                "message": (
+                    f"Contract {contract_id} changed {path}, which is outside "
+                    "the expected target allowed paths."
+                ),
+            }
+        )
+        suggested_changes.append(
+            f"Keep contract {contract_id} changes inside "
+            f"{', '.join(frontend_target.allowed_paths + backend_target.allowed_paths)}."
+        )
+    return findings, suggested_changes
+
+
+def _task_target_consistency_findings(
+    plan: dict[str, Any],
+    contract: dict[str, Any],
+    frontend_target: TargetProject,
+    backend_target: TargetProject,
+    contract_id: str,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    findings: list[dict[str, Any]] = []
+    suggested_changes: list[str] = []
+    assigned_role = _string_value(plan.get("assignedRole"))
+    expected_target_id = None
+    if assigned_role == "frontend":
+        expected_target_id = frontend_target.target_id
+    elif assigned_role == "backend":
+        expected_target_id = backend_target.target_id
+    elif assigned_role in {"qa", "review"}:
+        expected_target_id = _string_value(contract.get("frontendTargetId")) or frontend_target.target_id
+
+    actual_target_id = _string_value(plan.get("targetId"))
+    if expected_target_id and actual_target_id and actual_target_id != expected_target_id:
+        findings.append(
+            {
+                "severity": "high",
+                "file": None,
+                "message": (
+                    f"Contract {contract_id} expected task target {expected_target_id}, "
+                    f"but task plan targets {actual_target_id}."
+                ),
+            }
+        )
+        suggested_changes.append(
+            f"Align task targetId with contract target IDs for {contract_id}."
+        )
+
+    for field, expected in [
+        ("frontendTargetId", frontend_target.target_id),
+        ("backendTargetId", backend_target.target_id),
+    ]:
+        actual = _string_value(plan.get(field))
+        if actual and actual != expected:
+            findings.append(
+                {
+                    "severity": "high",
+                    "file": None,
+                    "message": (
+                        f"Contract {contract_id} expected {field}={expected}, "
+                        f"but task plan has {actual}."
+                    ),
+                }
+            )
+            suggested_changes.append(f"Use registry-resolved {field}={expected}.")
+    return findings, suggested_changes
+
+
+def _status_and_risk_for(findings: list[dict[str, Any]]) -> tuple[str, str]:
+    severities = {str(finding.get("severity") or "").lower() for finding in findings}
+    if "high" in severities:
+        return "failed", "high"
+    if findings:
+        return "warning", "medium"
+    return "passed", "low"
 
 
 def _summary_for(
@@ -328,28 +488,35 @@ def _summary_for(
     )
 
 
-def _contract_for_diff_artifact(
+def _plan_for_diff_artifact(
     db: DbSession,
     diff_artifact: Artifact,
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any]:
     task_run = db.get(TaskRun, diff_artifact.task_run_id)
     if task_run is None:
-        return None
+        return {}
     task = db.get(Task, task_run.task_id)
     if task is None:
-        return None
+        return {}
     try:
         plan = json.loads(task.plan_json)
     except json.JSONDecodeError:
-        return None
-    if not isinstance(plan, dict):
-        return None
-    contract = plan.get("appContract")
-    return contract if isinstance(contract, dict) else None
+        return {}
+    return plan if isinstance(plan, dict) else {}
 
 
 def _first_file(files_reviewed: list[str]) -> Optional[str]:
     return files_reviewed[0] if files_reviewed else None
+
+
+def _primary_allowed_path(target: TargetProject) -> str:
+    return target.allowed_paths[0] if target.allowed_paths else target.root
+
+
+def _string_value(value: Any) -> Optional[str]:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
 
 
 def _to_stored_review(artifact: Artifact, review: Review) -> StoredReviewArtifact:

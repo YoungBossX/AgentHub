@@ -1,5 +1,45 @@
 # AgentHub Change Log
 
+## P7-4 Target-aware Review / QA
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/reviews.py` | Added target-registry review checks for allowed paths, denied paths, API-base consistency, and contract/task target consistency. |
+| `apps/api/tests/test_task_runs.py` | Added review coverage for platform-code mutation failures and task target mismatch failures. |
+| `docs/project-state.md` | Recorded P7-4 review behavior. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-4 complete after validation. |
+
+### What Changed
+
+P7-4 makes the deterministic review artifact target-aware:
+
+- full-stack diffs that stay inside `demo-frontend` and `demo-backend`
+  allowed paths pass;
+- frontend local API base URLs must match the registry-resolved
+  `demo-backend` base URL;
+- ordinary app diffs that modify `apps/api` fail review with high risk;
+- task target IDs are checked against contract target IDs.
+
+Review remains advisory and non-blocking for preview/mock deploy in this phase.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted review tests in `tests/test_task_runs.py` | Pass: 4 tests. |
+| `bash scripts/check-api.sh` | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 141 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+
+---
+
 ## P7-3 Target-aware Contract Planner
 
 **Date:** 2026-05-24
