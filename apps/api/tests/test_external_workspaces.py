@@ -9,7 +9,7 @@ from sqlmodel import SQLModel, create_engine
 
 from app.external_workspaces import DEFAULT_EXTERNAL_DENIED_PATHS
 from app.main import app, get_db
-from app.models import Workspace
+from app.models import Session, Workspace
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
@@ -33,7 +33,14 @@ def client() -> Iterator[TestClient]:
             root_path="apps/demo",
             default_branch="main",
         )
+        session = Session(
+            workspace_id=workspace.id,
+            title="External target session",
+            bound_branch="main",
+            worktree_path=".worktrees/external-target-session",
+        )
         db.add(workspace)
+        db.add(session)
         db.commit()
 
     def override_db() -> Iterator[DbSession]:
@@ -114,6 +121,47 @@ def test_register_external_project_target(client: TestClient, tmp_path: Path) ->
     assert targets["external-sample-vite"]["root"] == str(project.resolve())
     assert targets["external-sample-vite"]["allowedPaths"] == ["src"]
     assert targets["external-sample-vite"]["packageManager"] == "pnpm"
+
+    session = client.get(f"/workspaces/{workspace['id']}/sessions").json()[0]
+    selection_response = client.patch(
+        f"/sessions/{session['id']}/target-selection",
+        json={"frontendTargetId": "external-sample-vite"},
+    )
+    assert selection_response.status_code == 200
+    assert selection_response.json()["activeFrontendTargetId"] == "external-sample-vite"
+
+
+def test_session_target_selection_rejects_wrong_or_unknown_target(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "sample-api"
+    (project / "app").mkdir(parents=True)
+    workspace = client.get("/workspaces/demo").json()
+    create_response = client.post(
+        f"/workspaces/{workspace['id']}/external-targets",
+        json={
+            "targetId": "external-sample-api",
+            "name": "Sample API",
+            "rootPath": str(project),
+            "projectType": "fastapi",
+            "allowedPaths": ["app"],
+        },
+    )
+    assert create_response.status_code == 201
+    session = client.get(f"/workspaces/{workspace['id']}/sessions").json()[0]
+
+    wrong_type = client.patch(
+        f"/sessions/{session['id']}/target-selection",
+        json={"frontendTargetId": "external-sample-api"},
+    )
+    unknown = client.patch(
+        f"/sessions/{session['id']}/target-selection",
+        json={"backendTargetId": "external-missing"},
+    )
+
+    assert wrong_type.status_code == 400
+    assert unknown.status_code == 400
 
 
 def test_registration_rejects_unsafe_roots(

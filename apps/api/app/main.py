@@ -65,7 +65,12 @@ from app.scheduler import complete_synthetic_planning_tasks
 from app.scheduler import evaluate_and_apply_scheduler_readiness
 from app.scheduler import refresh_session_scheduler_state
 from app.target_registry import DEMO_BACKEND_TARGET_ID, DEMO_FRONTEND_TARGET_ID
-from app.target_registry import TargetProject, list_targets_for_workspace
+from app.target_registry import (
+    TargetProject,
+    TargetRegistryError,
+    get_target_for_workspace,
+    list_targets_for_workspace,
+)
 from app.schemas import (
     AgentContactResponse,
     ApprovalDecisionRequest,
@@ -84,6 +89,7 @@ from app.schemas import (
     SessionCreateRequest,
     SessionExecutionLedgerResponse,
     SessionResponse,
+    SessionTargetSelectionRequest,
     SessionUpdateRequest,
     TargetProjectResponse,
     TaskResponse,
@@ -543,6 +549,57 @@ def update_session(
     return persist_session(db, session)
 
 
+@app.patch("/sessions/{session_id}/target-selection", response_model=SessionResponse)
+def update_session_target_selection(
+    session_id: str,
+    request: SessionTargetSelectionRequest,
+    db: DbSession = Depends(get_db),
+) -> AgentHubSession:
+    session = get_session(db, session_id)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    if request.frontend_target_id is not None:
+        _validate_session_target(
+            db,
+            session.workspace_id,
+            request.frontend_target_id,
+            expected_type="frontend",
+        )
+        session.active_frontend_target_id = request.frontend_target_id
+    if request.backend_target_id is not None:
+        _validate_session_target(
+            db,
+            session.workspace_id,
+            request.backend_target_id,
+            expected_type="backend",
+        )
+        session.active_backend_target_id = request.backend_target_id
+
+    return persist_session(db, session)
+
+
+def _validate_session_target(
+    db: DbSession,
+    workspace_id: str,
+    target_id: str,
+    *,
+    expected_type: str,
+) -> None:
+    try:
+        target = get_target_for_workspace(db, workspace_id, target_id)
+    except TargetRegistryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    if target.type != expected_type:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Target {target_id} is not a {expected_type} target.",
+        )
+
+
 @app.get("/sessions/{session_id}/messages", response_model=list[MessageResponse])
 def read_session_messages(
     session_id: str,
@@ -625,6 +682,14 @@ def _should_auto_start_task(task: Task, plan: dict[str, Any]) -> bool:
     if not isinstance(files, list) or not files:
         return False
     if task.intent_type == "frontend_change":
+        target_id = plan.get("targetId")
+        if isinstance(target_id, str) and target_id.startswith("external-"):
+            safe_target = plan.get("safeTarget")
+            return (
+                isinstance(safe_target, str)
+                and bool(safe_target)
+                and all(_is_safe_relative_external_path(path) for path in files)
+            )
         if plan.get("targetId") not in {None, DEMO_FRONTEND_TARGET_ID}:
             return False
         if plan.get("safeTarget") != "apps/demo/src":
@@ -643,6 +708,18 @@ def _should_auto_start_task(task: Task, plan: dict[str, Any]) -> bool:
             for path in files
         )
     return False
+
+
+def _is_safe_relative_external_path(path: object) -> bool:
+    if not isinstance(path, str) or not path.strip():
+        return False
+    normalized = path.replace("\\", "/").strip()
+    if normalized.startswith("/") or normalized.startswith("../") or "/../" in normalized:
+        return False
+    return not any(
+        part in {".git", "node_modules", ".venv", "venv", "secrets"}
+        for part in normalized.split("/")
+    )
 
 
 def ledger_response(
@@ -758,7 +835,7 @@ def agent_run_request_for(
         taskRunId=task_run.id,
         sessionId=session.id,
         workspaceId=session.workspace_id,
-        worktreePath=session.worktree_path,
+        worktreePath=task_run.worktree_path,
         agentId=task_run.agent_id,
         adapterType=adapter_type,
         instruction=build_role_instruction(task, agent, context_pack),

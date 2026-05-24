@@ -58,6 +58,8 @@ class Session(SQLModel, table=True):
     session_type: str = "demo"
     bound_branch: str
     worktree_path: str = Field(index=True, unique=True)
+    active_frontend_target_id: Optional[str] = None
+    active_backend_target_id: Optional[str] = None
     status: str = "active"
     last_message_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utc_now)

@@ -1,5 +1,50 @@
 # AgentHub Change Log
 
+## P9-5 External Project Task Execution
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/models.py` | Added session active frontend/backend target IDs. |
+| `apps/api/app/db.py` | Added SQLite column backfill for existing local session tables. |
+| `apps/api/app/schemas.py` | Added active target fields and session target selection request schema. |
+| `apps/api/app/main.py` | Added session target selection API and external frontend auto-start safety check. |
+| `apps/api/app/planning.py` | Routed direct mentions and bounded Orchestrator frontend requests to selected external targets. |
+| `apps/api/app/task_runs.py` | Uses external target root as TaskRun worktree path for external target tasks. |
+| `apps/api/tests/test_external_workspaces.py` | Added session target selection tests. |
+| `apps/api/tests/test_planning.py` | Added external direct frontend and Orchestrator auto-start routing tests. |
+| `apps/api/tests/test_task_runs.py` | Added external TaskRun worktree-path assertion. |
+| `apps/api/tests/test_models.py` | Updated model boundary expectations for active target fields. |
+| `docs/project-state.md` | Recorded P9-5 behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-5 complete after validation. |
+
+### What Changed
+
+P9-5 gives registered external targets an executable task path:
+
+- sessions can select active external frontend/backend targets;
+- direct assignment tasks target active external projects when selected;
+- bounded no-mention UI requests can be routed by Orchestrator to active
+  external frontend targets and auto-started through TaskRun;
+- TaskRun execution requests use the external target root as worktree path;
+- unsupported broad requests remain rejected instead of silently executing.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted external execution/routing tests | Pass: 64 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+
+---
+
 ## P9-4 External Target Instruction Builder
 
 **Date:** 2026-05-24

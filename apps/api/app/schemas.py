@@ -129,6 +129,8 @@ class SessionResponse(ApiModel):
     session_type: str = Field(alias="sessionType")
     bound_branch: str = Field(alias="boundBranch")
     worktree_path: str = Field(alias="worktreePath")
+    active_frontend_target_id: Optional[str] = Field(alias="activeFrontendTargetId")
+    active_backend_target_id: Optional[str] = Field(alias="activeBackendTargetId")
     status: str
     last_message_at: Optional[datetime] = Field(alias="lastMessageAt")
     created_at: datetime = Field(alias="createdAt")
@@ -142,6 +144,13 @@ class SessionCreateRequest(BaseModel):
 class SessionUpdateRequest(BaseModel):
     title: Optional[str] = None
     status: Optional[str] = None
+
+
+class SessionTargetSelectionRequest(BaseModel):
+    frontend_target_id: Optional[str] = Field(default=None, alias="frontendTargetId")
+    backend_target_id: Optional[str] = Field(default=None, alias="backendTargetId")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class MessageResponse(ApiModel):

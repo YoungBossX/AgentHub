@@ -8,14 +8,17 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.models import Agent, Message, Task
+from app.models import Session as AgentHubSession
 from app.repositories import create_session_message, list_session_tasks
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
     DEMO_FRONTEND_TARGET_ID,
     TargetProject,
+    TargetRegistryError,
     get_related_backend_target,
     get_target,
+    get_target_for_workspace,
 )
 
 SUPPORTED_MENTION_ROLES = {"orchestrator", "frontend", "backend", "qa", "review"}
@@ -166,6 +169,13 @@ def plan_for_message(
 
     if "login page" not in content.lower() or "demo app" not in content.lower():
         if bounded_intent is None:
+            active_frontend_target = _active_external_target_for_role(db, message, "frontend")
+            if active_frontend_target is not None and _is_safe_external_frontend_request(content):
+                return _create_orchestrator_external_frontend_task(
+                    db,
+                    message,
+                    active_frontend_target,
+                )
             if _is_safe_demo_frontend_request(content):
                 return _create_orchestrator_demo_frontend_task(db, message)
             _create_orchestrator_boundary_message(
@@ -780,6 +790,21 @@ def _create_direct_assignment_tasks(
     existing_tasks: list[Task],
 ) -> list[Task]:
     if role == "backend":
+        active_backend_target = _active_external_target_for_role(db, message, "backend")
+        if active_backend_target is not None:
+            backend = _enabled_agent_or_raise(db, "backend")
+            return [
+                _create_external_assignment_task(
+                    db,
+                    message,
+                    agent=backend,
+                    role="backend",
+                    target=active_backend_target,
+                    intent_type="backend_change",
+                    priority=_next_priority(existing_tasks),
+                    depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
+                )
+            ]
         if _is_explicit_platform_mode_request(message.content_md):
             return _create_platform_maintenance_task(
                 db,
@@ -825,6 +850,21 @@ def _create_direct_assignment_tasks(
         ]
 
     if role == "frontend":
+        active_frontend_target = _active_external_target_for_role(db, message, "frontend")
+        if active_frontend_target is not None:
+            frontend = _enabled_agent_or_raise(db, "frontend")
+            return [
+                _create_external_assignment_task(
+                    db,
+                    message,
+                    agent=frontend,
+                    role="frontend",
+                    target=active_frontend_target,
+                    intent_type="frontend_change",
+                    priority=_next_priority(existing_tasks),
+                    depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
+                )
+            ]
         if not _is_safe_demo_frontend_request(message.content_md):
             _create_orchestrator_boundary_message(
                 db,
@@ -864,6 +904,14 @@ def _create_direct_assignment_tasks(
 
     qa = _enabled_agent_or_raise(db, "qa")
     review_role = "review" if role == "review" else "qa"
+    active_review_target = _active_external_target_for_role(db, message, "frontend") or _active_external_target_for_role(db, message, "backend")
+    target_plan = {}
+    if active_review_target is not None:
+        target_plan = {
+            "targetId": active_review_target.target_id,
+            "safeTarget": _primary_allowed_path(active_review_target),
+            "readOnly": True,
+        }
     return [
         _create_single_task(
             db,
@@ -877,7 +925,8 @@ def _create_direct_assignment_tasks(
                 "planner": "direct_assignment_v1",
                 "routing": "direct_mention",
                 "assignedRole": review_role,
-                "target": "session_review_request",
+                "target": "external_review_request" if active_review_target is not None else "session_review_request",
+                **target_plan,
                 "originalRequest": message.content_md,
                 "expectedArtifactTypes": ["review"],
                 "autoStart": False,
@@ -924,6 +973,87 @@ def _create_orchestrator_demo_frontend_task(
         "I routed this to the Frontend Agent as a safe demo-app task and started it automatically.",
     )
     return [task]
+
+
+def _create_orchestrator_external_frontend_task(
+    db: DbSession,
+    message: Message,
+    target: TargetProject,
+) -> list[Task]:
+    frontend = _enabled_agent_or_raise(db, "frontend")
+    task = _create_external_assignment_task(
+        db,
+        message,
+        agent=frontend,
+        role="frontend",
+        target=target,
+        intent_type="frontend_change",
+        priority=0,
+        depends_on=[],
+        auto_start=True,
+        planner="orchestrator_external_target_v1",
+        routing="orchestrator_default",
+    )
+    _create_orchestrator_boundary_message(
+        db,
+        message,
+        f"I routed this to the Frontend Agent for external target `{target.target_id}` and started it automatically.",
+    )
+    return [task]
+
+
+def _create_external_assignment_task(
+    db: DbSession,
+    message: Message,
+    *,
+    agent: Agent,
+    role: str,
+    target: TargetProject,
+    intent_type: str,
+    priority: int,
+    depends_on: list[str],
+    auto_start: bool = False,
+    planner: str = "direct_assignment_v1",
+    routing: str = "direct_mention",
+) -> Task:
+    allowed_path = _primary_allowed_path(target)
+    files = _external_task_files(target)
+    plan = {
+        "planner": planner,
+        "routing": routing,
+        "assignedRole": role,
+        "target": "external_target_request",
+        "targetId": target.target_id,
+        "safeTarget": allowed_path,
+        "allowedPaths": list(target.allowed_paths),
+        "deniedPaths": list(target.denied_paths),
+        "files": files,
+        "projectType": target.project_type,
+        "detectedFramework": target.detected_framework,
+        "packageManager": target.package_manager,
+        "devCommand": target.dev_command,
+        "testCommand": target.test_command,
+        "checkCommand": target.check_command,
+        "buildCommand": target.build_command,
+        "previewCommand": target.preview_command,
+        "originalRequest": message.content_md,
+        "expectedArtifactTypes": ["diff", "review"],
+        "autoStart": auto_start,
+    }
+    if role == "frontend":
+        plan["frontendTargetId"] = target.target_id
+    if role == "backend":
+        plan["backendTargetId"] = target.target_id
+    return _create_single_task(
+        db,
+        message,
+        agent=agent,
+        title=_task_title(role.title(), message.content_md),
+        intent_type=intent_type,
+        priority=priority,
+        depends_on=depends_on,
+        plan=plan,
+    )
 
 
 def _create_platform_maintenance_task(
@@ -1033,6 +1163,68 @@ def _is_safe_demo_frontend_request(content: str) -> bool:
         "hero",
     ]
     return any(signal in normalized for signal in safe_signals)
+
+
+def _is_safe_external_frontend_request(content: str) -> bool:
+    normalized = MENTION_PATTERN.sub("", content).lower()
+    if _is_unsupported_broad_request(normalized):
+        return False
+    safe_signals = [
+        "frontend",
+        "ui",
+        "page",
+        "dashboard",
+        "hero",
+        "copy",
+        "button",
+        "layout",
+        "前端",
+        "页面",
+        "仪表盘",
+        "按钮",
+        "文案",
+    ]
+    return any(signal in normalized for signal in safe_signals)
+
+
+def _active_external_target_for_role(
+    db: DbSession,
+    message: Message,
+    role: str,
+) -> Optional[TargetProject]:
+    session = _session_for_message(db, message)
+    target_id = (
+        session.active_frontend_target_id
+        if role == "frontend"
+        else session.active_backend_target_id
+    )
+    if not target_id:
+        return None
+    try:
+        target = get_target_for_workspace(db, session.workspace_id, target_id)
+    except TargetRegistryError:
+        return None
+    if not target.target_id.startswith("external-"):
+        return None
+    if role == "frontend" and target.type != "frontend":
+        return None
+    if role == "backend" and target.type != "backend":
+        return None
+    return target
+
+
+def _external_task_files(target: TargetProject) -> list[str]:
+    root = Path(target.root)
+    files: list[str] = []
+    for allowed_path in target.allowed_paths:
+        allowed_root = root / allowed_path
+        for candidate in ("App.tsx", "App.jsx", "main.tsx", "main.jsx", "main.py", "server.ts"):
+            if (allowed_root / candidate).exists():
+                files.append(f"{allowed_path}/{candidate}")
+                break
+        if not files:
+            files.append(allowed_path)
+    return files[:4]
 
 
 def _is_unsupported_broad_request(content: str) -> bool:

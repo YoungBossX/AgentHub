@@ -109,7 +109,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p9-external-project-workspace-mode --strict`.
 
-- [ ] 1.5 P9-5 External Project Task Execution.
+- [x] 1.5 P9-5 External Project Task Execution.
   - Objective: Allow registered external targets to receive executable
     coding/review tasks through existing adapters.
   - Scope:

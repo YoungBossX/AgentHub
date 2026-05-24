@@ -76,6 +76,8 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "session_type",
             "bound_branch",
             "worktree_path",
+            "active_frontend_target_id",
+            "active_backend_target_id",
             "status",
             "last_message_at",
             "created_at",

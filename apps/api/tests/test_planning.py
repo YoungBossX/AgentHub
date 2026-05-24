@@ -7,6 +7,10 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
+from app.external_workspaces import (
+    ExternalWorkspaceRegistration,
+    register_external_project_target,
+)
 from app.main import app, get_db
 from app.models import Agent, Message, Session, Task, Workspace
 from app.planning import (
@@ -544,6 +548,98 @@ def test_backend_mention_creates_safe_demo_backend_task(
         "apps/demo-api/tests/test_contacts.py",
     ]
     assert task["planJson"]["originalRequest"] == "@backend add a contacts endpoint"
+
+
+def test_direct_frontend_mention_uses_active_external_target(
+    client: TestClient,
+    tmp_path,
+) -> None:
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        project = tmp_path / "external-app"
+        (project / "src").mkdir(parents=True)
+        (project / "src" / "App.tsx").write_text("export default function App() { return null }\n")
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-planning-app",
+                name="External Planning App",
+                root_path=str(project),
+                project_type="vite-react",
+                allowed_paths=["src"],
+                dev_command="pnpm dev",
+                test_command="pnpm test",
+                package_manager="pnpm",
+                detected_framework="vite-react",
+            ),
+        )
+        session.active_frontend_target_id = "external-planning-app"
+        db.add(session)
+        db.commit()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@frontend update the app hero copy"},
+    )
+
+    assert response.status_code == 201
+    task = client.get(f"/sessions/{session_id}/tasks").json()[0]
+
+    assert task["assignedAgentRole"] == "frontend"
+    assert task["intentType"] == "frontend_change"
+    assert task["planJson"]["targetId"] == "external-planning-app"
+    assert task["planJson"]["frontendTargetId"] == "external-planning-app"
+    assert task["planJson"]["safeTarget"] == "src"
+    assert task["planJson"]["files"] == ["src/App.tsx"]
+    assert task["planJson"]["autoStart"] is False
+    assert task["planJson"]["originalRequest"] == "@frontend update the app hero copy"
+
+
+def test_orchestrator_can_create_auto_start_external_frontend_task(
+    client: TestClient,
+    tmp_path,
+) -> None:
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        project = tmp_path / "external-dashboard"
+        (project / "src").mkdir(parents=True)
+        (project / "src" / "App.tsx").write_text("export default function App() { return null }\n")
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-dashboard",
+                name="External Dashboard",
+                root_path=str(project),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        session.active_frontend_target_id = "external-dashboard"
+        db.add(session)
+        db.commit()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "build a dashboard page with cards"},
+    )
+
+    assert response.status_code == 201
+    task = client.get(f"/sessions/{session_id}/tasks").json()[0]
+
+    assert task["assignedAgentRole"] == "frontend"
+    assert task["status"] == "running"
+    assert len(task["taskRuns"]) == 1
+    assert task["taskRuns"][0]["state"] == "queued"
+    assert task["planJson"]["planner"] == "orchestrator_external_target_v1"
+    assert task["planJson"]["routing"] == "orchestrator_default"
+    assert task["planJson"]["targetId"] == "external-dashboard"
+    assert task["planJson"]["autoStart"] is True
 
 
 def test_explicit_platform_mode_request_creates_approval_gated_platform_task(

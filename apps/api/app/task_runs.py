@@ -10,7 +10,11 @@ from app.diffs import capture_base_ref_for_worktree
 from app.models import Agent, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
-from app.target_registry import AGENTHUB_PLATFORM_TARGET_ID
+from app.target_registry import (
+    AGENTHUB_PLATFORM_TARGET_ID,
+    TargetRegistryError,
+    get_target_for_workspace,
+)
 
 TASK_RUN_STATES = {
     "created",
@@ -70,12 +74,13 @@ def create_task_run(
     initial_state = "waiting_approval" if approval_payload is not None else "queued"
     task.status = _task_status_for_run_state(initial_state)
     task.updated_at = now
+    worktree_path = _worktree_path_for_task(db, task, session)
     task_run = TaskRun(
         task_id=task.id,
         agent_id=agent.id,
         state=initial_state,
-        worktree_path=session.worktree_path,
-        base_ref=capture_base_ref_for_worktree(session.worktree_path),
+        worktree_path=worktree_path,
+        base_ref=capture_base_ref_for_worktree(worktree_path),
         metrics_json=json.dumps(metrics, separators=(",", ":")),
         created_at=now,
         updated_at=now,
@@ -291,6 +296,22 @@ def _platform_approval_payload(task: Task) -> Optional[dict[str, Any]]:
             "expiresAt": None,
         }
     return None
+
+
+def _worktree_path_for_task(
+    db: DbSession,
+    task: Task,
+    session: AgentHubSession,
+) -> str:
+    plan = _plan_json(task)
+    target_id = plan.get("targetId")
+    if not isinstance(target_id, str) or not target_id.startswith("external-"):
+        return session.worktree_path
+    try:
+        target = get_target_for_workspace(db, session.workspace_id, target_id)
+    except TargetRegistryError:
+        return session.worktree_path
+    return target.root
 
 
 def _ensure_target_write_lock_available(db: DbSession, task: Task) -> None:

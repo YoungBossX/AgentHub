@@ -571,6 +571,7 @@ def test_external_target_context_reaches_instruction_builder(
         request = agent_run_request_for(db, task_run, adapter_type="codex")
 
     target_context = request.plan_context["sessionContext"]["targetProject"]
+    assert request.worktree_path == str(external_root.resolve())
     assert target_context["targetId"] == "external-vite-app"
     assert target_context["root"] == str(external_root.resolve())
     assert target_context["allowedPaths"] == ["src"]

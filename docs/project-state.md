@@ -5,6 +5,32 @@ reference instead of repeating long context blocks.
 
 ## P9 Status
 
+### P9-5 External Project Task Execution
+
+P9-5 completed on 2026-05-24.
+
+Registered external targets can now receive executable tasks through existing
+routing and TaskRun paths:
+
+- sessions can select active external frontend/backend target IDs;
+- target selection validates that the target exists in the workspace registry
+  and matches the requested frontend/backend type;
+- direct `@frontend` and `@backend` assignments route to the selected external
+  target when present;
+- direct `@qa` / `@review` assignments become read-oriented external review
+  tasks when an external target is active;
+- Orchestrator can create and auto-start a bounded external frontend task when
+  an active external frontend target is selected and the request is a safe UI
+  change;
+- external TaskRuns use the external target root as their execution worktree
+  path instead of the built-in session demo worktree;
+- SQLite initialization now backfills the session active-target columns for
+  existing local demo databases.
+
+Current limitation: external diff/command evidence is still basic and
+capability-specific evidence artifacts are P9-6. Real Claude/Codex external
+execution is reserved for P9-8 rehearsal.
+
 ### P9-4 External Target Instruction Builder
 
 P9-4 completed on 2026-05-24.
