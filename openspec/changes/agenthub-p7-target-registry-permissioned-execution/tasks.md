@@ -27,7 +27,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`.
 
-- [ ] 1.2 P7-2 Target-aware Instruction Builder.
+- [x] 1.2 P7-2 Target-aware Instruction Builder.
   - Objective: Generate role instructions from target registry metadata.
   - Scope:
     - update frontend, backend, QA, and review instructions to resolve target

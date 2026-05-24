@@ -1,5 +1,50 @@
 # AgentHub Change Log
 
+## P7-2 Target-aware Instruction Builder
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/instruction_builder.py` | Resolved role instructions through target registry metadata, including target IDs, allowed paths, commands, related backend base URL, and platform-mode requirements. |
+| `apps/api/app/context_pack.py` | Added resolved target metadata and related target metadata to session context packs when target IDs are present. |
+| `apps/api/app/main.py` | Removed the unused legacy `instruction_for_task` helper so instruction generation has one backend boundary. |
+| `apps/api/tests/test_task_runs.py` | Added instruction/request coverage for target-aware backend, frontend, contract, context pack, and platform-maintenance behavior. |
+| `docs/project-state.md` | Recorded P7-2 behavior and remaining migration caveats. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-2 complete after validation. |
+
+### What Changed
+
+P7-2 keeps P6 instruction behavior compatible while allowing P7 target-aware
+plans to drive instruction construction:
+
+- frontend instructions reference `demo-frontend`, `apps/demo/src`, and the
+  registry-resolved `demo-backend` base URL;
+- backend instructions reference `demo-backend`, `apps/demo-api`, and
+  `pnpm demo:api:test`;
+- explicit `agenthub-platform` tasks produce platform-maintenance instructions
+  that require platform mode and approval;
+- context packs expose `targetProject` and `relatedTargetProjects` metadata for
+  adapter request construction.
+
+P7-3 still needs to update planner output so target IDs are emitted by default.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pytest tests/test_task_runs.py -q` | Pass: 26 tests. |
+| `bash scripts/check-api.sh` | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 139 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+
+---
+
 ## P7-1 Target Project Registry
 
 **Date:** 2026-05-24

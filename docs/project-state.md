@@ -5,6 +5,32 @@ reference instead of repeating long context blocks.
 
 ## P7 Status
 
+### P7-2 Target-aware Instruction Builder
+
+P7-2 completed on 2026-05-24.
+
+Agent instructions are now generated through the Target Project Registry
+boundary:
+
+- frontend instructions resolve `demo-frontend`, its allowed path
+  `apps/demo/src`, and the related `demo-backend` base URL;
+- backend instructions resolve `demo-backend`, its allowed path
+  `apps/demo-api`, its validation command `pnpm demo:api:test`, and the
+  `apps/api` denial;
+- platform-maintenance instructions can be built only when a task explicitly
+  targets `agenthub-platform`, and those instructions state that platform mode
+  and approval are required;
+- session context packs now include resolved target metadata when task plans
+  include target IDs, while preserving the P6 legacy plan shape.
+
+The old unused `instruction_for_task` helper in `apps/api/app/main.py` was
+removed so `apps/api/app/instruction_builder.py` remains the single instruction
+builder boundary.
+
+Current limitation: planner-generated app contracts and tasks still need to be
+migrated to emit target IDs by default in P7-3. Review policy enforcement still
+needs the P7-4 target-aware checks.
+
 ### P7-1 Target Project Registry
 
 P7-1 completed on 2026-05-24 as the first step of

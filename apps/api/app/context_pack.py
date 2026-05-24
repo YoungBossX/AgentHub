@@ -20,6 +20,13 @@ from app.models import (
     TaskRun,
 )
 from app.models import Session as AgentHubSession
+from app.target_registry import (
+    DEMO_BACKEND_TARGET_ID,
+    TargetProject,
+    TargetRegistryError,
+    get_related_targets,
+    get_target,
+)
 
 RECENT_MESSAGE_LIMIT = 8
 RECENT_MESSAGE_CHAR_LIMIT = 700
@@ -84,6 +91,8 @@ def build_session_context_pack(
         "latestDeployment": latest_deployment,
         "selectedArtifact": selected_artifact,
         "appContract": app_contract,
+        "targetProject": _target_project_context(task, merged_context),
+        "relatedTargetProjects": _related_target_project_context(merged_context),
         "safeTargetPaths": _safe_target_paths(task, merged_context),
         "validationExpectations": _validation_expectations(task, merged_context),
     }
@@ -314,18 +323,85 @@ def _task_description(task: Task, context: dict[str, Any]) -> str:
 
 
 def _safe_target_paths(task: Task, context: dict[str, Any]) -> list[str]:
+    target = _target_for_context(task, context)
     safe_target = context.get("safeTarget")
     paths: list[str] = []
+    if target is not None:
+        paths.extend(target.allowed_paths)
     if isinstance(safe_target, str) and safe_target:
         paths.append(safe_target)
     files = context.get("files")
     if isinstance(files, list):
         paths.extend(path for path in files if isinstance(path, str))
-    if task.intent_type == "backend_change" and "apps/demo-api" not in paths:
-        paths.append("apps/demo-api")
+    if task.intent_type == "backend_change" and target is None:
+        paths.extend(get_target(DEMO_BACKEND_TARGET_ID).allowed_paths)
     if task.intent_type in {"review", "qa_review"}:
         paths.append("read-only current session artifacts")
     return _dedupe(paths)
+
+
+def _target_project_context(task: Task, context: dict[str, Any]) -> Optional[dict[str, Any]]:
+    target = _target_for_context(task, context)
+    if target is None:
+        return None
+    return _target_to_context(target)
+
+
+def _related_target_project_context(context: dict[str, Any]) -> list[dict[str, Any]]:
+    target_id = _string_value(context.get("targetId") or context.get("frontendTargetId"))
+    if target_id is None:
+        contract = context.get("appContract")
+        if isinstance(contract, dict):
+            target_id = _string_value(contract.get("frontendTargetId"))
+    if target_id is None:
+        return []
+    try:
+        return [_target_to_context(target) for target in get_related_targets(target_id)]
+    except TargetRegistryError:
+        return []
+
+
+def _target_for_context(task: Task, context: dict[str, Any]) -> Optional[TargetProject]:
+    target_id = _string_value(context.get("targetId"))
+    contract = context.get("appContract")
+    if target_id is None and isinstance(contract, dict):
+        if task.intent_type == "frontend_change":
+            target_id = _string_value(context.get("frontendTargetId") or contract.get("frontendTargetId"))
+        elif task.intent_type == "backend_change":
+            target_id = _string_value(context.get("backendTargetId") or contract.get("backendTargetId"))
+    if target_id is None and task.intent_type == "backend_change":
+        target_id = DEMO_BACKEND_TARGET_ID
+    if target_id is None:
+        return None
+    try:
+        return get_target(target_id)
+    except TargetRegistryError:
+        return None
+
+
+def _target_to_context(target: TargetProject) -> dict[str, Any]:
+    return {
+        "targetId": target.target_id,
+        "name": target.name,
+        "type": target.type,
+        "root": target.root,
+        "allowedPaths": list(target.allowed_paths),
+        "deniedPaths": list(target.denied_paths),
+        "devCommand": target.dev_command,
+        "testCommand": target.test_command,
+        "previewCommand": target.preview_command,
+        "baseUrl": target.base_url,
+        "allowedAgents": list(target.allowed_agents),
+        "requiresPlatformMode": target.requires_platform_mode,
+        "requiresApproval": target.requires_approval,
+        "relatedTargetIds": list(target.related_target_ids),
+    }
+
+
+def _string_value(value: Any) -> Optional[str]:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
 
 
 def _validation_expectations(task: Task, context: dict[str, Any]) -> list[str]:

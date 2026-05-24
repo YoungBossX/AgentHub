@@ -27,6 +27,11 @@ from app.models import (
 )
 from app.models import utc_now
 from app.task_runs import TaskRunLifecycleError, create_task_run, transition_task_run
+from app.target_registry import (
+    AGENTHUB_PLATFORM_TARGET_ID,
+    DEMO_BACKEND_TARGET_ID,
+    DEMO_FRONTEND_TARGET_ID,
+)
 
 
 @pytest.fixture
@@ -486,6 +491,7 @@ def test_backend_instruction_targets_demo_backend_without_platform_api_access(
             plan_json=json.dumps(
                 {
                     "target": "demo_backend_request",
+                    "targetId": DEMO_BACKEND_TARGET_ID,
                     "safeTarget": "apps/demo-api",
                     "originalRequest": "@backend add a contacts endpoint",
                 },
@@ -503,8 +509,11 @@ def test_backend_instruction_targets_demo_backend_without_platform_api_access(
     assert "Work only inside apps/demo-api" in request.instruction
     assert "GET /health" in request.instruction
     assert "POST /contacts" in request.instruction
+    assert "targetId: demo-backend" in request.instruction
+    assert "testCommand: pnpm demo:api:test" in request.instruction
     assert "Do not edit apps/api" in request.instruction
     assert "not available yet" not in request.instruction
+    assert request.plan_context["sessionContext"]["targetProject"]["targetId"] == DEMO_BACKEND_TARGET_ID
     assert request.plan_context["sessionContext"]["safeTargetPaths"] == ["apps/demo-api"]
 
 
@@ -573,6 +582,8 @@ def test_contract_aware_role_instructions_reference_same_contract(
         "appName": "Mini CRM Contacts",
         "appType": "mini_crm_contacts",
         "userGoal": "帮我做一个 mini CRM，包含联系人和备注",
+        "frontendTargetId": DEMO_FRONTEND_TARGET_ID,
+        "backendTargetId": DEMO_BACKEND_TARGET_ID,
         "backendTarget": "apps/demo-api",
         "frontendTarget": "apps/demo",
         "demoApiBaseUrl": "http://127.0.0.1:5174",
@@ -595,6 +606,8 @@ def test_contract_aware_role_instructions_reference_same_contract(
             plan_json=json.dumps(
                 {
                     "assignedRole": "backend",
+                    "targetId": DEMO_BACKEND_TARGET_ID,
+                    "backendTargetId": DEMO_BACKEND_TARGET_ID,
                     "safeTarget": "apps/demo-api",
                     "appContract": contract,
                     "contractId": contract["contractId"],
@@ -612,6 +625,9 @@ def test_contract_aware_role_instructions_reference_same_contract(
             plan_json=json.dumps(
                 {
                     "assignedRole": "frontend",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "frontendTargetId": DEMO_FRONTEND_TARGET_ID,
+                    "backendTargetId": DEMO_BACKEND_TARGET_ID,
                     "safeTarget": "apps/demo/src",
                     "frontendTarget": "apps/demo",
                     "files": ["apps/demo/src/App.tsx"],
@@ -631,6 +647,7 @@ def test_contract_aware_role_instructions_reference_same_contract(
             plan_json=json.dumps(
                 {
                     "assignedRole": "review",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
                     "target": "contract_review",
                     "appContract": contract,
                     "contractId": contract["contractId"],
@@ -658,11 +675,53 @@ def test_contract_aware_role_instructions_reference_same_contract(
         assert "contract-mini_crm_contacts" in request.instruction
         assert request.plan_context["sessionContext"]["appContract"] == contract
 
-    assert "targeting apps/demo-api" in backend_request.instruction
-    assert "targeting apps/demo/src" in frontend_request.instruction
+    assert "targeting `demo-backend` (apps/demo-api)" in backend_request.instruction
+    assert "targeting `demo-frontend` (apps/demo/src)" in frontend_request.instruction
+    assert "targetId: demo-frontend" in frontend_request.instruction
+    assert "relatedBackendTargetId: demo-backend" in frontend_request.instruction
     assert "http://127.0.0.1:5174" in frontend_request.instruction
     assert "Do not call the AgentHub platform API at http://localhost:8000" in frontend_request.instruction
     assert "Review backend and frontend work" in review_request.instruction
+    assert frontend_request.plan_context["sessionContext"]["targetProject"]["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert frontend_request.plan_context["sessionContext"]["relatedTargetProjects"][0]["targetId"] == DEMO_BACKEND_TARGET_ID
+
+
+def test_platform_instruction_requires_explicit_platform_mode_and_approval(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        backend_agent = db.exec(select(Agent).where(Agent.role == "backend")).one()
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        platform_task = Task(
+            session_id=session_id,
+            title="Platform maintenance: adjust AgentHub API",
+            intent_type="platform_maintenance",
+            status="pending",
+            assigned_agent_id=backend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "backend",
+                    "targetId": AGENTHUB_PLATFORM_TARGET_ID,
+                    "platformMode": True,
+                    "requiresApproval": True,
+                    "originalRequest": "platform mode: adjust AgentHub API",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(platform_task)
+        db.commit()
+        db.refresh(platform_task)
+        task_run = create_task_run(db, platform_task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert "AgentHub Platform Maintenance Mode" in request.instruction
+    assert "targetId: agenthub-platform" in request.instruction
+    assert "requiresPlatformMode: true" in request.instruction
+    assert "requiresApproval: true" in request.instruction
+    assert "pnpm check && pnpm test" in request.instruction
+    assert request.plan_context["sessionContext"]["targetProject"]["targetId"] == AGENTHUB_PLATFORM_TARGET_ID
 
 
 def test_contract_aware_review_validates_backend_and_frontend_targets(

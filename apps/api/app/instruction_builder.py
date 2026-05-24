@@ -1,8 +1,16 @@
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from app.models import Agent, Task
+from app.target_registry import (
+    DEMO_BACKEND_TARGET_ID,
+    DEMO_FRONTEND_TARGET_ID,
+    TargetProject,
+    TargetRegistryError,
+    get_related_backend_target,
+    get_target,
+)
 
 
 def build_role_instruction(
@@ -13,11 +21,13 @@ def build_role_instruction(
     role = _effective_role(task, agent, context_pack)
     plan = _task_plan(context_pack)
     original_request = str(context_pack.get("originalUserRequest") or task.title).strip()
+    target = _target_for_role(role, plan)
     sections = [
-        _role_body(role, task, plan, original_request),
-        _contract_guidance(role, plan),
+        _role_body(role, task, plan, original_request, target),
+        _target_section(role, plan, target),
+        _contract_guidance(role, plan, target),
         _context_section(context_pack),
-        _guardrails(role),
+        _guardrails(role, target),
     ]
     return "\n\n".join(section for section in sections if section)
 
@@ -27,11 +37,14 @@ def _role_body(
     task: Task,
     plan: dict[str, Any],
     original_request: str,
+    target: TargetProject,
 ) -> str:
+    if target.type == "platform":
+        return _platform_body(original_request, target)
     if role == "frontend":
-        return _frontend_body(task, plan, original_request)
+        return _frontend_body(task, plan, original_request, target)
     if role == "backend":
-        return _backend_body(original_request)
+        return _backend_body(original_request, target)
     if role in {"qa", "review"}:
         return _review_body(original_request)
     if role == "orchestrator":
@@ -47,9 +60,11 @@ def _frontend_body(
     task: Task,
     plan: dict[str, Any],
     original_request: str,
+    target: TargetProject,
 ) -> str:
-    target = plan.get("target")
-    if task.intent_type == "frontend_change" and target == "login_page":
+    allowed_path = _primary_allowed_path(target)
+    target_kind = plan.get("target")
+    if task.intent_type == "frontend_change" and target_kind == "login_page":
         return (
             "You are the Frontend Agent for AgentHub's demo app.\n"
             f"Original user request: {original_request}\n"
@@ -62,7 +77,7 @@ def _frontend_body(
             "commands."
         )
 
-    if task.intent_type == "frontend_change" and target == "primary_action_button_text":
+    if task.intent_type == "frontend_change" and target_kind == "primary_action_button_text":
         target_text = str(plan.get("targetText") or "").strip()
         return (
             "You are the Frontend Agent for AgentHub's demo app.\n"
@@ -75,7 +90,7 @@ def _frontend_body(
             "dependency install commands."
         )
 
-    if task.intent_type == "frontend_change" and target == "demo_heading_text":
+    if task.intent_type == "frontend_change" and target_kind == "demo_heading_text":
         target_text = str(plan.get("targetText") or "").strip()
         return (
             "You are the Frontend Agent for AgentHub's demo app.\n"
@@ -87,7 +102,7 @@ def _frontend_body(
             "do not run setup or dependency install commands."
         )
 
-    if task.intent_type == "frontend_change" and target == "theme_accent_color":
+    if task.intent_type == "frontend_change" and target_kind == "theme_accent_color":
         target_text = str(plan.get("targetText") or "").strip()
         return (
             "You are the Frontend Agent for AgentHub's demo app.\n"
@@ -100,7 +115,7 @@ def _frontend_body(
             "dependency install commands."
         )
 
-    if task.intent_type == "frontend_change" and target == "simple_input_field":
+    if task.intent_type == "frontend_change" and target_kind == "simple_input_field":
         target_text = str(plan.get("targetText") or "").strip()
         return (
             "You are the Frontend Agent for AgentHub's demo app.\n"
@@ -113,7 +128,7 @@ def _frontend_body(
             "dependency install commands."
         )
 
-    if task.intent_type == "frontend_change" and target == "status_help_text":
+    if task.intent_type == "frontend_change" and target_kind == "status_help_text":
         target_text = str(plan.get("targetText") or "").strip()
         return (
             "You are the Frontend Agent for AgentHub's demo app.\n"
@@ -125,7 +140,7 @@ def _frontend_body(
             "setup or dependency install commands."
         )
 
-    if task.intent_type == "frontend_change" and target == "layout_copy":
+    if task.intent_type == "frontend_change" and target_kind == "layout_copy":
         target_text = str(plan.get("targetText") or "").strip()
         return (
             "You are the Frontend Agent for AgentHub's demo app.\n"
@@ -138,31 +153,32 @@ def _frontend_body(
         )
 
     files = plan.get("files")
-    file_list = ", ".join(files) if isinstance(files, list) else "apps/demo/src"
+    file_list = ", ".join(files) if isinstance(files, list) else allowed_path
     return (
         "You are the Frontend Agent for AgentHub's demo app.\n"
         f"Original user request: {original_request}\n"
         "Implement a meaningful, bounded frontend change for that request. "
         "Use the session context pack to understand prior changes and follow-up "
-        "intent. Work only inside apps/demo/src, preferably in the existing "
+        f"intent. Work only inside {allowed_path}, preferably in the existing "
         f"React demo files: {file_list}. Preserve the existing Vite React demo "
         "app boundary. Keep the diff focused and previewable."
     )
 
 
-def _backend_body(original_request: str) -> str:
-    target_exists = _demo_backend_target_exists()
+def _backend_body(original_request: str, target: TargetProject) -> str:
+    target_exists = _target_root_exists(target)
+    allowed_path = _primary_allowed_path(target)
     if target_exists:
         availability = (
-            "The safe demo backend target apps/demo-api exists. Work only inside "
-            "apps/demo-api for backend application code. Current scaffold is a "
+            f"The safe demo backend target {target.root} exists. Work only inside "
+            f"{allowed_path} for backend application code. Current scaffold is a "
             "minimal FastAPI contacts API with GET /health, GET /contacts, and "
             "POST /contacts."
         )
     else:
         availability = (
-            "The safe demo backend target apps/demo-api is not available yet. "
-            "If apps/demo-api is missing, do not pretend backend execution is "
+            f"The safe demo backend target {target.root} is not available yet. "
+            f"If {target.root} is missing, do not pretend backend execution is "
             "possible. Report that backend execution is blocked until P6-4 adds "
             "the safe demo backend target."
         )
@@ -196,6 +212,54 @@ def _manager_body(original_request: str) -> str:
     )
 
 
+def _platform_body(original_request: str, target: TargetProject) -> str:
+    validation = target.test_command or "pnpm check && pnpm test"
+    return (
+        "You are working in AgentHub Platform Maintenance Mode.\n"
+        f"Original user request: {original_request}\n"
+        f"Target `{target.target_id}` requires explicit platform mode and "
+        "approval before adapter execution. Treat this as control-plane work, "
+        f"use stricter validation (`{validation}`), and do not route ordinary "
+        "application backend work here."
+    )
+
+
+def _target_section(
+    role: str,
+    plan: dict[str, Any],
+    target: TargetProject,
+) -> str:
+    lines = [
+        "Target Project:",
+        f"- targetId: {target.target_id}",
+        f"- name: {target.name}",
+        f"- type: {target.type}",
+        f"- root: {target.root}",
+        f"- allowedPaths: {', '.join(target.allowed_paths)}",
+        f"- deniedPaths: {', '.join(target.denied_paths)}",
+    ]
+    if target.dev_command:
+        lines.append(f"- devCommand: {target.dev_command}")
+    if target.test_command:
+        lines.append(f"- testCommand: {target.test_command}")
+    if target.preview_command:
+        lines.append(f"- previewCommand: {target.preview_command}")
+    if target.base_url:
+        lines.append(f"- baseUrl: {target.base_url}")
+    if target.requires_platform_mode:
+        lines.append("- requiresPlatformMode: true")
+    if target.requires_approval:
+        lines.append("- requiresApproval: true")
+
+    if role == "frontend":
+        backend_target = _backend_target_for_frontend(plan, target)
+        if backend_target.base_url:
+            lines.append(f"- relatedBackendTargetId: {backend_target.target_id}")
+            lines.append(f"- relatedBackendBaseUrl: {backend_target.base_url}")
+
+    return "\n".join(lines)
+
+
 def _context_section(context_pack: dict[str, Any]) -> str:
     return (
         "Session Context Pack:\n"
@@ -205,26 +269,32 @@ def _context_section(context_pack: dict[str, Any]) -> str:
     )
 
 
-def _contract_guidance(role: str, plan: dict[str, Any]) -> str:
+def _contract_guidance(
+    role: str,
+    plan: dict[str, Any],
+    target: TargetProject,
+) -> str:
     contract = plan.get("appContract")
     if not isinstance(contract, dict):
         return ""
     contract_id = str(contract.get("contractId") or "shared contract")
     app_name = str(contract.get("appName") or "the bounded app")
-    demo_api_base_url = str(contract.get("demoApiBaseUrl") or "http://127.0.0.1:5174")
+    backend_target = _backend_target_for_frontend(plan, target)
+    demo_api_base_url = backend_target.base_url or str(contract.get("demoApiBaseUrl") or "")
     if role == "backend":
         return (
             f"Shared App Contract: Use `{contract_id}` for {app_name}. "
             "Implement only backend API behavior described by the contract, "
-            "targeting apps/demo-api."
+            f"targeting `{target.target_id}` ({_primary_allowed_path(target)})."
         )
     if role == "frontend":
         return (
             f"Shared App Contract: Use `{contract_id}` for {app_name}. "
             "Implement only frontend UI behavior described by the contract, "
-            "targeting apps/demo/src and integrating with the demo API shape. "
-            f"Use the demo backend base URL `{demo_api_base_url}` for app data "
-            "calls. Do not call the AgentHub platform API at http://localhost:8000 "
+            f"targeting `{target.target_id}` ({_primary_allowed_path(target)}) "
+            "and integrating with the demo API shape. "
+            f"Use the `{backend_target.target_id}` base URL `{demo_api_base_url}` "
+            "for app data calls. Do not call the AgentHub platform API at http://localhost:8000 "
             "or http://127.0.0.1:8000 for generated app data."
         )
     if role in {"qa", "review"}:
@@ -240,14 +310,18 @@ def _contract_guidance(role: str, plan: dict[str, Any]) -> str:
     return f"Shared App Contract: Use `{contract_id}` for {app_name}."
 
 
-def _guardrails(role: str) -> str:
+def _guardrails(role: str, target: TargetProject) -> str:
     role_specific = []
     if role == "frontend":
-        role_specific.append("Work only inside apps/demo/src unless a later task explicitly expands the safe target.")
+        role_specific.append(
+            f"Work only inside {', '.join(target.allowed_paths)} unless a later task explicitly expands the safe target."
+        )
     if role == "backend":
         role_specific.append("Do not modify apps/api or any AgentHub platform backend files.")
     if role in {"qa", "review"}:
         role_specific.append("Stay read-oriented unless an explicit future task allows write remediation.")
+    if target.requires_platform_mode:
+        role_specific.append("Platform maintenance requires explicit platform mode and approval.")
 
     guardrails = [
         "Do not edit .env files, secrets, node_modules, .git, or host paths outside the assigned worktree.",
@@ -281,8 +355,63 @@ def _task_plan(context_pack: dict[str, Any]) -> dict[str, Any]:
     return plan if isinstance(plan, dict) else {}
 
 
-def _demo_backend_target_exists() -> bool:
-    return (_repo_root() / "apps/demo-api/app/main.py").exists()
+def _target_for_role(role: str, plan: dict[str, Any]) -> TargetProject:
+    explicit_target = _string_value(plan.get("targetId"))
+    contract = plan.get("appContract")
+    if explicit_target is None and isinstance(contract, dict):
+        if role == "frontend":
+            explicit_target = _string_value(plan.get("frontendTargetId") or contract.get("frontendTargetId"))
+        elif role == "backend":
+            explicit_target = _string_value(plan.get("backendTargetId") or contract.get("backendTargetId"))
+        elif role in {"qa", "review"}:
+            explicit_target = _string_value(plan.get("targetId") or contract.get("frontendTargetId"))
+
+    if explicit_target:
+        try:
+            return get_target(explicit_target)
+        except TargetRegistryError:
+            pass
+
+    if role == "backend":
+        return get_target(DEMO_BACKEND_TARGET_ID)
+    if role == "frontend":
+        return get_target(DEMO_FRONTEND_TARGET_ID)
+    if role in {"qa", "review"}:
+        return get_target(DEMO_FRONTEND_TARGET_ID)
+    if role == "orchestrator":
+        return get_target(DEMO_FRONTEND_TARGET_ID)
+    return get_target(DEMO_FRONTEND_TARGET_ID)
+
+
+def _backend_target_for_frontend(plan: dict[str, Any], frontend_target: TargetProject) -> TargetProject:
+    contract = plan.get("appContract")
+    backend_target_id = _string_value(plan.get("backendTargetId"))
+    if backend_target_id is None and isinstance(contract, dict):
+        backend_target_id = _string_value(contract.get("backendTargetId"))
+    if backend_target_id:
+        try:
+            return get_target(backend_target_id)
+        except TargetRegistryError:
+            pass
+    if frontend_target.target_id == DEMO_FRONTEND_TARGET_ID:
+        return get_related_backend_target(frontend_target.target_id)
+    return get_target(DEMO_BACKEND_TARGET_ID)
+
+
+def _primary_allowed_path(target: TargetProject) -> str:
+    return target.allowed_paths[0] if target.allowed_paths else target.root
+
+
+def _target_root_exists(target: TargetProject) -> bool:
+    if target.target_id == DEMO_BACKEND_TARGET_ID:
+        return (_repo_root() / target.root / "app/main.py").exists()
+    return (_repo_root() / target.root).exists()
+
+
+def _string_value(value: Any) -> Optional[str]:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
 
 
 def _repo_root() -> Path:
