@@ -1,5 +1,43 @@
 # AgentHub Change Log
 
+## P11-3 Local Staging Deploy Provider
+
+**Date:** 2026-05-25
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/deployments.py` | Added `local_staging` provider, build runner, static directory server runner, target/worktree resolution, health checking, and provider-selected deploy creation. |
+| `apps/api/app/main.py` | Allowed `POST /previews/{previewId}/deploy` to accept `providerId` while preserving mock as the default. |
+| `apps/api/app/schemas.py` | Added deploy create request schema. |
+| `apps/api/app/target_registry.py` | Aligned demo frontend build command with target-root execution. |
+| `apps/api/tests/test_deployments.py` | Added local staging success, build failure, missing output, and API provider selection tests. |
+| `apps/api/tests/test_target_registry.py` | Updated deploy config assertions for target-root build execution. |
+| `docs/project-state.md` | Recorded P11-3 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-3 complete after targeted verification. |
+
+### What Changed
+
+P11-3 adds a real local staging provider path. It reads deploy configuration
+from Target Registry, runs the target build command, checks the configured
+output directory, starts a local static server, performs a URL health check,
+and records a staging deployment when the URL is ready.
+
+The API remains compatible with existing mock deploy callers and now accepts
+`providerId: local_staging` for staging deploy requests. Deterministic
+TestClient smoke coverage verifies the local provider selection without
+starting long-lived external services.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted deployment / target registry tests | Pass: 24 tests. |
+
+---
+
 ## P11-2 Target-aware Deploy Configuration
 
 **Date:** 2026-05-25

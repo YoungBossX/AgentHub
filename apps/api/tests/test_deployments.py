@@ -8,7 +8,15 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
 import pytest
-from app.deployments import DeployError, DeployProviderResult, DeployService
+from app.deployments import (
+    CommandResult,
+    DeployError,
+    DeployProviderResult,
+    DeployService,
+    LocalStagingDeployProvider,
+    MockDeployProvider,
+    StagingServerProcess,
+)
 from app.main import app, get_db
 from app.models import (
     Agent,
@@ -59,6 +67,7 @@ def create_preview_fixture(db: DbSession, worktree_path: Path) -> tuple[str, str
         title="Build login page",
         intent_type="frontend_change",
         assigned_agent_id=agent.id,
+        plan_json=json.dumps({"targetId": "demo-frontend"}, separators=(",", ":")),
     )
     task_run = TaskRun(
         task_id=task.id,
@@ -93,6 +102,57 @@ def create_preview_fixture(db: DbSession, worktree_path: Path) -> tuple[str, str
     db.refresh(task_run)
     db.refresh(preview)
     return preview.id, task_run.id
+
+
+class RecordingBuildRunner:
+    def __init__(
+        self,
+        *,
+        exit_code: int = 0,
+        stdout: str = "build ok",
+        stderr: str = "",
+        create_output: bool = True,
+    ) -> None:
+        self.exit_code = exit_code
+        self.stdout = stdout
+        self.stderr = stderr
+        self.create_output = create_output
+        self.commands: list[tuple[str, Path]] = []
+
+    def run(self, command: str, cwd: Path) -> CommandResult:
+        self.commands.append((command, cwd))
+        if self.create_output:
+            output = cwd / "dist"
+            output.mkdir(parents=True, exist_ok=True)
+            (output / "index.html").write_text("<h1>staging</h1>\n")
+        return CommandResult(
+            exit_code=self.exit_code,
+            stdout=self.stdout,
+            stderr=self.stderr,
+        )
+
+
+class RecordingStaticServer:
+    def __init__(self) -> None:
+        self.calls: list[tuple[Path, int]] = []
+
+    def start(self, output_dir: Path, port: int) -> StagingServerProcess:
+        self.calls.append((output_dir, port))
+        return StagingServerProcess(
+            pid=5252,
+            url=f"http://127.0.0.1:{port}",
+            command=f"python -m http.server {port} --bind 127.0.0.1 --directory {output_dir}",
+        )
+
+
+class StaticHealthChecker:
+    def __init__(self, healthy: bool = True) -> None:
+        self.healthy = healthy
+        self.urls: list[str] = []
+
+    def is_healthy(self, url: str) -> bool:
+        self.urls.append(url)
+        return self.healthy
 
 
 def test_mock_deploy_persists_deployment_artifact_and_ready_event(tmp_path: Path) -> None:
@@ -165,7 +225,9 @@ def test_deploy_service_rejects_failed_provider_result_without_success_artifact(
         def deploy(
             self,
             *,
+            db: DbSession,
             preview: Preview,
+            preview_artifact: Artifact,
             task_run: TaskRun,
             deployment_id: str,
         ) -> DeployProviderResult:
@@ -192,6 +254,104 @@ def test_deploy_service_rejects_failed_provider_result_without_success_artifact(
         artifacts = db.exec(select(Artifact).where(Artifact.artifact_type == "deployment")).all()
         assert deployments == []
         assert artifacts == []
+
+
+def test_local_staging_provider_builds_serves_and_persists_ready_artifact(
+    tmp_path: Path,
+) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, task_run_id = create_preview_fixture(db, worktree)
+        build_runner = RecordingBuildRunner()
+        static_server = RecordingStaticServer()
+        health_checker = StaticHealthChecker()
+        provider = LocalStagingDeployProvider(
+            command_runner=build_runner,
+            static_server=static_server,
+            health_checker=health_checker,
+            port_allocator=lambda: 45217,
+        )
+        service = DeployService(providers=(MockDeployProvider(), provider))
+
+        stored = service.create_deployment(db, preview_id, provider_id="local_staging")
+
+        artifact = db.get(Artifact, stored.artifact_id)
+        deployment = db.get(Deployment, stored.id)
+        event = db.exec(
+            select(TaskRunEvent).where(
+                TaskRunEvent.task_run_id == task_run_id,
+                TaskRunEvent.event_type == "artifact.deploy.ready",
+            )
+        ).one()
+
+        assert artifact is not None
+        assert deployment is not None
+        assert stored.provider == "local_staging"
+        assert stored.environment == "staging"
+        assert stored.status == "ready"
+        assert stored.url == "http://127.0.0.1:45217"
+        assert build_runner.commands == [("pnpm build", worktree / "apps/demo")]
+        assert static_server.calls == [(worktree / "apps/demo/dist", 45217)]
+        assert health_checker.urls == ["http://127.0.0.1:45217"]
+
+        metadata = json.loads(artifact.meta_json)
+        provider_result = metadata["providerResult"]
+        assert provider_result["providerId"] == "local_staging"
+        assert provider_result["providerType"] == "local_staging"
+        assert provider_result["targetId"] == "demo-frontend"
+        assert provider_result["buildCommand"] == "pnpm build"
+        assert provider_result["deployCommand"].startswith("python -m http.server")
+        assert provider_result["outputUrl"] == "http://127.0.0.1:45217"
+        assert "build ok" in "\n".join(provider_result["logs"])
+        assert json.loads(event.payload_json)["provider"] == "local_staging"
+
+
+def test_local_staging_provider_reports_failed_build_without_ready_artifact(
+    tmp_path: Path,
+) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, _ = create_preview_fixture(db, worktree)
+        provider = LocalStagingDeployProvider(
+            command_runner=RecordingBuildRunner(
+                exit_code=1,
+                stdout="",
+                stderr="build exploded",
+                create_output=False,
+            ),
+            static_server=RecordingStaticServer(),
+            health_checker=StaticHealthChecker(),
+            port_allocator=lambda: 45218,
+        )
+        service = DeployService(providers=(provider,))
+
+        with pytest.raises(DeployError, match="Build command failed"):
+            service.create_deployment(db, preview_id, provider_id="local_staging")
+
+        assert db.exec(select(Deployment)).all() == []
+
+
+def test_local_staging_provider_reports_missing_output_without_ready_artifact(
+    tmp_path: Path,
+) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, _ = create_preview_fixture(db, worktree)
+        provider = LocalStagingDeployProvider(
+            command_runner=RecordingBuildRunner(create_output=False),
+            static_server=RecordingStaticServer(),
+            health_checker=StaticHealthChecker(),
+            port_allocator=lambda: 45219,
+        )
+        service = DeployService(providers=(provider,))
+
+        with pytest.raises(DeployError, match="output directory missing"):
+            service.create_deployment(db, preview_id, provider_id="local_staging")
+
+        assert db.exec(select(Deployment)).all() == []
 
 
 def test_deploy_api_creates_and_lists_mock_deployments(tmp_path: Path) -> None:
@@ -224,6 +384,44 @@ def test_deploy_api_creates_and_lists_mock_deployments(tmp_path: Path) -> None:
         assert ledger_response.json()["latestDeploymentId"] == create_response.json()["id"]
         assert ledger_response.json()["latestDeploymentProvider"] == "mock"
         assert ledger_response.json()["latestDeploymentStatus"] == "ready"
+
+
+def test_deploy_api_can_select_local_staging_provider(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, _ = create_preview_fixture(db, worktree)
+        provider = LocalStagingDeployProvider(
+            command_runner=RecordingBuildRunner(),
+            static_server=RecordingStaticServer(),
+            health_checker=StaticHealthChecker(),
+            port_allocator=lambda: 45220,
+        )
+        service = DeployService(providers=(MockDeployProvider(), provider))
+
+        def override_db() -> Iterator[DbSession]:
+            yield db
+
+        def override_deploy_service() -> DeployService:
+            return service
+
+        app.dependency_overrides[get_db] = override_db
+        from app.main import get_deploy_service
+
+        app.dependency_overrides[get_deploy_service] = override_deploy_service
+        try:
+            client = TestClient(app)
+            response = client.post(
+                f"/previews/{preview_id}/deploy",
+                json={"providerId": "local_staging"},
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 201
+        assert response.json()["provider"] == "local_staging"
+        assert response.json()["environment"] == "staging"
+        assert response.json()["url"] == "http://127.0.0.1:45220"
 
 
 def test_mock_deploy_rejects_nonexistent_preview(tmp_path: Path) -> None:

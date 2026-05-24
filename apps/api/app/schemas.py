@@ -328,6 +328,12 @@ class DeploymentResponse(ApiModel):
     updated_at: datetime = Field(alias="updatedAt")
 
 
+class DeploymentCreateRequest(BaseModel):
+    provider_id: str = Field(default="mock", alias="providerId")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class CommandEvidenceCreateRequest(BaseModel):
     command_type: str = Field(alias="commandType")
     command: str

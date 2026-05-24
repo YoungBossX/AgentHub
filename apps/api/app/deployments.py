@@ -1,14 +1,26 @@
 import json
+import shlex
+import subprocess
+import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable, Optional
 
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
-from app.models import Artifact, Deployment, Preview, Task, TaskRun, new_id, utc_now
+from app.models import Artifact, Deployment, Preview, Task, TaskRun, Workspace, new_id, utc_now
+from app.models import Session as AgentHubSession
+from app.previews import UrlPreviewHealthChecker, reserve_preview_port
 from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
-from app.target_registry import DEMO_FRONTEND_TARGET_ID
+from app.target_registry import (
+    DEMO_FRONTEND_TARGET_ID,
+    TargetProject,
+    TargetRegistryError,
+    get_target_for_workspace,
+    resolve_deploy_config,
+)
 
 
 class DeployError(ValueError):
@@ -58,6 +70,61 @@ class DeployProviderResult:
         }
 
 
+@dataclass(frozen=True)
+class CommandResult:
+    exit_code: int
+    stdout: str
+    stderr: str
+
+
+@dataclass(frozen=True)
+class StagingServerProcess:
+    pid: int
+    url: str
+    command: str
+
+
+class SubprocessCommandRunner:
+    def run(self, command: str, cwd: Path) -> CommandResult:
+        process = subprocess.run(
+            shlex.split(command),
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return CommandResult(
+            exit_code=process.returncode,
+            stdout=process.stdout,
+            stderr=process.stderr,
+        )
+
+
+class StaticDirectoryServer:
+    def start(self, output_dir: Path, port: int) -> StagingServerProcess:
+        command = [
+            "python",
+            "-m",
+            "http.server",
+            str(port),
+            "--bind",
+            "127.0.0.1",
+            "--directory",
+            str(output_dir),
+        ]
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        return StagingServerProcess(
+            pid=process.pid,
+            url=f"http://127.0.0.1:{port}",
+            command=" ".join(command),
+        )
+
+
 class MockDeployProvider:
     provider_id = "mock"
     provider_type = "mock"
@@ -65,7 +132,9 @@ class MockDeployProvider:
     def deploy(
         self,
         *,
+        db: DbSession,
         preview: Preview,
+        preview_artifact: Artifact,
         task_run: TaskRun,
         deployment_id: str,
     ) -> DeployProviderResult:
@@ -85,9 +154,123 @@ class MockDeployProvider:
         )
 
 
+class LocalStagingDeployProvider:
+    provider_id = "local_staging"
+    provider_type = "local_staging"
+
+    def __init__(
+        self,
+        *,
+        command_runner: Optional[object] = None,
+        static_server: Optional[object] = None,
+        health_checker: Optional[object] = None,
+        port_allocator=None,
+        health_attempts: int = 20,
+        health_interval_seconds: float = 0.25,
+    ) -> None:
+        self.command_runner = command_runner or SubprocessCommandRunner()
+        self.static_server = static_server or StaticDirectoryServer()
+        self.health_checker = health_checker or UrlPreviewHealthChecker()
+        self.port_allocator = port_allocator or reserve_preview_port
+        self.health_attempts = health_attempts
+        self.health_interval_seconds = health_interval_seconds
+
+    def deploy(
+        self,
+        *,
+        db: DbSession,
+        preview: Preview,
+        preview_artifact: Artifact,
+        task_run: TaskRun,
+        deployment_id: str,
+    ) -> DeployProviderResult:
+        target = _target_for_task_run(db, task_run)
+        config = resolve_deploy_config(target)
+        target_root = _target_root_for_task_run(target, task_run)
+        logs = [
+            f"Local staging deploy requested for preview {preview.id}.",
+            f"Target: {target.target_id} ({target.root}).",
+            f"Build command: {config.build_command}",
+        ]
+
+        build = self.command_runner.run(config.build_command, target_root)
+        if build.stdout:
+            logs.append(build.stdout)
+        if build.stderr:
+            logs.append(build.stderr)
+        if build.exit_code != 0:
+            return DeployProviderResult(
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+                target_id=target.target_id,
+                build_command=config.build_command,
+                deploy_command=config.serve_command,
+                output_url=None,
+                status="failed",
+                logs=tuple([*logs, f"Build command failed with exit code {build.exit_code}."]),
+                environment="staging",
+            )
+
+        output_dir = _output_dir_for_target(target_root, config.output_dir)
+        if not output_dir.exists() or not output_dir.is_dir():
+            return DeployProviderResult(
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+                target_id=target.target_id,
+                build_command=config.build_command,
+                deploy_command=config.serve_command,
+                output_url=None,
+                status="failed",
+                logs=tuple([*logs, f"Staging output directory missing: {output_dir}."]),
+                environment="staging",
+            )
+
+        port = int(self.port_allocator())
+        server = self.static_server.start(output_dir, port)
+        logs.append(f"Serving {output_dir} at {server.url}.")
+        healthy = self._wait_until_healthy(server.url)
+        if not healthy:
+            return DeployProviderResult(
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+                target_id=target.target_id,
+                build_command=config.build_command,
+                deploy_command=server.command,
+                output_url=server.url,
+                status="failed",
+                logs=tuple([*logs, "Staging URL did not pass health check."]),
+                environment="staging",
+            )
+
+        return DeployProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            target_id=target.target_id,
+            build_command=config.build_command,
+            deploy_command=server.command,
+            output_url=server.url,
+            status="ready",
+            logs=tuple([*logs, "Local staging deploy is ready."]),
+            environment="staging",
+        )
+
+    def _wait_until_healthy(self, url: str) -> bool:
+        attempts = max(1, self.health_attempts)
+        for index in range(attempts):
+            if self.health_checker.is_healthy(url):
+                return True
+            if index < attempts - 1:
+                time.sleep(self.health_interval_seconds)
+        return False
+
+
 class DeployService:
     def __init__(self, providers: Optional[Iterable[object]] = None) -> None:
-        configured_providers = tuple(providers) if providers is not None else (MockDeployProvider(),)
+        configured_providers = (
+            tuple(providers)
+            if providers is not None
+            else (MockDeployProvider(), LocalStagingDeployProvider())
+        )
         self._providers = {
             str(provider.provider_id): provider for provider in configured_providers
         }
@@ -108,14 +291,17 @@ class DeployService:
 
         deployment_id = new_id()
         provider_result = provider.deploy(
+            db=db,
             preview=preview,
+            preview_artifact=preview_artifact,
             task_run=task_run,
             deployment_id=deployment_id,
         )
         if provider_result.status != "ready":
+            reason = provider_result.logs[-1] if provider_result.logs else provider_result.status
             raise DeployError(
                 f"Deploy provider {provider_result.provider_id} failed with status "
-                f"{provider_result.status}"
+                f"{provider_result.status}: {reason}"
             )
 
         return self._persist_provider_deployment(
@@ -247,6 +433,50 @@ def _load_deploy_context(
     if task_run is None:
         raise DeployError(f"TaskRun not found for Preview: {preview_id}")
     return preview, preview_artifact, task_run
+
+
+def _target_for_task_run(db: DbSession, task_run: TaskRun) -> TargetProject:
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        raise DeployError(f"Task not found for TaskRun: {task_run.id}")
+    session = db.get(AgentHubSession, task.session_id)
+    if session is None:
+        raise DeployError(f"Session not found for TaskRun: {task_run.id}")
+    workspace = db.get(Workspace, session.workspace_id)
+    if workspace is None:
+        raise DeployError(f"Workspace not found for Session: {session.id}")
+
+    target_id = _target_id_for_task(task)
+    try:
+        return get_target_for_workspace(db, workspace.id, target_id)
+    except TargetRegistryError as exc:
+        raise DeployError(str(exc)) from exc
+
+
+def _target_id_for_task(task: Task) -> str:
+    try:
+        plan = json.loads(task.plan_json)
+    except json.JSONDecodeError:
+        plan = {}
+    if isinstance(plan, dict):
+        target_id = plan.get("targetId") or plan.get("frontendTargetId")
+        if isinstance(target_id, str) and target_id:
+            return target_id
+    return DEMO_FRONTEND_TARGET_ID
+
+
+def _target_root_for_task_run(target: TargetProject, task_run: TaskRun) -> Path:
+    root = Path(target.root)
+    if root.is_absolute():
+        return root
+    return Path(task_run.worktree_path) / root
+
+
+def _output_dir_for_target(target_root: Path, output_dir: str) -> Path:
+    path = Path(output_dir)
+    if path.is_absolute():
+        return path
+    return target_root / path
 
 
 def _ensure_deploy_prerequisites(db: DbSession, task_run: TaskRun) -> None:

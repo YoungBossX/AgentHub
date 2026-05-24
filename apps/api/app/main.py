@@ -84,6 +84,7 @@ from app.schemas import (
     ApprovalRequestResponse,
     CommandEvidenceCreateRequest,
     CommandEvidenceResponse,
+    DeploymentCreateRequest,
     HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
@@ -1481,11 +1482,16 @@ def stop_existing_preview(
 )
 def create_mock_deployment_for_preview(
     preview_id: str,
+    request: DeploymentCreateRequest = DeploymentCreateRequest(),
     db: DbSession = Depends(get_db),
     deployments: DeployService = Depends(get_deploy_service),
 ) -> DeploymentResponse:
     try:
-        deployment = deployments.create_mock_deployment(db, preview_id)
+        deployment = deployments.create_deployment(
+            db,
+            preview_id,
+            provider_id=request.provider_id,
+        )
         refresh_session_ledger_for_task_run(db, deployment.task_run_id)
     except DeployError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

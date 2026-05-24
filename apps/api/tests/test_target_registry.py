@@ -38,7 +38,7 @@ def test_registry_exposes_initial_target_projects() -> None:
     assert frontend.root == "apps/demo"
     assert frontend.allowed_paths == ("apps/demo/src",)
     assert frontend.dev_command == "pnpm demo:dev"
-    assert frontend.build_command == "pnpm --filter @agenthub/demo build"
+    assert frontend.build_command == "pnpm build"
     assert frontend.preview_command == "pnpm dev --host 127.0.0.1 --port <port>"
     assert frontend.staging_output_dir == "dist"
     assert frontend.staging_serve_command == (
@@ -72,7 +72,7 @@ def test_demo_frontend_resolves_deploy_config_from_registry() -> None:
 
     assert config.target_id == DEMO_FRONTEND_TARGET_ID
     assert config.provider_ids == ("mock", "local_staging")
-    assert config.build_command == "pnpm --filter @agenthub/demo build"
+    assert config.build_command == "pnpm build"
     assert config.output_dir == "dist"
     assert config.serve_command == (
         "python -m http.server <port> --bind 127.0.0.1 --directory dist"

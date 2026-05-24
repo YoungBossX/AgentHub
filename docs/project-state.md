@@ -5,6 +5,27 @@ reference instead of repeating long context blocks.
 
 ## P11 Status
 
+### P11-3 Local Staging Deploy Provider
+
+P11-3 completed on 2026-05-25.
+
+AgentHub now includes a `local_staging` deploy provider alongside the existing
+mock provider. The local staging provider resolves target deploy configuration
+from Target Registry, runs the configured build command in the target root,
+verifies the configured output directory, starts a local static file server,
+health-checks the generated URL, and persists a ready staging deployment
+artifact when the provider succeeds.
+
+The deploy API remains backward-compatible: `POST /previews/{previewId}/deploy`
+defaults to `providerId: mock`, while callers can request
+`providerId: local_staging`. Failed build, missing output directory, and failed
+health check states are reported honestly and do not create a ready deployment.
+
+Current limitation: P11-3 stores provider logs inside artifact metadata and
+ready events, but does not yet persist full deploy status transition history or
+UI log expansion. That is P11-4. Deploy gates beyond preview/task prerequisites
+remain P11-5.
+
 ### P11-2 Target-aware Deploy Configuration
 
 P11-2 completed on 2026-05-25.
