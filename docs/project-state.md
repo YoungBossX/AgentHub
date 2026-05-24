@@ -5,6 +5,24 @@ reference instead of repeating long context blocks.
 
 ## P10 Status
 
+### P10-2 Stale Target Lock Cleanup
+
+P10-2 completed on 2026-05-24.
+
+Target write locks remain derived from active TaskRuns, but cleanup is now
+owner-aware and auditable:
+
+- active write-lock owners with valid heartbeat leases are not released;
+- expired write-lock owners can be marked stale through the cleanup path;
+- stale owner cleanup writes `target_lock.released` audit events that identify
+  target ID, owning TaskRun, task, session, lock mode, lease expiry, release
+  timestamp, and release reason;
+- waiting same-target write tasks are re-evaluated after stale owner cleanup.
+
+Current limitation: P10-2 still uses derived lock ownership instead of a
+dedicated lock table. Pre-run checkpoints, retry idempotency, conflict
+detection, and recovery action APIs remain P10-3 through P10-7.
+
 ### P10-1 TaskRun Heartbeat And Lease
 
 P10-1 completed on 2026-05-24.

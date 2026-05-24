@@ -1,5 +1,43 @@
 # AgentHub Change Log
 
+## P10-2 Stale Target Lock Cleanup
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/scheduler.py` | Added stale target lock cleanup for stale write-lock owner TaskRuns with audit events and scheduler refresh. |
+| `apps/api/tests/test_scheduler.py` | Added coverage that active owners are not released and stale owners release derived target locks. |
+| `docs/project-state.md` | Recorded P10-2 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-2 complete after validation. |
+
+### What Changed
+
+P10-2 keeps the existing P8 derived target-lock model, but adds an explicit
+cleanup path:
+
+- active TaskRuns with valid leases remain lock holders;
+- expired write-lock owner TaskRuns can be marked stale and failed;
+- cleanup writes `target_lock.released` events with target, owner, lock mode,
+  lease, release timestamp, and reason;
+- waiting tasks are re-evaluated after stale owner cleanup.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted stale lock cleanup tests | Pass: 2 tests. |
+| Targeted scheduler/task-run lock and liveness tests | Pass: 14 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+
+---
+
 ## P10-1 TaskRun Heartbeat And Lease
 
 **Date:** 2026-05-24

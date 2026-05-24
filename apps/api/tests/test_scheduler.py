@@ -1,6 +1,7 @@
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import timedelta
 
 import pytest
 from fastapi import BackgroundTasks
@@ -13,12 +14,14 @@ from app.external_workspaces import (
     ExternalWorkspaceRegistration,
     register_external_project_target,
 )
-from app.models import Agent, Session, Task, TaskRun, Workspace
+from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.models import utc_now
 from app.scheduler import (
     SCHEDULER_BLOCKED,
     SCHEDULER_READY,
     SCHEDULER_WAITING_DEPENDENCY,
     SCHEDULER_WAITING_TARGET_LOCK,
+    cleanup_stale_target_locks,
     evaluate_and_apply_dependency_readiness,
     evaluate_dependency_readiness,
 )
@@ -196,6 +199,72 @@ def test_terminal_run_releases_target_lock_for_waiting_task() -> None:
         assert scheduler["state"] == "ready"
         assert scheduler["targetId"] == DEMO_FRONTEND_TARGET_ID
         assert scheduler["lockHolderTaskRunIds"] == []
+
+
+def test_stale_target_lock_cleanup_does_not_release_active_owner() -> None:
+    with scheduler_db() as db:
+        _, session, first, second = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        first_run = create_task_run(db, first.id)
+        auto_start_safe_tasks(db, [second], BackgroundTasks())
+
+        released = cleanup_stale_target_locks(db, session_id=session.id)
+
+        stored = db.get(Task, second.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+        release_events = db.exec(
+            select(TaskRunEvent).where(
+                TaskRunEvent.event_type == "target_lock.released"
+            )
+        ).all()
+
+        assert released == []
+        assert db.get(TaskRun, first_run.id).state == "queued"
+        assert stored.status == "waiting_target_lock"
+        assert scheduler["lockHolderTaskRunIds"] == [first_run.id]
+        assert release_events == []
+
+
+def test_stale_target_lock_cleanup_releases_only_stale_owner() -> None:
+    with scheduler_db() as db:
+        _, session, first, second = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        first_run = create_task_run(db, first.id)
+        first_run.lease_expires_at = utc_now() - timedelta(minutes=1)
+        db.add(first_run)
+        db.commit()
+        auto_start_safe_tasks(db, [second], BackgroundTasks())
+
+        released = cleanup_stale_target_locks(db, session_id=session.id)
+
+        stored_run = db.get(TaskRun, first_run.id)
+        stored = db.get(Task, second.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+        release_event = db.exec(
+            select(TaskRunEvent).where(
+                TaskRunEvent.task_run_id == first_run.id,
+                TaskRunEvent.event_type == "target_lock.released",
+            )
+        ).one()
+        payload = json.loads(release_event.payload_json)
+
+        assert [item["taskRunId"] for item in released] == [first_run.id]
+        assert stored_run.state == "failed"
+        assert stored_run.error_code == "TASK_RUN_STALE"
+        assert stored.status == "pending"
+        assert scheduler["state"] == SCHEDULER_READY
+        assert scheduler["lockHolderTaskRunIds"] == []
+        assert payload["targetId"] == DEMO_FRONTEND_TARGET_ID
+        assert payload["ownerTaskRunId"] == first_run.id
+        assert payload["releaseReason"] == "stale_owner"
 
 
 def test_read_only_review_task_does_not_acquire_target_write_lock() -> None:

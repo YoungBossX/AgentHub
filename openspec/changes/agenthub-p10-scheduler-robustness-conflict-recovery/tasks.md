@@ -24,7 +24,7 @@
     - Run `git diff --check`.
     - Run `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`.
 
-- [ ] 1.2 P10-2 Stale Target Lock Cleanup.
+- [x] 1.2 P10-2 Stale Target Lock Cleanup.
   - Objective: ensure target write locks are owned, auditable, and safely
     releasable only when their owning TaskRun is stale or terminal.
   - Scope:

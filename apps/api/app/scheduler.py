@@ -5,6 +5,7 @@ from typing import Any, Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.events import append_task_run_event
 from app.models import Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
@@ -361,6 +362,69 @@ def refresh_session_scheduler_state(db: DbSession, session_id: str) -> list[Task
         decision = evaluate_scheduler_readiness(db, task)
         refreshed.append(apply_scheduler_decision(db, task, decision))
     return refreshed
+
+
+def cleanup_stale_target_locks(
+    db: DbSession,
+    *,
+    session_id: Optional[str] = None,
+) -> list[dict[str, Any]]:
+    from app.task_runs import mark_stale_task_runs
+
+    stale_runs = mark_stale_task_runs(db, reason="target_lock_owner_stale")
+    released: list[dict[str, Any]] = []
+    for task_run in stale_runs:
+        task = db.get(Task, task_run.task_id)
+        if task is None:
+            continue
+        if session_id is not None and task.session_id != session_id:
+            continue
+        if not write_lock_required_for_task(task):
+            continue
+        target_id = target_id_for_task(task, db)
+        if target_id is None:
+            continue
+
+        released_at = utc_now()
+        payload = {
+            "targetId": target_id,
+            "ownerTaskRunId": task_run.id,
+            "ownerTaskId": task.id,
+            "sessionId": task.session_id,
+            "lockMode": "write",
+            "acquiredAt": task_run.created_at.isoformat(),
+            "leaseExpiresAt": task_run.lease_expires_at.isoformat()
+            if task_run.lease_expires_at is not None
+            else None,
+            "releasedAt": released_at.isoformat(),
+            "releaseReason": "stale_owner",
+            "ownerState": task_run.state,
+        }
+        append_task_run_event(
+            db,
+            task_run_id=task_run.id,
+            event_type="target_lock.released",
+            payload_json=json.dumps(payload, separators=(",", ":")),
+        )
+        released.append(
+            {
+                "taskRunId": task_run.id,
+                "taskId": task.id,
+                "sessionId": task.session_id,
+                "targetId": target_id,
+                "releaseReason": "stale_owner",
+            }
+        )
+
+    if session_id is not None:
+        refresh_session_scheduler_state(db, session_id)
+    else:
+        refreshed_session_ids = {
+            item["sessionId"] for item in released if isinstance(item.get("sessionId"), str)
+        }
+        for refreshed_session_id in refreshed_session_ids:
+            refresh_session_scheduler_state(db, refreshed_session_id)
+    return released
 
 
 def target_id_for_task(task: Task, db: Optional[DbSession] = None) -> Optional[str]:
