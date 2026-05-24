@@ -5,6 +5,29 @@ reference instead of repeating long context blocks.
 
 ## P10 Status
 
+### P10-6 Conflict Detection
+
+P10-6 completed on 2026-05-24.
+
+Scheduler readiness now performs conservative conflict detection before
+starting write TaskRuns:
+
+- unsequenced write tasks with overlapping planned files are blocked as
+  `file_overlap`;
+- external or registered target dirty worktrees with dirty files outside the
+  planned safe files are blocked as `dirty_worktree`;
+- tasks whose `contractId` or `contractHash` no longer matches the embedded
+  `appContract` are blocked as `contract_drift`;
+- conflict details are written into the task scheduler metadata, including
+  conflict type, conflicting tasks, and conflicting files where available.
+
+P10-6 does not auto-merge conflicts. It stops before unsafe execution and
+leaves recovery decisions to explicit P10-7 actions.
+
+Current limitation: file-overlap detection is intentionally bounded to
+unsequenced write tasks so existing dependency-ordered P8/P9 pipelines keep
+working.
+
 ### P10-5 Failure Propagation Hardening
 
 P10-5 completed on 2026-05-24.

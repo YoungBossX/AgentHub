@@ -609,12 +609,17 @@ def _ensure_target_write_lock_available(db: DbSession, task: Task) -> None:
     from app.scheduler import (
         SCHEDULER_BLOCKED,
         SCHEDULER_WAITING_TARGET_LOCK,
+        SCHEDULER_WAITING_DEPENDENCY,
         apply_scheduler_decision,
-        evaluate_target_lock_readiness,
+        evaluate_scheduler_readiness,
     )
 
-    decision = evaluate_target_lock_readiness(db, task)
-    if decision.state in {SCHEDULER_WAITING_TARGET_LOCK, SCHEDULER_BLOCKED}:
+    decision = evaluate_scheduler_readiness(db, task)
+    if decision.state in {
+        SCHEDULER_WAITING_DEPENDENCY,
+        SCHEDULER_WAITING_TARGET_LOCK,
+        SCHEDULER_BLOCKED,
+    }:
         apply_scheduler_decision(db, task, decision)
         raise TaskRunLifecycleError(decision.reason)
 

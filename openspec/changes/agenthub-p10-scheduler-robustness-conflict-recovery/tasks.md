@@ -117,7 +117,7 @@
     - Run `git diff --check`.
     - Run `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`.
 
-- [ ] 1.6 P10-6 Conflict Detection.
+- [x] 1.6 P10-6 Conflict Detection.
   - Objective: identify common conflicts early and stop rather than attempting
     automatic merge or unsafe execution.
   - Scope:

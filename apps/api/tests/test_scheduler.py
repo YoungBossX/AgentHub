@@ -1,7 +1,9 @@
 import json
+import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from fastapi import BackgroundTasks
@@ -402,6 +404,124 @@ def test_same_external_target_write_task_waits_for_active_lock(tmp_path) -> None
         assert scheduler["state"] == SCHEDULER_WAITING_TARGET_LOCK
         assert scheduler["targetId"] == "external-vite-app"
         assert scheduler["lockHolderTaskRunIds"] == [first_run.id]
+
+
+def test_file_overlap_conflict_blocks_unsequenced_write_task() -> None:
+    with scheduler_db() as db:
+        _, _, first, second = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        first.depends_on_task_ids = "[]"
+        second.depends_on_task_ids = "[]"
+        db.add(first)
+        db.add(second)
+        db.commit()
+
+        with pytest.raises(TaskRunLifecycleError, match="file overlap conflict"):
+            create_task_run(db, second.id)
+
+        stored = db.get(Task, second.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+
+        assert stored.status == "blocked"
+        assert scheduler["state"] == SCHEDULER_BLOCKED
+        assert scheduler["conflictType"] == "file_overlap"
+        assert scheduler["conflictingTaskIds"] == [first.id]
+
+
+def test_dirty_worktree_conflict_blocks_external_write_task(tmp_path: Path) -> None:
+    with scheduler_db() as db:
+        workspace, session, _, _ = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        external_root = tmp_path / "external-conflict-app"
+        (external_root / "src").mkdir(parents=True)
+        (external_root / "src" / "App.tsx").write_text("export default function App() {}\n")
+        subprocess.run(["git", "init"], cwd=external_root, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=external_root, check=True)
+        subprocess.run(["git", "config", "user.name", "Test User"], cwd=external_root, check=True)
+        subprocess.run(["git", "add", "src/App.tsx"], cwd=external_root, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=external_root, check=True)
+        (external_root / "README.md").write_text("local notes\n")
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-conflict-app",
+                name="External Conflict App",
+                root_path=str(external_root),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        frontend = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="External write with dirty unrelated file",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend.id,
+            plan_json=json.dumps(
+                {
+                    "targetId": "external-conflict-app",
+                    "safeTarget": "src",
+                    "files": ["src/App.tsx"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+
+        with pytest.raises(TaskRunLifecycleError, match="dirty worktree conflict"):
+            create_task_run(db, task.id)
+
+        stored = db.get(Task, task.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+
+        assert stored.status == "blocked"
+        assert scheduler["state"] == SCHEDULER_BLOCKED
+        assert scheduler["conflictType"] == "dirty_worktree"
+        assert scheduler["conflictingFiles"] == ["README.md"]
+
+
+def test_contract_drift_conflict_blocks_stale_contract_task() -> None:
+    with scheduler_db() as db:
+        _, _, task, _ = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        task.plan_json = json.dumps(
+            {
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+                "contractId": "contract-a",
+                "appContract": {"contractId": "contract-b"},
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+
+        with pytest.raises(TaskRunLifecycleError, match="contract drift conflict"):
+            create_task_run(db, task.id)
+
+        stored = db.get(Task, task.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+
+        assert stored.status == "blocked"
+        assert scheduler["state"] == SCHEDULER_BLOCKED
+        assert scheduler["conflictType"] == "contract_drift"
 
 
 def test_failed_codex_coding_task_exposes_fallback_available_state() -> None:

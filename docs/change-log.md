@@ -1,5 +1,41 @@
 # AgentHub Change Log
 
+## P10-6 Conflict Detection
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/scheduler.py` | Added scheduler-level file overlap, dirty worktree, and contract drift conflict detection. |
+| `apps/api/app/task_runs.py` | Uses full scheduler readiness before TaskRun creation so conflicts block execution. |
+| `apps/api/tests/test_scheduler.py` | Added file overlap, dirty worktree, and contract drift conflict tests. |
+| `apps/api/tests/test_task_runs.py` | Adjusted checkpoint fixture to avoid intentionally dirty denied files now covered by conflict tests. |
+| `docs/project-state.md` | Recorded P10-6 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-6 complete after validation. |
+
+### What Changed
+
+Scheduler readiness now blocks common conflicts before write execution:
+unsequenced overlapping planned files, dirty worktree files outside planned
+safe files, and stale/mismatched contract context. Conflicts are recorded in
+task scheduler metadata and are not auto-merged.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted conflict detection tests | Pass: 3 tests. |
+| Targeted scheduler/task-run regression tests | Pass: 57 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+
+---
+
 ## P10-5 Failure Propagation Hardening
 
 **Date:** 2026-05-24

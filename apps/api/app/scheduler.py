@@ -1,5 +1,8 @@
 import json
+import hashlib
+import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional
 
 from sqlmodel import Session as DbSession
@@ -57,6 +60,9 @@ class SchedulerDecision:
     target_id: Optional[str] = None
     write_lock_required: bool = False
     lock_holder_task_run_ids: Optional[list[str]] = None
+    conflict_type: Optional[str] = None
+    conflicting_task_ids: Optional[list[str]] = None
+    conflicting_files: Optional[list[str]] = None
 
 
 def dependency_ids_for_task(task: Task) -> list[str]:
@@ -193,7 +199,10 @@ def evaluate_scheduler_readiness(db: DbSession, task: Task) -> SchedulerDecision
     dependency_decision = evaluate_dependency_readiness(db, task)
     if not dependency_decision.runnable:
         return dependency_decision
-    return evaluate_target_lock_readiness(db, task)
+    target_lock_decision = evaluate_target_lock_readiness(db, task)
+    if not target_lock_decision.runnable:
+        return target_lock_decision
+    return evaluate_conflict_readiness(db, task)
 
 
 def apply_scheduler_decision(
@@ -212,6 +221,12 @@ def apply_scheduler_decision(
         "writeLockRequired": decision.write_lock_required,
         "lockHolderTaskRunIds": decision.lock_holder_task_run_ids or [],
     }
+    if decision.conflict_type is not None:
+        plan["scheduler"]["conflictType"] = decision.conflict_type
+    if decision.conflicting_task_ids:
+        plan["scheduler"]["conflictingTaskIds"] = decision.conflicting_task_ids
+    if decision.conflicting_files:
+        plan["scheduler"]["conflictingFiles"] = decision.conflicting_files
     task.plan_json = json.dumps(plan, separators=(",", ":"))
 
     if task.status in SCHEDULER_MANAGED_STATUSES:
@@ -241,6 +256,80 @@ def evaluate_and_apply_scheduler_readiness(db: DbSession, task: Task) -> Schedul
     decision = evaluate_scheduler_readiness(db, task)
     apply_scheduler_decision(db, task, decision)
     return decision
+
+
+def evaluate_conflict_readiness(db: DbSession, task: Task) -> SchedulerDecision:
+    target_id = target_id_for_task(task, db)
+    dependency_ids = dependency_ids_for_task(task)
+    write_lock_required = write_lock_required_for_task(task)
+    if not write_lock_required:
+        return SchedulerDecision(
+            state=SCHEDULER_READY,
+            runnable=True,
+            reason="No write conflicts apply to read-only task.",
+            dependency_ids=dependency_ids,
+            blocking_dependency_ids=[],
+            target_id=target_id,
+            write_lock_required=False,
+            lock_holder_task_run_ids=[],
+        )
+
+    contract_conflict = _contract_drift_conflict(task)
+    if contract_conflict is not None:
+        return SchedulerDecision(
+            state=SCHEDULER_BLOCKED,
+            runnable=False,
+            reason="Blocked by contract drift conflict.",
+            dependency_ids=dependency_ids,
+            blocking_dependency_ids=[],
+            target_id=target_id,
+            write_lock_required=True,
+            lock_holder_task_run_ids=[],
+            conflict_type="contract_drift",
+            conflicting_files=[],
+        )
+
+    overlap = _file_overlap_conflict(db, task)
+    if overlap is not None:
+        return SchedulerDecision(
+            state=SCHEDULER_BLOCKED,
+            runnable=False,
+            reason="Blocked by file overlap conflict.",
+            dependency_ids=dependency_ids,
+            blocking_dependency_ids=[],
+            target_id=target_id,
+            write_lock_required=True,
+            lock_holder_task_run_ids=[],
+            conflict_type="file_overlap",
+            conflicting_task_ids=overlap["taskIds"],
+            conflicting_files=overlap["files"],
+        )
+
+    dirty_files = _dirty_worktree_conflict(db, task)
+    if dirty_files:
+        return SchedulerDecision(
+            state=SCHEDULER_BLOCKED,
+            runnable=False,
+            reason="Blocked by dirty worktree conflict.",
+            dependency_ids=dependency_ids,
+            blocking_dependency_ids=[],
+            target_id=target_id,
+            write_lock_required=True,
+            lock_holder_task_run_ids=[],
+            conflict_type="dirty_worktree",
+            conflicting_files=dirty_files,
+        )
+
+    return SchedulerDecision(
+        state=SCHEDULER_READY,
+        runnable=True,
+        reason="No write conflicts detected.",
+        dependency_ids=dependency_ids,
+        blocking_dependency_ids=[],
+        target_id=target_id,
+        write_lock_required=True,
+        lock_holder_task_run_ids=[],
+    )
 
 
 def complete_synthetic_planning_tasks(db: DbSession, tasks: list[Task]) -> list[Task]:
@@ -474,6 +563,127 @@ def active_write_lock_holder_run_ids(
         if target_id_for_task(run_task, db) == target_id:
             holders.append(run.id)
     return holders
+
+
+def _contract_drift_conflict(task: Task) -> Optional[dict[str, Any]]:
+    plan = _plan_for_task(task)
+    contract = plan.get("appContract")
+    contract_id = plan.get("contractId")
+    if isinstance(contract, dict):
+        active_contract_id = contract.get("contractId")
+        if (
+            isinstance(contract_id, str)
+            and isinstance(active_contract_id, str)
+            and contract_id != active_contract_id
+        ):
+            return {"expected": contract_id, "actual": active_contract_id}
+        contract_hash = plan.get("contractHash")
+        if isinstance(contract_hash, str) and contract_hash != _contract_hash(contract):
+            return {"expectedHash": contract_hash}
+    return None
+
+
+def _file_overlap_conflict(db: DbSession, task: Task) -> Optional[dict[str, Any]]:
+    if dependency_ids_for_task(task):
+        return None
+    planned_files = set(_planned_files_for_task(task))
+    if not planned_files:
+        return None
+    dependency_ids = set(dependency_ids_for_task(task))
+    conflicts: list[str] = []
+    overlapping_files: set[str] = set()
+    candidates = db.exec(
+        select(Task)
+        .where(Task.session_id == task.session_id)
+        .order_by(Task.priority, Task.created_at, Task.id)
+    ).all()
+    for candidate in candidates:
+        if candidate.id == task.id:
+            break
+        if candidate.status in {"completed", "failed", "interrupted", "blocked"}:
+            continue
+        if candidate.id in dependency_ids or task.id in dependency_ids_for_task(candidate):
+            continue
+        if not write_lock_required_for_task(candidate):
+            continue
+        candidate_files = set(_planned_files_for_task(candidate))
+        overlap = planned_files.intersection(candidate_files)
+        if overlap:
+            conflicts.append(candidate.id)
+            overlapping_files.update(overlap)
+    if not conflicts:
+        return None
+    return {"taskIds": conflicts, "files": sorted(overlapping_files)}
+
+
+def _dirty_worktree_conflict(db: DbSession, task: Task) -> list[str]:
+    plan = _plan_for_task(task)
+    planned_files = set(_planned_files_for_task(task))
+    target_id = target_id_for_task(task, db)
+    if target_id is None:
+        return []
+    workspace_id = _workspace_id_for_task(db, task)
+    if workspace_id is None:
+        return []
+    target = maybe_get_target_for_workspace(db, workspace_id, target_id)
+    if target is None:
+        return []
+    root = Path(target.root)
+    if not root.is_absolute():
+        session = db.get(AgentHubSession, task.session_id)
+        if session is None:
+            return []
+        root = Path(session.worktree_path)
+    dirty_files = _git_dirty_files(root)
+    if dirty_files is None:
+        return []
+    checkpoint = plan.get("preRunCheckpoint")
+    checkpoint_dirty = (
+        set(checkpoint.get("dirtyFiles", [])) if isinstance(checkpoint, dict) else set()
+    )
+    safe_files = planned_files.union(path for path in checkpoint_dirty if isinstance(path, str))
+    return sorted(path for path in dirty_files if path not in safe_files)
+
+
+def _planned_files_for_task(task: Task) -> list[str]:
+    plan = _plan_for_task(task)
+    files = plan.get("files")
+    if not isinstance(files, list):
+        return []
+    return [path for path in files if isinstance(path, str) and path]
+
+
+def _git_dirty_files(root: Path) -> Optional[list[str]]:
+    if not root.exists():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    files: list[str] = []
+    for line in result.stdout.splitlines():
+        if not line:
+            continue
+        path = line[3:] if len(line) > 3 else line
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        path = path.strip()
+        if path:
+            files.append(path)
+    return files
+
+
+def _contract_hash(contract: dict[str, Any]) -> str:
+    normalized = json.dumps(contract, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def _workspace_id_for_task(db: DbSession, task: Task) -> Optional[str]:

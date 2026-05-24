@@ -281,7 +281,6 @@ def test_external_write_task_run_checkpoint_uses_target_registry_policy(
     external_root = tmp_path / "external-app"
     (external_root / "src").mkdir(parents=True)
     (external_root / "src" / "App.tsx").write_text("export default function App() {}\n")
-    (external_root / ".env").write_text("SECRET=do-not-expose\n")
     subprocess.run(["git", "init"], cwd=external_root, check=True, capture_output=True)
     subprocess.run(
         ["git", "config", "user.email", "test@example.com"],
