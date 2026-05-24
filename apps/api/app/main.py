@@ -65,6 +65,7 @@ from app.scheduler import complete_synthetic_planning_tasks
 from app.scheduler import evaluate_and_apply_scheduler_readiness
 from app.scheduler import refresh_session_scheduler_state
 from app.target_registry import DEMO_BACKEND_TARGET_ID, DEMO_FRONTEND_TARGET_ID
+from app.target_registry import TargetProject, list_targets_for_workspace
 from app.schemas import (
     AgentContactResponse,
     ApprovalDecisionRequest,
@@ -84,6 +85,7 @@ from app.schemas import (
     SessionExecutionLedgerResponse,
     SessionResponse,
     SessionUpdateRequest,
+    TargetProjectResponse,
     TaskResponse,
     TaskRunResponse,
     WorkspaceResponse,
@@ -279,6 +281,47 @@ def external_project_analysis_response(
         analysisWarnings=list(analysis.analysis_warnings),
         confidence=analysis.confidence,
     )
+
+
+def target_project_response(target: TargetProject) -> TargetProjectResponse:
+    return TargetProjectResponse(
+        targetId=target.target_id,
+        name=target.name,
+        type=target.type,
+        root=target.root,
+        allowedPaths=list(target.allowed_paths),
+        deniedPaths=list(target.denied_paths),
+        devCommand=target.dev_command,
+        testCommand=target.test_command,
+        checkCommand=target.check_command,
+        buildCommand=target.build_command,
+        previewCommand=target.preview_command,
+        baseUrl=target.base_url,
+        packageManager=target.package_manager,
+        detectedFramework=target.detected_framework,
+        projectType=target.project_type,
+        analysisStatus=target.analysis_status,
+        allowedAgents=list(target.allowed_agents),
+        requiresPlatformMode=target.requires_platform_mode,
+        requiresApproval=target.requires_approval,
+        relatedTargetIds=list(target.related_target_ids),
+    )
+
+
+@app.get(
+    "/workspaces/{workspace_id}/targets",
+    response_model=list[TargetProjectResponse],
+)
+def read_workspace_targets(
+    workspace_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[TargetProjectResponse]:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return [
+        target_project_response(target)
+        for target in list_targets_for_workspace(db, workspace_id)
+    ]
 
 
 @app.post(

@@ -9,6 +9,10 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
 from app.main import auto_start_safe_tasks
+from app.external_workspaces import (
+    ExternalWorkspaceRegistration,
+    register_external_project_target,
+)
 from app.models import Agent, Session, Task, TaskRun, Workspace
 from app.scheduler import (
     SCHEDULER_BLOCKED,
@@ -265,6 +269,70 @@ def test_ordinary_backend_task_cannot_acquire_platform_write_lock() -> None:
         assert stored.status == "blocked"
         assert scheduler["state"] == "blocked"
         assert scheduler["targetId"] == AGENTHUB_PLATFORM_TARGET_ID
+
+
+def test_same_external_target_write_task_waits_for_active_lock(tmp_path) -> None:
+    with scheduler_db() as db:
+        workspace, session, _, _ = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        external_root = tmp_path / "external-app"
+        (external_root / "src").mkdir(parents=True)
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-vite-app",
+                name="External Vite App",
+                root_path=str(external_root),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        frontend = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        plan = {
+            "targetId": "external-vite-app",
+            "safeTarget": "src",
+            "autoStart": True,
+            "files": ["src/App.tsx"],
+        }
+        first = Task(
+            session_id=session.id,
+            title="First external write",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend.id,
+            plan_json=json.dumps(plan, separators=(",", ":")),
+        )
+        second = Task(
+            session_id=session.id,
+            title="Second external write",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend.id,
+            plan_json=json.dumps(plan, separators=(",", ":")),
+        )
+        db.add(first)
+        db.add(second)
+        db.commit()
+        db.refresh(first)
+        db.refresh(second)
+        first_run = create_task_run(db, first.id)
+
+        with pytest.raises(TaskRunLifecycleError, match="external-vite-app"):
+            create_task_run(db, second.id)
+
+        stored = db.get(Task, second.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+
+        assert first_run.state == "queued"
+        assert stored.status == "waiting_target_lock"
+        assert scheduler["state"] == SCHEDULER_WAITING_TARGET_LOCK
+        assert scheduler["targetId"] == "external-vite-app"
+        assert scheduler["lockHolderTaskRunIds"] == [first_run.id]
 
 
 def test_failed_codex_coding_task_exposes_fallback_available_state() -> None:

@@ -21,7 +21,7 @@ def build_role_instruction(
     role = _effective_role(task, agent, context_pack)
     plan = _task_plan(context_pack)
     original_request = str(context_pack.get("originalUserRequest") or task.title).strip()
-    target = _target_for_role(role, plan)
+    target = _target_for_role(role, plan, context_pack)
     sections = [
         _role_body(role, task, plan, original_request, target),
         _target_section(role, plan, target),
@@ -242,10 +242,22 @@ def _target_section(
         lines.append(f"- devCommand: {target.dev_command}")
     if target.test_command:
         lines.append(f"- testCommand: {target.test_command}")
+    if target.check_command:
+        lines.append(f"- checkCommand: {target.check_command}")
+    if target.build_command:
+        lines.append(f"- buildCommand: {target.build_command}")
     if target.preview_command:
         lines.append(f"- previewCommand: {target.preview_command}")
     if target.base_url:
         lines.append(f"- baseUrl: {target.base_url}")
+    if target.package_manager:
+        lines.append(f"- packageManager: {target.package_manager}")
+    if target.detected_framework:
+        lines.append(f"- detectedFramework: {target.detected_framework}")
+    if target.project_type:
+        lines.append(f"- projectType: {target.project_type}")
+    if target.analysis_status:
+        lines.append(f"- analysisStatus: {target.analysis_status}")
     if target.requires_platform_mode:
         lines.append("- requiresPlatformMode: true")
     if target.requires_approval:
@@ -355,7 +367,11 @@ def _task_plan(context_pack: dict[str, Any]) -> dict[str, Any]:
     return plan if isinstance(plan, dict) else {}
 
 
-def _target_for_role(role: str, plan: dict[str, Any]) -> TargetProject:
+def _target_for_role(
+    role: str,
+    plan: dict[str, Any],
+    context_pack: dict[str, Any],
+) -> TargetProject:
     explicit_target = _string_value(plan.get("targetId"))
     contract = plan.get("appContract")
     if explicit_target is None and isinstance(contract, dict):
@@ -367,6 +383,9 @@ def _target_for_role(role: str, plan: dict[str, Any]) -> TargetProject:
             explicit_target = _string_value(plan.get("targetId") or contract.get("frontendTargetId"))
 
     if explicit_target:
+        packed_target = _target_from_context_pack(context_pack, explicit_target)
+        if packed_target is not None:
+            return packed_target
         try:
             return get_target(explicit_target)
         except TargetRegistryError:
@@ -381,6 +400,48 @@ def _target_for_role(role: str, plan: dict[str, Any]) -> TargetProject:
     if role == "orchestrator":
         return get_target(DEMO_FRONTEND_TARGET_ID)
     return get_target(DEMO_FRONTEND_TARGET_ID)
+
+
+def _target_from_context_pack(
+    context_pack: dict[str, Any],
+    target_id: str,
+) -> Optional[TargetProject]:
+    for key in ("targetProject",):
+        value = context_pack.get(key)
+        if isinstance(value, dict) and value.get("targetId") == target_id:
+            return _target_from_context(value)
+
+    related = context_pack.get("relatedTargetProjects")
+    if isinstance(related, list):
+        for value in related:
+            if isinstance(value, dict) and value.get("targetId") == target_id:
+                return _target_from_context(value)
+    return None
+
+
+def _target_from_context(value: dict[str, Any]) -> TargetProject:
+    return TargetProject(
+        target_id=str(value.get("targetId") or ""),
+        name=str(value.get("name") or "External Target"),
+        type=str(value.get("type") or "frontend"),
+        root=str(value.get("root") or ""),
+        allowed_paths=tuple(_string_list(value.get("allowedPaths"))),
+        denied_paths=tuple(_string_list(value.get("deniedPaths"))),
+        allowed_agents=tuple(_string_list(value.get("allowedAgents"))),
+        dev_command=_string_value(value.get("devCommand")),
+        test_command=_string_value(value.get("testCommand")),
+        check_command=_string_value(value.get("checkCommand")),
+        build_command=_string_value(value.get("buildCommand")),
+        preview_command=_string_value(value.get("previewCommand")),
+        base_url=_string_value(value.get("baseUrl")),
+        package_manager=_string_value(value.get("packageManager")),
+        detected_framework=_string_value(value.get("detectedFramework")),
+        project_type=_string_value(value.get("projectType")),
+        analysis_status=_string_value(value.get("analysisStatus")),
+        requires_platform_mode=bool(value.get("requiresPlatformMode")),
+        requires_approval=bool(value.get("requiresApproval")),
+        related_target_ids=tuple(_string_list(value.get("relatedTargetIds"))),
+    )
 
 
 def _backend_target_for_frontend(plan: dict[str, Any], frontend_target: TargetProject) -> TargetProject:
@@ -412,6 +473,12 @@ def _string_value(value: Any) -> Optional[str]:
     if isinstance(value, str) and value.strip():
         return value.strip()
     return None
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
 
 
 def _repo_root() -> Path:

@@ -5,6 +5,31 @@ reference instead of repeating long context blocks.
 
 ## P9 Status
 
+### P9-3 External Target Registry Integration
+
+P9-3 completed on 2026-05-24.
+
+External project targets are now adapted into the same Target Registry shape as
+built-in targets:
+
+- workspace-aware registry reads merge `demo-frontend`, `demo-backend`,
+  `agenthub-platform`, and persisted external targets;
+- external registrations map into `TargetProject` metadata, including root,
+  allowed paths, denied paths, commands, package manager, detected framework,
+  project type, and analysis status;
+- backend APIs expose merged workspace targets through
+  `/workspaces/{workspace_id}/targets`;
+- session context packs can resolve external `targetId` values and pass target
+  metadata into agent instructions;
+- instruction building can render external target metadata without falling back
+  to demo target IDs;
+- P8 target write locks now recognize registered external targets, so
+  same-session same-external-target write tasks are serialized.
+
+Current limitation: Orchestrator does not yet select external targets for user
+requests, and adapters do not yet execute inside external roots. Those remain
+P9-4 and P9-5.
+
 ### P9-2 Project Analyzer
 
 P9-2 completed on 2026-05-24.

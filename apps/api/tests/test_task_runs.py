@@ -8,6 +8,10 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
 from app.context_pack import build_session_context_pack
+from app.external_workspaces import (
+    ExternalWorkspaceRegistration,
+    register_external_project_target,
+)
 from app.main import agent_run_request_for, app, get_db
 from app.guardrails import ApprovalRequestPayload, request_task_run_approval
 from app.reviews import create_scripted_review_for_task_run
@@ -515,6 +519,69 @@ def test_backend_instruction_targets_demo_backend_without_platform_api_access(
     assert "not available yet" not in request.instruction
     assert request.plan_context["sessionContext"]["targetProject"]["targetId"] == DEMO_BACKEND_TARGET_ID
     assert request.plan_context["sessionContext"]["safeTargetPaths"] == ["apps/demo-api"]
+
+
+def test_external_target_context_reaches_instruction_builder(
+    client: TestClient,
+    tmp_path,
+) -> None:
+    with db_from_override() as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        external_root = tmp_path / "external-vite"
+        (external_root / "src").mkdir(parents=True)
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-vite-app",
+                name="External Vite App",
+                root_path=str(external_root),
+                project_type="vite-react",
+                allowed_paths=["src"],
+                dev_command="pnpm dev",
+                test_command="pnpm test",
+                check_command="pnpm check",
+                package_manager="pnpm",
+                detected_framework="vite-react",
+            ),
+        )
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        task = Task(
+            session_id=session_id,
+            title="External frontend change",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "targetId": "external-vite-app",
+                    "safeTarget": "src",
+                    "files": ["src/App.tsx"],
+                    "originalRequest": "@frontend update the external app",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    target_context = request.plan_context["sessionContext"]["targetProject"]
+    assert target_context["targetId"] == "external-vite-app"
+    assert target_context["root"] == str(external_root.resolve())
+    assert target_context["allowedPaths"] == ["src"]
+    assert request.plan_context["sessionContext"]["safeTargetPaths"] == [
+        "src",
+        "src/App.tsx",
+    ]
+    assert "targetId: external-vite-app" in request.instruction
+    assert f"root: {external_root.resolve()}" in request.instruction
+    assert "packageManager: pnpm" in request.instruction
+    assert "detectedFramework: vite-react" in request.instruction
 
 
 def test_review_instruction_includes_reviewable_diff_context(

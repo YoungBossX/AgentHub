@@ -1,5 +1,10 @@
 import pytest
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session as DbSession
+from sqlmodel import SQLModel, create_engine
 
+from app.external_workspaces import ExternalWorkspaceRegistration, register_external_project_target
+from app.models import Workspace
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_BASE_URL,
@@ -9,8 +14,11 @@ from app.target_registry import (
     get_related_backend_target,
     get_related_targets,
     get_target,
+    get_target_for_workspace,
     list_targets,
+    list_targets_for_workspace,
     maybe_get_target,
+    maybe_get_target_for_workspace,
 )
 
 
@@ -123,3 +131,111 @@ def test_unknown_target_helpers_fail_honestly() -> None:
 
     with pytest.raises(TargetRegistryError, match="No related backend target"):
         get_related_backend_target(DEMO_BACKEND_TARGET_ID)
+
+
+def test_workspace_registry_merges_builtin_and_external_targets(tmp_path) -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    project = tmp_path / "external-app"
+    (project / "src").mkdir(parents=True)
+
+    with DbSession(engine) as db:
+        workspace = Workspace(
+            name="AgentHub Demo",
+            repo_url="local://apps/demo",
+            root_path="apps/demo",
+            default_branch="main",
+        )
+        db.add(workspace)
+        db.commit()
+        db.refresh(workspace)
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-vite-app",
+                name="External Vite App",
+                root_path=str(project),
+                project_type="vite-react",
+                allowed_paths=["src"],
+                dev_command="pnpm dev",
+                test_command="pnpm test",
+                check_command="pnpm check",
+                build_command="pnpm build",
+                preview_command="pnpm dev",
+                package_manager="pnpm",
+                detected_framework="vite-react",
+            ),
+        )
+
+        targets = {
+            target.target_id: target
+            for target in list_targets_for_workspace(db, workspace.id)
+        }
+        external = get_target_for_workspace(db, workspace.id, "external-vite-app")
+
+        assert {
+            DEMO_FRONTEND_TARGET_ID,
+            DEMO_BACKEND_TARGET_ID,
+            AGENTHUB_PLATFORM_TARGET_ID,
+            "external-vite-app",
+        } == set(targets)
+        assert external.target_id == "external-vite-app"
+        assert external.type == "frontend"
+        assert external.root == str(project.resolve())
+        assert external.allowed_paths == ("src",)
+        assert external.denied_paths
+        assert external.dev_command == "pnpm dev"
+        assert external.test_command == "pnpm test"
+        assert external.check_command == "pnpm check"
+        assert external.build_command == "pnpm build"
+        assert external.preview_command == "pnpm dev"
+        assert external.package_manager == "pnpm"
+        assert external.detected_framework == "vite-react"
+        assert external.project_type == "vite-react"
+        assert external.allows_agent("frontend") is True
+        assert maybe_get_target_for_workspace(db, workspace.id, "external-vite-app") is not None
+
+
+def test_workspace_registry_maps_external_backend_targets(tmp_path) -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    project = tmp_path / "external-api"
+    (project / "app").mkdir(parents=True)
+
+    with DbSession(engine) as db:
+        workspace = Workspace(
+            name="AgentHub Demo",
+            repo_url="local://apps/demo",
+            root_path="apps/demo",
+            default_branch="main",
+        )
+        db.add(workspace)
+        db.commit()
+        db.refresh(workspace)
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-fastapi",
+                name="External FastAPI",
+                root_path=str(project),
+                project_type="fastapi",
+                allowed_paths=["app"],
+                test_command="pytest",
+            ),
+        )
+
+        external = get_target_for_workspace(db, workspace.id, "external-fastapi")
+
+        assert external.type == "backend"
+        assert external.allowed_agents == ("backend", "qa", "review")
+        assert external.allows_agent("backend") is True

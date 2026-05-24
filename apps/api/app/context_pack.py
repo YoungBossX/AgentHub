@@ -26,6 +26,7 @@ from app.target_registry import (
     TargetRegistryError,
     get_related_targets,
     get_target,
+    get_target_for_workspace,
 )
 
 RECENT_MESSAGE_LIMIT = 8
@@ -91,9 +92,13 @@ def build_session_context_pack(
         "latestDeployment": latest_deployment,
         "selectedArtifact": selected_artifact,
         "appContract": app_contract,
-        "targetProject": _target_project_context(task, merged_context),
-        "relatedTargetProjects": _related_target_project_context(merged_context),
-        "safeTargetPaths": _safe_target_paths(task, merged_context),
+        "targetProject": _target_project_context(db, task, merged_context),
+        "relatedTargetProjects": _related_target_project_context(
+            db,
+            task,
+            merged_context,
+        ),
+        "safeTargetPaths": _safe_target_paths(db, task, merged_context),
         "validationExpectations": _validation_expectations(task, merged_context),
     }
 
@@ -322,8 +327,12 @@ def _task_description(task: Task, context: dict[str, Any]) -> str:
     return task.title
 
 
-def _safe_target_paths(task: Task, context: dict[str, Any]) -> list[str]:
-    target = _target_for_context(task, context)
+def _safe_target_paths(
+    db: DbSession,
+    task: Task,
+    context: dict[str, Any],
+) -> list[str]:
+    target = _target_for_context(db, task, context)
     safe_target = context.get("safeTarget")
     paths: list[str] = []
     if target is not None:
@@ -340,14 +349,22 @@ def _safe_target_paths(task: Task, context: dict[str, Any]) -> list[str]:
     return _dedupe(paths)
 
 
-def _target_project_context(task: Task, context: dict[str, Any]) -> Optional[dict[str, Any]]:
-    target = _target_for_context(task, context)
+def _target_project_context(
+    db: DbSession,
+    task: Task,
+    context: dict[str, Any],
+) -> Optional[dict[str, Any]]:
+    target = _target_for_context(db, task, context)
     if target is None:
         return None
     return _target_to_context(target)
 
 
-def _related_target_project_context(context: dict[str, Any]) -> list[dict[str, Any]]:
+def _related_target_project_context(
+    db: DbSession,
+    task: Task,
+    context: dict[str, Any],
+) -> list[dict[str, Any]]:
     target_id = _string_value(context.get("targetId") or context.get("frontendTargetId"))
     if target_id is None:
         contract = context.get("appContract")
@@ -356,12 +373,19 @@ def _related_target_project_context(context: dict[str, Any]) -> list[dict[str, A
     if target_id is None:
         return []
     try:
+        if target_id.startswith("external-"):
+            target = _target_for_context(db, task, {"targetId": target_id})
+            return [_target_to_context(target)] if target is not None else []
         return [_target_to_context(target) for target in get_related_targets(target_id)]
     except TargetRegistryError:
         return []
 
 
-def _target_for_context(task: Task, context: dict[str, Any]) -> Optional[TargetProject]:
+def _target_for_context(
+    db: Optional[DbSession],
+    task: Task,
+    context: dict[str, Any],
+) -> Optional[TargetProject]:
     target_id = _string_value(context.get("targetId"))
     contract = context.get("appContract")
     if target_id is None and isinstance(contract, dict):
@@ -374,6 +398,10 @@ def _target_for_context(task: Task, context: dict[str, Any]) -> Optional[TargetP
     if target_id is None:
         return None
     try:
+        if db is not None:
+            session = db.get(AgentHubSession, task.session_id)
+            if session is not None:
+                return get_target_for_workspace(db, session.workspace_id, target_id)
         return get_target(target_id)
     except TargetRegistryError:
         return None
@@ -389,8 +417,14 @@ def _target_to_context(target: TargetProject) -> dict[str, Any]:
         "deniedPaths": list(target.denied_paths),
         "devCommand": target.dev_command,
         "testCommand": target.test_command,
+        "checkCommand": target.check_command,
+        "buildCommand": target.build_command,
         "previewCommand": target.preview_command,
         "baseUrl": target.base_url,
+        "packageManager": target.package_manager,
+        "detectedFramework": target.detected_framework,
+        "projectType": target.project_type,
+        "analysisStatus": target.analysis_status,
         "allowedAgents": list(target.allowed_agents),
         "requiresPlatformMode": target.requires_platform_mode,
         "requiresApproval": target.requires_approval,

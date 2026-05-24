@@ -56,7 +56,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p9-external-project-workspace-mode --strict`.
 
-- [ ] 1.3 P9-3 External Target Registry Integration.
+- [x] 1.3 P9-3 External Target Registry Integration.
   - Objective: Make external targets available through the same Target Registry
     model as built-in targets.
   - Scope:

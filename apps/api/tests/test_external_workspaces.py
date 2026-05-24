@@ -102,6 +102,19 @@ def test_register_external_project_target(client: TestClient, tmp_path: Path) ->
     assert read_response.status_code == 200
     assert read_response.json()["targetId"] == "external-sample-vite"
 
+    targets_response = client.get(f"/workspaces/{workspace['id']}/targets")
+    assert targets_response.status_code == 200
+    targets = {target["targetId"]: target for target in targets_response.json()}
+    assert {
+        DEMO_FRONTEND_TARGET_ID,
+        DEMO_BACKEND_TARGET_ID,
+        AGENTHUB_PLATFORM_TARGET_ID,
+        "external-sample-vite",
+    } == set(targets)
+    assert targets["external-sample-vite"]["root"] == str(project.resolve())
+    assert targets["external-sample-vite"]["allowedPaths"] == ["src"]
+    assert targets["external-sample-vite"]["packageManager"] == "pnpm"
+
 
 def test_registration_rejects_unsafe_roots(
     client: TestClient,

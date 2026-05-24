@@ -1,5 +1,50 @@
 # AgentHub Change Log
 
+## P9-3 External Target Registry Integration
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/target_registry.py` | Added workspace-aware merged registry reads and external-target-to-`TargetProject` mapping. |
+| `apps/api/app/main.py` | Added merged workspace target list API. |
+| `apps/api/app/schemas.py` | Added target project response schema. |
+| `apps/api/app/context_pack.py` | Resolves external `targetId` metadata into session context packs. |
+| `apps/api/app/instruction_builder.py` | Allows instruction generation to use target metadata from context packs. |
+| `apps/api/app/scheduler.py` | Makes target write locks validate registered external targets. |
+| `apps/api/tests/test_target_registry.py` | Added merged registry and external backend/frontend mapping tests. |
+| `apps/api/tests/test_external_workspaces.py` | Added merged targets API coverage. |
+| `apps/api/tests/test_scheduler.py` | Added external target write-lock coverage. |
+| `apps/api/tests/test_task_runs.py` | Added context-pack-to-instruction external target coverage. |
+| `docs/project-state.md` | Recorded P9-3 behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-3 complete after validation. |
+
+### What Changed
+
+P9-3 integrates registered external targets into AgentHub's existing target
+metadata path:
+
+- merged registry reads include built-in and external targets;
+- external targets carry path policy and command metadata in the same shape as
+  built-in targets;
+- context packs and role instructions can reference external target metadata;
+- scheduler target locks apply to registered external target IDs.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted registry/scheduler/task-run tests | Pass: 56 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+
+---
+
 ## P9-2 Project Analyzer
 
 **Date:** 2026-05-24

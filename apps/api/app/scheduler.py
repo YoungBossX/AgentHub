@@ -6,8 +6,14 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.models import Task, TaskRun
+from app.models import Session as AgentHubSession
 from app.models import utc_now
-from app.target_registry import AGENTHUB_PLATFORM_TARGET_ID, list_targets, maybe_get_target
+from app.target_registry import (
+    AGENTHUB_PLATFORM_TARGET_ID,
+    list_targets,
+    list_targets_for_workspace,
+    maybe_get_target_for_workspace,
+)
 
 
 SCHEDULER_READY = "ready"
@@ -115,7 +121,7 @@ def evaluate_dependency_readiness(db: DbSession, task: Task) -> SchedulerDecisio
 
 
 def evaluate_target_lock_readiness(db: DbSession, task: Task) -> SchedulerDecision:
-    target_id = target_id_for_task(task)
+    target_id = target_id_for_task(task, db)
     write_lock_required = write_lock_required_for_task(task)
     dependency_ids = dependency_ids_for_task(task)
     if target_id is None or not write_lock_required:
@@ -144,7 +150,8 @@ def evaluate_target_lock_readiness(db: DbSession, task: Task) -> SchedulerDecisi
                 lock_holder_task_run_ids=[],
             )
 
-    if maybe_get_target(target_id) is None:
+    workspace_id = _workspace_id_for_task(db, task)
+    if workspace_id is None or maybe_get_target_for_workspace(db, workspace_id, target_id) is None:
         return SchedulerDecision(
             state=SCHEDULER_BLOCKED,
             runnable=False,
@@ -356,7 +363,7 @@ def refresh_session_scheduler_state(db: DbSession, session_id: str) -> list[Task
     return refreshed
 
 
-def target_id_for_task(task: Task) -> Optional[str]:
+def target_id_for_task(task: Task, db: Optional[DbSession] = None) -> Optional[str]:
     plan = _plan_for_task(task)
     target_id = plan.get("targetId")
     if isinstance(target_id, str) and target_id:
@@ -364,7 +371,13 @@ def target_id_for_task(task: Task) -> Optional[str]:
 
     safe_target = plan.get("safeTarget")
     if isinstance(safe_target, str) and safe_target:
-        for target in list_targets():
+        workspace_id = _workspace_id_for_task(db, task) if db is not None else None
+        targets = (
+            list_targets_for_workspace(db, workspace_id)
+            if db is not None and workspace_id is not None
+            else list_targets()
+        )
+        for target in targets:
             if target.permits_path(safe_target):
                 return target.target_id
     return None
@@ -394,9 +407,14 @@ def active_write_lock_holder_run_ids(
             continue
         if not write_lock_required_for_task(run_task):
             continue
-        if target_id_for_task(run_task) == target_id:
+        if target_id_for_task(run_task, db) == target_id:
             holders.append(run.id)
     return holders
+
+
+def _workspace_id_for_task(db: DbSession, task: Task) -> Optional[str]:
+    session = db.get(AgentHubSession, task.session_id)
+    return session.workspace_id if session is not None else None
 
 
 def _plan_for_task(task: Task) -> dict[str, Any]:

@@ -64,6 +64,29 @@ class ExternalProjectAnalysisResponse(ApiModel):
     confidence: str
 
 
+class TargetProjectResponse(ApiModel):
+    target_id: str = Field(alias="targetId")
+    name: str
+    type: str
+    root: str
+    allowed_paths: list[str] = Field(alias="allowedPaths")
+    denied_paths: list[str] = Field(alias="deniedPaths")
+    dev_command: Optional[str] = Field(alias="devCommand")
+    test_command: Optional[str] = Field(alias="testCommand")
+    check_command: Optional[str] = Field(alias="checkCommand")
+    build_command: Optional[str] = Field(alias="buildCommand")
+    preview_command: Optional[str] = Field(alias="previewCommand")
+    base_url: Optional[str] = Field(alias="baseUrl")
+    package_manager: Optional[str] = Field(alias="packageManager")
+    detected_framework: Optional[str] = Field(alias="detectedFramework")
+    project_type: Optional[str] = Field(alias="projectType")
+    analysis_status: Optional[str] = Field(alias="analysisStatus")
+    allowed_agents: list[str] = Field(alias="allowedAgents")
+    requires_platform_mode: bool = Field(alias="requiresPlatformMode")
+    requires_approval: bool = Field(alias="requiresApproval")
+    related_target_ids: list[str] = Field(alias="relatedTargetIds")
+
+
 class ExternalProjectTargetResponse(ApiModel):
     id: str
     workspace_id: str = Field(alias="workspaceId")
