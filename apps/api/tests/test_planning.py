@@ -394,11 +394,16 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     assert contract["userGoal"] == "帮我做一个 mini CRM，包含联系人和备注"
     assert contract["backendTarget"] == "apps/demo-api"
     assert contract["frontendTarget"] == "apps/demo"
+    assert contract["demoApiBaseUrl"] == "http://127.0.0.1:5174"
     assert contract["apiRoutes"] == [
         {"method": "GET", "path": "/health", "description": "Health check"},
         {"method": "GET", "path": "/contacts", "description": "List Contact records"},
         {"method": "POST", "path": "/contacts", "description": "Create a Contact record"},
     ]
+    assert (
+        "Frontend app data calls must use the demo API base URL http://127.0.0.1:5174."
+        in contract["validationExpectations"]
+    )
     assert "notes" in [field["name"] for field in contract["fields"]]
 
     for task in tasks:

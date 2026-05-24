@@ -5,6 +5,160 @@ reference instead of repeating long context blocks.
 
 ## P6 Status
 
+### P6-7 Final Full-stack Rehearsal And Freeze Review
+
+P6-7 final rehearsal passed on 2026-05-23 after the P6-7a API-base alignment
+fix and a small demo-api CORS hardening fix.
+
+Result: P6 is ready to freeze as a practical agent execution capability
+upgrade for a local single-user Agent Coding Workspace. It is still not a
+generic SaaS generator or production deployment platform.
+
+Fresh rehearsal request:
+
+```text
+帮我做一个 mini CRM，包含联系人和备注
+```
+
+Fresh evidence:
+
+- session ID: `d39ed32a-8426-4c75-86a1-9fd10a57f44c`;
+- contract ID: `contract-mini_crm_contacts`;
+- contract demo API base URL: `http://127.0.0.1:5174`;
+- backend task / run: `efe6482b-b2e3-43a7-bae9-2aa0b44dde41`,
+  `908a5708-3334-474c-8af6-b18e6ceaa319`;
+- frontend task / run: `f1d141d1-7fcb-4629-9ed1-20fd957d6ef4`,
+  `7a01e9ea-8d5d-4690-ae4c-35fbca0b6309`;
+- adapter type for both coding runs: `claude_code`;
+- final diff artifact ID: `a89dba5d-cc92-490c-aca1-6c00cd20cc5c`;
+- final review artifact ID: `076f01c5-1949-4fa6-9715-623e41642edb`;
+- final review status / risk: `passed`, `low`;
+- preview ID / URL / health:
+  `d515ffaf-bf9d-481d-9b51-77aa57eb2cef`,
+  `http://127.0.0.1:62947`, healthy;
+- mock deployment ID / provider / status:
+  `ff54062e-35ca-462d-a5f7-e9a4786517ec`, `mock`, `ready`.
+
+The final frontend diff included `http://127.0.0.1:5174` and did not include
+`http://localhost:8000` or `http://127.0.0.1:8000`. Browser inspection of the
+preview showed the contacts list with `Ada Lovelace` and `Grace Hopper`, which
+verified that the browser-visible mini CRM loaded data from the demo API rather
+than staying stuck at `Loading contacts...`.
+
+The demo API now allows local preview origins through CORS so Vite previews on
+dynamic local ports can call `apps/demo-api` during full-stack rehearsals.
+
+Remaining caveats:
+
+- the planned QA/Review task in the contract graph remains pending; the
+  automatic post-diff review artifact supplies the contract consistency
+  evidence;
+- Review remains deterministic `scripted_mock`, not a real Claude review;
+- deploy remains mock-labeled and is not production deployment;
+- P6 remains bounded to todo, notes, and mini CRM contacts style vertical
+  slices, not arbitrary SaaS generation;
+- same-session write tasks remain serial.
+
+Recommended freeze tag: `p6-agent-execution-upgrade-freeze`.
+
+### P6-7a Demo API Base Alignment Fix
+
+P6-7a completed on 2026-05-23 as a targeted fix for the P6-7 freeze blocker.
+
+What changed:
+
+- contract-first app contracts now include
+  `demoApiBaseUrl: "http://127.0.0.1:5174"`;
+- contract validation expectations now state that frontend app data calls must
+  use the demo API base URL;
+- contract-aware Frontend Agent instructions now explicitly require using the
+  demo backend base URL from the contract;
+- contract-aware Frontend Agent instructions explicitly forbid using the
+  AgentHub platform API at `http://localhost:8000` or
+  `http://127.0.0.1:8000` for generated app data;
+- scripted review now warns when a frontend contract diff references the
+  AgentHub platform API base instead of the demo API base.
+- `apps/demo-api` now allows local preview origins through CORS so Vite
+  previews on dynamic local ports can call the demo backend.
+
+Tests added or updated:
+
+- planning coverage verifies `demoApiBaseUrl` is present in the mini CRM
+  `appContract`;
+- instruction coverage verifies Frontend Agent prompts include
+  `http://127.0.0.1:5174` and forbid `http://localhost:8000`;
+- review coverage verifies a frontend diff with
+  `const API_BASE = "http://localhost:8000"` produces a warning and suggests
+  `http://127.0.0.1:5174`.
+- demo-api coverage verifies local preview CORS preflight for `/contacts`.
+
+P6-7a initially did not run a new real Claude/Codex mutation. A later fresh
+P6-7 rehearsal verified that generated frontend code uses the demo API base and
+the browser-visible mini CRM loads contacts from `apps/demo-api`.
+
+### P6-7 Full-stack Vertical Slice Rehearsal And Freeze Review
+
+P6-7 freeze review ran on 2026-05-23.
+
+Result: P6 is not ready to freeze yet. The P6-6 evidence remains valid for
+contract-first orchestration, target-aware backend/frontend task creation, real
+`ClaudeCodeAdapter` execution, diff/review artifact creation, persistent
+preview startup, and mock deploy creation. However, the browser-visible mini
+CRM app is not fully integrated with the safe demo backend by default.
+
+Reused P6-6 evidence:
+
+- session ID: `ad122cf7-afe7-4921-bbd9-b7e815539427`;
+- contract ID: `contract-mini_crm_contacts`;
+- backend task / run: `590cb06b-4a47-422e-b68f-79a873d4c84a`,
+  `d6779d0f-afa3-4124-9117-c40b651dd79a`;
+- frontend task / run: `12ffc19d-f483-4f8d-a541-4c5b935a49b4`,
+  `ade5c49c-097d-448e-831c-d10c6bdc3a71`;
+- adapter type for both coding runs: `claude_code`;
+- final diff artifact ID: `db403329-7f0c-4b2c-9134-d2d7ee652564`;
+- final review artifact ID: `1782b85d-c7f9-4d93-b699-27bd27a05ef7`.
+
+Persistent preview evidence:
+
+- persistent AgentHub API was started on `http://127.0.0.1:8010` because the
+  old `127.0.0.1:8000` process accepted TCP connections but did not respond to
+  `/health`;
+- preview was started through the persistent API for frontend task run
+  `ade5c49c-097d-448e-831c-d10c6bdc3a71`;
+- new preview ID: `3e500940-4d46-423b-af66-b36f1e6ba604`;
+- new preview URL / health: `http://127.0.0.1:65046`, healthy;
+- `curl -I http://127.0.0.1:65046` returned `200 OK` immediately after preview
+  creation and again after a 20 second delay;
+- new mock deploy ID / provider / status:
+  `6b14e81b-c1d6-40ed-b6c4-88a3f846db60`, `mock`, `ready`.
+
+The temporary preview process and the temporary `8010` / `5174` dev services
+were stopped after verification.
+
+Demo backend evidence:
+
+- `pnpm demo:api:dev` served the safe demo backend on
+  `http://127.0.0.1:5174`;
+- `GET /health` returned `{"status":"ok","service":"agenthub-demo-api"}`;
+- `GET /contacts` returned the seed contacts.
+
+Freeze blocker:
+
+- the generated frontend code in the P6-6 session worktree uses
+  `const API_BASE = "http://localhost:8000"`;
+- `apps/demo-api` defaults to `http://127.0.0.1:5174`;
+- browser inspection of the preview showed the app stuck at
+  `Loading contacts...`;
+- `curl http://127.0.0.1:8000/contacts` timed out against the stale AgentHub API
+  process;
+- therefore the final mini CRM preview shell is reachable, but the generated
+  frontend does not reliably call the safe demo backend target.
+
+P6-7 is intentionally left unchecked in the OpenSpec task list until this
+integration blocker is re-verified with a fresh rehearsal. P6-7a fixed the
+planning, instruction, and review path so future full-stack frontend tasks are
+directed to the demo API base URL and API-base mismatches are caught by review.
+
 ### P6-6 Mini CRM Full-stack Vertical Slice
 
 P6-6 completed on 2026-05-22 as an API-driven full-stack vertical slice smoke.

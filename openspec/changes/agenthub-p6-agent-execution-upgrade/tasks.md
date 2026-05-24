@@ -165,7 +165,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p6-agent-execution-upgrade --strict`.
 
-- [ ] 1.7 P6-7 P6 E2E rehearsal and freeze review.
+- [x] 1.7 P6-7 P6 E2E rehearsal and freeze review.
   - Objective: Verify and freeze P6 as an agent execution capability upgrade.
   - Scope:
     - verify default Orchestrator routing for unmentioned messages;

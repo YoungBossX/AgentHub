@@ -211,6 +211,7 @@ def _scripted_findings(
         contract_findings, contract_suggestions = _contract_consistency_findings(
             files_reviewed,
             contract,
+            patch_text,
         )
         findings.extend(contract_findings)
         suggested_changes.extend(contract_suggestions)
@@ -221,6 +222,7 @@ def _scripted_findings(
 def _contract_consistency_findings(
     files_reviewed: list[str],
     contract: dict[str, Any],
+    patch_text: str,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     findings: list[dict[str, Any]] = []
     suggested_changes: list[str] = []
@@ -251,6 +253,50 @@ def _contract_consistency_findings(
             }
         )
         suggested_changes.append(f"Add or verify frontend implementation under {frontend_prefix}.")
+
+    api_findings, api_suggestions = _api_base_findings(
+        files_reviewed,
+        contract,
+        frontend_prefix,
+        patch_text,
+    )
+    findings.extend(api_findings)
+    suggested_changes.extend(api_suggestions)
+
+    return findings, suggested_changes
+
+
+def _api_base_findings(
+    files_reviewed: list[str],
+    contract: dict[str, Any],
+    frontend_prefix: str,
+    patch_text: str,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    findings: list[dict[str, Any]] = []
+    suggested_changes: list[str] = []
+    frontend_files = [path for path in files_reviewed if path.startswith(f"{frontend_prefix}/")]
+    if not frontend_files:
+        return findings, suggested_changes
+
+    expected_base = str(contract.get("demoApiBaseUrl") or "http://127.0.0.1:5174")
+    contract_id = str(contract.get("contractId") or "shared contract")
+    platform_api_bases = ["http://localhost:8000", "http://127.0.0.1:8000"]
+    for platform_base in platform_api_bases:
+        if platform_base in patch_text and platform_base != expected_base:
+            findings.append(
+                {
+                    "severity": "medium",
+                    "file": _first_file(frontend_files),
+                    "message": (
+                        f"Contract {contract_id} expected demo API base {expected_base}, "
+                        f"but frontend code references AgentHub platform API {platform_base}."
+                    ),
+                }
+            )
+            suggested_changes.append(
+                f"Use demo API base {expected_base} for generated app data calls."
+            )
+            break
 
     return findings, suggested_changes
 

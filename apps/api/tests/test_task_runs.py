@@ -575,6 +575,7 @@ def test_contract_aware_role_instructions_reference_same_contract(
         "userGoal": "帮我做一个 mini CRM，包含联系人和备注",
         "backendTarget": "apps/demo-api",
         "frontendTarget": "apps/demo",
+        "demoApiBaseUrl": "http://127.0.0.1:5174",
         "apiRoutes": [
             {"method": "GET", "path": "/contacts"},
             {"method": "POST", "path": "/contacts"},
@@ -659,6 +660,8 @@ def test_contract_aware_role_instructions_reference_same_contract(
 
     assert "targeting apps/demo-api" in backend_request.instruction
     assert "targeting apps/demo/src" in frontend_request.instruction
+    assert "http://127.0.0.1:5174" in frontend_request.instruction
+    assert "Do not call the AgentHub platform API at http://localhost:8000" in frontend_request.instruction
     assert "Review backend and frontend work" in review_request.instruction
 
 
@@ -670,6 +673,7 @@ def test_contract_aware_review_validates_backend_and_frontend_targets(
         "appName": "Mini CRM Contacts",
         "backendTarget": "apps/demo-api",
         "frontendTarget": "apps/demo",
+        "demoApiBaseUrl": "http://127.0.0.1:5174",
     }
     with db_from_override() as db:
         task = db.get(Task, task_id())
@@ -720,6 +724,68 @@ def test_contract_aware_review_validates_backend_and_frontend_targets(
     assert review.risk_level == "low"
     assert review.findings == []
     assert "contract-mini_crm_contacts" in review.summary
+
+
+def test_contract_aware_review_warns_on_platform_api_base_mismatch(
+    client: TestClient,
+) -> None:
+    contract = {
+        "contractId": "contract-mini_crm_contacts",
+        "appName": "Mini CRM Contacts",
+        "backendTarget": "apps/demo-api",
+        "frontendTarget": "apps/demo",
+        "demoApiBaseUrl": "http://127.0.0.1:5174",
+    }
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "assignedRole": "frontend",
+                "appContract": contract,
+                "contractId": contract["contractId"],
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+        transition_task_run(db, task_run.id, "completed")
+        diff_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+            meta_json="{}",
+        )
+        db.add(diff_artifact)
+        db.commit()
+        db.refresh(diff_artifact)
+        diff = Diff(
+            artifact_id=diff_artifact.id,
+            base_ref="base",
+            head_ref="head+worktree",
+            patch_text=(
+                "diff --git a/apps/demo-api/app/main.py b/apps/demo-api/app/main.py\n"
+                "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\n"
+                '+const API_BASE = "http://localhost:8000";\n'
+            ),
+            changed_files_json=json.dumps(
+                ["apps/demo-api/app/main.py", "apps/demo/src/App.tsx"],
+                separators=(",", ":"),
+            ),
+            stats_json=json.dumps({"filesChanged": 2}, separators=(",", ":")),
+        )
+        db.add(diff)
+        db.commit()
+
+        review = create_scripted_review_for_task_run(db, task_run.id)
+
+    assert review.status == "warning"
+    assert review.risk_level == "medium"
+    assert any("http://localhost:8000" in finding["message"] for finding in review.findings)
+    assert any("http://127.0.0.1:5174" in suggestion for suggestion in review.suggested_changes)
 
 
 def test_transition_helper_rejects_unknown_states(client: TestClient) -> None:

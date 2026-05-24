@@ -211,6 +211,7 @@ def _contract_guidance(role: str, plan: dict[str, Any]) -> str:
         return ""
     contract_id = str(contract.get("contractId") or "shared contract")
     app_name = str(contract.get("appName") or "the bounded app")
+    demo_api_base_url = str(contract.get("demoApiBaseUrl") or "http://127.0.0.1:5174")
     if role == "backend":
         return (
             f"Shared App Contract: Use `{contract_id}` for {app_name}. "
@@ -221,7 +222,10 @@ def _contract_guidance(role: str, plan: dict[str, Any]) -> str:
         return (
             f"Shared App Contract: Use `{contract_id}` for {app_name}. "
             "Implement only frontend UI behavior described by the contract, "
-            "targeting apps/demo/src and integrating with the demo API shape."
+            "targeting apps/demo/src and integrating with the demo API shape. "
+            f"Use the demo backend base URL `{demo_api_base_url}` for app data "
+            "calls. Do not call the AgentHub platform API at http://localhost:8000 "
+            "or http://127.0.0.1:8000 for generated app data."
         )
     if role in {"qa", "review"}:
         return (

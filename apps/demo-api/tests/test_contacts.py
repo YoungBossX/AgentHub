@@ -29,6 +29,19 @@ def test_list_contacts_returns_seed_contacts() -> None:
     ]
 
 
+def test_contacts_allows_local_preview_cors() -> None:
+    response = client().options(
+        "/contacts",
+        headers={
+            "Origin": "http://127.0.0.1:62947",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:62947"
+
+
 def test_create_contact_appends_contact() -> None:
     api = client()
 

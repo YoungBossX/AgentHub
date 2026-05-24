@@ -20,6 +20,7 @@ GRAPH_ALLOWED_FILES = {
     "apps/demo/src/App.tsx",
     "apps/demo/src/styles.css",
 }
+DEMO_API_BASE_URL = "http://127.0.0.1:5174"
 MENTION_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9_-]*)")
 CHANGE_TO_PATTERN = re.compile(
     r"(?:change\s+(?:the\s+)?(?:primary\s+)?(?:login\s+page\s+)?"
@@ -586,9 +587,11 @@ def _app_contract_for(
         ],
         "backendTarget": "apps/demo-api",
         "frontendTarget": "apps/demo",
+        "demoApiBaseUrl": DEMO_API_BASE_URL,
         "validationExpectations": [
             "Backend task must stay in apps/demo-api.",
             "Frontend task must stay in apps/demo/src.",
+            f"Frontend app data calls must use the demo API base URL {DEMO_API_BASE_URL}.",
             "Do not modify apps/api.",
             "Review is advisory and non-blocking.",
             "Preview and mock deploy remain existing local demo evidence.",

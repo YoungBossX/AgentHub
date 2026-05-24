@@ -2,6 +2,7 @@ from typing import Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -24,6 +25,12 @@ class HealthResponse(BaseModel):
 
 
 app = FastAPI(title="AgentHub Demo API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1):\d+$",
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 _contacts: list[Contact] = [
     Contact(
