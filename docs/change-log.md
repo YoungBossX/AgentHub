@@ -1,5 +1,41 @@
 # AgentHub Change Log
 
+## P10-7 Recovery Actions
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/recovery.py` | Added auditable recovery actions for stale task failure, stale lock release, retry, and downstream stop/resume. |
+| `apps/api/app/task_runs.py` | Allowed recovery to request checkpoint retry mode while preserving retry safety checks. |
+| `apps/api/tests/test_recovery.py` | Added recovery action audit and behavior tests. |
+| `docs/project-state.md` | Recorded P10-7 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-7 complete after validation. |
+
+### What Changed
+
+P10-7 adds explicit service-level recovery actions. Stale task failure, stale
+lock release, retry from current state, retry from checkpoint, downstream stop,
+and downstream resume now produce `recovery.action` audit events. Recovery
+actions reuse P10 heartbeat, stale lock, checkpoint, retry, and scheduler
+readiness safeguards rather than adding automatic merge/reset behavior.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted recovery action tests | Pass: 4 tests. |
+| Targeted recovery/scheduler/task-run regression tests | Pass: 61 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+
+---
+
 ## P10-6 Conflict Detection
 
 **Date:** 2026-05-24

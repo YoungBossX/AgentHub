@@ -5,6 +5,28 @@ reference instead of repeating long context blocks.
 
 ## P10 Status
 
+### P10-7 Recovery Actions
+
+P10-7 completed on 2026-05-24.
+
+AgentHub now has a focused recovery service for scheduler robustness scenarios:
+
+- mark a stale TaskRun failed with a recovery audit event;
+- release a stale target lock and re-evaluate waiting tasks;
+- retry from current state with retry metadata and audit event;
+- retry from checkpoint after the same safety checks used by retry;
+- stop downstream pipeline progression with explicit blocked scheduler state;
+- resume downstream progression by re-evaluating dependency and scheduler
+  readiness.
+
+Each recovery action writes a `recovery.action` `TaskRunEvent` with actor,
+reason, action, and affected IDs. Stale lock release also preserves the
+`target_lock.released` audit event from P10-2.
+
+Current limitation: P10-7 exposes service-level recovery actions for API/test
+rehearsal. It does not add new UI buttons or automatic Git reset/merge
+behavior.
+
 ### P10-6 Conflict Detection
 
 P10-6 completed on 2026-05-24.

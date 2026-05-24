@@ -140,7 +140,7 @@
     - Run `git diff --check`.
     - Run `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`.
 
-- [ ] 1.7 P10-7 Recovery Actions.
+- [x] 1.7 P10-7 Recovery Actions.
   - Objective: provide explicit, auditable recovery actions for stale runs,
     stale locks, retry decisions, and downstream pipeline control.
   - Scope:

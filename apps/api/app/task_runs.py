@@ -348,11 +348,16 @@ def interrupt_task_run(db: DbSession, task_run_id: str) -> TaskRun:
     )
 
 
-def retry_task_run(db: DbSession, task_run_id: str) -> TaskRun:
+def retry_task_run(
+    db: DbSession,
+    task_run_id: str,
+    *,
+    retry_mode: str = "current_state",
+) -> TaskRun:
     previous = _retryable_run_or_raise(db, task_run_id)
     retry_metadata = _retry_metadata_for_previous_run(
         previous,
-        retry_mode="current_state",
+        retry_mode=retry_mode,
     )
     return create_task_run(
         db,
