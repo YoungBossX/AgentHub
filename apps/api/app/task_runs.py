@@ -60,6 +60,7 @@ def create_task_run(
     adapter_type: Optional[str] = None,
     retry_of_run_id: Optional[str] = None,
     fallback_from_run_id: Optional[str] = None,
+    retry_metadata: Optional[dict[str, Any]] = None,
 ) -> TaskRun:
     task = _task_or_raise(db, task_id)
     session = _session_or_raise(db, task.session_id)
@@ -77,6 +78,8 @@ def create_task_run(
         metrics["retryOfRunId"] = retry_of_run_id
     if fallback_from_run_id is not None:
         metrics["fallbackFromRunId"] = fallback_from_run_id
+    if retry_metadata is not None:
+        metrics.update(retry_metadata)
     checkpoint = _pre_run_checkpoint_for_task(
         db,
         task,
@@ -347,11 +350,16 @@ def interrupt_task_run(db: DbSession, task_run_id: str) -> TaskRun:
 
 def retry_task_run(db: DbSession, task_run_id: str) -> TaskRun:
     previous = _retryable_run_or_raise(db, task_run_id)
+    retry_metadata = _retry_metadata_for_previous_run(
+        previous,
+        retry_mode="current_state",
+    )
     return create_task_run(
         db,
         task_id=previous.task_id,
         adapter_type=adapter_type_for_run(db, previous),
         retry_of_run_id=previous.id,
+        retry_metadata=retry_metadata,
     )
 
 
@@ -360,12 +368,17 @@ def retry_with_scripted_mock(db: DbSession, task_run_id: str) -> TaskRun:
     if previous.state not in RETRYABLE_STATES or adapter_type_for_run(db, previous) != "codex":
         raise TaskRunLifecycleError("Fallback requires a failed or interrupted Codex run.")
 
+    retry_metadata = _retry_metadata_for_previous_run(
+        previous,
+        retry_mode="scripted_mock_fallback",
+    )
     return create_task_run(
         db,
         task_id=previous.task_id,
         adapter_type="scripted_mock",
         retry_of_run_id=previous.id,
         fallback_from_run_id=previous.id,
+        retry_metadata=retry_metadata,
     )
 
 
@@ -473,6 +486,88 @@ def _metrics(task_run: TaskRun) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return value if isinstance(value, dict) else {}
+
+
+def _retry_metadata_for_previous_run(
+    previous: TaskRun,
+    *,
+    retry_mode: str,
+) -> dict[str, Any]:
+    previous_metrics = _metrics(previous)
+    checkpoint = previous_metrics.get("preRunCheckpoint")
+    dirty_decision = _dirty_worktree_decision(previous, checkpoint)
+    if dirty_decision["status"] == "unsafe":
+        files = ", ".join(dirty_decision.get("unsafeFiles") or [])
+        raise TaskRunLifecycleError(
+            f"Unsafe retry blocked: dirty worktree contains files outside "
+            f"the previous checkpoint or planned safe paths ({files})."
+        )
+
+    return {
+        "previousRunId": previous.id,
+        "failureSummary": {
+            "state": previous.state,
+            "errorCode": previous.error_code,
+            "errorMessage": previous.error_message,
+            "endedAt": previous.ended_at.isoformat()
+            if previous.ended_at is not None
+            else None,
+        },
+        "retryMode": retry_mode,
+        "checkpointId": previous.id if isinstance(checkpoint, dict) else None,
+        "dirtyWorktreeDecision": dirty_decision,
+    }
+
+
+def _dirty_worktree_decision(
+    previous: TaskRun,
+    checkpoint: Any,
+) -> dict[str, Any]:
+    if not isinstance(checkpoint, dict):
+        return {
+            "status": "safe",
+            "reason": "No pre-run checkpoint was available for this legacy run.",
+            "dirtyFiles": [],
+            "unsafeFiles": [],
+        }
+
+    worktree_path = Path(previous.worktree_path)
+    dirty_result = _git_dirty_files(worktree_path)
+    if dirty_result.get("available") is not True:
+        return {
+            "status": "safe",
+            "reason": dirty_result.get("reason") or "git_status_unavailable",
+            "dirtyFiles": [],
+            "unsafeFiles": [],
+        }
+
+    dirty_files = [
+        path for path in dirty_result["dirtyFiles"] if isinstance(path, str)
+    ]
+    safe_files = {
+        path
+        for path in [
+            *checkpoint.get("dirtyFiles", []),
+            *checkpoint.get("plannedFiles", []),
+        ]
+        if isinstance(path, str) and path
+    }
+    unsafe_files = [
+        path for path in dirty_files if path not in safe_files
+    ]
+    if unsafe_files:
+        return {
+            "status": "unsafe",
+            "reason": "Dirty files are outside the previous checkpoint and planned safe paths.",
+            "dirtyFiles": dirty_files,
+            "unsafeFiles": unsafe_files,
+        }
+    return {
+        "status": "safe",
+        "reason": "Dirty files are limited to the previous checkpoint and planned safe paths.",
+        "dirtyFiles": dirty_files,
+        "unsafeFiles": [],
+    }
 
 
 def _platform_approval_payload(task: Task) -> Optional[dict[str, Any]]:
@@ -590,6 +685,23 @@ def _git_status_checkpoint(
     allowed_paths: list[str],
     denied_paths: list[str],
 ) -> dict[str, Any]:
+    dirty_result = _git_dirty_files(worktree_path)
+    if dirty_result.get("available") is not True:
+        return dirty_result
+
+    dirty_files = dirty_result["dirtyFiles"]
+    scoped_dirty_files = [
+        path
+        for path in dirty_files
+        if _matches_any_path(path, allowed_paths) and not _matches_any_path(path, denied_paths)
+    ]
+    return {
+        "available": True,
+        "dirtyFiles": scoped_dirty_files,
+    }
+
+
+def _git_dirty_files(worktree_path: Path) -> dict[str, Any]:
     if not worktree_path.exists():
         return {
             "available": False,
@@ -616,16 +728,9 @@ def _git_status_checkpoint(
             "reason": result.stderr.strip() or result.stdout.strip() or "git_status_failed",
             "dirtyFiles": [],
         }
-
-    dirty_files = _parse_porcelain_dirty_files(result.stdout)
-    scoped_dirty_files = [
-        path
-        for path in dirty_files
-        if _matches_any_path(path, allowed_paths) and not _matches_any_path(path, denied_paths)
-    ]
     return {
         "available": True,
-        "dirtyFiles": scoped_dirty_files,
+        "dirtyFiles": _parse_porcelain_dirty_files(result.stdout),
     }
 
 

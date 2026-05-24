@@ -1,5 +1,39 @@
 # AgentHub Change Log
 
+## P10-4 Retry Idempotency
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/task_runs.py` | Added retry metadata, dirty worktree retry safety checks, and unsafe retry blocking. |
+| `apps/api/tests/test_task_runs.py` | Added retry idempotency metadata and unsafe external dirty-worktree retry tests. |
+| `docs/project-state.md` | Recorded P10-4 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-4 complete after validation. |
+
+### What Changed
+
+Retries now record `previousRunId`, failure summary, retry mode, checkpoint
+reference, and dirty worktree decision. Automatic retry is blocked when current
+dirty files fall outside the prior checkpoint or planned safe paths, preventing
+blind retries into external project local edits.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted retry idempotency tests | Pass: 2 tests. |
+| Targeted task-run retry/checkpoint/liveness tests | Pass: 10 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+
+---
+
 ## P10-3 Pre-run Snapshot / Checkpoint
 
 **Date:** 2026-05-24

@@ -5,6 +5,27 @@ reference instead of repeating long context blocks.
 
 ## P10 Status
 
+### P10-4 Retry Idempotency
+
+P10-4 completed on 2026-05-24.
+
+Retry TaskRuns now carry idempotency metadata:
+
+- `previousRunId` links the retry to the prior failed/interrupted run;
+- `failureSummary` records prior state, error code/message, and end time;
+- `retryMode` records whether retry is from current state or scripted fallback;
+- `checkpointId` points to the prior TaskRun when a pre-run checkpoint exists;
+- `dirtyWorktreeDecision` records whether the current target state is safe.
+
+Automatic retry checks the current git dirty files against the previous
+checkpoint dirty files and planned files. If dirty files exist outside the
+checkpoint/planned safe paths, retry is blocked with an explicit unsafe retry
+error and no new TaskRun is created.
+
+Current limitation: P10-4 blocks unsafe retry but does not yet provide a
+separate recovery decision API. Retry-from-checkpoint and explicit recovery
+actions remain P10-7.
+
 ### P10-3 Pre-run Snapshot / Checkpoint
 
 P10-3 completed on 2026-05-24.

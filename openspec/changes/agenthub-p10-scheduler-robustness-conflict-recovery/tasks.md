@@ -69,7 +69,7 @@
     - Run `git diff --check`.
     - Run `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`.
 
-- [ ] 1.4 P10-4 Retry Idempotency.
+- [x] 1.4 P10-4 Retry Idempotency.
   - Objective: make retries traceable and prevent automatic retries into unsafe
     dirty or conflicting worktrees.
   - Scope:

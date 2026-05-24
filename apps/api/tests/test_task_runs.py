@@ -1394,6 +1394,19 @@ def test_interrupt_running_task_run_updates_task_and_preserves_history(
 def test_retry_failed_or_interrupted_run_creates_new_history_row(
     client: TestClient,
 ) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+
     original = client.post(f"/tasks/{task_id()}/runs").json()
     client.post(f"/task-runs/{original['id']}/interrupt")
 
@@ -1405,12 +1418,85 @@ def test_retry_failed_or_interrupted_run_creates_new_history_row(
     assert retried["state"] == "queued"
     assert retried["adapterType"] == "codex"
     assert retried["metricsJson"]["retryOfRunId"] == original["id"]
+    assert retried["metricsJson"]["previousRunId"] == original["id"]
+    assert retried["metricsJson"]["retryMode"] == "current_state"
+    assert retried["metricsJson"]["failureSummary"]["state"] == "interrupted"
+    assert retried["metricsJson"]["dirtyWorktreeDecision"]["status"] == "safe"
+    assert retried["metricsJson"]["checkpointId"] == original["id"]
 
     with db_from_override() as db:
         previous = db.get(TaskRun, original["id"])
         runs = db.exec(select(TaskRun).where(TaskRun.task_id == previous.task_id)).all()
         assert previous.state == "interrupted"
         assert len(runs) == 2
+
+
+def test_retry_blocks_external_target_dirty_worktree_outside_checkpoint(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    external_root = tmp_path / "external-retry-app"
+    (external_root / "src").mkdir(parents=True)
+    (external_root / "src" / "App.tsx").write_text("export default function App() {}\n")
+    subprocess.run(["git", "init"], cwd=external_root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=external_root,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=external_root,
+        check=True,
+    )
+    subprocess.run(["git", "add", "src/App.tsx"], cwd=external_root, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=external_root, check=True)
+
+    with db_from_override() as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-retry-app",
+                name="External Retry App",
+                root_path=str(external_root),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "targetId": "external-retry-app",
+                "safeTarget": "src",
+                "files": ["src/App.tsx"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        original = create_task_run(db, task.id)
+        transition_task_run(
+            db,
+            original.id,
+            "failed",
+            error_code="CODEX_TEST_FAILURE",
+            error_message="Codex failed before retry.",
+        )
+        original_id = original.id
+        original_task_id = original.task_id
+
+    (external_root / "README.md").write_text("local notes\n")
+
+    response = client.post(f"/task-runs/{original_id}/retry")
+
+    assert response.status_code == 400
+    assert "Unsafe retry blocked" in response.json()["detail"]
+
+    with db_from_override() as db:
+        runs = db.exec(select(TaskRun).where(TaskRun.task_id == original_task_id)).all()
+        assert len(runs) == 1
 
 
 def test_retry_with_scripted_mock_fallback_after_codex_failure(
