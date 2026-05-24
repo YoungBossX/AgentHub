@@ -79,7 +79,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict`.
 
-- [ ] 1.4 P8-4 Failure Recovery And Blocked States.
+- [x] 1.4 P8-4 Failure Recovery And Blocked States.
   - Objective: Make scheduler failure propagation, retry, and fallback states
     explicit.
   - Scope:

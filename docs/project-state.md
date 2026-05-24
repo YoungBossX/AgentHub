@@ -5,6 +5,27 @@ reference instead of repeating long context blocks.
 
 ## P8 Status
 
+### P8-4 Failure Recovery And Blocked States
+
+P8-4 completed on 2026-05-24.
+
+Scheduler-visible failure recovery states are now recorded in task
+`planJson.scheduler`:
+
+- completed TaskRuns record `state: completed`;
+- failed or interrupted coding TaskRuns record `retryable: true`;
+- failed/interrupted Codex coding runs record `state: fallback_available` and
+  `fallbackAvailable: true`;
+- failed non-Codex or non-fallback tasks record `state: retryable`;
+- downstream dependencies still move to `blocked` on upstream failure;
+- completed retry/fallback runs re-evaluate downstream tasks and can unblock
+  them when dependencies and target locks are satisfied;
+- terminal task scheduler metadata is preserved during session-level lock
+  refresh.
+
+Current limitation: P8-4 exposes retry/fallback state in backend payloads but
+does not yet add dedicated UI treatment. That remains P8-5.
+
 ### P8-3 Auto-run Pipeline
 
 P8-3 completed on 2026-05-24.

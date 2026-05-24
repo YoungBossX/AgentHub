@@ -18,7 +18,12 @@ from app.scheduler import (
     evaluate_and_apply_dependency_readiness,
     evaluate_dependency_readiness,
 )
-from app.task_runs import TaskRunLifecycleError, create_task_run, transition_task_run
+from app.task_runs import (
+    TaskRunLifecycleError,
+    create_task_run,
+    retry_with_scripted_mock,
+    transition_task_run,
+)
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
@@ -260,6 +265,108 @@ def test_ordinary_backend_task_cannot_acquire_platform_write_lock() -> None:
         assert stored.status == "blocked"
         assert scheduler["state"] == "blocked"
         assert scheduler["targetId"] == AGENTHUB_PLATFORM_TARGET_ID
+
+
+def test_failed_codex_coding_task_exposes_fallback_available_state() -> None:
+    with scheduler_db() as db:
+        _, _, task, _ = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        task_run = create_task_run(db, task.id)
+
+        transition_task_run(
+            db,
+            task_run.id,
+            "failed",
+            error_code="CODEX_TEST_FAILURE",
+            error_message="Codex failed in scheduler test.",
+        )
+
+        stored = db.get(Task, task.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+
+        assert stored.status == "failed"
+        assert scheduler["state"] == "fallback_available"
+        assert scheduler["retryable"] is True
+        assert scheduler["fallbackAvailable"] is True
+        assert scheduler["adapterType"] == "codex"
+
+
+def test_failed_non_codex_task_exposes_retryable_without_fallback() -> None:
+    with scheduler_db() as db:
+        _, _, task, _ = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        task_run = create_task_run(db, task.id, adapter_type="scripted_mock")
+
+        transition_task_run(
+            db,
+            task_run.id,
+            "failed",
+            error_code="SCRIPTED_TEST_FAILURE",
+            error_message="Scripted mock failed in scheduler test.",
+        )
+
+        stored = db.get(Task, task.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+
+        assert stored.status == "failed"
+        assert scheduler["state"] == "retryable"
+        assert scheduler["retryable"] is True
+        assert scheduler["fallbackAvailable"] is False
+        assert scheduler["adapterType"] == "scripted_mock"
+
+
+def test_completed_fallback_unblocks_downstream_dependency() -> None:
+    with scheduler_db() as db:
+        _, session, upstream, _ = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        frontend = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        downstream = Task(
+            session_id=session.id,
+            title="Downstream frontend write",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend.id,
+            plan_json=json.dumps(
+                {
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "safeTarget": "apps/demo/src",
+                    "files": ["apps/demo/src/App.tsx"],
+                    "autoStart": True,
+                },
+                separators=(",", ":"),
+            ),
+            depends_on_task_ids=json.dumps([upstream.id], separators=(",", ":")),
+        )
+        db.add(downstream)
+        db.commit()
+        db.refresh(downstream)
+        upstream_run = create_task_run(db, upstream.id)
+        transition_task_run(db, upstream_run.id, "failed")
+
+        blocked = db.get(Task, downstream.id)
+        assert blocked.status == "blocked"
+
+        fallback_run = retry_with_scripted_mock(db, upstream_run.id)
+        transition_task_run(db, fallback_run.id, "completed")
+
+        unblocked = db.get(Task, downstream.id)
+        scheduler = json.loads(unblocked.plan_json)["scheduler"]
+
+        assert unblocked.status == "pending"
+        assert scheduler["state"] == "ready"
+        assert scheduler["blockingDependencyIds"] == []
 
 
 @contextmanager

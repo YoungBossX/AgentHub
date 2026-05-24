@@ -15,6 +15,8 @@ SCHEDULER_COMPLETED = "completed"
 SCHEDULER_WAITING_DEPENDENCY = "waiting_dependency"
 SCHEDULER_WAITING_TARGET_LOCK = "waiting_target_lock"
 SCHEDULER_BLOCKED = "blocked"
+SCHEDULER_RETRYABLE = "retryable"
+SCHEDULER_FALLBACK_AVAILABLE = "fallback_available"
 
 DEPENDENCY_COMPLETE_STATUSES = {"completed"}
 DEPENDENCY_BLOCKING_STATUSES = {"failed", "interrupted", "blocked"}
@@ -35,6 +37,7 @@ LOCK_ACTIVE_RUN_STATES = {
 }
 WRITE_INTENT_TYPES = {"frontend_change", "backend_change", "platform_maintenance"}
 READ_INTENT_TYPES = {"planning", "review", "qa_review"}
+FALLBACK_ELIGIBLE_INTENT_TYPES = {"frontend_change", "backend_change"}
 
 
 @dataclass(frozen=True)
@@ -258,6 +261,60 @@ def complete_synthetic_planning_tasks(db: DbSession, tasks: list[Task]) -> list[
     return completed
 
 
+def mark_task_run_terminal_scheduler_state(
+    db: DbSession,
+    task: Task,
+    *,
+    run_state: str,
+    adapter_type: str,
+    task_run_id: str,
+) -> Task:
+    plan = _plan_for_task(task)
+    scheduler = dict(plan.get("scheduler") or {})
+    scheduler.setdefault("dependencyIds", dependency_ids_for_task(task))
+    scheduler.setdefault("blockingDependencyIds", [])
+    scheduler.setdefault("targetId", target_id_for_task(task))
+    scheduler.setdefault("writeLockRequired", write_lock_required_for_task(task))
+    scheduler.setdefault("lockHolderTaskRunIds", [])
+    scheduler["taskRunId"] = task_run_id
+    scheduler["adapterType"] = adapter_type
+
+    if run_state == "completed":
+        scheduler.update(
+            {
+                "state": SCHEDULER_COMPLETED,
+                "runnable": False,
+                "reason": "TaskRun completed.",
+                "retryable": False,
+                "fallbackAvailable": False,
+            }
+        )
+    elif run_state in {"failed", "interrupted"}:
+        fallback_available = (
+            adapter_type == "codex"
+            and task.intent_type in FALLBACK_ELIGIBLE_INTENT_TYPES
+        )
+        scheduler.update(
+            {
+                "state": SCHEDULER_FALLBACK_AVAILABLE
+                if fallback_available
+                else SCHEDULER_RETRYABLE,
+                "runnable": False,
+                "reason": "TaskRun did not complete; retry is available.",
+                "retryable": True,
+                "fallbackAvailable": fallback_available,
+            }
+        )
+
+    plan["scheduler"] = scheduler
+    task.plan_json = json.dumps(plan, separators=(",", ":"))
+    task.updated_at = utc_now()
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
 def refresh_downstream_scheduler_state(
     db: DbSession,
     dependency_task_id: str,
@@ -290,6 +347,8 @@ def refresh_session_scheduler_state(db: DbSession, session_id: str) -> list[Task
         .order_by(Task.priority, Task.created_at, Task.id)
     ).all()
     for task in tasks:
+        if task.status in {"completed", "failed", "interrupted"}:
+            continue
         if not dependency_ids_for_task(task) and not write_lock_required_for_task(task):
             continue
         decision = evaluate_scheduler_readiness(db, task)

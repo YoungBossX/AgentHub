@@ -1,5 +1,43 @@
 # AgentHub Change Log
 
+## P8-4 Failure Recovery And Blocked States
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/scheduler.py` | Added terminal TaskRun scheduler metadata for completed, retryable, and fallback-available states. |
+| `apps/api/app/task_runs.py` | Records terminal scheduler state before refreshing downstream dependency and lock state. |
+| `apps/api/tests/test_scheduler.py` | Added coverage for fallback availability, retryable state, and fallback completion unblocking downstream tasks. |
+| `docs/project-state.md` | Recorded P8-4 failure recovery behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-4 complete after validation. |
+
+### What Changed
+
+P8-4 makes scheduler failure recovery states explicit:
+
+- completed TaskRuns write `planJson.scheduler.state: completed`;
+- failed/interrupted Codex coding runs expose `fallback_available`;
+- failed/interrupted non-Codex runs expose `retryable`;
+- downstream tasks remain blocked after upstream failure;
+- completed retry/fallback runs re-evaluate downstream tasks and can unblock
+  them when dependency and target-lock rules are satisfied.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted scheduler failure tests | Pass: 13 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 155 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+
+---
+
 ## P8-3 Auto-run Pipeline
 
 **Date:** 2026-05-24

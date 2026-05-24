@@ -136,9 +136,17 @@ def transition_task_run(
     event_payload.setdefault("adapterType", adapter_type_for_run(db, task_run))
     _append_state_event(db, task_run, state, event_payload)
     if state in TERMINAL_STATES:
+        from app.scheduler import mark_task_run_terminal_scheduler_state
         from app.scheduler import refresh_downstream_scheduler_state
         from app.scheduler import refresh_session_scheduler_state
 
+        mark_task_run_terminal_scheduler_state(
+            db,
+            task,
+            run_state=state,
+            adapter_type=adapter_type_for_run(db, task_run),
+            task_run_id=task_run.id,
+        )
         refresh_downstream_scheduler_state(db, task.id)
         refresh_session_scheduler_state(db, task.session_id)
     return task_run
