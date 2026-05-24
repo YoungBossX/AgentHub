@@ -16,7 +16,11 @@ from app.planning import (
     parse_frontend_intent,
     parse_mentions,
 )
-from app.target_registry import DEMO_BACKEND_TARGET_ID, DEMO_FRONTEND_TARGET_ID
+from app.target_registry import (
+    AGENTHUB_PLATFORM_TARGET_ID,
+    DEMO_BACKEND_TARGET_ID,
+    DEMO_FRONTEND_TARGET_ID,
+)
 
 
 @pytest.fixture
@@ -506,12 +510,55 @@ def test_backend_mention_creates_safe_demo_backend_task(
     assert task["planJson"]["planner"] == "direct_assignment_v1"
     assert task["planJson"]["routing"] == "direct_mention"
     assert task["planJson"]["assignedRole"] == "backend"
+    assert task["planJson"]["targetId"] == DEMO_BACKEND_TARGET_ID
+    assert task["planJson"]["backendTargetId"] == DEMO_BACKEND_TARGET_ID
     assert task["planJson"]["safeTarget"] == "apps/demo-api"
     assert task["planJson"]["files"] == [
         "apps/demo-api/app/main.py",
         "apps/demo-api/tests/test_contacts.py",
     ]
     assert task["planJson"]["originalRequest"] == "@backend add a contacts endpoint"
+
+
+def test_explicit_platform_mode_request_creates_approval_gated_platform_task(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@backend platform mode update AgentHub API health metadata"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["assignedAgentRole"] == "backend"
+    assert task["intentType"] == "platform_maintenance"
+    assert task["status"] == "pending"
+    assert task["taskRuns"] == []
+    assert task["planJson"]["planner"] == "platform_maintenance_v1"
+    assert task["planJson"]["routing"] == "explicit_platform_mode"
+    assert task["planJson"]["targetId"] == AGENTHUB_PLATFORM_TARGET_ID
+    assert task["planJson"]["platformMode"] is True
+    assert task["planJson"]["requiresApproval"] is True
+    assert task["planJson"]["safeTarget"] == "apps/api"
+    assert task["planJson"]["validationExpectations"] == ["pnpm check", "pnpm test"]
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message).where(
+                Message.session_id == session_id,
+                Message.sender_type == "orchestrator",
+            )
+        ).all()
+
+    assert len(messages) == 1
+    assert "requires approval" in messages[0].content_md
 
 
 def test_review_mention_creates_read_only_review_assignment(

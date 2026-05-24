@@ -10,6 +10,7 @@ from app.diffs import capture_base_ref_for_worktree
 from app.models import Agent, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
+from app.target_registry import AGENTHUB_PLATFORM_TARGET_ID
 
 TASK_RUN_STATES = {
     "created",
@@ -64,12 +65,14 @@ def create_task_run(
     if fallback_from_run_id is not None:
         metrics["fallbackFromRunId"] = fallback_from_run_id
 
-    task.status = "running"
+    approval_payload = _platform_approval_payload(task)
+    initial_state = "waiting_approval" if approval_payload is not None else "queued"
+    task.status = _task_status_for_run_state(initial_state)
     task.updated_at = now
     task_run = TaskRun(
         task_id=task.id,
         agent_id=agent.id,
-        state="queued",
+        state=initial_state,
         worktree_path=session.worktree_path,
         base_ref=capture_base_ref_for_worktree(session.worktree_path),
         metrics_json=json.dumps(metrics, separators=(",", ":")),
@@ -81,7 +84,14 @@ def create_task_run(
     db.commit()
     db.refresh(task_run)
 
-    _append_state_event(db, task_run, "queued", {"adapterType": selected_adapter})
+    _append_state_event(db, task_run, initial_state, {"adapterType": selected_adapter})
+    if approval_payload is not None:
+        append_task_run_event(
+            db,
+            task_run_id=task_run.id,
+            event_type="approval.requested",
+            payload_json=json.dumps(approval_payload, separators=(",", ":")),
+        )
     return task_run
 
 
@@ -244,6 +254,33 @@ def _task_status_for_run_state(state: str) -> str:
 def _metrics(task_run: TaskRun) -> dict[str, Any]:
     try:
         value = json.loads(task_run.metrics_json)
+    except json.JSONDecodeError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _platform_approval_payload(task: Task) -> Optional[dict[str, Any]]:
+    plan = _plan_json(task)
+    if (
+        plan.get("targetId") == AGENTHUB_PLATFORM_TARGET_ID
+        and plan.get("platformMode") is True
+        and plan.get("requiresApproval") is True
+    ):
+        return {
+            "approvalType": "security_approval",
+            "reason": "AgentHub platform maintenance targets control-plane code and requires explicit approval.",
+            "requestedAction": "execute platform maintenance task",
+            "riskLevel": "high",
+            "command": None,
+            "path": plan.get("safeTarget") or "apps/api",
+            "expiresAt": None,
+        }
+    return None
+
+
+def _plan_json(task: Task) -> dict[str, Any]:
+    try:
+        value = json.loads(task.plan_json)
     except json.JSONDecodeError:
         return {}
     return value if isinstance(value, dict) else {}

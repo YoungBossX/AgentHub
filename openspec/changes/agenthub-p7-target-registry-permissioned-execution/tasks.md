@@ -107,7 +107,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`.
 
-- [ ] 1.5 P7-5 Platform Maintenance Mode.
+- [x] 1.5 P7-5 Platform Maintenance Mode.
   - Objective: Explicitly separate app development tasks from AgentHub platform
     maintenance tasks.
   - Scope:

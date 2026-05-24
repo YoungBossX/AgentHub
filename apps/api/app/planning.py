@@ -10,6 +10,7 @@ from sqlmodel import select
 from app.models import Agent, Message, Task
 from app.repositories import create_session_message, list_session_tasks
 from app.target_registry import (
+    AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
     DEMO_FRONTEND_TARGET_ID,
     TargetProject,
@@ -147,6 +148,9 @@ def plan_for_message(
         return _create_contract_first_plan(db, message, contract_intent)
     if contract_intent is not None and existing_tasks:
         return []
+
+    if _is_explicit_platform_mode_request(content) and not existing_tasks:
+        return _create_platform_maintenance_task(db, message)
 
     if bounded_intent is not None and existing_tasks:
         return _create_dynamic_frontend_tasks(
@@ -776,6 +780,13 @@ def _create_direct_assignment_tasks(
     existing_tasks: list[Task],
 ) -> list[Task]:
     if role == "backend":
+        if _is_explicit_platform_mode_request(message.content_md):
+            return _create_platform_maintenance_task(
+                db,
+                message,
+                depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
+                priority=_next_priority(existing_tasks),
+            )
         if not _demo_backend_target_exists():
             _create_orchestrator_boundary_message(
                 db,
@@ -784,6 +795,7 @@ def _create_direct_assignment_tasks(
             )
             return []
         backend = _enabled_agent_or_raise(db, "backend")
+        backend_target = get_target(DEMO_BACKEND_TARGET_ID)
         return [
             _create_single_task(
                 db,
@@ -798,10 +810,12 @@ def _create_direct_assignment_tasks(
                     "routing": "direct_mention",
                     "assignedRole": "backend",
                     "target": "demo_backend_request",
-                    "safeTarget": "apps/demo-api",
+                    "targetId": backend_target.target_id,
+                    "backendTargetId": backend_target.target_id,
+                    "safeTarget": _primary_allowed_path(backend_target),
                     "files": [
-                        "apps/demo-api/app/main.py",
-                        "apps/demo-api/tests/test_contacts.py",
+                        f"{backend_target.root}/app/main.py",
+                        f"{backend_target.root}/tests/test_contacts.py",
                     ],
                     "originalRequest": message.content_md,
                     "expectedArtifactTypes": ["diff", "review"],
@@ -819,6 +833,7 @@ def _create_direct_assignment_tasks(
             )
             return []
         frontend = _enabled_agent_or_raise(db, "frontend")
+        frontend_target = get_target(DEMO_FRONTEND_TARGET_ID)
         return [
             _create_single_task(
                 db,
@@ -833,8 +848,13 @@ def _create_direct_assignment_tasks(
                     "routing": "direct_mention",
                     "assignedRole": "frontend",
                     "target": "demo_frontend_request",
-                    "safeTarget": "apps/demo/src",
-                    "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+                    "targetId": frontend_target.target_id,
+                    "frontendTargetId": frontend_target.target_id,
+                    "safeTarget": _primary_allowed_path(frontend_target),
+                    "files": [
+                        f"{_primary_allowed_path(frontend_target)}/App.tsx",
+                        f"{_primary_allowed_path(frontend_target)}/styles.css",
+                    ],
                     "originalRequest": message.content_md,
                     "expectedArtifactTypes": ["diff", "review"],
                     "autoStart": False,
@@ -871,6 +891,8 @@ def _create_orchestrator_demo_frontend_task(
     message: Message,
 ) -> list[Task]:
     frontend = _enabled_agent_or_raise(db, "frontend")
+    frontend_target = get_target(DEMO_FRONTEND_TARGET_ID)
+    frontend_allowed_path = _primary_allowed_path(frontend_target)
     task = _create_single_task(
         db,
         message,
@@ -884,8 +906,13 @@ def _create_orchestrator_demo_frontend_task(
             "routing": "orchestrator_default",
             "assignedRole": "frontend",
             "target": "demo_frontend_request",
-            "safeTarget": "apps/demo/src",
-            "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+            "targetId": frontend_target.target_id,
+            "frontendTargetId": frontend_target.target_id,
+            "safeTarget": frontend_allowed_path,
+            "files": [
+                f"{frontend_allowed_path}/App.tsx",
+                f"{frontend_allowed_path}/styles.css",
+            ],
             "originalRequest": message.content_md,
             "expectedArtifactTypes": ["diff", "review"],
             "autoStart": True,
@@ -895,6 +922,48 @@ def _create_orchestrator_demo_frontend_task(
         db,
         message,
         "I routed this to the Frontend Agent as a safe demo-app task and started it automatically.",
+    )
+    return [task]
+
+
+def _create_platform_maintenance_task(
+    db: DbSession,
+    message: Message,
+    *,
+    depends_on: Optional[list[str]] = None,
+    priority: int = 0,
+) -> list[Task]:
+    backend = _enabled_agent_or_raise(db, "backend")
+    platform_target = get_target(AGENTHUB_PLATFORM_TARGET_ID)
+    task = _create_single_task(
+        db,
+        message,
+        agent=backend,
+        title=_task_title("Platform maintenance", message.content_md),
+        intent_type="platform_maintenance",
+        priority=priority,
+        depends_on=depends_on or [],
+        plan={
+            "planner": "platform_maintenance_v1",
+            "routing": "explicit_platform_mode",
+            "assignedRole": "backend",
+            "target": "agenthub_platform_maintenance",
+            "targetId": platform_target.target_id,
+            "platformMode": True,
+            "requiresApproval": True,
+            "safeTarget": "apps/api",
+            "allowedPaths": list(platform_target.allowed_paths),
+            "deniedPaths": list(platform_target.denied_paths),
+            "validationExpectations": ["pnpm check", "pnpm test"],
+            "originalRequest": message.content_md,
+            "expectedArtifactTypes": ["diff", "review"],
+            "autoStart": False,
+        },
+    )
+    _create_orchestrator_boundary_message(
+        db,
+        message,
+        "I created a platform maintenance task targeting agenthub-platform. It requires approval before adapter execution.",
     )
     return [task]
 
@@ -980,6 +1049,16 @@ def _is_unsupported_broad_request(content: str) -> bool:
         "生产部署",
     ]
     return any(signal in content for signal in blocked_signals)
+
+
+def _is_explicit_platform_mode_request(content: str) -> bool:
+    normalized = MENTION_PATTERN.sub("", content).lower()
+    return (
+        "platform mode" in normalized
+        or "platform maintenance" in normalized
+        or "平台维护模式" in normalized
+        or "平台维护" in normalized
+    )
 
 
 def _demo_backend_target_exists() -> bool:

@@ -5,6 +5,26 @@ reference instead of repeating long context blocks.
 
 ## P7 Status
 
+### P7-5 Platform Maintenance Mode
+
+P7-5 completed on 2026-05-24.
+
+AgentHub now separates ordinary app backend work from platform maintenance:
+
+- ordinary `@backend` requests continue to create `demo-backend` tasks that
+  target `apps/demo-api`;
+- explicit platform maintenance requests such as `platform mode ...` create
+  `platform_maintenance` tasks targeting `agenthub-platform`;
+- platform maintenance plans include `platformMode: true`,
+  `requiresApproval: true`, stricter validation expectations, and
+  `safeTarget: apps/api`;
+- creating a TaskRun for a platform maintenance task starts it in
+  `waiting_approval` with a `security_approval` request instead of queueing
+  adapter execution immediately.
+
+This keeps AgentHub platform backend code protected from ordinary app backend
+tasks while preserving an explicit path for approved platform maintenance.
+
 ### P7-4 Target-aware Review / QA
 
 P7-4 completed on 2026-05-24.

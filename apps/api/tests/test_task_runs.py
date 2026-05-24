@@ -713,9 +713,20 @@ def test_platform_instruction_requires_explicit_platform_mode_and_approval(
         db.commit()
         db.refresh(platform_task)
         task_run = create_task_run(db, platform_task.id)
+        event = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .where(TaskRunEvent.event_type == "approval.requested")
+        ).one()
+        task_run_state = task_run.state
+        approval_payload = json.loads(event.payload_json)
 
         request = agent_run_request_for(db, task_run, adapter_type="codex")
 
+    assert task_run_state == "waiting_approval"
+    assert approval_payload["approvalType"] == "security_approval"
+    assert approval_payload["riskLevel"] == "high"
+    assert approval_payload["path"] == "apps/api"
     assert "AgentHub Platform Maintenance Mode" in request.instruction
     assert "targetId: agenthub-platform" in request.instruction
     assert "requiresPlatformMode: true" in request.instruction

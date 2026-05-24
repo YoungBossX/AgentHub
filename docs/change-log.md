@@ -1,5 +1,44 @@
 # AgentHub Change Log
 
+## P7-5 Platform Maintenance Mode
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Added explicit platform maintenance routing while preserving ordinary `@backend` routing to `demo-backend`. |
+| `apps/api/app/task_runs.py` | Added approval-gated TaskRun creation for `agenthub-platform` tasks. |
+| `apps/api/tests/test_planning.py` | Added coverage for ordinary backend routing and explicit platform mode task creation. |
+| `apps/api/tests/test_task_runs.py` | Added coverage for platform maintenance TaskRun approval requests. |
+| `docs/project-state.md` | Recorded P7-5 platform mode behavior. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-5 complete after validation. |
+
+### What Changed
+
+P7-5 introduces explicit AgentHub platform maintenance mode:
+
+- ordinary `@backend` requests target `demo-backend` / `apps/demo-api`;
+- explicit `platform mode` or platform-maintenance phrasing creates
+  `agenthub-platform` tasks;
+- platform tasks require `platformMode: true` and `requiresApproval: true`;
+- platform TaskRuns start in `waiting_approval` and emit a
+  `security_approval` request instead of queueing execution immediately.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted routing/approval tests | Pass: 3 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 142 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+
+---
+
 ## P7-4 Target-aware Review / QA
 
 **Date:** 2026-05-24
