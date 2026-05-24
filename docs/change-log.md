@@ -1,5 +1,42 @@
 # AgentHub Change Log
 
+## P8-5 Scheduler UI Trace
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/components/task-card-list.tsx` | Added scheduler status labels, task-card scheduler summary, and execution-trace flags for waits/blocks. |
+| `apps/web/src/components/task-card-list.test.tsx` | Added coverage for scheduler target-lock, retry, and fallback metadata rendering. |
+| `docs/project-state.md` | Recorded P8-5 UI trace behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-5 complete after validation. |
+
+### What Changed
+
+P8-5 makes scheduler decisions visible in the existing UI:
+
+- task cards show scheduler state, reason, target ID, blocking dependencies,
+  target lock holder run IDs, write-lock state, retryable state, and fallback
+  availability;
+- the execution trace flags dependency waits, target lock waits, and blocked
+  states;
+- existing artifact and run controls remain in place.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted task-card-list tests | Pass: 37 web tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 37 web tests, 155 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+
+---
+
 ## P8-4 Failure Recovery And Blocked States
 
 **Date:** 2026-05-24

@@ -5,6 +5,26 @@ reference instead of repeating long context blocks.
 
 ## P8 Status
 
+### P8-5 Scheduler UI Trace
+
+P8-5 completed on 2026-05-24.
+
+The workspace UI now surfaces scheduler state from `planJson.scheduler` in the
+existing task timeline and execution trace:
+
+- task status labels include `waiting_dependency`, `waiting_target_lock`,
+  `blocked`, `retryable`, and `fallback_available`;
+- each task card can show scheduler reason, target ID, blocking dependency IDs,
+  lock-holder TaskRun IDs, write-lock indicator, retryable state, and fallback
+  availability;
+- the execution trace header highlights dependency waits, target-lock waits,
+  and blocked states;
+- existing artifact chips, artifact message cards, right Artifact Panel, Start,
+  Retry, Fallback, Review, Preview, and Deploy actions remain available.
+
+Current limitation: P8-5 is a UI visibility pass only. It does not add new
+scheduler backend semantics beyond P8-1 through P8-4.
+
 ### P8-4 Failure Recovery And Blocked States
 
 P8-4 completed on 2026-05-24.

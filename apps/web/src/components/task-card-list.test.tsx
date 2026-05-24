@@ -43,6 +43,38 @@ describe("TaskCardList", () => {
     expect(screen.getByText("依赖 task-0")).toBeTruthy()
   })
 
+  it("renders scheduler dependency, lock, retry, and fallback state metadata", () => {
+    const waitingLockTask: SessionTask = {
+      ...baseTask,
+      status: "waiting_target_lock",
+      planJson: {
+        scheduler: {
+          state: "waiting_target_lock",
+          runnable: false,
+          reason: "Waiting for target write lock: demo-frontend.",
+          dependencyIds: ["task-0"],
+          blockingDependencyIds: [],
+          targetId: "demo-frontend",
+          writeLockRequired: true,
+          lockHolderTaskRunIds: ["run-lock-holder"],
+          retryable: true,
+          fallbackAvailable: true,
+        },
+      },
+    }
+
+    render(createElement(TaskCardList, { tasks: [waitingLockTask] }))
+
+    expect(screen.getAllByText("等待目标锁").length).toBeGreaterThan(0)
+    expect(screen.getByText("调度状态")).toBeTruthy()
+    expect(screen.getByText("demo-frontend")).toBeTruthy()
+    expect(screen.getByText("Waiting for target write lock: demo-frontend.")).toBeTruthy()
+    expect(screen.getByText("锁持有者 run-lock")).toBeTruthy()
+    expect(screen.getByText("写锁")).toBeTruthy()
+    expect(screen.getByText("fallback available")).toBeTruthy()
+    expect(screen.getByText("retryable")).toBeTruthy()
+  })
+
   it("renders run history and P0 run controls", () => {
     const onCreateRun = vi.fn()
     const onForceCodexFailure = vi.fn()

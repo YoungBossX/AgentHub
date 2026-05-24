@@ -107,7 +107,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict`.
 
-- [ ] 1.5 P8-5 Scheduler UI Trace.
+- [x] 1.5 P8-5 Scheduler UI Trace.
   - Objective: Make scheduler decisions visible in the current workspace UI.
   - Scope:
     - surface scheduler states in existing task cards, timeline, or execution
