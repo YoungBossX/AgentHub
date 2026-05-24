@@ -5,6 +5,39 @@ reference instead of repeating long context blocks.
 
 ## P9 Status
 
+### P9-8 External Project E2E Rehearsal And Freeze Review
+
+P9-8 completed on 2026-05-24.
+
+Result: P9 is ready to freeze as External Project Workspace Mode.
+
+The freeze rehearsal used a temporary local Vite-style external project and
+controlled local service calls, not a fresh real Claude/Codex mutation.
+
+P9 rehearsal evidence:
+
+- sample root: `/tmp/agenthub-p9-external-sample`;
+- workspace ID: `deecb61e-8255-4f97-af36-668f8fefc66d`;
+- session ID: `09977dc0-1eac-49f6-ae78-cb7ae7aa9ccc`;
+- target ID: `external-p9-sample`;
+- analysis status / type: `ready`, `vite-react`;
+- task / run:
+  `ce8fe3de-6969-4273-84e9-274ab440f39b`,
+  `1d6d2916-b179-4bb7-ad7a-642733dfd175`;
+- changed file: `src/App.tsx`;
+- diff artifact: `7bf6efa3-289b-4cb8-9644-6ca6e283b230`;
+- command evidence:
+  `c6d581bf-e80a-4fb9-bb21-f0db1cb9ff4d`,
+  `b01ccc78-b3d4-44fc-b758-4c9558d2f594`,
+  `9a256f14-fe1f-4e4b-9dc7-78c4402edd01`;
+- review artifact/status/risk:
+  `383e7822-0145-4950-9bd1-b3dffb170b36`, `passed`, `low`.
+
+See `docs/p9-freeze-review.md` for the full evidence record and caveats.
+
+Recommended freeze tag:
+`p9-external-project-workspace-mode-freeze`.
+
 ### P9-7 External Project Review
 
 P9-7 completed on 2026-05-24.

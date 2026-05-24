@@ -185,7 +185,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p9-external-project-workspace-mode --strict`.
 
-- [ ] 1.8 P9-8 External Project E2E Rehearsal And Freeze Review.
+- [x] 1.8 P9-8 External Project E2E Rehearsal And Freeze Review.
   - Objective: Verify external workspace mode without regressing P6/P7/P8.
   - Scope:
     - create or use a local sample external project outside built-in demo

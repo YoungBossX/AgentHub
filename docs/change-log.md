@@ -1,5 +1,58 @@
 # AgentHub Change Log
 
+## P9-8 External Project E2E Rehearsal And Freeze Review
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p9-freeze-review.md` | Added P9 freeze evidence, rehearsal IDs, validation notes, caveats, and recommended tag. |
+| `docs/project-state.md` | Recorded P9-8 freeze result and recommended tag. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-8 complete after validation. |
+
+### Review Result
+
+P9 is ready to freeze as External Project Workspace Mode.
+
+P9 did not run a fresh real Claude/Codex mutation. It used a temporary local
+Vite-style external project and controlled service calls to verify analysis,
+registration, target selection, external task/run routing, diff, command
+evidence, and review policy.
+
+### P9 Rehearsal Evidence
+
+| Field | Value |
+|---|---|
+| Sample root | `/tmp/agenthub-p9-external-sample` |
+| Session ID | `09977dc0-1eac-49f6-ae78-cb7ae7aa9ccc` |
+| Target ID | `external-p9-sample` |
+| Analysis status / type | `ready`, `vite-react` |
+| Task / run | `ce8fe3de-6969-4273-84e9-274ab440f39b`, `1d6d2916-b179-4bb7-ad7a-642733dfd175` |
+| Adapter type | `scripted_mock` controlled rehearsal |
+| Changed files | `src/App.tsx` |
+| Diff artifact | `7bf6efa3-289b-4cb8-9644-6ca6e283b230` |
+| Command evidence | `c6d581bf-e80a-4fb9-bb21-f0db1cb9ff4d`, `b01ccc78-b3d4-44fc-b758-4c9558d2f594`, `9a256f14-fe1f-4e4b-9dc7-78c4402edd01` |
+| Review artifact / status | `383e7822-0145-4950-9bd1-b3dffb170b36`, `passed` |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P9 temporary external rehearsal | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `pnpm demo:api:test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+
+Recommended freeze tag:
+`p9-external-project-workspace-mode-freeze`.
+
+---
+
 ## P9-7 External Project Review
 
 **Date:** 2026-05-24
