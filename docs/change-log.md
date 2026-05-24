@@ -1,5 +1,43 @@
 # AgentHub Change Log
 
+## P11-2 Target-aware Deploy Configuration
+
+**Date:** 2026-05-25
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/target_registry.py` | Added deploy metadata to target projects and `resolve_deploy_config()` for deployable frontend targets. |
+| `apps/api/app/models.py` | Added external target deploy metadata fields for staging output, staging serve command, and deploy provider IDs. |
+| `apps/api/app/external_workspaces.py` | Accepted and persisted external target deploy provider metadata. |
+| `apps/api/app/schemas.py` | Exposed deploy metadata in external target and target project request/response schemas. |
+| `apps/api/app/main.py` | Returned deploy metadata through target registry and external target APIs. |
+| `apps/api/tests/test_target_registry.py` | Added deploy config resolution and non-deployable target tests. |
+| `apps/api/tests/test_external_workspaces.py` | Added external target deploy metadata API coverage. |
+| `docs/project-state.md` | Recorded P11-2 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-2 complete after targeted verification. |
+
+### What Changed
+
+P11-2 makes Target Registry the source of truth for deploy configuration.
+Deployable frontend targets can now expose build command, staging output
+directory, staging serve command, and allowed deploy provider IDs. The built-in
+demo frontend advertises mock and local staging provider availability, while
+backend/platform targets fail honestly through `resolve_deploy_config()`.
+
+External frontend targets may carry deploy metadata through registration and
+workspace target APIs. P11-2 does not execute deploy commands yet.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted target registry / external workspace tests | Pass: 16 tests. |
+
+---
+
 ## P11-1 Deploy Provider Abstraction
 
 **Date:** 2026-05-25

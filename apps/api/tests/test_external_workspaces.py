@@ -74,6 +74,9 @@ def test_register_external_project_target(client: TestClient, tmp_path: Path) ->
             "checkCommand": "pnpm check",
             "buildCommand": "pnpm build",
             "previewCommand": "pnpm dev --host 127.0.0.1 --port <port>",
+            "stagingOutputDir": "dist",
+            "stagingServeCommand": "python -m http.server <port> --bind 127.0.0.1 --directory dist",
+            "deployProviderIds": ["local_staging"],
             "packageManager": "pnpm",
             "detectedFramework": "vite-react",
         },
@@ -91,6 +94,9 @@ def test_register_external_project_target(client: TestClient, tmp_path: Path) ->
     assert body["checkCommand"] == "pnpm check"
     assert body["buildCommand"] == "pnpm build"
     assert body["previewCommand"] == "pnpm dev --host 127.0.0.1 --port <port>"
+    assert body["stagingOutputDir"] == "dist"
+    assert body["stagingServeCommand"] == "python -m http.server <port> --bind 127.0.0.1 --directory dist"
+    assert body["deployProviderIds"] == ["local_staging"]
     assert body["packageManager"] == "pnpm"
     assert body["detectedFramework"] == "vite-react"
     assert body["analysisStatus"] == "manual"
@@ -120,6 +126,8 @@ def test_register_external_project_target(client: TestClient, tmp_path: Path) ->
     } == set(targets)
     assert targets["external-sample-vite"]["root"] == str(project.resolve())
     assert targets["external-sample-vite"]["allowedPaths"] == ["src"]
+    assert targets["external-sample-vite"]["stagingOutputDir"] == "dist"
+    assert targets["external-sample-vite"]["deployProviderIds"] == ["local_staging"]
     assert targets["external-sample-vite"]["packageManager"] == "pnpm"
 
     session = client.get(f"/workspaces/{workspace['id']}/sessions").json()[0]

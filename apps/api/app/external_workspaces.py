@@ -62,6 +62,9 @@ class ExternalWorkspaceRegistration:
         check_command: Optional[str] = None,
         build_command: Optional[str] = None,
         preview_command: Optional[str] = None,
+        staging_output_dir: Optional[str] = None,
+        staging_serve_command: Optional[str] = None,
+        deploy_provider_ids: Optional[list[str]] = None,
         package_manager: Optional[str] = None,
         detected_framework: Optional[str] = None,
     ) -> None:
@@ -76,6 +79,9 @@ class ExternalWorkspaceRegistration:
         self.check_command = check_command
         self.build_command = build_command
         self.preview_command = preview_command
+        self.staging_output_dir = staging_output_dir
+        self.staging_serve_command = staging_serve_command
+        self.deploy_provider_ids = deploy_provider_ids or []
         self.package_manager = package_manager
         self.detected_framework = detected_framework
 
@@ -114,6 +120,12 @@ def register_external_project_target(
         check_command=registration.check_command,
         build_command=registration.build_command,
         preview_command=registration.preview_command,
+        staging_output_dir=registration.staging_output_dir,
+        staging_serve_command=registration.staging_serve_command,
+        deploy_provider_ids_json=json.dumps(
+            _validate_deploy_provider_ids(registration.deploy_provider_ids),
+            separators=(",", ":"),
+        ),
         package_manager=registration.package_manager,
         detected_framework=registration.detected_framework,
         analysis_status="manual",
@@ -155,6 +167,10 @@ def allowed_paths_for(target: ExternalProjectTarget) -> list[str]:
 
 def denied_paths_for(target: ExternalProjectTarget) -> list[str]:
     return _json_string_list(target.denied_paths_json)
+
+
+def deploy_provider_ids_for(target: ExternalProjectTarget) -> list[str]:
+    return _json_string_list(target.deploy_provider_ids_json)
 
 
 def _validate_name(name: str) -> str:
@@ -208,6 +224,20 @@ def _validate_allowed_paths(allowed_paths: list[str]) -> list[str]:
 def _merged_denied_paths(denied_paths: list[str]) -> list[str]:
     clean_denied = [_normalize_relative_path(path) for path in denied_paths]
     return _dedupe([*DEFAULT_EXTERNAL_DENIED_PATHS, *clean_denied])
+
+
+def _validate_deploy_provider_ids(provider_ids: list[str]) -> list[str]:
+    clean: list[str] = []
+    for provider_id in provider_ids:
+        value = provider_id.strip()
+        if not value:
+            continue
+        if not re.match(r"^[a-z][a-z0-9_]{1,40}$", value):
+            raise ExternalWorkspaceRegistrationError(
+                f"Deploy provider ID is invalid: {provider_id}"
+            )
+        clean.append(value)
+    return _dedupe(clean)
 
 
 def _normalize_relative_path(path: str) -> str:

@@ -5,6 +5,25 @@ reference instead of repeating long context blocks.
 
 ## P11 Status
 
+### P11-2 Target-aware Deploy Configuration
+
+P11-2 completed on 2026-05-25.
+
+Target Registry now exposes staging deploy metadata for deployable frontend
+targets. The built-in `demo-frontend` target includes a build command, staging
+output directory, staging serve command template, and allowed deploy provider
+IDs. External project registration and workspace target responses can also
+carry `stagingOutputDir`, `stagingServeCommand`, and `deployProviderIds`.
+
+`resolve_deploy_config()` centralizes deploy configuration lookup and fails
+honestly when a target is not a deployable frontend target or lacks the required
+build/output/provider metadata. `demo-backend` and `agenthub-platform` remain
+non-deployable through this staging config path.
+
+Current limitation: P11-2 only provides target-aware deploy configuration. It
+does not yet run a build, serve static output, record expanded deploy logs, or
+enforce deploy gates.
+
 ### P11-1 Deploy Provider Abstraction
 
 P11-1 completed on 2026-05-25.

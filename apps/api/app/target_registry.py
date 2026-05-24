@@ -6,6 +6,7 @@ from sqlmodel import Session as DbSession
 from app.external_workspaces import (
     allowed_paths_for,
     denied_paths_for,
+    deploy_provider_ids_for,
     get_external_project_target,
     list_external_project_targets,
 )
@@ -40,6 +41,9 @@ class TargetProject:
     check_command: Optional[str] = None
     build_command: Optional[str] = None
     preview_command: Optional[str] = None
+    staging_output_dir: Optional[str] = None
+    staging_serve_command: Optional[str] = None
+    deploy_provider_ids: tuple[str, ...] = ()
     base_url: Optional[str] = None
     package_manager: Optional[str] = None
     detected_framework: Optional[str] = None
@@ -64,6 +68,15 @@ class TargetProject:
         return self.allows_path(path) and not self.denies_path(path)
 
 
+@dataclass(frozen=True)
+class DeployTargetConfig:
+    target_id: str
+    provider_ids: tuple[str, ...]
+    build_command: str
+    output_dir: str
+    serve_command: Optional[str]
+
+
 TARGET_REGISTRY: dict[str, TargetProject] = {
     DEMO_FRONTEND_TARGET_ID: TargetProject(
         target_id=DEMO_FRONTEND_TARGET_ID,
@@ -73,7 +86,11 @@ TARGET_REGISTRY: dict[str, TargetProject] = {
         allowed_paths=("apps/demo/src",),
         denied_paths=("apps/api", "apps/demo-api", *GLOBAL_DENIED_PATHS),
         dev_command="pnpm demo:dev",
+        build_command="pnpm --filter @agenthub/demo build",
         preview_command="pnpm dev --host 127.0.0.1 --port <port>",
+        staging_output_dir="dist",
+        staging_serve_command="python -m http.server <port> --bind 127.0.0.1 --directory dist",
+        deploy_provider_ids=("mock", "local_staging"),
         allowed_agents=("frontend", "qa", "review"),
         related_target_ids=(DEMO_BACKEND_TARGET_ID,),
     ),
@@ -180,6 +197,9 @@ def external_target_to_project(target: ExternalProjectTarget) -> TargetProject:
         check_command=target.check_command,
         build_command=target.build_command,
         preview_command=target.preview_command,
+        staging_output_dir=target.staging_output_dir,
+        staging_serve_command=target.staging_serve_command,
+        deploy_provider_ids=tuple(deploy_provider_ids_for(target)),
         package_manager=target.package_manager,
         detected_framework=target.detected_framework,
         project_type=target.project_type,
@@ -201,6 +221,25 @@ def get_related_backend_target(frontend_target_id: str) -> TargetProject:
         if related_target.type == "backend":
             return related_target
     raise TargetRegistryError(f"No related backend target for: {frontend_target_id}")
+
+
+def resolve_deploy_config(target: TargetProject) -> DeployTargetConfig:
+    if (
+        target.type != "frontend"
+        or not target.build_command
+        or not target.staging_output_dir
+        or not target.deploy_provider_ids
+    ):
+        raise TargetRegistryError(
+            f"Target {target.target_id} does not have staging deploy config"
+        )
+    return DeployTargetConfig(
+        target_id=target.target_id,
+        provider_ids=target.deploy_provider_ids,
+        build_command=target.build_command,
+        output_dir=target.staging_output_dir,
+        serve_command=target.staging_serve_command,
+    )
 
 
 def _normalize_path(path: str) -> str:

@@ -11,6 +11,7 @@ from app.target_registry import (
     DEMO_BACKEND_TARGET_ID,
     DEMO_FRONTEND_TARGET_ID,
     TargetRegistryError,
+    resolve_deploy_config,
     get_related_backend_target,
     get_related_targets,
     get_target,
@@ -37,7 +38,13 @@ def test_registry_exposes_initial_target_projects() -> None:
     assert frontend.root == "apps/demo"
     assert frontend.allowed_paths == ("apps/demo/src",)
     assert frontend.dev_command == "pnpm demo:dev"
+    assert frontend.build_command == "pnpm --filter @agenthub/demo build"
     assert frontend.preview_command == "pnpm dev --host 127.0.0.1 --port <port>"
+    assert frontend.staging_output_dir == "dist"
+    assert frontend.staging_serve_command == (
+        "python -m http.server <port> --bind 127.0.0.1 --directory dist"
+    )
+    assert frontend.deploy_provider_ids == ("mock", "local_staging")
     assert frontend.allowed_agents == ("frontend", "qa", "review")
 
     backend = targets[DEMO_BACKEND_TARGET_ID]
@@ -48,6 +55,7 @@ def test_registry_exposes_initial_target_projects() -> None:
     assert backend.dev_command == "pnpm demo:api:dev"
     assert backend.test_command == "pnpm demo:api:test"
     assert backend.base_url == DEMO_BACKEND_BASE_URL
+    assert backend.deploy_provider_ids == ()
     assert backend.allowed_agents == ("backend", "qa", "review")
 
     platform = targets[AGENTHUB_PLATFORM_TARGET_ID]
@@ -57,6 +65,23 @@ def test_registry_exposes_initial_target_projects() -> None:
     assert platform.test_command == "pnpm check && pnpm test"
     assert platform.requires_platform_mode is True
     assert platform.requires_approval is True
+
+
+def test_demo_frontend_resolves_deploy_config_from_registry() -> None:
+    config = resolve_deploy_config(get_target(DEMO_FRONTEND_TARGET_ID))
+
+    assert config.target_id == DEMO_FRONTEND_TARGET_ID
+    assert config.provider_ids == ("mock", "local_staging")
+    assert config.build_command == "pnpm --filter @agenthub/demo build"
+    assert config.output_dir == "dist"
+    assert config.serve_command == (
+        "python -m http.server <port> --bind 127.0.0.1 --directory dist"
+    )
+
+
+def test_non_frontend_target_without_deploy_config_fails_honestly() -> None:
+    with pytest.raises(TargetRegistryError, match="does not have staging deploy config"):
+        resolve_deploy_config(get_target(DEMO_BACKEND_TARGET_ID))
 
 
 def test_demo_backend_base_url_is_registry_metadata() -> None:
@@ -167,6 +192,9 @@ def test_workspace_registry_merges_builtin_and_external_targets(tmp_path) -> Non
                 check_command="pnpm check",
                 build_command="pnpm build",
                 preview_command="pnpm dev",
+                staging_output_dir="dist",
+                staging_serve_command="python -m http.server <port> --bind 127.0.0.1 --directory dist",
+                deploy_provider_ids=["local_staging"],
                 package_manager="pnpm",
                 detected_framework="vite-react",
             ),
@@ -194,11 +222,20 @@ def test_workspace_registry_merges_builtin_and_external_targets(tmp_path) -> Non
         assert external.check_command == "pnpm check"
         assert external.build_command == "pnpm build"
         assert external.preview_command == "pnpm dev"
+        assert external.staging_output_dir == "dist"
+        assert external.staging_serve_command == (
+            "python -m http.server <port> --bind 127.0.0.1 --directory dist"
+        )
+        assert external.deploy_provider_ids == ("local_staging",)
         assert external.package_manager == "pnpm"
         assert external.detected_framework == "vite-react"
         assert external.project_type == "vite-react"
         assert external.allows_agent("frontend") is True
         assert maybe_get_target_for_workspace(db, workspace.id, "external-vite-app") is not None
+
+        deploy_config = resolve_deploy_config(external)
+        assert deploy_config.output_dir == "dist"
+        assert deploy_config.provider_ids == ("local_staging",)
 
 
 def test_workspace_registry_maps_external_backend_targets(tmp_path) -> None:
