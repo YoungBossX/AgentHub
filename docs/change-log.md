@@ -1,5 +1,47 @@
 # AgentHub Change Log
 
+## P8-1 Dependency-aware Task Scheduler
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/scheduler.py` | Added dependency readiness decisions, scheduler metadata persistence, session refresh, and downstream refresh helpers. |
+| `apps/api/app/main.py` | Evaluates scheduler dependency readiness after planning and before auto-starting safe tasks. |
+| `apps/api/app/task_runs.py` | Refreshes downstream scheduler state when an upstream TaskRun reaches a terminal state. |
+| `apps/api/tests/test_scheduler.py` | Added dependency readiness, auto-start blocking, ready auto-start, and downstream blocking coverage. |
+| `apps/api/tests/test_planning.py` | Updated planning API expectations to expose `waiting_dependency` state and scheduler metadata for dependent tasks. |
+| `docs/project-state.md` | Recorded P8-1 baseline behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-1 complete after validation. |
+
+### What Changed
+
+P8-1 makes declared task dependencies operational for the scheduler path:
+
+- incomplete dependencies prevent automatic TaskRun creation;
+- completed dependencies allow an auto-start-eligible task to queue;
+- synthetic Manager planning tasks are marked `completed` when the task graph
+  is created, preserving the existing no-mention frontend auto-run path;
+- failed, interrupted, or blocked dependencies mark downstream tasks
+  `blocked`;
+- dependency state is visible through `planJson.scheduler`;
+- manual TaskRun creation remains unchanged outside scheduled auto-start.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted scheduler/planning tests | Pass: 7 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 147 API tests, 5 demo-api tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+
+---
+
 ## P7-6 E2E Rehearsal And Freeze Review
 
 **Date:** 2026-05-24

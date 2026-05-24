@@ -3,6 +3,34 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P8 Status
+
+### P8-1 Dependency-aware Task Scheduler
+
+P8-1 completed on 2026-05-24 as the first implementation step of
+`agenthub-p8-dependency-scheduler-target-locks`.
+
+AgentHub now has a narrow scheduler boundary for task graph dependencies:
+
+- tasks with incomplete upstream dependencies are marked
+  `waiting_dependency` and do not auto-start;
+- tasks with failed, interrupted, or blocked upstream dependencies are marked
+  `blocked`;
+- dependency wait/block metadata is visible in `planJson.scheduler`, including
+  scheduler state, runnable flag, reason, dependency IDs, and blocking
+  dependency IDs;
+- synthetic Manager planning tasks that only represent an already-created plan
+  are marked `completed` when the task graph is created, so dependent safe
+  frontend tasks can still auto-start through the P6 path;
+- when an upstream TaskRun reaches a terminal state, downstream tasks are
+  re-evaluated;
+- manual TaskRun creation keeps its existing behavior outside the scheduler
+  auto-start path.
+
+Current limitation: P8-1 does not add target write locks, automatic full
+pipeline progression, failure recovery affordances, or scheduler UI trace.
+Those remain P8-2 through P8-5.
+
 ## P7 Status
 
 ### P7-6 E2E Rehearsal And Freeze Review

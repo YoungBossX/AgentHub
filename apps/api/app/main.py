@@ -50,6 +50,9 @@ from app.reviews import (
     create_scripted_review_for_task_run,
     list_task_run_reviews,
 )
+from app.scheduler import complete_synthetic_planning_tasks
+from app.scheduler import evaluate_and_apply_dependency_readiness
+from app.scheduler import refresh_session_scheduler_state
 from app.schemas import (
     AgentContactResponse,
     ApprovalDecisionRequest,
@@ -378,6 +381,8 @@ def create_message(
     if created.sender_type == "user":
         try:
             planned_tasks = plan_for_message(db, created, created.content_md)
+            complete_synthetic_planning_tasks(db, planned_tasks)
+            refresh_session_scheduler_state(db, session.id)
             auto_start_safe_tasks(db, planned_tasks, background_tasks)
         except MentionParseError as exc:
             raise HTTPException(
@@ -400,6 +405,9 @@ def auto_start_safe_tasks(
         except json.JSONDecodeError:
             continue
         if not _should_auto_start_task(task, plan):
+            continue
+        decision = evaluate_and_apply_dependency_readiness(db, task)
+        if not decision.runnable:
             continue
         task_run = create_task_run(db, task.id)
         adapter_type = adapter_type_for_run(db, task_run)

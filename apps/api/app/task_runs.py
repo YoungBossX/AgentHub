@@ -134,6 +134,10 @@ def transition_task_run(
         event_payload.setdefault("errorMessage", error_message)
     event_payload.setdefault("adapterType", adapter_type_for_run(db, task_run))
     _append_state_event(db, task_run, state, event_payload)
+    if state in TERMINAL_STATES:
+        from app.scheduler import refresh_downstream_scheduler_state
+
+        refresh_downstream_scheduler_state(db, task.id)
     return task_run
 
 

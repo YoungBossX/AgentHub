@@ -110,7 +110,11 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     tasks = task_response.json()
 
     assert len(tasks) == 3
-    assert [task["status"] for task in tasks] == ["pending", "pending", "pending"]
+    assert [task["status"] for task in tasks] == [
+        "completed",
+        "pending",
+        "waiting_dependency",
+    ]
     assert {task["assignedAgentRole"] for task in tasks} == {
         "orchestrator",
         "frontend",
@@ -119,6 +123,11 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     assert tasks[0]["dependsOnTaskIds"] == []
     assert tasks[1]["dependsOnTaskIds"] == [tasks[0]["id"]]
     assert tasks[2]["dependsOnTaskIds"] == [tasks[1]["id"]]
+    assert tasks[0]["planJson"]["scheduler"]["state"] == "completed"
+    assert tasks[1]["planJson"]["scheduler"]["state"] == "ready"
+    assert tasks[1]["planJson"]["scheduler"]["blockingDependencyIds"] == []
+    assert tasks[2]["planJson"]["scheduler"]["state"] == "waiting_dependency"
+    assert tasks[2]["planJson"]["scheduler"]["blockingDependencyIds"] == [tasks[1]["id"]]
 
     frontend_task = next(task for task in tasks if task["assignedAgentRole"] == "frontend")
     assert frontend_task["intentType"] == "frontend_change"
@@ -386,11 +395,23 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
         "frontend_change",
         "review",
     ]
-    assert [task["status"] for task in tasks] == ["pending"] * 4
+    assert [task["status"] for task in tasks] == [
+        "completed",
+        "pending",
+        "waiting_dependency",
+        "waiting_dependency",
+    ]
     assert tasks[0]["dependsOnTaskIds"] == []
     assert tasks[1]["dependsOnTaskIds"] == [tasks[0]["id"]]
     assert tasks[2]["dependsOnTaskIds"] == [tasks[1]["id"]]
     assert tasks[3]["dependsOnTaskIds"] == [tasks[2]["id"]]
+    assert tasks[0]["planJson"]["scheduler"]["state"] == "completed"
+    assert tasks[1]["planJson"]["scheduler"]["state"] == "ready"
+    assert tasks[1]["planJson"]["scheduler"]["blockingDependencyIds"] == []
+    assert tasks[2]["planJson"]["scheduler"]["state"] == "waiting_dependency"
+    assert tasks[2]["planJson"]["scheduler"]["blockingDependencyIds"] == [tasks[1]["id"]]
+    assert tasks[3]["planJson"]["scheduler"]["state"] == "waiting_dependency"
+    assert tasks[3]["planJson"]["scheduler"]["blockingDependencyIds"] == [tasks[2]["id"]]
 
     contract = tasks[0]["planJson"]["appContract"]
     contract_id = contract["contractId"]
