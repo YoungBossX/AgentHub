@@ -175,3 +175,43 @@ def test_mock_deploy_rejects_unhealthy_preview(tmp_path: Path) -> None:
         service = DeployService()
         with pytest.raises(DeployError, match="healthy preview"):
             service.create_mock_deployment(db, preview_id)
+
+
+def test_mock_deploy_rejects_failed_task_run(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, task_run_id = create_preview_fixture(db, tmp_path / "session-worktree")
+        task_run = db.get(TaskRun, task_run_id)
+        assert task_run is not None
+        task_run.state = "failed"
+        db.add(task_run)
+        db.commit()
+
+        service = DeployService()
+        with pytest.raises(DeployError, match="completed TaskRun"):
+            service.create_mock_deployment(db, preview_id)
+
+
+def test_mock_deploy_rejects_failed_dependency_prerequisite(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, task_run_id = create_preview_fixture(db, tmp_path / "session-worktree")
+        task_run = db.get(TaskRun, task_run_id)
+        assert task_run is not None
+        task = db.get(Task, task_run.task_id)
+        assert task is not None
+        upstream = Task(
+            session_id=task.session_id,
+            title="Failed backend prerequisite",
+            intent_type="backend_change",
+            status="failed",
+            assigned_agent_id=task.assigned_agent_id,
+        )
+        db.add(upstream)
+        db.commit()
+        db.refresh(upstream)
+        task.depends_on_task_ids = json.dumps([upstream.id], separators=(",", ":"))
+        db.add(task)
+        db.commit()
+
+        service = DeployService()
+        with pytest.raises(DeployError, match="failed prerequisite"):
+            service.create_mock_deployment(db, preview_id)

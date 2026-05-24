@@ -12,7 +12,7 @@ from sqlmodel import SQLModel, create_engine, select
 
 from app.main import app, get_db, get_preview_service
 from app.models import Agent, Artifact, Preview, Session, Task, TaskRun, TaskRunEvent, Workspace
-from app.previews import PreviewProcess, PreviewService
+from app.previews import PreviewError, PreviewProcess, PreviewService
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -229,6 +229,60 @@ def test_unhealthy_preview_persists_health_status_without_ready_event(
     assert preview.health_status == "unhealthy"
     assert preview.status_reason == "Preview did not respond to the health check."
     assert ready_events == []
+
+
+def test_preview_rejects_failed_task_run(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_task_run_fixture(db, demo_worktree)
+    task_run = db.get(TaskRun, task_run_id)
+    assert task_run is not None
+    task_run.state = "failed"
+    db.add(task_run)
+    db.commit()
+    service = PreviewService(
+        process_runner=RecordingRunner(),
+        health_checker=StaticHealthChecker(healthy=True),
+        port_allocator=lambda: 4321,
+        health_attempts=1,
+    )
+
+    with pytest.raises(PreviewError, match="completed TaskRun"):
+        service.start_task_run_preview(db, task_run_id)
+
+
+def test_preview_rejects_failed_dependency_prerequisite(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_task_run_fixture(db, demo_worktree)
+    task_run = db.get(TaskRun, task_run_id)
+    assert task_run is not None
+    task = db.get(Task, task_run.task_id)
+    assert task is not None
+    upstream = Task(
+        session_id=task.session_id,
+        title="Failed upstream",
+        intent_type="backend_change",
+        status="failed",
+        assigned_agent_id=task.assigned_agent_id,
+    )
+    db.add(upstream)
+    db.commit()
+    db.refresh(upstream)
+    task.depends_on_task_ids = json.dumps([upstream.id], separators=(",", ":"))
+    db.add(task)
+    db.commit()
+    service = PreviewService(
+        process_runner=RecordingRunner(),
+        health_checker=StaticHealthChecker(healthy=True),
+        port_allocator=lambda: 4322,
+        health_attempts=1,
+    )
+
+    with pytest.raises(PreviewError, match="failed prerequisite"):
+        service.start_task_run_preview(db, task_run_id)
 
 
 def test_listing_preview_refreshes_health_and_emits_ready_event(

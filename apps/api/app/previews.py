@@ -15,6 +15,7 @@ from sqlmodel import select
 from app.events import append_task_run_event
 from app.models import Artifact, Preview, Task, TaskRun, Workspace, utc_now
 from app.models import Session as AgentHubSession
+from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
 
 
 class PreviewError(ValueError):
@@ -126,6 +127,7 @@ class PreviewService:
         task_run = db.get(TaskRun, task_run_id)
         if task_run is None:
             raise PreviewError(f"TaskRun not found: {task_run_id}")
+        _ensure_preview_prerequisites(db, task_run)
 
         demo_root = _demo_root_for_task_run(db, task_run)
         if not demo_root.exists():
@@ -324,6 +326,26 @@ def _demo_root_for_task_run(db: DbSession, task_run: TaskRun) -> Path:
     if workspace is None:
         raise PreviewError(f"Workspace not found for Session: {session.id}")
     return Path(session.worktree_path) / workspace.root_path
+
+
+def _ensure_preview_prerequisites(db: DbSession, task_run: TaskRun) -> None:
+    if task_run.state != "completed":
+        raise PreviewError("Preview requires a completed TaskRun.")
+
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        raise PreviewError(f"Task not found for TaskRun: {task_run.id}")
+
+    incomplete_dependencies: list[str] = []
+    for dependency_id in dependency_ids_for_task(task):
+        dependency = db.get(Task, dependency_id)
+        if dependency is None or dependency.status not in DEPENDENCY_COMPLETE_STATUSES:
+            incomplete_dependencies.append(dependency_id)
+    if incomplete_dependencies:
+        raise PreviewError(
+            "Preview blocked by failed prerequisite or incomplete dependency: "
+            + ", ".join(incomplete_dependencies)
+        )
 
 
 def _to_stored_preview(artifact: Artifact, preview: Preview) -> StoredPreviewArtifact:

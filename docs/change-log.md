@@ -1,5 +1,41 @@
 # AgentHub Change Log
 
+## P10-5 Failure Propagation Hardening
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/previews.py` | Gated preview creation on completed TaskRun and completed dependencies. |
+| `apps/api/app/deployments.py` | Gated mock deploy on completed TaskRun and completed dependencies behind the preview. |
+| `apps/api/tests/test_previews.py` | Added failed TaskRun and failed dependency preview rejection tests. |
+| `apps/api/tests/test_deployments.py` | Added failed TaskRun and failed dependency mock deploy rejection tests. |
+| `docs/project-state.md` | Recorded P10-5 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-5 complete after validation. |
+
+### What Changed
+
+Preview and mock deploy no longer proceed after failed or incomplete
+prerequisites. Manual preview now requires a completed TaskRun and completed
+dependencies. Mock deploy keeps its healthy-preview requirement and also
+requires the backing TaskRun and dependencies to be complete.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted preview/deploy prerequisite rejection tests | Pass: 4 tests. |
+| Targeted scheduler/preview/deploy/fallback recovery tests | Pass: 29 tests. |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+
+---
+
 ## P10-4 Retry Idempotency
 
 **Date:** 2026-05-24

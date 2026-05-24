@@ -6,7 +6,8 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
-from app.models import Artifact, Deployment, Preview, TaskRun, utc_now
+from app.models import Artifact, Deployment, Preview, Task, TaskRun, utc_now
+from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
 
 
 class DeployError(ValueError):
@@ -49,6 +50,7 @@ class DeployService:
         task_run = db.get(TaskRun, preview_artifact.task_run_id)
         if task_run is None:
             raise DeployError(f"TaskRun not found for Preview: {preview_id}")
+        _ensure_deploy_prerequisites(db, task_run)
 
         now = utc_now()
         commit_sha = task_run.head_ref or task_run.base_ref or f"worktree:{task_run.id}"
@@ -125,6 +127,26 @@ class DeployService:
             if deployment is not None:
                 deployments.append(_to_stored_deployment(artifact, deployment))
         return deployments
+
+
+def _ensure_deploy_prerequisites(db: DbSession, task_run: TaskRun) -> None:
+    if task_run.state != "completed":
+        raise DeployError("Mock deployment requires a completed TaskRun.")
+
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        raise DeployError(f"Task not found for TaskRun: {task_run.id}")
+
+    incomplete_dependencies: list[str] = []
+    for dependency_id in dependency_ids_for_task(task):
+        dependency = db.get(Task, dependency_id)
+        if dependency is None or dependency.status not in DEPENDENCY_COMPLETE_STATUSES:
+            incomplete_dependencies.append(dependency_id)
+    if incomplete_dependencies:
+        raise DeployError(
+            "Mock deployment blocked by failed prerequisite or incomplete dependency: "
+            + ", ".join(incomplete_dependencies)
+        )
 
 
 def _to_stored_deployment(

@@ -5,6 +5,27 @@ reference instead of repeating long context blocks.
 
 ## P10 Status
 
+### P10-5 Failure Propagation Hardening
+
+P10-5 completed on 2026-05-24.
+
+Preview and mock deploy creation are now gated by successful prerequisites:
+
+- preview requires the source TaskRun to be completed;
+- preview rejects failed, interrupted, stale, timed-out, or still-running
+  TaskRuns;
+- preview rejects tasks whose dependencies are missing or not completed;
+- mock deploy requires a healthy preview backed by a completed TaskRun;
+- mock deploy rejects failed or incomplete upstream dependencies.
+
+Existing scheduler dependency blocking, retry/fallback downstream
+re-evaluation, and the fallback diff -> preview -> mock deploy path remain
+intact.
+
+Current limitation: P10-5 hardens downstream gating but does not yet perform
+file-overlap, dirty-worktree, or contract-drift conflict detection. Those
+remain P10-6.
+
 ### P10-4 Retry Idempotency
 
 P10-4 completed on 2026-05-24.

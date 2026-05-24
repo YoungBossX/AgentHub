@@ -93,7 +93,7 @@
     - Run `git diff --check`.
     - Run `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`.
 
-- [ ] 1.5 P10-5 Failure Propagation Hardening.
+- [x] 1.5 P10-5 Failure Propagation Hardening.
   - Objective: prevent downstream execution, preview, and mock deploy from
     proceeding after failed prerequisites.
   - Scope:
