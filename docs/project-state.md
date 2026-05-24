@@ -5,6 +5,43 @@ reference instead of repeating long context blocks.
 
 ## P7 Status
 
+### P7-6 E2E Rehearsal And Freeze Review
+
+P7-6 completed on 2026-05-24.
+
+Result: P7 is ready to freeze as Target Project Registry + Permissioned
+Execution for the local single-user AgentHub workspace.
+
+P7 did not run a fresh real Claude/Codex mutation. The freeze review reused the
+P6 final real `ClaudeCodeAdapter` mini CRM evidence for the diff, review,
+preview, and mock deploy loop, then verified the new P7 registry and permission
+boundaries through API rehearsal and full regression validation.
+
+P7 API rehearsal evidence:
+
+- mini CRM rehearsal session ID:
+  `d0500f2c-a480-4903-aea5-5d2d72b2bf31`;
+- contract ID: `contract-mini_crm_contacts`;
+- frontend target ID / backend target ID: `demo-frontend`, `demo-backend`;
+- registry-resolved demo API base URL: `http://127.0.0.1:5174`;
+- mini CRM task IDs:
+  `952bcfd1-12b9-41ca-b81d-694a66b4dcea`,
+  `d382a368-0cd2-4d46-86c6-790b691d4b58`,
+  `5966d060-0df4-463d-94e1-d7bebdddf729`,
+  `634bb541-3b0e-47ad-a408-13392b6dea11`;
+- platform rehearsal session ID:
+  `57d92dde-710f-484e-b86a-f7c0e06e22e6`;
+- platform task / run:
+  `fc86452a-a92b-4894-844d-372b5df799e1`,
+  `7ef6efcb-979c-4984-a1a2-2f29f893bc79`;
+- platform target / state / approval:
+  `agenthub-platform`, `waiting_approval`, `security_approval`, `high`.
+
+See `docs/p7-freeze-review.md` for the full evidence record and caveats.
+
+Recommended freeze tag:
+`p7-target-registry-permissioned-execution-freeze`.
+
 ### P7-5 Platform Maintenance Mode
 
 P7-5 completed on 2026-05-24.

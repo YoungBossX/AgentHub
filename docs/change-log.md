@@ -1,5 +1,57 @@
 # AgentHub Change Log
 
+## P7-6 E2E Rehearsal And Freeze Review
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p7-freeze-review.md` | Added P7 freeze evidence, reused P6 real execution evidence, API rehearsal IDs, validation notes, and caveats. |
+| `docs/project-state.md` | Recorded P7-6 freeze result and recommended tag. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-6 complete after validation. |
+
+### Review Result
+
+P7 is ready to freeze as Target Project Registry + Permissioned Execution.
+
+P7 did not run a fresh real Claude/Codex mutation. It reused the P6 final
+`ClaudeCodeAdapter` mini CRM evidence for diff, review, preview, and mock
+deploy, then verified P7-specific behavior through API rehearsal and regression
+validation.
+
+### P7 API Rehearsal Evidence
+
+| Field | Value |
+|---|---|
+| Mini CRM session ID | `d0500f2c-a480-4903-aea5-5d2d72b2bf31` |
+| Contract ID | `contract-mini_crm_contacts` |
+| Frontend / backend target IDs | `demo-frontend`, `demo-backend` |
+| Demo API base URL | `http://127.0.0.1:5174` |
+| Mini CRM task IDs | `952bcfd1-12b9-41ca-b81d-694a66b4dcea`, `d382a368-0cd2-4d46-86c6-790b691d4b58`, `5966d060-0df4-463d-94e1-d7bebdddf729`, `634bb541-3b0e-47ad-a408-13392b6dea11` |
+| Platform session ID | `57d92dde-710f-484e-b86a-f7c0e06e22e6` |
+| Platform task / run | `fc86452a-a92b-4894-844d-372b5df799e1`, `7ef6efcb-979c-4984-a1a2-2f29f893bc79` |
+| Platform target / state | `agenthub-platform`, `waiting_approval` |
+| Platform approval | `security_approval`, `high` |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P7 API rehearsal script | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass: 36 web tests, 142 API tests, 5 demo-api tests. |
+| `pnpm demo:api:test` | Pass: 5 tests. |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+
+Recommended freeze tag:
+`p7-target-registry-permissioned-execution-freeze`.
+
+---
+
 ## P7-5 Platform Maintenance Mode
 
 **Date:** 2026-05-24

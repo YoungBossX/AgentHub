@@ -137,7 +137,7 @@
     - `git diff --check`;
     - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`.
 
-- [ ] 1.6 P7-6 P7 E2E Rehearsal And Freeze Review.
+- [x] 1.6 P7-6 P7 E2E Rehearsal And Freeze Review.
   - Objective: Verify that P7 target registry preserves P6 while adding
     permissioned execution boundaries.
   - Scope:
