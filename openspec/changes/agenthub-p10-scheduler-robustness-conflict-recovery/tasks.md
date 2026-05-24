@@ -166,7 +166,7 @@
     - Run `git diff --check`.
     - Run `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`.
 
-- [ ] 1.8 P10-8 Robustness Rehearsal And Freeze Review.
+- [x] 1.8 P10-8 Robustness Rehearsal And Freeze Review.
   - Objective: verify P10 robustness behavior end to end and decide whether the
     change is ready to freeze.
   - Scope:

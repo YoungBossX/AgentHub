@@ -1,5 +1,40 @@
 # AgentHub Change Log
 
+## P10-8 Robustness Rehearsal And Freeze Review
+
+**Date:** 2026-05-24
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p10-freeze-review.md` | Added P10 freeze evidence, validation notes, caveats, and recommended tag. |
+| `docs/project-state.md` | Recorded P10-8 freeze result and recommended tag. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-8 complete after validation. |
+
+### Review Result
+
+P10 is ready to freeze as Scheduler Robustness and Conflict Recovery.
+
+The freeze review used deterministic local tests and existing P6/P7/P8/P9
+baseline coverage. It did not run a fresh real Claude/Codex mutation.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted P10 rehearsal tests | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+
+Recommended freeze tag:
+`p10-scheduler-robustness-conflict-recovery-freeze`.
+
+---
+
 ## P10-7 Recovery Actions
 
 **Date:** 2026-05-24

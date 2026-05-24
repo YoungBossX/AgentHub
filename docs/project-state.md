@@ -5,6 +5,32 @@ reference instead of repeating long context blocks.
 
 ## P10 Status
 
+### P10-8 Robustness Rehearsal And Freeze Review
+
+P10-8 completed on 2026-05-24.
+
+Result: P10 is ready to freeze as Scheduler Robustness and Conflict Recovery.
+
+The freeze review used deterministic local tests and did not run a fresh real
+Claude/Codex mutation. Covered rehearsal scenarios include:
+
+- TaskRun heartbeat and lease;
+- stale TaskRun detection;
+- active-lock preservation;
+- stale target lock cleanup;
+- pre-run checkpoint;
+- retry idempotency and unsafe retry blocking;
+- failed dependency propagation;
+- preview/mock deploy prerequisite gating;
+- file overlap, dirty worktree, and contract drift conflicts;
+- auditable recovery actions.
+
+See `docs/p10-freeze-review.md` for the evidence table, caveats, and validation
+record.
+
+Recommended freeze tag:
+`p10-scheduler-robustness-conflict-recovery-freeze`.
+
 ### P10-7 Recovery Actions
 
 P10-7 completed on 2026-05-24.
