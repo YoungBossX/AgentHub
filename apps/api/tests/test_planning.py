@@ -20,6 +20,9 @@ from app.planning import (
     parse_frontend_intent,
     parse_mentions,
 )
+from app.plan_validator import PlanValidationError, validate_task_graph
+from app.planner_service import build_plan_draft
+from app.task_graph_builder import TaskGraphTaskSpec
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
@@ -141,6 +144,15 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     assert frontend_task["planJson"]["taskGraph"]["goal"] == (
         "@orchestrator build a login page for the demo app"
     )
+    plan_draft = frontend_task["planJson"]["planDraft"]
+    assert plan_draft["planner"] == "deterministic_login_v1"
+    assert plan_draft["version"] == 1
+    assert plan_draft["agentRole"] == "frontend"
+    assert plan_draft["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert plan_draft["plannedFiles"] == [
+        "apps/demo/src/App.tsx",
+        "apps/demo/src/styles.css",
+    ]
 
     with next(db_from_override()) as db:
         messages = db.exec(
@@ -261,6 +273,73 @@ def test_parse_frontend_intent_supports_bounded_p5_dynamic_intents() -> None:
     assert layout_copy.target == "layout_copy"
 
 
+def test_plan_draft_boundary_captures_task_graph_contract() -> None:
+    specs = [
+        TaskGraphTaskSpec(
+            title="Plan the demo",
+            intent_type="planning",
+            role="orchestrator",
+            priority=0,
+            plan={"target": "login_page"},
+            expected_artifact_types=["plan"],
+        ),
+        TaskGraphTaskSpec(
+            title="Build the demo",
+            intent_type="frontend_change",
+            role="frontend",
+            priority=1,
+            plan={
+                "target": "login_page",
+                "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+            },
+            expected_artifact_types=["diff", "review"],
+        ),
+    ]
+
+    draft = build_plan_draft(
+        goal="@orchestrator build a login page for the demo app",
+        intent="login_page",
+        planner="deterministic_login_v1",
+        task_specs=specs,
+    )
+
+    metadata = draft.to_metadata()
+    assert metadata["planId"].startswith("plan-deterministic_login_v1-")
+    assert metadata["version"] == 1
+    assert metadata["taskGraph"]["tasks"][1]["dependsOn"] == [
+        "1-orchestrator-planning"
+    ]
+    assert metadata["dependencyEdges"] == [
+        {
+            "from": "1-orchestrator-planning",
+            "to": "2-frontend-frontend_change",
+        }
+    ]
+    assert metadata["agentRole"] == "frontend"
+    assert metadata["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert metadata["plannedFiles"] == [
+        "apps/demo/src/App.tsx",
+        "apps/demo/src/styles.css",
+    ]
+    assert "login-page demo fallback" in metadata["rationale"]
+
+
+def test_plan_validator_rejects_unsafe_task_graph_files() -> None:
+    with pytest.raises(PlanValidationError, match="unsupported target files"):
+        validate_task_graph(
+            [
+                TaskGraphTaskSpec(
+                    title="Unsafe platform edit",
+                    intent_type="frontend_change",
+                    role="frontend",
+                    priority=0,
+                    plan={"files": ["apps/api/app/main.py"]},
+                    expected_artifact_types=["diff"],
+                )
+            ]
+        )
+
+
 def test_parse_app_contract_intent_supports_bounded_app_types() -> None:
     todo = parse_app_contract_intent("build a todo app")
     notes = parse_app_contract_intent("帮我做一个笔记应用")
@@ -316,6 +395,9 @@ def test_orchestrator_supported_frontend_intent_creates_dynamic_task_graph(
     assert frontend_plan["taskGraph"]["tasks"][2]["expectedArtifactTypes"] == [
         "review"
     ]
+    assert frontend_plan["planDraft"]["planner"] == "dynamic_manager_v1"
+    assert frontend_plan["planDraft"]["agentRole"] == "frontend"
+    assert frontend_plan["planDraft"]["targetId"] == DEMO_FRONTEND_TARGET_ID
 
     with next(db_from_override()) as db:
         messages = db.exec(
@@ -450,6 +532,8 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
         assert task["planJson"]["contractId"] == contract_id
         assert task["planJson"]["appContract"] == contract
         assert task["planJson"]["taskGraph"]["planner"] == "contract_first_v1"
+        assert task["planJson"]["planDraft"]["planner"] == "contract_first_v1"
+        assert task["planJson"]["planDraft"]["dependencyEdges"]
 
     backend = tasks[1]
     frontend = tasks[2]

@@ -9,6 +9,8 @@ from sqlmodel import select
 
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
+from app.plan_validator import PlanValidationError, validate_task_graph
+from app.planner_service import build_plan_draft
 from app.repositories import create_session_message, list_session_tasks
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
@@ -20,17 +22,10 @@ from app.target_registry import (
     get_target,
     get_target_for_workspace,
 )
+from app.task_graph_builder import TaskGraphTaskSpec, task_graph_metadata
 
 SUPPORTED_MENTION_ROLES = {"orchestrator", "frontend", "backend", "qa", "review"}
 MENTION_AGENT_ROLE = {"review": "qa"}
-GRAPH_AGENT_ROLES = {"orchestrator", "backend", "frontend", "qa"}
-GRAPH_EXPECTED_ARTIFACTS = {"plan", "diff", "review"}
-GRAPH_ALLOWED_FILES = {
-    "apps/demo-api/app/main.py",
-    "apps/demo-api/tests/test_contacts.py",
-    "apps/demo/src/App.tsx",
-    "apps/demo/src/styles.css",
-}
 MENTION_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9_-]*)")
 CHANGE_TO_PATTERN = re.compile(
     r"(?:change\s+(?:the\s+)?(?:primary\s+)?(?:login\s+page\s+)?"
@@ -99,14 +94,7 @@ class AppContractIntent:
     summary: str
 
 
-@dataclass(frozen=True)
-class TaskSpec:
-    title: str
-    intent_type: str
-    role: str
-    priority: int
-    plan: dict
-    expected_artifact_types: list[str]
+TaskSpec = TaskGraphTaskSpec
 
 
 def parse_mentions(db: DbSession, content: str) -> ParsedMentions:
@@ -247,6 +235,12 @@ def _create_login_page_plan(db: DbSession, message: Message) -> list[Task]:
         planner="deterministic_login_v1",
         task_specs=task_specs,
     )
+    plan_draft = _plan_draft_metadata(
+        goal=message.content_md,
+        intent="login_page",
+        planner="deterministic_login_v1",
+        task_specs=task_specs,
+    )
     for index, spec in enumerate(task_specs):
         depends_on = [tasks[index - 1].id] if index > 0 else []
         plan = {
@@ -255,6 +249,7 @@ def _create_login_page_plan(db: DbSession, message: Message) -> list[Task]:
             "goal": message.content_md,
             "expectedArtifactTypes": spec.expected_artifact_types,
             "taskGraph": graph,
+            "planDraft": plan_draft,
         }
         task = Task(
             session_id=message.session_id,
@@ -518,6 +513,12 @@ def _create_contract_first_plan(
         planner="contract_first_v1",
         task_specs=task_specs,
     )
+    plan_draft = _plan_draft_metadata(
+        goal=message.content_md,
+        intent=intent.app_type,
+        planner="contract_first_v1",
+        task_specs=task_specs,
+    )
     contract["taskGraph"] = graph
 
     tasks: list[Task] = []
@@ -533,6 +534,7 @@ def _create_contract_first_plan(
             "contractId": contract["contractId"],
             "expectedArtifactTypes": spec.expected_artifact_types,
             "taskGraph": graph,
+            "planDraft": plan_draft,
             "autoStart": spec.intent_type in {"backend_change", "frontend_change"},
         }
         task = Task(
@@ -732,6 +734,12 @@ def _create_dynamic_frontend_tasks(
         planner="dynamic_manager_v1",
         task_specs=task_specs,
     )
+    plan_draft = _plan_draft_metadata(
+        goal=message.content_md,
+        intent=intent.intent,
+        planner="dynamic_manager_v1",
+        task_specs=task_specs,
+    )
     tasks: list[Task] = []
     prior_task_id = existing_tasks[-1].id if existing_tasks else None
     for index, spec in enumerate(task_specs):
@@ -746,6 +754,7 @@ def _create_dynamic_frontend_tasks(
             "intent": intent.intent,
             "expectedArtifactTypes": spec.expected_artifact_types,
             "taskGraph": graph,
+            "planDraft": plan_draft,
         }
         if auto_start and spec.intent_type == "frontend_change":
             plan["autoStart"] = True
@@ -1303,40 +1312,34 @@ def _graph_metadata(
     planner: str,
     task_specs: list[TaskSpec],
 ) -> dict:
-    return {
-        "goal": goal,
-        "intent": intent,
-        "planner": planner,
-        "tasks": [
-            {
-                "key": f"{index + 1}-{spec.role}-{spec.intent_type}",
-                "title": spec.title,
-                "assignedAgentRole": spec.role,
-                "priority": spec.priority,
-                "dependsOn": [f"{index}-{task_specs[index - 1].role}-{task_specs[index - 1].intent_type}"]
-                if index > 0
-                else [],
-                "expectedArtifactTypes": spec.expected_artifact_types,
-                "targetId": spec.plan.get("targetId"),
-            }
-            for index, spec in enumerate(task_specs)
-        ],
-    }
+    return task_graph_metadata(
+        goal=goal,
+        intent=intent,
+        planner=planner,
+        task_specs=task_specs,
+    )
+
+
+def _plan_draft_metadata(
+    *,
+    goal: str,
+    intent: str,
+    planner: str,
+    task_specs: list[TaskSpec],
+) -> dict:
+    return build_plan_draft(
+        goal=goal,
+        intent=intent,
+        planner=planner,
+        task_specs=task_specs,
+    ).to_metadata()
 
 
 def _validate_task_graph(task_specs: list[TaskSpec]) -> None:
-    if not 1 <= len(task_specs) <= 4:
-        raise MentionParseError("Manager planner generated too many tasks.")
-
-    for spec in task_specs:
-        if spec.role not in GRAPH_AGENT_ROLES:
-            raise MentionParseError(f"Unsupported planner role: {spec.role}.")
-        expected = set(spec.expected_artifact_types)
-        if not expected.issubset(GRAPH_EXPECTED_ARTIFACTS):
-            raise MentionParseError("Manager planner generated unsupported artifacts.")
-        files = spec.plan.get("files", [])
-        if isinstance(files, list) and not set(files).issubset(GRAPH_ALLOWED_FILES):
-            raise MentionParseError("Manager planner generated unsupported target files.")
+    try:
+        validate_task_graph(task_specs)
+    except PlanValidationError as exc:
+        raise MentionParseError(str(exc)) from exc
 
 
 def _session_for_message(db: DbSession, message: Message):
