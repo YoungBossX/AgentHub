@@ -27,6 +27,21 @@ export type AgentContact = {
   contactType: "agent" | "placeholder" | "service" | string
 }
 
+export type AgentProfile = {
+  id: string
+  displayName: string
+  avatarInitials: string
+  role: string
+  adapterType: string
+  providerId: string
+  capabilityTags: string[]
+  supportedTargets: string[]
+  supportedModes: string[]
+  safeForWrite: boolean
+  safeForReview: boolean
+  description: string
+}
+
 export type WorkspaceSession = {
   id: string
   workspaceId: string
@@ -279,6 +294,25 @@ export async function listWorkspaceAgents(
   }
 
   return (await response.json()) as AgentContact[]
+}
+
+export async function listWorkspaceAgentProfiles(
+  backendUrl: string,
+  workspaceId: string,
+  fetcher: Fetcher = fetch,
+): Promise<AgentProfile[]> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/agent-profiles`),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as AgentProfile[]
 }
 
 export async function createWorkspaceSession(

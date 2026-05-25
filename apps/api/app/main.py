@@ -10,6 +10,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
+from app.agent_profiles import AgentProfile, profile_for_agent
 from app.artifact_versions import (
     ArtifactVersionError,
     StoredArtifactVersion,
@@ -86,6 +87,7 @@ from app.target_registry import (
 )
 from app.schemas import (
     AgentContactResponse,
+    AgentProfileResponse,
     ApprovalDecisionRequest,
     ApprovalRequestResponse,
     CommandEvidenceCreateRequest,
@@ -164,49 +166,6 @@ def get_worktree_service() -> WorktreeService:
 
 _preview_service = PreviewService()
 _deploy_service = DeployService()
-
-AGENT_CONTACT_METADATA: dict[str, dict[str, Any]] = {
-    "orchestrator": {
-        "displayName": "Manager / Orchestrator",
-        "avatarInitials": "MO",
-        "capabilityTags": ["planning", "task assignment", "coordination"],
-        "status": "available",
-        "safeForWrite": False,
-        "safeForReview": True,
-        "description": "Plans the local demo workflow and coordinates role agents.",
-        "contactType": "agent",
-    },
-    "frontend": {
-        "displayName": "Frontend Agent",
-        "avatarInitials": "FE",
-        "capabilityTags": ["Vite React", "UI changes", "diff artifacts"],
-        "status": "available",
-        "safeForWrite": True,
-        "safeForReview": False,
-        "description": "Executes bounded frontend changes inside the session worktree.",
-        "contactType": "agent",
-    },
-    "backend": {
-        "displayName": "Backend Agent",
-        "avatarInitials": "BE",
-        "capabilityTags": ["FastAPI", "API changes", "SQLite"],
-        "status": "available",
-        "safeForWrite": True,
-        "safeForReview": False,
-        "description": "Represents backend coding work while preserving demo guardrails.",
-        "contactType": "agent",
-    },
-    "qa": {
-        "displayName": "QA Agent",
-        "avatarInitials": "QA",
-        "capabilityTags": ["demo QA", "preview checks", "workflow review"],
-        "status": "available",
-        "safeForWrite": False,
-        "safeForReview": True,
-        "description": "Reviews the demo path and expected evidence without changing dispatch.",
-        "contactType": "agent",
-    },
-}
 
 VIRTUAL_AGENT_CONTACTS: tuple[AgentContactResponse, ...] = (
     AgentContactResponse(
@@ -453,19 +412,36 @@ def read_external_target(
 
 
 def agent_contact_response(agent: Agent) -> AgentContactResponse:
-    metadata = AGENT_CONTACT_METADATA.get(agent.role, {})
+    profile = profile_for_agent(agent)
     return AgentContactResponse(
-        id=agent.id,
-        displayName=str(metadata.get("displayName") or agent.name),
-        avatarInitials=str(metadata.get("avatarInitials") or agent.role[:2].upper()),
-        role=agent.role,
-        adapterType=agent.adapter_type,
-        capabilityTags=list(metadata.get("capabilityTags") or []),
-        status=str(metadata.get("status") or "available"),
-        safeForWrite=bool(metadata.get("safeForWrite", False)),
-        safeForReview=bool(metadata.get("safeForReview", False)),
-        description=str(metadata.get("description") or agent.system_prompt),
-        contactType=str(metadata.get("contactType") or "agent"),
+        id=profile.id,
+        displayName=profile.display_name,
+        avatarInitials=profile.avatar_initials,
+        role=profile.role,
+        adapterType=profile.adapter_type,
+        capabilityTags=profile.capability_tags,
+        status="available",
+        safeForWrite=profile.safe_for_write,
+        safeForReview=profile.safe_for_review,
+        description=profile.description,
+        contactType="agent",
+    )
+
+
+def agent_profile_response(profile: AgentProfile) -> AgentProfileResponse:
+    return AgentProfileResponse(
+        id=profile.id,
+        displayName=profile.display_name,
+        avatarInitials=profile.avatar_initials,
+        role=profile.role,
+        adapterType=profile.adapter_type,
+        providerId=profile.provider_id,
+        capabilityTags=profile.capability_tags,
+        supportedTargets=profile.supported_targets,
+        supportedModes=profile.supported_modes,
+        safeForWrite=profile.safe_for_write,
+        safeForReview=profile.safe_for_review,
+        description=profile.description,
     )
 
 
@@ -480,6 +456,30 @@ def read_workspace_agents(
     if get_workspace(db, workspace_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
 
+    agents = _ordered_enabled_agents(db)
+    return [agent_contact_response(agent) for agent in agents] + list(
+        VIRTUAL_AGENT_CONTACTS
+    )
+
+
+@app.get(
+    "/workspaces/{workspace_id}/agent-profiles",
+    response_model=list[AgentProfileResponse],
+)
+def read_workspace_agent_profiles(
+    workspace_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[AgentProfileResponse]:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+
+    return [
+        agent_profile_response(profile_for_agent(agent))
+        for agent in _ordered_enabled_agents(db)
+    ]
+
+
+def _ordered_enabled_agents(db: DbSession) -> list[Agent]:
     role_order = {
         "orchestrator": 0,
         "frontend": 1,
@@ -490,9 +490,7 @@ def read_workspace_agents(
         get_enabled_agents(db),
         key=lambda agent: role_order.get(agent.role, 99),
     )
-    return [agent_contact_response(agent) for agent in agents] + list(
-        VIRTUAL_AGENT_CONTACTS
-    )
+    return list(agents)
 
 
 @app.get(

@@ -216,6 +216,43 @@ def test_workspace_agent_registry_returns_im_contacts(client: TestClient) -> Non
     assert fallback["contactType"] == "service"
 
 
+def test_workspace_agent_profiles_return_minimal_profile_contract(client: TestClient) -> None:
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+
+    response = client.get(f"/workspaces/{workspace.id}/agent-profiles")
+
+    assert response.status_code == 200
+    profiles = response.json()
+    assert [profile["role"] for profile in profiles] == [
+        "orchestrator",
+        "frontend",
+        "backend",
+        "qa",
+    ]
+
+    frontend = profiles[1]
+    assert frontend == {
+        "id": frontend["id"],
+        "displayName": "Frontend Agent",
+        "avatarInitials": "FE",
+        "role": "frontend",
+        "adapterType": "codex",
+        "providerId": "local",
+        "capabilityTags": ["Vite React", "UI changes", "diff artifacts"],
+        "supportedTargets": ["demo-frontend", "external-frontend"],
+        "supportedModes": ["direct-assignment", "scheduled-task"],
+        "safeForWrite": True,
+        "safeForReview": False,
+        "description": "Executes bounded frontend changes inside assigned target paths.",
+    }
+
+    backend = profiles[2]
+    assert backend["supportedTargets"] == ["demo-backend", "external-backend"]
+    assert backend["safeForWrite"] is True
+    assert "AgentHub platform backend" in backend["description"]
+
+
 def test_disabled_mention_returns_user_facing_parse_error(client: TestClient) -> None:
     with next(db_from_override()) as db:
         session = db.exec(select(Session).where(Session.title == "Planning session")).one()

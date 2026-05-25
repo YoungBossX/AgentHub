@@ -131,6 +131,21 @@ class AgentContactResponse(ApiModel):
     contact_type: str = Field(alias="contactType")
 
 
+class AgentProfileResponse(ApiModel):
+    id: str
+    display_name: str = Field(alias="displayName")
+    avatar_initials: str = Field(alias="avatarInitials")
+    role: str
+    adapter_type: str = Field(alias="adapterType")
+    provider_id: str = Field(alias="providerId")
+    capability_tags: list[str] = Field(alias="capabilityTags")
+    supported_targets: list[str] = Field(alias="supportedTargets")
+    supported_modes: list[str] = Field(alias="supportedModes")
+    safe_for_write: bool = Field(alias="safeForWrite")
+    safe_for_review: bool = Field(alias="safeForReview")
+    description: str
+
+
 class SessionResponse(ApiModel):
     id: str
     workspace_id: str = Field(alias="workspaceId")

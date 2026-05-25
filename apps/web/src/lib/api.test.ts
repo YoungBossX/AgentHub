@@ -13,6 +13,7 @@ import {
   getBackendHealth,
   getDemoWorkspace,
   interruptTaskRun,
+  listWorkspaceAgentProfiles,
   listWorkspaceAgents,
   listTaskRunDeployments,
   listTaskRunDiffs,
@@ -178,6 +179,45 @@ describe("workspace and session API", () => {
     )
     expect(agents[0].displayName).toBe("Frontend Agent")
     expect(agents[0].capabilityTags).toContain("Vite React")
+  })
+
+  it("lists minimal agent profiles for a workspace", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify([
+          {
+            id: "agent-frontend",
+            displayName: "Frontend Agent",
+            avatarInitials: "FE",
+            role: "frontend",
+            adapterType: "codex",
+            providerId: "local",
+            capabilityTags: ["Vite React", "UI changes"],
+            supportedTargets: ["demo-frontend", "external-frontend"],
+            supportedModes: ["direct-assignment", "scheduled-task"],
+            safeForWrite: true,
+            safeForReview: false,
+            description: "Executes bounded frontend changes.",
+          },
+        ]),
+        { status: 200 },
+      )
+    })
+
+    const profiles = await listWorkspaceAgentProfiles(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/agent-profiles",
+      {
+        cache: "no-store",
+      },
+    )
+    expect(profiles[0].providerId).toBe("local")
+    expect(profiles[0].supportedTargets).toContain("demo-frontend")
   })
 })
 
