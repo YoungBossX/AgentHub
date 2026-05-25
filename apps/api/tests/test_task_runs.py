@@ -500,6 +500,19 @@ def test_agent_run_request_preserves_generic_demo_frontend_request(
         "apps/demo/src/App.tsx",
         "apps/demo/src/styles.css",
     ]
+    with db_from_override() as db:
+        stored_run = db.get(TaskRun, task_run.id)
+        metrics = json.loads(stored_run.metrics_json)
+
+    snapshot = metrics["canonicalContextSnapshot"]
+    assert snapshot["version"] == "canonical_shared_context_v1"
+    assert snapshot["fields"]["userGoal"]["value"] == original_request
+    assert snapshot["fields"]["currentTask"]["trustLevel"] == "system"
+    assert snapshot["fields"]["safePaths"]["value"] == [
+        "apps/demo/src",
+        "apps/demo/src/App.tsx",
+        "apps/demo/src/styles.css",
+    ]
 
 
 def test_context_pack_includes_recent_messages_ledger_and_excludes_other_sessions(
@@ -560,6 +573,50 @@ def test_context_pack_includes_recent_messages_ledger_and_excludes_other_session
         message["contentMd"] != "Do not leak this message"
         for message in context["recentMessages"]
     )
+    canonical = context["canonicalContext"]
+    assert canonical["version"] == "canonical_shared_context_v1"
+    assert canonical["fields"]["session"]["value"]["sessionId"] == task.session_id
+    assert canonical["fields"]["userGoal"]["source"] == "session_ledger"
+    assert canonical["fields"]["recentMessages"]["visibility"] == "provider"
+    assert canonical["fields"]["guardrails"]["trustLevel"] == "system"
+
+
+def test_canonical_context_filters_protected_provider_visible_paths(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "target": "demo_frontend_request",
+                "safeTarget": "apps/demo/src",
+                "files": [
+                    "apps/demo/src/App.tsx",
+                    ".env",
+                    "node_modules/pkg/index.js",
+                    "/Users/example/secrets/token.txt",
+                ],
+                "originalRequest": "Build a dashboard",
+                "secretToken": "should-not-leak",
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+
+        context = build_session_context_pack(db, task)
+
+    safe_paths = context["canonicalContext"]["fields"]["safePaths"]["value"]
+    visible = json.dumps(
+        context["providerVisibleContext"],
+        ensure_ascii=True,
+        sort_keys=True,
+    )
+    assert safe_paths == ["apps/demo/src", "apps/demo/src/App.tsx"]
+    assert ".env" not in visible
+    assert "node_modules" not in visible
+    assert "/Users/example" not in visible
+    assert "should-not-leak" not in visible
 
 
 def test_context_pack_includes_latest_artifact_preview_and_deploy_metadata(

@@ -854,6 +854,7 @@ def agent_run_request_for(
         task,
         plan_context=merged_plan_context,
     )
+    _persist_context_snapshot(db, task_run, context_pack)
     merged_plan_context["sessionContext"] = context_pack
     return AgentRunRequest(
         taskRunId=task_run.id,
@@ -868,6 +869,28 @@ def agent_run_request_for(
         demoMode=True,
         fallbackPolicy="scripted_mock" if adapter_type == "scripted_mock" else "none",
     )
+
+
+def _persist_context_snapshot(
+    db: DbSession,
+    task_run: TaskRun,
+    context_pack: dict[str, Any],
+) -> None:
+    canonical_context = context_pack.get("canonicalContext")
+    if not isinstance(canonical_context, dict):
+        return
+    metrics = metrics_for_run(task_run)
+    metrics["canonicalContextSnapshot"] = canonical_context
+    task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
+    task_run.updated_at = utc_now()
+    db.add(task_run)
+    expire_on_commit = getattr(db, "expire_on_commit", True)
+    db.expire_on_commit = False
+    try:
+        db.commit()
+        db.refresh(task_run)
+    finally:
+        db.expire_on_commit = expire_on_commit
 
 
 def plan_json_for_task(task: Task) -> dict[str, Any]:

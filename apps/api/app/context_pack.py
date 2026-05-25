@@ -4,6 +4,11 @@ from typing import Any, Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.canonical_context import (
+    build_canonical_shared_context,
+    filter_protected_values,
+    provider_visible_context,
+)
 from app.ledger import (
     active_agents_for_ledger,
     changed_files_for_ledger,
@@ -57,7 +62,7 @@ def build_session_context_pack(
     selected_artifact = _selected_artifact_context(db, task.session_id, merged_context)
     app_contract = _app_contract_context(merged_context)
 
-    return {
+    context_pack = {
         "version": "session_context_pack_v1",
         "sessionId": task.session_id,
         "workspaceId": session.workspace_id if session is not None else None,
@@ -103,6 +108,13 @@ def build_session_context_pack(
         "safeTargetPaths": _safe_target_paths(db, task, merged_context),
         "validationExpectations": _validation_expectations(task, merged_context),
     }
+    canonical_context = build_canonical_shared_context(context_pack)
+    context_pack["canonicalContext"] = canonical_context
+    context_pack["providerVisibleContext"] = provider_visible_context(
+        context_pack,
+        canonical_context,
+    )
+    return context_pack
 
 
 def _recent_messages(
@@ -366,7 +378,8 @@ def _safe_target_paths(
         paths.extend(get_target(DEMO_BACKEND_TARGET_ID).allowed_paths)
     if task.intent_type in {"review", "qa_review"}:
         paths.append("read-only current session artifacts")
-    return _dedupe(paths)
+    filtered_paths = filter_protected_values(_dedupe(paths))
+    return [path for path in filtered_paths if isinstance(path, str)]
 
 
 def _target_project_context(
