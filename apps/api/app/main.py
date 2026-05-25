@@ -42,6 +42,7 @@ from app.ledger import (
     refresh_session_ledger,
     refresh_session_ledger_for_task_run,
 )
+from app.mission_trace import build_session_mission_trace
 from app.models import Agent, Message, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import SessionExecutionLedger
@@ -98,6 +99,7 @@ from app.schemas import (
     ReviewArtifactResponse,
     SessionCreateRequest,
     SessionExecutionLedgerResponse,
+    SessionMissionTraceResponse,
     SessionResponse,
     SessionTargetSelectionRequest,
     SessionUpdateRequest,
@@ -776,6 +778,19 @@ def read_session_execution_ledger(
     if get_session(db, session_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return ledger_response(refresh_session_ledger(db, session_id))
+
+
+@app.get(
+    "/sessions/{session_id}/mission-trace",
+    response_model=SessionMissionTraceResponse,
+)
+def read_session_mission_trace(
+    session_id: str,
+    db: DbSession = Depends(get_db),
+) -> SessionMissionTraceResponse:
+    if get_session(db, session_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return build_session_mission_trace(db, session_id)
 
 
 def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:

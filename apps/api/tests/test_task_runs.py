@@ -837,6 +837,51 @@ def test_artifact_reference_context_rejects_unsupported_artifact_type(
     assert "not supported in P12" in reference["reason"]
 
 
+def test_session_mission_trace_exposes_tasks_artifacts_and_blockers(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task_run = create_task_run(db, task.id)
+        transition_task_run(db, task_run.id, "completed")
+        artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+        )
+        db.add(artifact)
+        db.commit()
+        task.plan_json = json.dumps(
+            {
+                "scheduler": {
+                    "state": "waiting_dependency",
+                    "reason": "Waiting for upstream dependencies to complete.",
+                    "dependencyIds": ["upstream-task"],
+                    "blockingDependencyIds": ["upstream-task"],
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                }
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        session_id = task.session_id
+        task_run_id_value = task_run.id
+
+    response = client.get(f"/sessions/{session_id}/mission-trace")
+
+    assert response.status_code == 200
+    trace = response.json()
+    assert trace["tasks"][0]["id"] == task_id()
+    assert trace["taskRuns"][0]["id"] == task_run_id_value
+    assert trace["events"]
+    assert trace["artifacts"][0]["artifactType"] == "diff"
+    assert trace["blockers"][0]["state"] == "waiting_dependency"
+    assert trace["blockers"][0]["blockingDependencyIds"] == ["upstream-task"]
+    assert trace["nextActions"][0]["type"] == "inspect_blocker"
+
+
 def test_completed_dependency_creates_handoff_context_for_downstream_task(
     client: TestClient,
 ) -> None:

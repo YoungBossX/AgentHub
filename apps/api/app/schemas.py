@@ -205,6 +205,16 @@ class SessionExecutionLedgerResponse(ApiModel):
     updated_at: datetime = Field(alias="updatedAt")
 
 
+class SessionMissionTraceResponse(ApiModel):
+    current_goal: Optional[str] = Field(alias="currentGoal")
+    tasks: list[dict[str, Any]]
+    task_runs: list[dict[str, Any]] = Field(alias="taskRuns")
+    events: list[dict[str, Any]]
+    artifacts: list[dict[str, Any]]
+    blockers: list[dict[str, Any]]
+    next_actions: list[dict[str, Any]] = Field(alias="nextActions")
+
+
 class TaskResponse(ApiModel):
     id: str
     session_id: str = Field(alias="sessionId")
