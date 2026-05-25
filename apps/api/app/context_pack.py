@@ -4,6 +4,10 @@ from typing import Any, Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.artifact_references import (
+    selected_artifact_id,
+    selected_artifact_reference,
+)
 from app.canonical_context import (
     build_canonical_shared_context,
     filter_protected_values,
@@ -61,6 +65,11 @@ def build_session_context_pack(
     latest_command_evidence = _latest_command_evidence_context(db, task_runs)
     original_request = _original_request_for_task(db, task, merged_context)
     selected_artifact = _selected_artifact_context(db, task.session_id, merged_context)
+    artifact_reference = selected_artifact_reference(
+        db,
+        session_id=task.session_id,
+        context=merged_context,
+    )
     app_contract = _app_contract_context(merged_context)
     handoff_notes = handoff_context_for_task(db, task)
 
@@ -100,6 +109,7 @@ def build_session_context_pack(
         "latestDeployment": latest_deployment,
         "latestCommandEvidence": latest_command_evidence,
         "selectedArtifact": selected_artifact,
+        "artifactReferences": [artifact_reference] if artifact_reference else [],
         "appContract": app_contract,
         "handoffNotes": handoff_notes,
         "targetProject": _target_project_context(db, task, merged_context),
@@ -322,15 +332,7 @@ def _selected_artifact_context(
 
 
 def _selected_artifact_id(context: dict[str, Any]) -> Optional[str]:
-    value = context.get("selectedArtifactId")
-    if isinstance(value, str) and value:
-        return value
-    selected = context.get("selectedArtifact")
-    if isinstance(selected, dict):
-        nested = selected.get("artifactId") or selected.get("id")
-        if isinstance(nested, str) and nested:
-            return nested
-    return None
+    return selected_artifact_id(context)
 
 
 def _app_contract_context(context: dict[str, Any]) -> Optional[dict[str, Any]]:

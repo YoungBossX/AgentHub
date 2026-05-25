@@ -764,7 +764,77 @@ def test_context_pack_includes_latest_artifact_preview_and_deploy_metadata(
     assert context["latestDeployment"]["provider"] == "mock"
     assert context["selectedArtifact"]["valid"] is True
     assert context["selectedArtifact"]["artifactId"] == diff_artifact.id
+    assert context["artifactReferences"][0]["artifact_id"] == diff_artifact.id
+    assert context["artifactReferences"][0]["artifact_type"] == "diff"
+    assert context["artifactReferences"][0]["valid"] is True
     assert context["ledger"]["latestChangedFiles"] == ["apps/demo/src/App.tsx"]
+
+
+def test_artifact_reference_context_supports_preview_review_and_deploy(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task_run = create_task_run(db, task.id)
+        transition_task_run(db, task_run.id, "completed")
+        artifacts = [
+            Artifact(
+                task_run_id=task_run.id,
+                artifact_type=artifact_type,
+                title=f"{artifact_type} artifact",
+                status="ready",
+            )
+            for artifact_type in ["review", "preview", "deployment"]
+        ]
+        for artifact in artifacts:
+            db.add(artifact)
+        db.commit()
+        for artifact in artifacts:
+            db.refresh(artifact)
+
+        references = [
+            build_session_context_pack(
+                db,
+                task,
+                plan_context={"selectedArtifactId": artifact.id},
+            )["artifactReferences"][0]
+            for artifact in artifacts
+        ]
+
+    assert [reference["artifact_type"] for reference in references] == [
+        "review",
+        "preview",
+        "deployment",
+    ]
+    assert all(reference["valid"] is True for reference in references)
+
+
+def test_artifact_reference_context_rejects_unsupported_artifact_type(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task_run = create_task_run(db, task.id)
+        artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="command_evidence",
+            title="Command evidence",
+            status="ready",
+        )
+        db.add(artifact)
+        db.commit()
+        db.refresh(artifact)
+
+        context = build_session_context_pack(
+            db,
+            task,
+            plan_context={"selectedArtifactId": artifact.id},
+        )
+
+    reference = context["artifactReferences"][0]
+    assert reference["artifact_type"] == "command_evidence"
+    assert reference["valid"] is False
+    assert "not supported in P12" in reference["reason"]
 
 
 def test_completed_dependency_creates_handoff_context_for_downstream_task(

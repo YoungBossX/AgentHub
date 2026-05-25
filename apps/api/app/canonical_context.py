@@ -35,6 +35,7 @@ def build_canonical_shared_context(
     task_graph = task_plan.get("taskGraph") or task_plan.get("planDraft", {}).get("taskGraph")
     relevant_artifacts = {
         "selectedArtifact": session_context_pack.get("selectedArtifact"),
+        "artifactReferences": session_context_pack.get("artifactReferences", []),
         "latestCommandEvidence": session_context_pack.get("latestCommandEvidence"),
     }
 
