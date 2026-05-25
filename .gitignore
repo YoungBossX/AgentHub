@@ -1,38 +1,93 @@
-# dependencies
+# Dependencies
 node_modules/
 .pnpm-store/
+.pnpm/
 
 # Python
 .venv/
 __pycache__/
 .pytest_cache/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist-packages/
+build/
+.coverage
+.coverage.*
+.cache/
+.tox/
+.hypothesis/
 
-# env
+# Environment
 .env
 .env.*
 !.env.example
+!.env.local.example
 
-# databases
+# Databases
 *.db
 *.sqlite
 *.sqlite3
 
-# build outputs
+# Build outputs
 .next/
 *.tsbuildinfo
 dist/
 build/
 out/
 
-# logs
+# Logs
 *.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # OS / IDE
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
 
-# runtime
+# Runtime
 tmp/
+temp/
+.cache/
+
+# Session worktrees (AgentHub specific)
 .worktrees/
+session-worktrees/
+agent-workspaces/
+
+# Codex / CLI runtime
+.codex/sessions/
+.codex/tmp/
+.codex/logs/
+
+# Testing
+.nyc_output/
+coverage/
+
+# Misc
+*.bak
+*.tmp
+*.temp
+
+# Local research docs (not for repo)
+*.pdf
+*调研报告*.md
+*落地型*.md
+*架构分析*.md
+*工程模式*.md
+*请求流向*.md
+*agent建议*.md
+agenthub_design_v_2.md
