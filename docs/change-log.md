@@ -1,5 +1,45 @@
 # AgentHub Change Log
 
+## P11-6 E2E Rehearsal And Freeze Review
+
+**Date:** 2026-05-25
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/deployments.py` | Fixed local static serving to use `sys.executable` instead of assuming `python` exists on the host. |
+| `apps/api/tests/test_deployments.py` | Added regression coverage for the static server interpreter command. |
+| `docs/p11-freeze-review.md` | Added P11 freeze evidence, caveats, validation notes, and recommended tag. |
+| `docs/project-state.md` | Recorded P11-6 freeze result and evidence IDs. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-6, non-goals, and validation complete after verification. |
+
+### Review Result
+
+P11 is ready to freeze as Real Staging Deploy Provider.
+
+The freeze rehearsal used a real local staging deploy for the built-in
+`demo-frontend` target. It ran `pnpm build`, served the built `dist` directory
+on a local URL, verified the URL returned HTML, and recorded deployment logs,
+status history, target metadata, and source artifact references.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Real local staging rehearsal | Pass |
+| Targeted deployment regression tests | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p11-real-staging-deploy-provider --strict` | Pass |
+
+Recommended freeze tag:
+`p11-real-staging-deploy-provider-freeze`.
+
+---
+
 ## P11-5 Deploy Gate
 
 **Date:** 2026-05-25

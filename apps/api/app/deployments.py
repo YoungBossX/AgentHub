@@ -1,6 +1,7 @@
 import json
 import shlex
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -124,7 +125,7 @@ class SubprocessCommandRunner:
 class StaticDirectoryServer:
     def start(self, output_dir: Path, port: int) -> StagingServerProcess:
         command = [
-            "python",
+            sys.executable,
             "-m",
             "http.server",
             str(port),

@@ -1,4 +1,5 @@
 import json
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Optional
@@ -17,6 +18,7 @@ from app.deployments import (
     LocalStagingDeployProvider,
     MockDeployProvider,
     StagingServerProcess,
+    StaticDirectoryServer,
 )
 from app.main import app, get_db
 from app.models import (
@@ -208,6 +210,31 @@ class StaticHealthChecker:
     def is_healthy(self, url: str) -> bool:
         self.urls.append(url)
         return self.healthy
+
+
+def test_static_directory_server_uses_current_python_interpreter(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    class FakeProcess:
+        pid = 5151
+
+    def fake_popen(command, **kwargs):
+        calls.append(command)
+        return FakeProcess()
+
+    monkeypatch.setattr("app.deployments.subprocess.Popen", fake_popen)
+
+    server = StaticDirectoryServer()
+    output_dir = tmp_path / "dist"
+    output_dir.mkdir()
+    process = server.start(output_dir, 45111)
+
+    assert process.pid == 5151
+    assert calls[0][0] == sys.executable
+    assert process.command.startswith(sys.executable)
 
 
 def test_mock_deploy_persists_deployment_artifact_and_ready_event(tmp_path: Path) -> None:

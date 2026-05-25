@@ -5,6 +5,37 @@ reference instead of repeating long context blocks.
 
 ## P11 Status
 
+### P11-6 E2E Rehearsal And Freeze Review
+
+P11-6 completed on 2026-05-25.
+
+Result: P11 is ready to freeze as Real Staging Deploy Provider.
+
+The freeze rehearsal used the built-in `demo-frontend` target and a real local
+staging deploy path. The provider ran `pnpm build` in `apps/demo`, served
+`apps/demo/dist` on a local URL, verified that the URL returned built HTML, and
+recorded deployment/source/log/status metadata.
+
+Evidence:
+
+- provider: `local_staging`;
+- environment: `staging`;
+- deployment status: `ready`;
+- deployment ID: `8c776325-e98a-435c-ab1c-6a2d71c6946f`;
+- artifact ID: `949c9411-98c6-4e0c-978f-96bc7ac88f0c`;
+- target ID: `demo-frontend`;
+- source preview/diff/review artifact references were recorded;
+- status history: `queued -> building -> deploying -> ready`.
+
+P11-6 also fixed a real rehearsal blocker: the static server now uses
+`sys.executable` instead of assuming a `python` command exists on the host.
+
+See `docs/p11-freeze-review.md` for the full evidence table, caveats, and
+recommended tag.
+
+Recommended freeze tag:
+`p11-real-staging-deploy-provider-freeze`.
+
 ### P11-5 Deploy Gate
 
 P11-5 completed on 2026-05-25.

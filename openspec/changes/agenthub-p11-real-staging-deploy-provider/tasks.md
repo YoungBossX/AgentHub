@@ -5,16 +5,16 @@
 - [x] 1.3 P11-3 Local Staging Deploy Provider: implement a local staging provider that runs the target build command, serves the built output directory locally, records a reachable staging URL, and reports failed build/output/server startup states without faking success; add backend tests and one bounded manual/API smoke for either the built-in demo frontend or an external Vite sample target.
 - [x] 1.4 P11-4 Deploy Logs and Status Artifact: persist deploy status transitions for queued, building, deploying, ready, failed, and cancelled; record logs, staging URL, target metadata, source diff/review/preview references, and provider details in a deployment artifact; expose this evidence through the existing artifact/deploy UI without removing mock deploy cards; add tests for log/status visibility and artifact linkage.
 - [x] 1.5 P11-5 Deploy Gate: block staging deploy when the latest review failed, preview failed, target policy violations exist, or a production deployment is requested; preserve clear staging-only labeling; add tests for each blocked state and for a successful gated staging deploy path.
-- [ ] 1.6 P11-6 P11 E2E Rehearsal and Freeze Review: rehearse a real local staging deploy for the built-in demo frontend or an external Vite sample target, verify the staging URL is reachable, verify logs and deploy artifact evidence are recorded, verify mock deploy remains available where needed, verify P6/P7/P8/P9/P10 baselines remain intact, update project docs and change log, and mark P11 ready to freeze only if validation passes.
+- [x] 1.6 P11-6 P11 E2E Rehearsal and Freeze Review: rehearse a real local staging deploy for the built-in demo frontend or an external Vite sample target, verify the staging URL is reachable, verify logs and deploy artifact evidence are recorded, verify mock deploy remains available where needed, verify P6/P7/P8/P9/P10 baselines remain intact, update project docs and change log, and mark P11 ready to freeze only if validation passes.
 
 ## 2. Explicit Non-goals
 
-- [ ] 2.1 Confirm P11 does not implement production deploy, cloud provider token management, Vercel/Netlify/Render full integration, Docker/Kubernetes, domain management, database hosting, automatic rollback, multi-user deploy approvals, provider marketplace, PR creation, or unrestricted repository editing.
+- [x] 2.1 Confirm P11 does not implement production deploy, cloud provider token management, Vercel/Netlify/Render full integration, Docker/Kubernetes, domain management, database hosting, automatic rollback, multi-user deploy approvals, provider marketplace, PR creation, or unrestricted repository editing.
 
 ## 3. Validation
 
-- [ ] 3.1 Run `pnpm check`.
-- [ ] 3.2 Run `pnpm test`.
-- [ ] 3.3 Run any target-specific staging deploy tests added during implementation.
-- [ ] 3.4 Run `git diff --check`.
-- [ ] 3.5 Run `openspec validate agenthub-p11-real-staging-deploy-provider --strict`.
+- [x] 3.1 Run `pnpm check`.
+- [x] 3.2 Run `pnpm test`.
+- [x] 3.3 Run any target-specific staging deploy tests added during implementation.
+- [x] 3.4 Run `git diff --check`.
+- [x] 3.5 Run `openspec validate agenthub-p11-real-staging-deploy-provider --strict`.
