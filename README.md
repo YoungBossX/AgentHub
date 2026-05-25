@@ -1,155 +1,130 @@
 # AgentHub
 
-AgentHub is a local, single-user Agent Coding Workspace / strong demo MVP. It
-uses an IM-style command-center interface, but it is not a full multi-user
-Feishu/WeChat-style collaboration platform. The verified demo loop is:
+AgentHub 是一个本地单用户 Agent 编码工作区 / 强 Demo MVP。它使用 IM 风格的命令中心界面，但不是完整的多用户微信、飞书式协作平台。已验证的 Demo 循环是：
 
 ```text
-requirement -> orchestrator plan -> agent execution -> real git diff -> real preview -> deploy card
+需求 -> 协调器规划 -> Agent 执行 -> 真实 Git Diff -> 真实预览 -> 部署卡片
 ```
 
-The original MVP source is the completed OpenSpec change at
-`openspec/changes/agenthub-im-coding-mvp`. Final demo hardening is tracked in
-`openspec/changes/agenthub-final-demo-hardening`, with current state recorded in
-`AGENTS.md`, `docs/project-state.md`, and `docs/change-log.md`.
+## 当前技术栈
 
-## Current Stack
+- 产品 UI：Next.js App Router、TypeScript、Tailwind CSS，以及 `apps/web` 中的本地 shadcn/ui 风格组件
+- 后端：FastAPI、Pydantic、SQLModel，以及 `apps/api` 中的 SQLite
+- Agent 修改的 Demo 应用：仅 `apps/demo` 中的 Vite React
+- 实时通信：由持久化的 `TaskRunEvent` 记录支持的 SSE
+- 隔离机制：每个 AgentHub Session 一个 Git Worktree
+- 执行适配器：本地 CLI `CodexAdapter`、本地 CLI `ClaudeCodeAdapter` 和 `ScriptedMockAdapter`
+- 产物：Git Diff 卡片、Vite React 预览卡片和 Mock 部署卡片
 
-- Product UI: Next.js App Router, TypeScript, Tailwind CSS, and local
-  shadcn/ui-style components in `apps/web`.
-- Backend: FastAPI, Pydantic, SQLModel, and SQLite in `apps/api`.
-- Demo app modified by agents: Vite React only in `apps/demo`.
-- Realtime: SSE backed by persisted `TaskRunEvent` records.
-- Isolation: one git worktree per AgentHub Session.
-- Execution adapters: local-CLI `CodexAdapter`, local-CLI
-  `ClaudeCodeAdapter`, and `ScriptedMockAdapter`.
-- Artifacts: Git diff cards, Vite React preview cards, and mock deploy cards.
+## 前置条件
 
-## Prerequisites
+- Node.js 和 pnpm。本仓库在 `package.json` 中声明了 `pnpm@10.33.4`
+- Python 3.9 或更高版本
+- Git
+- 真实 Codex 适配器路径可选：本地 Codex CLI，已登录，可通过 `CODEX_CLI_PATH` 或 `apps/api/app/codex_adapter.py` 使用的默认 macOS 应用路径访问
+- 真实 Claude Code 适配器路径可选：本地 Claude Code CLI，已登录，可作为 `claude` 或通过 `CLAUDE_CODE_CLI_PATH` 访问
 
-- Node.js and pnpm. This repo declares `pnpm@10.33.4` in `package.json`.
-- Python 3.9 or newer.
-- Git.
-- Optional for the Codex real adapter path: the local Codex CLI, logged in and
-  available at either `CODEX_CLI_PATH` or the default macOS app path used by
-  `apps/api/app/codex_adapter.py`.
-- Optional for the Claude Code real adapter path: the local Claude Code CLI,
-  logged in and available as `claude` or via `CLAUDE_CODE_CLI_PATH`.
+## 安装设置
 
-## Setup
+从仓库根目录运行这些命令。
 
-Run these commands from the repo root.
-
-Install JavaScript workspace dependencies:
+安装 JavaScript 工作区依赖：
 
 ```bash
 pnpm install
 ```
 
-Create and populate the Python virtual environment used by the backend scripts:
+创建并填充后端脚本使用的 Python 虚拟环境：
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r apps/api/requirements.txt
 ```
 
-Install the Vite React demo app dependencies during setup:
+在设置期间安装 Vite React Demo 应用依赖：
 
 ```bash
 pnpm demo:setup
 ```
 
-Agent execution and preview startup must not run dependency installation. The
-setup step above is the intended time for creating `node_modules`.
+Agent 执行和预览启动不得运行依赖安装。上面的设置步骤是创建 `node_modules` 的预期时间。
 
-Initialize and seed the local SQLite database:
+初始化并填充本地 SQLite 数据库：
 
 ```bash
 pnpm db:init
 ```
 
-`pnpm db:init` creates the SQLModel tables and seeds:
+`pnpm db:init` 创建 SQLModel 表并填充：
 
-- one demo user
-- one `AgentHub Demo` workspace pointing at `apps/demo`
-- enabled orchestrator, frontend, backend, and QA agents
+- 一个 Demo 用户
+- 一个指向 `apps/demo` 的 `AgentHub Demo` 工作区
+- 启用的协调器、前端、后端和 QA Agent
 
-To reseed an existing database without recreating tables:
+要重新填充现有数据库而不重新创建表：
 
 ```bash
 pnpm db:seed
 ```
 
-The default database URL is `sqlite:///data/agenthub.sqlite3`, relative to
-`apps/api`.
+默认数据库 URL 是 `sqlite:///data/agenthub.sqlite3`，相对于 `apps/api`。
 
-## Safe Demo Reset
+## 安全 Demo 重置
 
-Use the reset helper when the local demo database has accumulated old sessions,
-task runs, previews, or smoke-test records:
+当本地 Demo 数据库积累了旧的 Session、Task Run、预览或冒烟测试记录时，使用重置辅助工具：
 
 ```bash
 pnpm demo:reset
 ```
 
-The helper is non-destructive by default:
+该辅助工具默认是非破坏性的：
 
-- it refuses to run while the SQLite database is open by the API process;
-- it backs up `apps/api/data/agenthub.sqlite3` and any SQLite WAL/SHM files to
-  `apps/api/data/backups/demo-reset-<timestamp>/`;
-- it removes only the active SQLite files after backup;
-- it recreates and seeds the database through the existing SQLModel init path;
-- it does not delete `.worktrees`, source code, dependencies, or preview files;
-- it does not stop running preview or dev-server processes.
+- 它拒绝在 API 进程打开 SQLite 数据库时运行
+- 它将 `apps/api/data/agenthub.sqlite3` 和任何 SQLite WAL/SHM 文件备份到 `apps/api/data/backups/demo-reset-<timestamp>/`
+- 它在备份后仅删除活动的 SQLite 文件
+- 它通过现有的 SQLModel 初始化路径重新创建并填充数据库
+- 它不删除 `.worktrees`、源代码、依赖项或预览文件
+- 它不停止正在运行的预览或开发服务器进程
 
-After reset, start `pnpm dev:api` and `pnpm dev:web`, create a fresh session in
-the UI, and send the fixed demo request again.
+重置后，启动 `pnpm dev:api` 和 `pnpm dev:web`，在 UI 中创建一个新的 Session，然后再次发送固定的 Demo 请求。
 
-To restore the previous database, stop the API and copy the backed-up files back
-to `apps/api/data/agenthub.sqlite3`. The reset command prints the exact backup
-path and restore commands each time it runs.
+要恢复之前的数据库，停止 API 并将备份的文件复制回 `apps/api/data/agenthub.sqlite3`。重置命令每次运行时都会打印确切的备份路径和恢复命令。
 
-## Run Locally
+## 本地运行
 
-Start the backend:
+启动后端：
 
 ```bash
 pnpm dev:api
 ```
 
-The backend listens on `http://127.0.0.1:8000` by default. Override the port
-with `AGENTHUB_API_PORT`.
+后端默认监听 `http://127.0.0.1:8000`。使用 `AGENTHUB_API_PORT` 覆盖端口。
 
-Start the product UI in a second terminal:
+在第二个终端中启动产品 UI：
 
 ```bash
 pnpm dev:web
 ```
 
-The frontend listens on `http://127.0.0.1:3000` and calls the backend at
-`http://127.0.0.1:8000` by default. Override the backend URL for the Next.js app
-with `BACKEND_URL`.
+前端默认监听 `http://127.0.0.1:3000` 并调用后端 `http://127.0.0.1:8000`。使用 `BACKEND_URL` 覆盖 Next.js 应用的后端 URL。
 
-Start the demo app manually when you only want to inspect the baseline Vite
-React app:
+当你只想检查基线 Vite React Demo 应用时，手动启动 Demo 应用：
 
 ```bash
 pnpm demo:dev
 ```
 
-The repo-level demo command uses port `5173` by default. The fixed preview
-command shape is:
+仓库级 Demo 命令默认使用端口 `5173`。固定的预览命令形式是：
 
 ```bash
 pnpm dev --host 127.0.0.1 --port <port>
 ```
 
-The backend preview runner executes that command inside the session worktree and
-does not install dependencies.
+后端预览运行器在 Session Worktree 内部执行该命令，不安装依赖项。
 
-## Verification Commands
+## 验证命令
 
-Run these from the repo root:
+从仓库根目录运行这些命令：
 
 ```bash
 pnpm check
@@ -157,7 +132,7 @@ pnpm test
 git diff --check
 ```
 
-Useful narrower commands:
+有用的更窄命令：
 
 ```bash
 pnpm check:web
@@ -167,175 +142,146 @@ pnpm test:web
 pnpm test:api
 ```
 
-## Product Surfaces
+## 产品界面
 
-The local UI currently includes:
+本地 UI 当前包括：
 
-- session list and `New session` control
-- selected-session chat stream
-- orchestrator plan message
-- task cards with assigned role agents and dependencies
-- run history per task
-- run controls: `Start run`, `Interrupt`, `Retry`, `Force Codex failure`, and
-  `Retry with ScriptedMockAdapter`
-- diff card with changed files, patch summary, and expandable Monaco diff
-  inspection
-- preview card with status, URL, port, refresh/open actions, and a right-side
-  iframe panel
-- deploy card backed by a persisted mock Deployment record
+- Session 列表和 `New session` 控件
+- 选中 Session 的聊天流
+- 协调器计划消息
+- 带有分配的角色 Agent 和依赖项的任务卡片
+- 每个任务的运行历史
+- 运行控件：`Start run`、`Interrupt`、`Retry`、`Force Codex failure` 和 `Retry with ScriptedMockAdapter`
+- 带有更改文件、补丁摘要和可展开 Monaco Diff 检查的 Diff 卡片
+- 带有状态、URL、端口、刷新/打开操作和右侧 iframe 面板的预览卡片
+- 由持久化 Mock Deployment 记录支持的部署卡片
 
-## Demo Request
+## Demo 请求
 
-Use this fixed request in a selected session:
+在选中的 Session 中使用这个固定请求：
 
 ```text
 @orchestrator build a login page for the demo app
 ```
 
-The current planner creates a 3-step plan:
+当前规划器创建一个 3 步计划：
 
-1. Plan the login page change.
-2. Build the Vite React login page.
-3. Review the login page demo path.
+1. 规划登录页面更改。
+2. 构建 Vite React 登录页面。
+3. 审查登录页面 Demo 路径。
 
-The deterministic demo mutation targets are in `apps/demo/src/App.tsx`:
+确定性 Demo 变异目标位于 `apps/demo/src/App.tsx` 中：
 
 - `data-agenthub-target="login-page-slot"`
 - `data-agenthub-target="primary-action-button"`
 
-## Demo Script
+## Demo 脚本
 
-Use `docs/demo-script.md` for the narrated demo. It includes:
+使用 `docs/demo-script.md` 进行带旁白的 Demo。它包括：
 
-- a main demo path through session creation, planning, task cards, real local
-  agent Direct Start execution, diff, preview, and mock deploy
-- a failure recovery path showing a failed Codex run preserved in history and a
-  successful `ScriptedMockAdapter` retry
+- 通过 Session 创建、规划、任务卡片、真实本地 Agent Direct Start 执行、Diff、预览和 Mock 部署的主 Demo 路径
+- 显示失败的 Codex 运行保留在历史记录中以及成功的 `ScriptedMockAdapter` 重试的失败恢复路径
 
-Current P4 status: the `Start run` UI dispatches real local agent Direct Start
-execution. P1-11 verified a clean SQLite rehearsal through real Codex file
-mutation, diff, healthy Vite preview, and mock deploy card. P4-0 verified a
-Claude Code default-adapter path, plus fallback and follow-up paths, through the
-browser-facing API path. The forced-failure `ScriptedMockAdapter` path remains
-the reliability fallback if real local agent execution is unavailable,
-unauthenticated, usage-limited, or too slow for the demo window.
+当前 P4 状态：`Start run` UI 调度真实本地 Agent Direct Start 执行。P1-11 通过真实 Codex 文件变异、Diff、健康的 Vite 预览和 Mock 部署卡片验证了干净的 SQLite 演练。P4-0 通过面向浏览器的 API 路径验证了 Claude Code 默认适配器路径，以及降级和后续路径。如果真实本地 Agent 执行不可用、未认证、使用受限或对于 Demo 窗口太慢，强制失败的 `ScriptedMockAdapter` 路径仍然是可靠性降级方案。
 
-To use Claude Code as the default coding adapter for frontend/backend coding
-tasks:
+要使用 Claude Code 作为前端/后端编码任务的默认编码适配器：
 
 ```bash
 AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api
 ```
 
-## Current Demo Boundaries
+## 当前 Demo 边界
 
-The current local demo includes:
+当前本地 Demo 包括：
 
-- single-user local workspace and sessions
-- SSE, not WebSocket
-- session-level git worktrees, not Docker sandbox
-- Vite React preview only
-- SQLite, not Postgres
-- local Codex CLI and local Claude Code CLI as real adapter paths
-- `ScriptedMockAdapter` as the reliability fallback, with real file changes
-- Git CLI diff collection and persisted diff artifacts
-- mock-backed deploy card when real deployment is unavailable
+- 单用户本地工作区和 Session
+- SSE，不是 WebSocket
+- Session 级别的 Git Worktree，不是 Docker 沙箱
+- 仅 Vite React 预览
+- SQLite，不是 Postgres
+- 本地 Codex CLI 和本地 Claude Code CLI 作为真实适配器路径
+- `ScriptedMockAdapter` 作为可靠性降级方案，具有真实文件更改
+- Git CLI Diff 收集和持久化 Diff 产物
+- 当真实部署不可用时，由 Mock 支持的部署卡片
 
-Deferred platform items include:
+延迟的平台项目包括：
 
 - `HumanAgentAdapter`
-- Docker sandbox
+- Docker 沙箱
 - WebSocket
-- provider marketplace or MCP marketplace
-- PR creation or patch export
-- external Feishu, Slack, WeChat, or other IM integrations
-- multiplayer collaboration
-- enterprise RBAC, billing, or admin policy console
-- production deployment matrix or one-click production deploy guide
+- Provider Marketplace 或 MCP Marketplace
+- PR 创建或补丁导出
+- 外部飞书、Slack、微信或其他 IM 集成
+- 多人协作
+- 企业 RBAC、计费或管理策略控制台
+- 生产部署矩阵或一键生产部署指南
 
-## P1 Reset Notes
+## P1 重置说明
 
-- `pnpm db:init` initializes and seeds the SQLite database.
-- Runtime worktrees live under `.worktrees/`.
-- Runtime API database files live under `apps/api/data/`.
-- Do not delete `.git/`, `.env*`, `node_modules/`, or unrelated user files
-  during a demo reset.
-- For the P1-11 clean-state rehearsal, the previous SQLite database was moved
-  to `/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`
-  before running `pnpm db:init`. Existing `.worktrees` checkouts were left in
-  place to avoid disturbing Git's registered worktree metadata.
-- To restore that pre-P1-11 database, stop the dev servers first, back up the
-  current `apps/api/data/agenthub.sqlite3` if you need to keep it, then move the
-  P1-11 backup file back to `apps/api/data/agenthub.sqlite3`.
+- `pnpm db:init` 初始化并填充 SQLite 数据库。
+- 运行时 Worktree 位于 `.worktrees/` 下。
+- 运行时 API 数据库文件位于 `apps/api/data/` 下。
+- 在 Demo 重置期间不要删除 `.git/`、`.env*`、`node_modules/` 或不相关的用户文件。
+- 对于 P1-11 干净状态演练，在运行 `pnpm db:init` 之前，之前的 SQLite 数据库被移动到 `/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`。现有的 `.worktrees` 检出保持原位，以避免干扰 Git 注册的 Worktree 元数据。
+- 要恢复该 P1-11 之前的数据库，首先停止开发服务器，如果需要保留当前的 `apps/api/data/agenthub.sqlite3` 则备份它，然后将 P1-11 备份文件移回 `apps/api/data/agenthub.sqlite3`。
 
-## Troubleshooting
+## 故障排除
 
-### Frontend Does Not Start
+### 前端无法启动
 
-Run `pnpm install` from the repo root, then `pnpm dev:web`. The web app expects
-the backend at `http://127.0.0.1:8000` unless `BACKEND_URL` is set.
+从仓库根目录运行 `pnpm install`，然后 `pnpm dev:web`。除非设置了 `BACKEND_URL`，否则 Web 应用期望后端在 `http://127.0.0.1:8000`。
 
-### Backend Does Not Start
+### 后端无法启动
 
-Create the Python virtual environment and install backend requirements:
+创建 Python 虚拟环境并安装后端依赖项：
 
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r apps/api/requirements.txt
 ```
 
-Then run `pnpm dev:api`.
+然后运行 `pnpm dev:api`。
 
-### Database Is Missing Or Not Seeded
+### 数据库缺失或未填充
 
-Run:
+运行：
 
 ```bash
 pnpm db:init
 ```
 
-Refresh the web app. The health card should show the backend as reachable, and
-the workspace should be `AgentHub Demo`.
+刷新 Web 应用。健康卡片应显示后端可访问，工作区应为 `AgentHub Demo`。
 
-### Real Agent CLI Is Unavailable, Unauthenticated, Or Usage-Limited
+### 真实 Agent CLI 不可用、未认证或使用受限
 
-Read `docs/adapter-notes.md` for Codex notes and
-`docs/claude-code-adapter-notes.md` for Claude Code notes. Use the visible
-recovery path: `Force Codex failure`, then `Retry with ScriptedMockAdapter`.
+阅读 `docs/adapter-notes.md` 了解 Codex 说明，阅读 `docs/claude-code-adapter-notes.md` 了解 Claude Code 说明。使用可见的恢复路径：`Force Codex failure`，然后 `Retry with ScriptedMockAdapter`。
 
-### Preview Port Is Unavailable
+### 预览端口不可用
 
-The preview runner allocates a port for backend-started previews. For manual
-demo-app startup, set a different port:
+预览运行器为后端启动的预览分配端口。对于手动 Demo 应用启动，设置不同的端口：
 
 ```bash
 AGENTHUB_DEMO_PORT=5174 pnpm demo:dev
 ```
 
-### Vite Demo Dependencies Are Missing
+### Vite Demo 依赖项缺失
 
-Run setup-time installation:
+运行设置时安装：
 
 ```bash
 pnpm demo:setup
 ```
 
-Do not add dependency installation to adapter execution or preview startup.
+不要将依赖安装添加到适配器执行或预览启动中。
 
-### Fallback Does Not Produce A Diff
+### 降级方案未生成 Diff
 
-Check that the selected session has a git worktree and that the fallback run
-completed. `ScriptedMockAdapter` expects `apps/demo/src/App.tsx` inside the
-session worktree and uses the deterministic targets listed above.
+检查选中的 Session 有一个 Git Worktree 并且降级运行已完成。`ScriptedMockAdapter` 期望 Session Worktree 内的 `apps/demo/src/App.tsx` 并使用上面列出的确定性目标。
 
-### Mock Deploy Card Does Not Appear
+### Mock 部署卡片未出现
 
-Create or refresh a healthy preview first. The mock deploy card is created from
-the preview card with `Create deploy card`; it is persisted by the backend and
-is not a frontend-only placeholder.
+首先创建或刷新健康的预览。Mock 部署卡片从预览卡片通过 `Create deploy card` 创建；它由后端持久化，不是仅前端的占位符。
 
-### Locale-Specific Hydration Warning In Dev Console
+### 开发控制台中的特定区域 Hydration 警告
 
-During P1-11, a non-blocking development hydration warning was observed around
-locale-specific session date formatting. It did not block the clean-state
-rehearsal, fallback rehearsal, diff cards, preview iframe, or mock deploy card.
+在 P1-11 期间，观察到围绕特定区域 Session 日期格式化的非阻塞开发 Hydration 警告。它没有阻止干净状态演练、降级演练、Diff 卡片、预览 iframe 或 Mock 部署卡片。
