@@ -10,6 +10,11 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
+from app.artifact_versions import (
+    ArtifactVersionError,
+    StoredArtifactVersion,
+    list_artifact_versions,
+)
 from app.config import get_settings
 from app.claude_code_adapter import ClaudeCodeAdapter
 from app.codex_adapter import CodexAdapter
@@ -89,6 +94,7 @@ from app.schemas import (
     HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
+    ArtifactVersionResponse,
     ExternalProjectAnalysisRequest,
     ExternalProjectAnalysisResponse,
     ExternalProjectTargetCreateRequest,
@@ -1123,6 +1129,21 @@ def diff_artifact_response(diff_artifact: StoredDiffArtifact) -> DiffArtifactRes
     )
 
 
+def artifact_version_response(version: StoredArtifactVersion) -> ArtifactVersionResponse:
+    return ArtifactVersionResponse(
+        id=version.id,
+        artifactId=version.artifact_id,
+        version=version.version,
+        sourceTaskRunId=version.source_task_run_id,
+        parentArtifactId=version.parent_artifact_id,
+        gitBaseRef=version.git_base_ref,
+        gitHeadRef=version.git_head_ref,
+        changedFiles=version.changed_files,
+        summary=version.summary,
+        createdAt=version.created_at,
+    )
+
+
 def review_response(review: StoredReviewArtifact) -> ReviewArtifactResponse:
     return ReviewArtifactResponse(
         id=review.id,
@@ -1404,6 +1425,18 @@ def read_task_run_diffs(
     if db.get(TaskRun, task_run_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
     return [diff_artifact_response(diff) for diff in list_task_run_diffs(db, task_run_id)]
+
+
+@app.get("/artifacts/{artifact_id}/versions", response_model=list[ArtifactVersionResponse])
+def read_artifact_versions(
+    artifact_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[ArtifactVersionResponse]:
+    try:
+        versions = list_artifact_versions(db, artifact_id)
+    except ArtifactVersionError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return [artifact_version_response(version) for version in versions]
 
 
 @app.post(

@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
+from app.artifact_versions import record_artifact_version
 from app.diffs import (
     _head_ref,
     _parse_numstat_value,
@@ -22,7 +23,18 @@ from app.external_workspaces import (
     register_external_project_target,
 )
 from app.main import app, get_db
-from app.models import Agent, Artifact, Diff, Review, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.models import (
+    Agent,
+    Artifact,
+    ArtifactVersion,
+    Diff,
+    Review,
+    Session,
+    Task,
+    TaskRun,
+    TaskRunEvent,
+    Workspace,
+)
 from app.task_runs import create_task_run
 
 
@@ -163,6 +175,16 @@ def test_collect_task_run_diff_stores_git_patch_and_excludes_node_modules(
     assert json.loads(stored_diff.stats_json)["filesChanged"] == 1
     assert json.loads(event.payload_json)["artifactId"] == artifact.id
 
+    version = db.exec(
+        select(ArtifactVersion).where(ArtifactVersion.artifact_id == artifact.id)
+    ).one()
+    assert version.version == 1
+    assert version.source_task_run_id == task_run_id
+    assert version.git_base_ref == base_ref
+    assert version.git_head_ref == stored_run.head_ref
+    assert json.loads(version.changed_files_json) == ["apps/demo/src/App.tsx"]
+    assert "Diff captured 1 changed file" in version.summary
+
 
 def test_external_task_run_diff_uses_allowed_paths_and_excludes_denied(
     db: DbSession,
@@ -283,6 +305,67 @@ def test_diff_api_returns_stored_diff_artifacts(
     stored_review = db.get(Review, reviews[0]["id"])
     assert stored_review is not None
     assert stored_review.reviewed_diff_artifact_id == created["artifactId"]
+
+    versions_response = client.get(f"/artifacts/{created['artifactId']}/versions")
+    assert versions_response.status_code == 200
+    versions = versions_response.json()
+    assert versions[0]["artifactId"] == created["artifactId"]
+    assert versions[0]["version"] == 1
+    assert versions[0]["changedFiles"] == ["apps/demo/src/App.tsx"]
+
+
+def test_artifact_versions_support_followup_v2_parent_chain(
+    client: TestClient,
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_run_fixture(db, demo_worktree)
+    mutate_worktree(demo_worktree)
+    first_diff = collect_task_run_diff(db, task_run_id)
+    task_run = db.get(TaskRun, task_run_id)
+    assert task_run is not None
+
+    followup_artifact = Artifact(
+        task_run_id=task_run_id,
+        artifact_type="diff",
+        title="Follow-up diff",
+        status="ready",
+        version=2,
+    )
+    db.add(followup_artifact)
+    db.commit()
+    db.refresh(followup_artifact)
+
+    followup_version = record_artifact_version(
+        db,
+        followup_artifact,
+        parent_artifact_id=first_diff.artifact_id,
+        source_task_run_id=task_run_id,
+        git_base_ref=task_run.base_ref,
+        git_head_ref="followup-head",
+        changed_files=["apps/demo/src/App.tsx"],
+        summary="Follow-up artifact version for v2 evidence.",
+    )
+
+    response = client.get(f"/artifacts/{followup_artifact.id}/versions")
+
+    assert response.status_code == 200
+    assert followup_version.version == 2
+    payload = response.json()
+    assert payload == [
+        {
+            "id": followup_version.id,
+            "artifactId": followup_artifact.id,
+            "version": 2,
+            "sourceTaskRunId": task_run_id,
+            "parentArtifactId": first_diff.artifact_id,
+            "gitBaseRef": task_run.base_ref,
+            "gitHeadRef": "followup-head",
+            "changedFiles": ["apps/demo/src/App.tsx"],
+            "summary": "Follow-up artifact version for v2 evidence.",
+            "createdAt": payload[0]["createdAt"],
+        }
+    ]
 
 
 def test_parse_numstat_value_handles_binary_and_normal() -> None:

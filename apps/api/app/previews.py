@@ -12,6 +12,7 @@ from typing import Optional, Protocol
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.artifact_versions import record_artifact_version
 from app.events import append_task_run_event
 from app.models import Artifact, Preview, Task, TaskRun, Workspace, utc_now
 from app.models import Session as AgentHubSession
@@ -181,6 +182,15 @@ class PreviewService:
         db.add(preview)
         db.commit()
         db.refresh(preview)
+
+        record_artifact_version(
+            db,
+            artifact,
+            source_task_run_id=task_run.id,
+            git_base_ref=task_run.base_ref,
+            git_head_ref=task_run.head_ref,
+            summary=f"Preview became {health_status} at {url}.",
+        )
 
         if healthy:
             append_task_run_event(

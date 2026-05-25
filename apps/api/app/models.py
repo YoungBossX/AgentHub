@@ -156,6 +156,19 @@ class Artifact(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
+class ArtifactVersion(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    artifact_id: str = Field(foreign_key="artifact.id", index=True)
+    version: int = 1
+    source_task_run_id: Optional[str] = Field(default=None, foreign_key="taskrun.id")
+    parent_artifact_id: Optional[str] = Field(default=None, foreign_key="artifact.id")
+    git_base_ref: Optional[str] = None
+    git_head_ref: Optional[str] = None
+    changed_files_json: str = "[]"
+    summary: str = ""
+    created_at: datetime = Field(default_factory=utc_now)
+
+
 class Diff(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     artifact_id: str = Field(foreign_key="artifact.id", index=True)

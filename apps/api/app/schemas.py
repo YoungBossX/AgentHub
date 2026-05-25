@@ -289,6 +289,19 @@ class DiffArtifactResponse(ApiModel):
     stats: dict[str, Any]
 
 
+class ArtifactVersionResponse(ApiModel):
+    id: str
+    artifact_id: str = Field(alias="artifactId")
+    version: int
+    source_task_run_id: Optional[str] = Field(alias="sourceTaskRunId")
+    parent_artifact_id: Optional[str] = Field(alias="parentArtifactId")
+    git_base_ref: Optional[str] = Field(alias="gitBaseRef")
+    git_head_ref: Optional[str] = Field(alias="gitHeadRef")
+    changed_files: list[str] = Field(alias="changedFiles")
+    summary: str
+    created_at: datetime = Field(alias="createdAt")
+
+
 class ReviewArtifactResponse(ApiModel):
     id: str
     artifact_id: str = Field(alias="artifactId")

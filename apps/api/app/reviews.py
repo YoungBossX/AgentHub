@@ -6,6 +6,7 @@ from typing import Any, Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.artifact_versions import record_artifact_version
 from app.events import append_task_run_event
 from app.external_evidence import list_task_run_command_evidence
 from app.models import Artifact, Diff, Review, Task, TaskRun, utc_now
@@ -131,6 +132,15 @@ def create_scripted_review_for_diff(
     db.add(review)
     db.commit()
     db.refresh(review)
+
+    record_artifact_version(
+        db,
+        artifact,
+        source_task_run_id=artifact.task_run_id,
+        parent_artifact_id=diff_artifact.id,
+        changed_files=files_reviewed,
+        summary=summary,
+    )
 
     append_task_run_event(
         db,

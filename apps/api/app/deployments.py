@@ -10,6 +10,7 @@ from typing import Iterable, Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.artifact_versions import record_artifact_version
 from app.events import append_task_run_event
 from app.models import (
     Artifact,
@@ -432,6 +433,18 @@ class DeployService:
         db.commit()
         db.refresh(artifact)
         db.refresh(deployment)
+
+        changed_files = _latest_changed_files_for_task_run(db, task_run.id)
+        record_artifact_version(
+            db,
+            artifact,
+            source_task_run_id=task_run.id,
+            parent_artifact_id=preview_artifact.id,
+            git_base_ref=task_run.base_ref,
+            git_head_ref=task_run.head_ref,
+            changed_files=changed_files,
+            summary=f"{deployment.provider} deployment recorded with status {deployment.status}.",
+        )
 
         append_task_run_event(
             db,

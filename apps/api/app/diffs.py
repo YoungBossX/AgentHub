@@ -7,6 +7,7 @@ from typing import Any, Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.artifact_versions import record_artifact_version
 from app.events import append_task_run_event
 from app.models import Artifact, Diff, Task, TaskRun
 from app.models import Session as AgentHubSession
@@ -122,6 +123,16 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
     db.add(diff)
     db.commit()
     db.refresh(diff)
+
+    record_artifact_version(
+        db,
+        artifact,
+        source_task_run_id=task_run.id,
+        git_base_ref=base_ref,
+        git_head_ref=head_ref,
+        changed_files=changed_files,
+        summary=f"Diff captured {len(changed_files)} changed file(s).",
+    )
 
     append_task_run_event(
         db,

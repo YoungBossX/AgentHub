@@ -6,6 +6,7 @@ from app.db import create_db_and_tables, engine
 from app.models import (
     Agent,
     Artifact,
+    ArtifactVersion,
     Deployment,
     Diff,
     ExternalProjectTarget,
@@ -27,6 +28,7 @@ from app.seed import seed_demo_data
 EXPECTED_TABLES = {
     "agent",
     "artifact",
+    "artifactversion",
     "deployment",
     "diff",
     "externalprojecttarget",
@@ -166,6 +168,18 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "meta_json",
             "created_at",
             "updated_at",
+        },
+        ArtifactVersion: {
+            "id",
+            "artifact_id",
+            "version",
+            "source_task_run_id",
+            "parent_artifact_id",
+            "git_base_ref",
+            "git_head_ref",
+            "changed_files_json",
+            "summary",
+            "created_at",
         },
         Diff: {
             "id",
