@@ -5,6 +5,24 @@ reference instead of repeating long context blocks.
 
 ## P11 Status
 
+### P11-4 Deploy Logs And Status Artifact
+
+P11-4 completed on 2026-05-25.
+
+Deployment artifacts now expose provider evidence more directly. Deployment
+metadata records provider type, target ID, source preview/diff/review
+references, provider logs, and status history. The deploy API response includes
+these fields so UI clients do not need to parse raw artifact metadata.
+
+The existing deploy card now renders target/source references, status history,
+and logs while preserving mock deploy behavior. Local staging failures such as
+build failure, missing output directory, or failed health check are persisted as
+failed deployment artifacts with logs instead of being silently lost.
+
+Current limitation: P11-4 records status history as provider-produced metadata
+and deploy events. It does not yet enforce review/preview/policy deploy gates;
+that remains P11-5.
+
 ### P11-3 Local Staging Deploy Provider
 
 P11-3 completed on 2026-05-25.

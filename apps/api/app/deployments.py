@@ -40,6 +40,13 @@ class StoredDeploymentArtifact:
     commit_sha: Optional[str]
     url: Optional[str]
     deploy_log_uri: Optional[str]
+    provider_type: Optional[str]
+    target_id: Optional[str]
+    source_preview_id: Optional[str]
+    source_diff_artifact_id: Optional[str]
+    source_review_artifact_id: Optional[str]
+    logs: tuple[str, ...]
+    status_history: tuple[dict[str, str], ...]
     created_at: object
     updated_at: object
 
@@ -54,7 +61,9 @@ class DeployProviderResult:
     output_url: Optional[str]
     status: str
     logs: tuple[str, ...]
+    status_history: tuple[dict[str, str], ...] = ()
     environment: str = "staging"
+    persist_failed: bool = False
 
     def to_metadata(self) -> dict[str, object]:
         return {
@@ -66,6 +75,7 @@ class DeployProviderResult:
             "outputUrl": self.output_url,
             "status": self.status,
             "logs": list(self.logs),
+            "statusHistory": [dict(item) for item in self.status_history],
             "environment": self.environment,
         }
 
@@ -150,6 +160,10 @@ class MockDeployProvider:
                 f"Mock deploy accepted healthy preview {preview.id}.",
                 f"Source TaskRun {task_run.id} was completed.",
             ),
+            status_history=(
+                {"status": "queued", "message": "Mock deploy request queued."},
+                {"status": "ready", "message": "Mock deployment is ready."},
+            ),
             environment="preview",
         )
 
@@ -208,7 +222,13 @@ class LocalStagingDeployProvider:
                 output_url=None,
                 status="failed",
                 logs=tuple([*logs, f"Build command failed with exit code {build.exit_code}."]),
+                status_history=(
+                    {"status": "queued", "message": "Local staging deploy request queued."},
+                    {"status": "building", "message": "Build command started."},
+                    {"status": "failed", "message": "Build command failed."},
+                ),
                 environment="staging",
+                persist_failed=True,
             )
 
         output_dir = _output_dir_for_target(target_root, config.output_dir)
@@ -222,7 +242,13 @@ class LocalStagingDeployProvider:
                 output_url=None,
                 status="failed",
                 logs=tuple([*logs, f"Staging output directory missing: {output_dir}."]),
+                status_history=(
+                    {"status": "queued", "message": "Local staging deploy request queued."},
+                    {"status": "building", "message": "Build command completed."},
+                    {"status": "failed", "message": "Staging output directory missing."},
+                ),
                 environment="staging",
+                persist_failed=True,
             )
 
         port = int(self.port_allocator())
@@ -239,7 +265,14 @@ class LocalStagingDeployProvider:
                 output_url=server.url,
                 status="failed",
                 logs=tuple([*logs, "Staging URL did not pass health check."]),
+                status_history=(
+                    {"status": "queued", "message": "Local staging deploy request queued."},
+                    {"status": "building", "message": "Build command completed."},
+                    {"status": "deploying", "message": "Static server started."},
+                    {"status": "failed", "message": "Staging health check failed."},
+                ),
                 environment="staging",
+                persist_failed=True,
             )
 
         return DeployProviderResult(
@@ -251,6 +284,12 @@ class LocalStagingDeployProvider:
             output_url=server.url,
             status="ready",
             logs=tuple([*logs, "Local staging deploy is ready."]),
+            status_history=(
+                {"status": "queued", "message": "Local staging deploy request queued."},
+                {"status": "building", "message": "Build command completed."},
+                {"status": "deploying", "message": "Static server started."},
+                {"status": "ready", "message": "Local staging deploy is ready."},
+            ),
             environment="staging",
         )
 
@@ -297,7 +336,7 @@ class DeployService:
             task_run=task_run,
             deployment_id=deployment_id,
         )
-        if provider_result.status != "ready":
+        if provider_result.status != "ready" and not provider_result.persist_failed:
             reason = provider_result.logs[-1] if provider_result.logs else provider_result.status
             raise DeployError(
                 f"Deploy provider {provider_result.provider_id} failed with status "
@@ -332,6 +371,8 @@ class DeployService:
     ) -> StoredDeploymentArtifact:
         now = utc_now()
         commit_sha = task_run.head_ref or task_run.base_ref or f"worktree:{task_run.id}"
+        source = _source_metadata_for_task_run(db, preview, preview_artifact, task_run)
+        status_history = _status_history_for_provider_result(provider_result)
         artifact = Artifact(
             task_run_id=task_run.id,
             artifact_type="deployment",
@@ -346,6 +387,9 @@ class DeployService:
                     "targetId": provider_result.target_id,
                     "environment": provider_result.environment,
                     "commitSha": commit_sha,
+                    "source": source,
+                    "logs": list(provider_result.logs),
+                    "statusHistory": status_history,
                     "providerResult": provider_result.to_metadata(),
                 },
                 separators=(",", ":"),
@@ -375,7 +419,7 @@ class DeployService:
         append_task_run_event(
             db,
             task_run_id=task_run.id,
-            event_type="artifact.deploy.ready",
+            event_type=f"artifact.deploy.{deployment.status}",
             payload_json=json.dumps(
                 {
                     "artifactId": artifact.id,
@@ -388,6 +432,8 @@ class DeployService:
                     "url": deployment.url,
                     "commitSha": deployment.commit_sha,
                     "logs": list(provider_result.logs),
+                    "statusHistory": status_history,
+                    "source": source,
                 },
                 separators=(",", ":"),
             ),
@@ -479,6 +525,79 @@ def _output_dir_for_target(target_root: Path, output_dir: str) -> Path:
     return target_root / path
 
 
+def _source_metadata_for_task_run(
+    db: DbSession,
+    preview: Preview,
+    preview_artifact: Artifact,
+    task_run: TaskRun,
+) -> dict[str, Optional[str]]:
+    return {
+        "taskRunId": task_run.id,
+        "previewId": preview.id,
+        "previewArtifactId": preview_artifact.id,
+        "diffArtifactId": _latest_artifact_id(db, task_run.id, "diff"),
+        "reviewArtifactId": _latest_artifact_id(db, task_run.id, "review"),
+    }
+
+
+def _latest_artifact_id(
+    db: DbSession,
+    task_run_id: str,
+    artifact_type: str,
+) -> Optional[str]:
+    artifact = db.exec(
+        select(Artifact)
+        .where(Artifact.task_run_id == task_run_id, Artifact.artifact_type == artifact_type)
+        .order_by(Artifact.created_at.desc(), Artifact.id.desc())
+    ).first()
+    return artifact.id if artifact is not None else None
+
+
+def _status_history_for_provider_result(
+    provider_result: DeployProviderResult,
+) -> list[dict[str, str]]:
+    if provider_result.status_history:
+        return [dict(item) for item in provider_result.status_history]
+    return [{"status": provider_result.status, "message": provider_result.status}]
+
+
+def _metadata_for_artifact(artifact: Artifact) -> dict[str, object]:
+    try:
+        parsed = json.loads(artifact.meta_json)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _string_value(value: object) -> Optional[str]:
+    return value if isinstance(value, str) else None
+
+
+def _string_list(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(item for item in value if isinstance(item, str))
+
+
+def _status_history_list(value: object) -> tuple[dict[str, str], ...]:
+    if not isinstance(value, list):
+        return ()
+    history: list[dict[str, str]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        status = item.get("status")
+        message = item.get("message")
+        if isinstance(status, str):
+            history.append(
+                {
+                    "status": status,
+                    "message": message if isinstance(message, str) else status,
+                }
+            )
+    return tuple(history)
+
+
 def _ensure_deploy_prerequisites(db: DbSession, task_run: TaskRun) -> None:
     if task_run.state != "completed":
         raise DeployError("Deployment requires a completed TaskRun.")
@@ -503,6 +622,13 @@ def _to_stored_deployment(
     artifact: Artifact,
     deployment: Deployment,
 ) -> StoredDeploymentArtifact:
+    metadata = _metadata_for_artifact(artifact)
+    provider_result = metadata.get("providerResult")
+    if not isinstance(provider_result, dict):
+        provider_result = {}
+    source = metadata.get("source")
+    if not isinstance(source, dict):
+        source = {}
     return StoredDeploymentArtifact(
         id=deployment.id,
         artifact_id=artifact.id,
@@ -515,6 +641,15 @@ def _to_stored_deployment(
         commit_sha=deployment.commit_sha,
         url=deployment.url,
         deploy_log_uri=deployment.deploy_log_uri,
+        provider_type=_string_value(metadata.get("providerType") or provider_result.get("providerType")),
+        target_id=_string_value(metadata.get("targetId") or provider_result.get("targetId")),
+        source_preview_id=_string_value(source.get("previewId")),
+        source_diff_artifact_id=_string_value(source.get("diffArtifactId")),
+        source_review_artifact_id=_string_value(source.get("reviewArtifactId")),
+        logs=_string_list(metadata.get("logs") or provider_result.get("logs")),
+        status_history=_status_history_list(
+            metadata.get("statusHistory") or provider_result.get("statusHistory")
+        ),
         created_at=deployment.created_at,
         updated_at=deployment.updated_at,
     )

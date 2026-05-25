@@ -1,5 +1,46 @@
 # AgentHub Change Log
 
+## P11-4 Deploy Logs And Status Artifact
+
+**Date:** 2026-05-25
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/deployments.py` | Added deployment source metadata, logs, status history, failed deployment artifact persistence, and expanded deployment response mapping. |
+| `apps/api/app/main.py` | Returned deploy provider type, target/source references, logs, and status history in deployment responses. |
+| `apps/api/app/schemas.py` | Added deployment response fields for deploy evidence and status history. |
+| `apps/api/tests/test_deployments.py` | Added deployment evidence, failed artifact, and API response coverage. |
+| `apps/web/src/lib/api.ts` | Added deploy evidence fields to the frontend API type. |
+| `apps/web/src/lib/api.test.ts` | Updated deployment fixture payload coverage. |
+| `apps/web/src/components/deploy-card.tsx` | Rendered target/source references, status history, and logs in deployment cards. |
+| `apps/web/src/components/deploy-card.test.tsx` | Added deploy card evidence assertions. |
+| `apps/web/src/components/__fixtures__/sample-deployment.ts` | Added sample deploy evidence metadata. |
+| `docs/project-state.md` | Recorded P11-4 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-4 complete after targeted verification. |
+
+### What Changed
+
+P11-4 makes deployment evidence visible and durable. Deployment artifacts and
+API responses now include target ID, provider type, source preview/diff/review
+references, logs, and status history. The deploy card renders those details
+inline so staging deploys can be reviewed like other AgentHub artifacts.
+
+Local staging provider failures now persist failed deployment artifacts with
+diagnostic logs instead of disappearing behind an exception. Unknown providers
+still fail before artifact creation.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted deployment tests | Pass: 13 tests. |
+| Targeted deploy card/frontend tests | Pass: 37 tests. |
+
+---
+
 ## P11-3 Local Staging Deploy Provider
 
 **Date:** 2026-05-25

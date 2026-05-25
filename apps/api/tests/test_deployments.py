@@ -204,6 +204,9 @@ def test_deploy_provider_result_records_standard_metadata(tmp_path: Path) -> Non
         assert provider_result["outputUrl"] == stored.url
         assert provider_result["status"] == "ready"
         assert provider_result["logs"]
+        assert metadata["logs"] == provider_result["logs"]
+        assert metadata["statusHistory"][-1]["status"] == "ready"
+        assert metadata["source"]["previewId"] == preview_id
 
 
 def test_deploy_service_rejects_unknown_provider(tmp_path: Path) -> None:
@@ -327,10 +330,14 @@ def test_local_staging_provider_reports_failed_build_without_ready_artifact(
         )
         service = DeployService(providers=(provider,))
 
-        with pytest.raises(DeployError, match="Build command failed"):
-            service.create_deployment(db, preview_id, provider_id="local_staging")
+        stored = service.create_deployment(db, preview_id, provider_id="local_staging")
+        artifact = db.get(Artifact, stored.artifact_id)
 
-        assert db.exec(select(Deployment)).all() == []
+        assert stored.status == "failed"
+        assert artifact is not None
+        metadata = json.loads(artifact.meta_json)
+        assert metadata["statusHistory"][-1]["status"] == "failed"
+        assert "Build command failed" in "\n".join(metadata["logs"])
 
 
 def test_local_staging_provider_reports_missing_output_without_ready_artifact(
@@ -348,10 +355,12 @@ def test_local_staging_provider_reports_missing_output_without_ready_artifact(
         )
         service = DeployService(providers=(provider,))
 
-        with pytest.raises(DeployError, match="output directory missing"):
-            service.create_deployment(db, preview_id, provider_id="local_staging")
+        stored = service.create_deployment(db, preview_id, provider_id="local_staging")
+        artifact = db.get(Artifact, stored.artifact_id)
 
-        assert db.exec(select(Deployment)).all() == []
+        assert stored.status == "failed"
+        assert artifact is not None
+        assert "output directory missing" in "\n".join(json.loads(artifact.meta_json)["logs"])
 
 
 def test_deploy_api_creates_and_lists_mock_deployments(tmp_path: Path) -> None:
@@ -422,6 +431,11 @@ def test_deploy_api_can_select_local_staging_provider(tmp_path: Path) -> None:
         assert response.json()["provider"] == "local_staging"
         assert response.json()["environment"] == "staging"
         assert response.json()["url"] == "http://127.0.0.1:45220"
+        assert response.json()["targetId"] == "demo-frontend"
+        assert response.json()["providerType"] == "local_staging"
+        assert response.json()["sourcePreviewId"] == preview_id
+        assert response.json()["logs"]
+        assert response.json()["statusHistory"][-1]["status"] == "ready"
 
 
 def test_mock_deploy_rejects_nonexistent_preview(tmp_path: Path) -> None:

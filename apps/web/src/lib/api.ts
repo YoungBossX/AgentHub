@@ -188,10 +188,17 @@ export type DeploymentArtifact = {
   title: string
   status: string
   provider: string
+  providerType: string | null
   environment: string
   commitSha: string | null
   url: string | null
   deployLogUri: string | null
+  targetId: string | null
+  sourcePreviewId: string | null
+  sourceDiffArtifactId: string | null
+  sourceReviewArtifactId: string | null
+  logs: string[]
+  statusHistory: Array<{ status: string; message?: string }>
   createdAt: string
   updatedAt: string
 }

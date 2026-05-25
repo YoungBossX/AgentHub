@@ -42,7 +42,9 @@ export function DeployCard({ deployment }: DeployCardProps) {
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
         <div>
           <dt className="text-[var(--muted-foreground)]">提供方</dt>
-          <dd className="mt-1 font-medium">{deployment.provider}</dd>
+          <dd className="mt-1 font-medium">
+            {deployment.providerType ?? deployment.provider}
+          </dd>
         </div>
         <div>
           <dt className="text-[var(--muted-foreground)]">环境</dt>
@@ -54,6 +56,12 @@ export function DeployCard({ deployment }: DeployCardProps) {
             {deployment.commitSha ?? "worktree"}
           </dd>
         </div>
+        {deployment.targetId ? (
+          <div className="min-w-0">
+            <dt className="text-[var(--muted-foreground)]">目标</dt>
+            <dd className="mt-1 truncate font-medium">{deployment.targetId}</dd>
+          </div>
+        ) : null}
       </dl>
 
       <dl className="mt-3 grid gap-2 text-xs">
@@ -67,7 +75,38 @@ export function DeployCard({ deployment }: DeployCardProps) {
             {deployment.deployLogUri ?? "mock://logs/pending"}
           </dd>
         </div>
+        {deployment.sourceDiffArtifactId ? (
+          <div className="min-w-0">
+            <dt className="text-[var(--muted-foreground)]">Diff</dt>
+            <dd className="mt-1 truncate font-medium">{deployment.sourceDiffArtifactId}</dd>
+          </div>
+        ) : null}
+        {deployment.sourceReviewArtifactId ? (
+          <div className="min-w-0">
+            <dt className="text-[var(--muted-foreground)]">Review</dt>
+            <dd className="mt-1 truncate font-medium">
+              {deployment.sourceReviewArtifactId}
+            </dd>
+          </div>
+        ) : null}
       </dl>
+
+      {deployment.statusHistory.length > 0 ? (
+        <ol className="mt-3 grid gap-1 text-xs text-[var(--muted-foreground)]">
+          {deployment.statusHistory.map((item, index) => (
+            <li key={`${item.status}-${index}`} className="flex gap-2">
+              <span className="font-medium text-[var(--foreground)]">{item.status}</span>
+              <span className="truncate">{item.message ?? item.status}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
+      {deployment.logs.length > 0 ? (
+        <pre className="mt-3 max-h-28 overflow-auto rounded-sm bg-[var(--muted)] p-2 text-xs leading-relaxed text-[var(--foreground)]">
+          {deployment.logs.join("\n")}
+        </pre>
+      ) : null}
     </article>
   )
 }

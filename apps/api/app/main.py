@@ -1130,6 +1130,13 @@ def deployment_response(deployment: StoredDeploymentArtifact) -> DeploymentRespo
         commitSha=deployment.commit_sha,
         url=deployment.url,
         deployLogUri=deployment.deploy_log_uri,
+        providerType=deployment.provider_type,
+        targetId=deployment.target_id,
+        sourcePreviewId=deployment.source_preview_id,
+        sourceDiffArtifactId=deployment.source_diff_artifact_id,
+        sourceReviewArtifactId=deployment.source_review_artifact_id,
+        logs=list(deployment.logs),
+        statusHistory=list(deployment.status_history),
         createdAt=deployment.created_at,
         updatedAt=deployment.updated_at,
     )

@@ -324,6 +324,13 @@ class DeploymentResponse(ApiModel):
     commit_sha: Optional[str] = Field(alias="commitSha")
     url: Optional[str]
     deploy_log_uri: Optional[str] = Field(alias="deployLogUri")
+    provider_type: Optional[str] = Field(alias="providerType")
+    target_id: Optional[str] = Field(alias="targetId")
+    source_preview_id: Optional[str] = Field(alias="sourcePreviewId")
+    source_diff_artifact_id: Optional[str] = Field(alias="sourceDiffArtifactId")
+    source_review_artifact_id: Optional[str] = Field(alias="sourceReviewArtifactId")
+    logs: list[str]
+    status_history: list[dict[str, str]] = Field(alias="statusHistory")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
 
