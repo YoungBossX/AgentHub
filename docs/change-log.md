@@ -1,5 +1,38 @@
 # AgentHub Change Log
 
+## P11-5 Deploy Gate
+
+**Date:** 2026-05-25
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/deployments.py` | Added staging deploy gates for production requests, preview health, failed review, and target policy violations. |
+| `apps/api/app/schemas.py` | Added deployment environment request field. |
+| `apps/api/app/main.py` | Passed requested deployment environment to `DeployService`. |
+| `apps/api/tests/test_deployments.py` | Added deploy gate tests for failed review, unhealthy preview, target policy violation, production rejection, and successful staging path. |
+| `docs/project-state.md` | Recorded P11-5 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-5 complete after targeted verification. |
+
+### What Changed
+
+P11-5 adds conservative staging deploy gates before the local staging provider
+runs. Staging deploy now rejects production/prod environment requests, failed
+or unhealthy preview prerequisites, failed latest review artifacts, and
+changed files outside the target registry path policy.
+
+Mock deploy remains available for existing demo and fallback paths.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted deployment tests | Pass: 17 tests. |
+
+---
+
 ## P11-4 Deploy Logs And Status Artifact
 
 **Date:** 2026-05-25

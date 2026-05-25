@@ -337,6 +337,7 @@ class DeploymentResponse(ApiModel):
 
 class DeploymentCreateRequest(BaseModel):
     provider_id: str = Field(default="mock", alias="providerId")
+    environment: str = "preview"
 
     model_config = ConfigDict(populate_by_name=True)
 

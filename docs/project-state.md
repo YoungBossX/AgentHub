@@ -5,6 +5,20 @@ reference instead of repeating long context blocks.
 
 ## P11 Status
 
+### P11-5 Deploy Gate
+
+P11-5 completed on 2026-05-25.
+
+Staging deploy requests now run through conservative deploy gates before the
+`local_staging` provider executes. P11 rejects production/prod deploy requests,
+requires a healthy preview, blocks when the latest relevant review failed, and
+blocks changed files that violate the target registry's allowed/denied path
+policy. Mock deploy remains available for the legacy demo/fallback path.
+
+Current limitation: P11-5 is a service-level deploy gate. It does not add a
+multi-user approval workflow, cloud deploy approvals, rollback, or production
+deploy. P11-6 remains responsible for real staging rehearsal and freeze review.
+
 ### P11-4 Deploy Logs And Status Artifact
 
 P11-4 completed on 2026-05-25.

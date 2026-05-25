@@ -10,7 +10,18 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
-from app.models import Artifact, Deployment, Preview, Task, TaskRun, Workspace, new_id, utc_now
+from app.models import (
+    Artifact,
+    Deployment,
+    Diff,
+    Preview,
+    Review,
+    Task,
+    TaskRun,
+    Workspace,
+    new_id,
+    utc_now,
+)
 from app.models import Session as AgentHubSession
 from app.previews import UrlPreviewHealthChecker, reserve_preview_port
 from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
@@ -320,13 +331,18 @@ class DeployService:
         preview_id: str,
         *,
         provider_id: str = "mock",
+        environment: str = "preview",
     ) -> StoredDeploymentArtifact:
         provider = self._providers.get(provider_id)
         if provider is None:
             raise DeployError(f"Unknown deploy provider: {provider_id}")
+        if environment.lower() in {"production", "prod"}:
+            raise DeployError("Production deploy is not supported in P11.")
 
         preview, preview_artifact, task_run = _load_deploy_context(db, preview_id)
         _ensure_deploy_prerequisites(db, task_run)
+        if provider_id != "mock":
+            _ensure_staging_deploy_gates(db, task_run, preview)
 
         deployment_id = new_id()
         provider_result = provider.deploy(
@@ -538,6 +554,67 @@ def _source_metadata_for_task_run(
         "diffArtifactId": _latest_artifact_id(db, task_run.id, "diff"),
         "reviewArtifactId": _latest_artifact_id(db, task_run.id, "review"),
     }
+
+
+def _ensure_staging_deploy_gates(
+    db: DbSession,
+    task_run: TaskRun,
+    preview: Preview,
+) -> None:
+    if preview.health_status != "healthy":
+        raise DeployError("Staging deploy blocked because preview is not healthy.")
+
+    latest_review = _latest_review_for_task_run(db, task_run.id)
+    if latest_review is not None and latest_review.status == "failed":
+        raise DeployError("Staging deploy blocked because review failed.")
+
+    target = _target_for_task_run(db, task_run)
+    changed_files = _latest_changed_files_for_task_run(db, task_run.id)
+    violations = [
+        path
+        for path in changed_files
+        if target.denies_path(path) or not target.allows_path(path)
+    ]
+    if violations:
+        raise DeployError(
+            "Staging deploy blocked by target policy violation: "
+            + ", ".join(violations)
+        )
+
+
+def _latest_review_for_task_run(
+    db: DbSession,
+    task_run_id: str,
+) -> Optional[Review]:
+    artifact = db.exec(
+        select(Artifact)
+        .where(Artifact.task_run_id == task_run_id, Artifact.artifact_type == "review")
+        .order_by(Artifact.created_at.desc(), Artifact.id.desc())
+    ).first()
+    if artifact is None:
+        return None
+    return db.exec(select(Review).where(Review.artifact_id == artifact.id)).first()
+
+
+def _latest_changed_files_for_task_run(
+    db: DbSession,
+    task_run_id: str,
+) -> list[str]:
+    artifact = db.exec(
+        select(Artifact)
+        .where(Artifact.task_run_id == task_run_id, Artifact.artifact_type == "diff")
+        .order_by(Artifact.created_at.desc(), Artifact.id.desc())
+    ).first()
+    if artifact is None:
+        return []
+    diff = db.exec(select(Diff).where(Diff.artifact_id == artifact.id)).first()
+    if diff is None:
+        return []
+    try:
+        parsed = json.loads(diff.changed_files_json)
+    except json.JSONDecodeError:
+        return []
+    return [item for item in parsed if isinstance(item, str)]
 
 
 def _latest_artifact_id(

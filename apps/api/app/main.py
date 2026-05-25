@@ -1498,6 +1498,7 @@ def create_mock_deployment_for_preview(
             db,
             preview_id,
             provider_id=request.provider_id,
+            environment=request.environment,
         )
         refresh_session_ledger_for_task_run(db, deployment.task_run_id)
     except DeployError as exc:

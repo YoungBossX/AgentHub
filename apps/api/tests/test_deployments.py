@@ -1,6 +1,7 @@
 import json
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Optional
 
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
@@ -22,7 +23,9 @@ from app.models import (
     Agent,
     Artifact,
     Deployment,
+    Diff,
     Preview,
+    Review,
     Session,
     Task,
     TaskRun,
@@ -102,6 +105,58 @@ def create_preview_fixture(db: DbSession, worktree_path: Path) -> tuple[str, str
     db.refresh(task_run)
     db.refresh(preview)
     return preview.id, task_run.id
+
+
+def add_diff_and_review(
+    db: DbSession,
+    task_run_id: str,
+    *,
+    review_status: str = "passed",
+    risk_level: str = "low",
+    changed_files: Optional[list[str]] = None,
+) -> tuple[str, str]:
+    files = changed_files or ["apps/demo/src/App.tsx"]
+    diff_artifact = Artifact(
+        task_run_id=task_run_id,
+        artifact_type="diff",
+        title="Git diff",
+        status="ready",
+    )
+    db.add(diff_artifact)
+    db.commit()
+    db.refresh(diff_artifact)
+    diff = Diff(
+        artifact_id=diff_artifact.id,
+        base_ref="abc123",
+        head_ref="def456+worktree",
+        patch_text="\n".join([f"diff --git a/{path} b/{path}" for path in files]),
+        changed_files_json=json.dumps(files, separators=(",", ":")),
+        stats_json="{}",
+    )
+    review_artifact = Artifact(
+        task_run_id=task_run_id,
+        artifact_type="review",
+        title="Review Agent report",
+        status=review_status,
+    )
+    db.add(diff)
+    db.add(review_artifact)
+    db.commit()
+    db.refresh(review_artifact)
+    review = Review(
+        artifact_id=review_artifact.id,
+        reviewed_diff_artifact_id=diff_artifact.id,
+        adapter_type="scripted_mock",
+        status=review_status,
+        risk_level=risk_level,
+        summary=f"{review_status} review",
+        files_reviewed_json=json.dumps(files, separators=(",", ":")),
+        findings_json="[]",
+        suggested_changes_json="[]",
+    )
+    db.add(review)
+    db.commit()
+    return diff_artifact.id, review_artifact.id
 
 
 class RecordingBuildRunner:
@@ -436,6 +491,78 @@ def test_deploy_api_can_select_local_staging_provider(tmp_path: Path) -> None:
         assert response.json()["sourcePreviewId"] == preview_id
         assert response.json()["logs"]
         assert response.json()["statusHistory"][-1]["status"] == "ready"
+
+
+def test_local_staging_deploy_blocks_failed_review(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, task_run_id = create_preview_fixture(db, worktree)
+        add_diff_and_review(db, task_run_id, review_status="failed", risk_level="high")
+        provider = LocalStagingDeployProvider(
+            command_runner=RecordingBuildRunner(),
+            static_server=RecordingStaticServer(),
+            health_checker=StaticHealthChecker(),
+            port_allocator=lambda: 45221,
+        )
+        service = DeployService(providers=(provider,))
+
+        with pytest.raises(DeployError, match="review failed"):
+            service.create_deployment(db, preview_id, provider_id="local_staging")
+
+
+def test_local_staging_deploy_blocks_unhealthy_preview(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, _ = create_preview_fixture(db, worktree)
+        preview = db.get(Preview, preview_id)
+        assert preview is not None
+        preview.health_status = "unhealthy"
+        db.add(preview)
+        db.commit()
+        service = DeployService()
+
+        with pytest.raises(DeployError, match="healthy preview"):
+            service.create_deployment(db, preview_id, provider_id="local_staging")
+
+
+def test_local_staging_deploy_blocks_target_policy_violation(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, task_run_id = create_preview_fixture(db, worktree)
+        add_diff_and_review(
+            db,
+            task_run_id,
+            review_status="warning",
+            risk_level="medium",
+            changed_files=["apps/api/app/main.py"],
+        )
+        provider = LocalStagingDeployProvider(
+            command_runner=RecordingBuildRunner(),
+            static_server=RecordingStaticServer(),
+            health_checker=StaticHealthChecker(),
+            port_allocator=lambda: 45222,
+        )
+        service = DeployService(providers=(provider,))
+
+        with pytest.raises(DeployError, match="target policy violation"):
+            service.create_deployment(db, preview_id, provider_id="local_staging")
+
+
+def test_production_deploy_request_is_rejected(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
+        service = DeployService()
+
+        with pytest.raises(DeployError, match="Production deploy is not supported"):
+            service.create_deployment(
+                db,
+                preview_id,
+                provider_id="local_staging",
+                environment="production",
+            )
 
 
 def test_mock_deploy_rejects_nonexistent_preview(tmp_path: Path) -> None:
