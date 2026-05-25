@@ -1,7 +1,9 @@
-import json
 from pathlib import Path
 from typing import Any, Optional
 
+from app.instruction_adapters import adapter_for_provider
+from app.instruction_adapters.base import ProviderInstructionRequest
+from app.instruction_adapters.shared_sections import context_section
 from app.models import Agent, Task
 from app.target_registry import (
     DEMO_BACKEND_TARGET_ID,
@@ -17,6 +19,8 @@ def build_role_instruction(
     task: Task,
     agent: Agent,
     context_pack: dict[str, Any],
+    *,
+    adapter_type: str = "codex",
 ) -> str:
     role = _effective_role(task, agent, context_pack)
     plan = _task_plan(context_pack)
@@ -29,7 +33,18 @@ def build_role_instruction(
         _context_section(context_pack),
         _guardrails(role, target),
     ]
-    return "\n\n".join(section for section in sections if section)
+    core_instruction = "\n\n".join(section for section in sections if section)
+    provider_adapter = adapter_for_provider(adapter_type)
+    return provider_adapter.render(
+        ProviderInstructionRequest(
+            task=task,
+            agent=agent,
+            adapter_type=adapter_type,
+            role=role,
+            context_pack=context_pack,
+            core_instruction=core_instruction,
+        )
+    )
 
 
 def _role_body(
@@ -349,15 +364,7 @@ def _target_section(
 
 
 def _context_section(context_pack: dict[str, Any]) -> str:
-    provider_context = context_pack.get("providerVisibleContext")
-    if not isinstance(provider_context, dict):
-        provider_context = context_pack
-    return (
-        "Session Context Pack:\n"
-        "```json\n"
-        f"{json.dumps(provider_context, ensure_ascii=True, sort_keys=True, indent=2)}\n"
-        "```"
-    )
+    return context_section(context_pack)
 
 
 def _contract_guidance(

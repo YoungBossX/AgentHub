@@ -15,6 +15,7 @@ from app.external_workspaces import (
     ExternalWorkspaceRegistration,
     register_external_project_target,
 )
+from app.instruction_adapters import adapter_for_provider
 from app.main import agent_run_request_for, app, get_db, task_run_response
 from app.guardrails import ApprovalRequestPayload, request_task_run_approval
 from app.reviews import create_scripted_review_for_task_run
@@ -410,6 +411,35 @@ def test_agent_run_request_bounds_frontend_login_demo_instruction(
     assert "do not read the OpenSpec change" in request.instruction
     assert "dependency install" in request.instruction
     assert request.instruction != "Build login page"
+
+
+def test_provider_instruction_adapters_dispatch_without_losing_context(
+    client: TestClient,
+) -> None:
+    assert adapter_for_provider("codex").provider_id == "codex"
+    assert adapter_for_provider("claude_code").provider_id == "claude_code"
+    assert adapter_for_provider("scripted_mock").provider_id == "scripted_mock"
+
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "target": "demo_frontend_request",
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+                "originalRequest": "Update the demo dashboard",
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id, adapter_type="claude_code")
+
+        request = agent_run_request_for(db, task_run, adapter_type="claude_code")
+
+    assert "Update the demo dashboard" in request.instruction
+    assert "canonical_shared_context_v1" in request.instruction
+    assert request.adapter_type == "claude_code"
 
 
 def test_agent_run_request_bounds_followup_button_instruction(

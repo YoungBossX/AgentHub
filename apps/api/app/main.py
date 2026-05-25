@@ -863,7 +863,12 @@ def agent_run_request_for(
         worktreePath=task_run.worktree_path,
         agentId=task_run.agent_id,
         adapterType=adapter_type,
-        instruction=build_role_instruction(task, agent, context_pack),
+        instruction=build_role_instruction(
+            task,
+            agent,
+            context_pack,
+            adapter_type=adapter_type,
+        ),
         planContext=merged_plan_context,
         permissionProfile={"network": "off"},
         demoMode=True,
