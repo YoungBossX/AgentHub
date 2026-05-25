@@ -181,6 +181,10 @@ def transition_task_run(
         from app.scheduler import refresh_downstream_scheduler_state
         from app.scheduler import refresh_session_scheduler_state
 
+        if state == "completed":
+            from app.handoffs import create_dependency_handoffs
+
+            create_dependency_handoffs(db, task_run)
         mark_task_run_terminal_scheduler_state(
             db,
             task,

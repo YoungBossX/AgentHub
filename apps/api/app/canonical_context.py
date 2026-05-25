@@ -124,7 +124,11 @@ def build_canonical_shared_context(
             trust_level="system",
         ),
         "handoffNotes": _field(
-            filter_protected_values(task_plan.get("handoffNotes") or []),
+            filter_protected_values(
+                session_context_pack.get("handoffNotes")
+                or task_plan.get("handoffNotes")
+                or []
+            ),
             source="handoff",
             created_at=timestamp,
             trust_level="system",

@@ -767,6 +767,69 @@ def test_context_pack_includes_latest_artifact_preview_and_deploy_metadata(
     assert context["ledger"]["latestChangedFiles"] == ["apps/demo/src/App.tsx"]
 
 
+def test_completed_dependency_creates_handoff_context_for_downstream_task(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        upstream = db.get(Task, task_id())
+        upstream.plan_json = json.dumps(
+            {
+                "target": "demo_frontend_request",
+                "files": ["apps/demo/src/App.tsx"],
+                "originalRequest": "Build a dashboard",
+            },
+            separators=(",", ":"),
+        )
+        qa_agent = db.exec(select(Agent).where(Agent.role == "qa")).one()
+        downstream = Task(
+            session_id=upstream.session_id,
+            title="Review dashboard diff",
+            intent_type="review",
+            status="pending",
+            assigned_agent_id=qa_agent.id,
+            depends_on_task_ids=json.dumps([upstream.id], separators=(",", ":")),
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "review",
+                    "target": "session_review_request",
+                    "originalRequest": "Review the dashboard",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(upstream)
+        db.add(downstream)
+        db.commit()
+        db.refresh(upstream)
+        db.refresh(downstream)
+
+        upstream_run = create_task_run(db, upstream.id)
+        transition_task_run(db, upstream_run.id, "completed")
+        handoff = db.exec(
+            select(Artifact).where(Artifact.artifact_type == "handoff")
+        ).one()
+        context = build_session_context_pack(db, downstream)
+        handoff_id = handoff.id
+        handoff_status = handoff.status
+        handoff_meta = json.loads(handoff.meta_json)
+        upstream_id = upstream.id
+        upstream_run_id = upstream_run.id
+        downstream_id = downstream.id
+
+    assert handoff_status == "ready"
+    assert handoff_meta["fromTaskId"] == upstream_id
+    assert handoff_meta["fromTaskRunId"] == upstream_run_id
+    assert handoff_meta["fromAgentRole"] == "frontend"
+    assert handoff_meta["toTaskId"] == downstream_id
+    assert handoff_meta["toAgentRole"] == "qa"
+    assert handoff_meta["changedFiles"] == ["apps/demo/src/App.tsx"]
+    assert handoff_meta["verificationStatus"] == "completed"
+    assert context["handoffNotes"][0]["artifactId"] == handoff_id
+    assert context["canonicalContext"]["fields"]["handoffNotes"]["value"][0][
+        "toTaskId"
+    ] == downstream_id
+
+
 def test_backend_instruction_targets_demo_backend_without_platform_api_access(
     client: TestClient,
 ) -> None:
