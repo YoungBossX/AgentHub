@@ -96,3 +96,19 @@ agenthub_design_v_2.md
 # Project docs and specs (local only)
 docs/
 openspec/
+
+# Extra local temp files
+*.local
+*.local.*
+*.dev
+*.dev.*
+*.bak.*
+*.old
+*.old.*
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
