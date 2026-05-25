@@ -92,3 +92,7 @@ coverage/
 *请求流向*.md
 *agent建议*.md
 agenthub_design_v_2.md
+
+# Project docs and specs (local only)
+docs/
+openspec/
