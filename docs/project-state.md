@@ -3,6 +3,59 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P13 Status
+
+### P13-1 Provider Assignment Matrix
+
+P13-1 completed on 2026-05-26.
+
+AgentHub now has an explicit provider assignment foundation for cross-provider
+coordination. `apps/api/app/provider_assignments.py` defines the assignment
+resolver and built-in role default metadata. Runtime assignment can be supplied
+with `AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX`:
+
+```json
+{
+  "roles": {
+    "backend": {"adapterType": "codex", "providerId": "local-codex-cli"},
+    "frontend": {
+      "adapterType": "claude_code",
+      "providerId": "local-claude-code-cli"
+    },
+    "review": {
+      "adapterType": "scripted_mock",
+      "providerId": "local-scripted-review"
+    }
+  },
+  "targets": {
+    "demo-frontend": {
+      "frontend": {
+        "adapterType": "claude_code",
+        "providerId": "local-claude-code-cli"
+      }
+    }
+  }
+}
+```
+
+Resolution order:
+
+1. explicit adapter override on the TaskRun request;
+2. target-specific matrix assignment for `targetId + role`;
+3. role-level matrix assignment;
+4. legacy adapter selection from Agent metadata and
+   `AGENTHUB_DEFAULT_CODE_ADAPTER`.
+
+TaskRun `metricsJson` now records `providerAssignment` with role, adapter type,
+provider ID, source, target ID, supported mode, and fallback policy. Mission
+trace TaskRun entries expose the same metadata, so provider choice is visible
+without running real Claude Code or Codex during this foundation task.
+
+Invalid assignment adapter types fail honestly before TaskRun creation. P13-1
+does not add provider marketplace support, OpenCode, user-created custom-agent
+UI, canonical-context enforcement, handoff protocol changes, or real
+mixed-provider execution rehearsal. Those remain later P13 tasks.
+
 ## P12 Status
 
 ### P12-10 E2E Rehearsal And Freeze Review

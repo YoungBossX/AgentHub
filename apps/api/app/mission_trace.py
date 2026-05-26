@@ -91,12 +91,14 @@ def _task_trace(task: Task) -> dict[str, Any]:
 
 
 def _task_run_trace(task_run: TaskRun) -> dict[str, Any]:
+    metrics = _json_dict(task_run.metrics_json)
     return {
         "id": task_run.id,
         "taskId": task_run.task_id,
         "agentId": task_run.agent_id,
         "state": task_run.state,
-        "adapterType": _json_dict(task_run.metrics_json).get("adapterType"),
+        "adapterType": metrics.get("adapterType"),
+        "providerAssignment": metrics.get("providerAssignment"),
         "errorCode": task_run.error_code,
         "errorMessage": task_run.error_message,
         "navigation": {

@@ -388,6 +388,191 @@ def test_default_code_adapter_env_rejects_unknown_adapter(
             create_task_run(db, task_id())
 
 
+def test_provider_assignment_matrix_resolves_role_defaults(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX",
+        json.dumps(
+            {
+                "roles": {
+                    "frontend": {
+                        "adapterType": "claude_code",
+                        "providerId": "local-claude-code-cli",
+                    },
+                    "backend": {
+                        "adapterType": "codex",
+                        "providerId": "local-codex-cli",
+                    },
+                    "review": {
+                        "adapterType": "scripted_mock",
+                        "providerId": "local-scripted-review",
+                    },
+                }
+            }
+        ),
+    )
+
+    with db_from_override() as db:
+        frontend_run = create_task_run(db, task_id())
+        backend_agent = db.exec(select(Agent).where(Agent.role == "backend")).one()
+        qa_agent = db.exec(select(Agent).where(Agent.role == "qa")).one()
+        session_id = db.get(Task, task_id()).session_id
+        backend_task = Task(
+            session_id=session_id,
+            title="Add contacts API",
+            intent_type="backend_change",
+            status="pending",
+            assigned_agent_id=backend_agent.id,
+            plan_json=json.dumps({"targetId": DEMO_BACKEND_TARGET_ID}),
+        )
+        review_task = Task(
+            session_id=session_id,
+            title="Review contacts work",
+            intent_type="review",
+            status="pending",
+            assigned_agent_id=qa_agent.id,
+            plan_json=json.dumps(
+                {"assignedRole": "review", "targetId": DEMO_FRONTEND_TARGET_ID}
+            ),
+        )
+        db.add(backend_task)
+        db.add(review_task)
+        db.commit()
+
+        backend_run = create_task_run(db, backend_task.id)
+        review_run = create_task_run(db, review_task.id)
+        frontend_metrics = json.loads(frontend_run.metrics_json)
+        backend_metrics = json.loads(backend_run.metrics_json)
+        review_metrics = json.loads(review_run.metrics_json)
+
+    assert frontend_metrics["adapterType"] == "claude_code"
+    assert frontend_metrics["providerAssignment"]["source"] == "role_default"
+    assert frontend_metrics["providerAssignment"]["role"] == "frontend"
+    assert frontend_metrics["providerAssignment"]["providerId"] == "local-claude-code-cli"
+    assert backend_metrics["adapterType"] == "codex"
+    assert backend_metrics["providerAssignment"]["providerId"] == "local-codex-cli"
+    assert review_metrics["adapterType"] == "scripted_mock"
+    assert review_metrics["providerAssignment"]["role"] == "review"
+
+
+def test_provider_assignment_matrix_target_override_precedes_role_default(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX",
+        json.dumps(
+            {
+                "roles": {
+                    "frontend": {
+                        "adapterType": "codex",
+                        "providerId": "local-codex-cli",
+                    }
+                },
+                "targets": {
+                    DEMO_FRONTEND_TARGET_ID: {
+                        "frontend": {
+                            "adapterType": "claude_code",
+                            "providerId": "local-claude-code-cli",
+                        }
+                    }
+                },
+            }
+        ),
+    )
+
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {"targetId": DEMO_FRONTEND_TARGET_ID},
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+        response = task_run_response(db, task_run).model_dump(by_alias=True)
+
+    assignment = response["metricsJson"]["providerAssignment"]
+    assert response["adapterType"] == "claude_code"
+    assert assignment["source"] == "target_override"
+    assert assignment["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert assignment["providerId"] == "local-claude-code-cli"
+
+
+def test_provider_assignment_matrix_preserves_default_adapter_fallback(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX", raising=False)
+    monkeypatch.setenv("AGENTHUB_DEFAULT_CODE_ADAPTER", "claude_code")
+
+    with db_from_override() as db:
+        task_run = create_task_run(db, task_id())
+        metrics = json.loads(task_run.metrics_json)
+
+    assert metrics["adapterType"] == "claude_code"
+    assert metrics["providerAssignment"]["source"] == "legacy_default"
+    assert metrics["providerAssignment"]["fallbackPolicy"] == "legacy_default_adapter"
+
+
+def test_provider_assignment_matrix_rejects_invalid_assignment(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX",
+        json.dumps(
+            {
+                "roles": {
+                    "frontend": {
+                        "adapterType": "open_code",
+                        "providerId": "local-opencode",
+                    }
+                }
+            }
+        ),
+    )
+
+    with db_from_override() as db:
+        with pytest.raises(TaskRunLifecycleError, match="Unsupported provider assignment"):
+            create_task_run(db, task_id())
+
+
+def test_provider_assignment_is_visible_in_mission_trace(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX",
+        json.dumps(
+            {
+                "roles": {
+                    "frontend": {
+                        "adapterType": "claude_code",
+                        "providerId": "local-claude-code-cli",
+                    }
+                }
+            }
+        ),
+    )
+
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task_run = create_task_run(db, task.id)
+        session_id = task.session_id
+        run_id = task_run.id
+
+    response = client.get(f"/sessions/{session_id}/mission-trace")
+
+    assert response.status_code == 200
+    trace = response.json()
+    run_trace = next(run for run in trace["taskRuns"] if run["id"] == run_id)
+    assert run_trace["adapterType"] == "claude_code"
+    assert run_trace["providerAssignment"]["providerId"] == "local-claude-code-cli"
+
+
 def test_agent_run_request_bounds_frontend_login_demo_instruction(
     client: TestClient,
 ) -> None:

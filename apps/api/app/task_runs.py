@@ -15,6 +15,10 @@ from app.diffs import capture_base_ref_for_worktree
 from app.models import Agent, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
+from app.provider_assignments import (
+    ProviderAssignmentError,
+    resolve_provider_assignment,
+)
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     TargetRegistryError,
@@ -66,6 +70,16 @@ def create_task_run(
     session = _session_or_raise(db, task.session_id)
     agent = _agent_or_raise(db, task.assigned_agent_id)
     selected_adapter = adapter_type or _default_adapter_for_agent(agent)
+    try:
+        provider_assignment = resolve_provider_assignment(
+            task,
+            agent,
+            selected_adapter=selected_adapter,
+            explicit_adapter_type=adapter_type,
+        )
+    except ProviderAssignmentError as exc:
+        raise TaskRunLifecycleError(str(exc)) from exc
+    selected_adapter = provider_assignment.adapter_type
     _ensure_target_write_lock_available(db, task)
 
     now = utc_now()
@@ -73,6 +87,7 @@ def create_task_run(
     base_ref = capture_base_ref_for_worktree(worktree_path)
     metrics = {
         "adapterType": selected_adapter,
+        "providerAssignment": provider_assignment.to_metadata(),
     }
     if retry_of_run_id is not None:
         metrics["retryOfRunId"] = retry_of_run_id
@@ -114,7 +129,15 @@ def create_task_run(
     db.commit()
     db.refresh(task_run)
 
-    _append_state_event(db, task_run, initial_state, {"adapterType": selected_adapter})
+    _append_state_event(
+        db,
+        task_run,
+        initial_state,
+        {
+            "adapterType": selected_adapter,
+            "providerAssignment": provider_assignment.to_metadata(),
+        },
+    )
     if checkpoint is not None:
         append_task_run_event(
             db,

@@ -1,5 +1,46 @@
 # AgentHub Change Log
 
+## P13-1 Provider Assignment Matrix
+
+**Date:** 2026-05-26
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/provider_assignments.py` | Added provider assignment matrix resolution for role defaults, target overrides, explicit adapter selection, and legacy default fallback metadata. |
+| `apps/api/app/task_runs.py` | Routed TaskRun adapter selection through provider assignment resolution and recorded assignment metadata on runs and state events. |
+| `apps/api/app/mission_trace.py` | Exposed provider assignment metadata in mission trace TaskRun entries. |
+| `apps/api/tests/test_task_runs.py` | Added Provider Assignment Matrix tests for frontend, backend, review, target override, legacy fallback, invalid assignment rejection, and mission trace visibility. |
+| `docs/project-state.md` | Recorded P13-1 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-1 complete after targeted verification. |
+
+### What Changed
+
+P13-1 adds an explicit and auditable provider assignment foundation. Runtime
+configuration may assign providers by role through
+`AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.roles` and may override by target through
+`AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.targets`. Target-specific assignments
+take precedence over role defaults.
+
+TaskRuns now record a `providerAssignment` payload in `metricsJson` with role,
+adapter type, provider ID, source, target ID, supported mode, and fallback
+policy. Mission trace TaskRun entries expose the same assignment metadata.
+
+Existing adapter selection remains compatible: when no P13 matrix assignment
+is configured, AgentHub preserves the legacy Agent metadata and
+`AGENTHUB_DEFAULT_CODE_ADAPTER` behavior.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted provider assignment tests | Pass: 5 tests. |
+| Targeted task run / scheduler / planning tests | Pass: 92 tests. |
+
+---
+
 ## P12-10 E2E Rehearsal And Freeze Review
 
 **Date:** 2026-05-26
