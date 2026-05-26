@@ -9,16 +9,16 @@
 - [x] 1.7 P12-7 Web Component Decomposition and Message Actions: split workspace-shell.tsx and task-card-list.tsx into session-sidebar, agent-contact-list, chat-thread, message-composer, mission-panel, artifact-panel, task-card, run-history, run-controls, and artifact-chips components; preserve existing behavior and visual layout; add first-stage message actions for copy, quote as context, use artifact as context, retry failed run, and open artifact when backed by existing APIs; update frontend tests.
 - [x] 1.8 P12-8 Artifact Version History Skeleton: add or standardize ArtifactVersion metadata with artifact_id, version, source_task_run_id, parent_artifact_id, git_base_ref, git_head_ref, changed_files, and summary; support v1/v2 follow-up chains for diff/review/preview/deployment evidence; do not implement online editing or git revert UI; add tests for version creation and readback.
 - [x] 1.9 P12-9 Agent Profile Minimal Foundation: stabilize AgentProfile schema with id, display_name, avatar_initials, role, adapter_type, provider_id, capability_tags, supported_targets, supported_modes, safe_for_write, safe_for_review, and description; map existing built-in agents into profiles; do not add user-created custom agents UI; update agent contact/profile tests.
-- [ ] 1.10 P12-10 E2E Rehearsal and Freeze Review: run a complete rehearsal covering new session, @orchestrator login-page request, plan/task graph, frontend agent run, diff, handoff, QA review, preview, local staging deploy, follow-up modification, artifact version v2, and updated preview/deploy evidence; verify P6-P11 baselines remain intact; update docs/project-state.md, docs/change-log.md, docs/p12-freeze-review.md, and mark P12 ready to freeze only after validation passes.
+- [x] 1.10 P12-10 E2E Rehearsal and Freeze Review: run a complete rehearsal covering new session, @orchestrator login-page request, plan/task graph, frontend agent run, diff, handoff, QA review, preview, local staging deploy, follow-up modification, artifact version v2, and updated preview/deploy evidence; verify P6-P11 baselines remain intact; update docs/project-state.md, docs/change-log.md, docs/p12-freeze-review.md, and mark P12 ready to freeze only after validation passes.
 
 ## 2. Explicit Non-goals
 
-- [ ] 2.1 Confirm P12 does not implement provider marketplace, full user-created custom agents UI, full artifact editor, document/PPT rendering, multi-user mission control, desktop/IDE/CLI clients, cloud deploy provider, LLM dynamic planner, or scheduler replacement with LangGraph/CrewAI.
+- [x] 2.1 Confirm P12 does not implement provider marketplace, full user-created custom agents UI, full artifact editor, document/PPT rendering, multi-user mission control, desktop/IDE/CLI clients, cloud deploy provider, LLM dynamic planner, or scheduler replacement with LangGraph/CrewAI.
 
 ## 3. Validation
 
-- [ ] 3.1 Run `pnpm check`.
-- [ ] 3.2 Run `pnpm test`.
-- [ ] 3.3 Run targeted backend/frontend tests added for each P12 task.
-- [ ] 3.4 Run `git diff --check`.
-- [ ] 3.5 Run `openspec validate agenthub-p12-platform-core-consolidation --strict`.
+- [x] 3.1 Run `pnpm check`.
+- [x] 3.2 Run `pnpm test`.
+- [x] 3.3 Run targeted backend/frontend tests added for each P12 task.
+- [x] 3.4 Run `git diff --check`.
+- [x] 3.5 Run `openspec validate agenthub-p12-platform-core-consolidation --strict`.
