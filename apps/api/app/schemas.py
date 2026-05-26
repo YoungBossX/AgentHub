@@ -139,6 +139,7 @@ class AgentProfileResponse(ApiModel):
     adapter_type: str = Field(alias="adapterType")
     provider_id: str = Field(alias="providerId")
     capability_tags: list[str] = Field(alias="capabilityTags")
+    supported_roles: list[str] = Field(alias="supportedRoles")
     supported_targets: list[str] = Field(alias="supportedTargets")
     supported_modes: list[str] = Field(alias="supportedModes")
     safe_for_write: bool = Field(alias="safeForWrite")

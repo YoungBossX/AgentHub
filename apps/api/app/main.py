@@ -437,6 +437,7 @@ def agent_profile_response(profile: AgentProfile) -> AgentProfileResponse:
         adapterType=profile.adapter_type,
         providerId=profile.provider_id,
         capabilityTags=profile.capability_tags,
+        supportedRoles=profile.supported_roles,
         supportedTargets=profile.supported_targets,
         supportedModes=profile.supported_modes,
         safeForWrite=profile.safe_for_write,

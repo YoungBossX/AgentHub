@@ -1,5 +1,47 @@
 # AgentHub Change Log
 
+## P13-2 Provider-aware Agent Profile
+
+**Date:** 2026-05-26
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_profiles.py` | Added supported role metadata and aligned AgentProfile adapter/provider fields with P13 provider assignment policy. |
+| `apps/api/app/provider_assignments.py` | Added read-only profile provider assignment resolution using configured role assignments or built-in provider defaults. |
+| `apps/api/app/schemas.py` | Added `supportedRoles` to AgentProfile API responses. |
+| `apps/api/app/main.py` | Returned supported roles in workspace agent profile responses. |
+| `apps/api/tests/test_planning.py` | Added API coverage for provider-aware profiles and assignment-matched profile metadata. |
+| `apps/web/src/lib/api.ts` | Added `supportedRoles` to the AgentProfile client type. |
+| `apps/web/src/lib/api.test.ts` | Updated profile API fixture coverage for provider-aware metadata. |
+| `docs/project-state.md` | Recorded P13-2 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-2 complete after verification. |
+
+### What Changed
+
+AgentProfile responses now expose `supportedRoles` in addition to provider ID,
+adapter type, supported targets, supported modes, and safety flags.
+Built-in profiles map current role agents to provider-aware defaults such as
+`frontend -> local-codex-cli`, `backend -> local-codex-cli`, and
+`qa/review -> local-scripted-review`.
+
+When `AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.roles` configures a built-in role,
+the corresponding AgentProfile reflects that configured adapter/provider
+choice. This keeps profile metadata compatible with the P13-1 provider
+assignment matrix without adding user-created custom agents or changing
+execution dispatch behavior.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted agent profile API tests | Pass: 2 tests. |
+| Targeted web API tests | Pass: 39 tests. |
+
+---
+
 ## P13-1 Provider Assignment Matrix
 
 **Date:** 2026-05-26

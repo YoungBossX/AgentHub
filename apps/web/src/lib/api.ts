@@ -35,6 +35,7 @@ export type AgentProfile = {
   adapterType: string
   providerId: string
   capabilityTags: string[]
+  supportedRoles: string[]
   supportedTargets: string[]
   supportedModes: string[]
   safeForWrite: boolean

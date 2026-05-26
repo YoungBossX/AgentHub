@@ -238,8 +238,9 @@ def test_workspace_agent_profiles_return_minimal_profile_contract(client: TestCl
         "avatarInitials": "FE",
         "role": "frontend",
         "adapterType": "codex",
-        "providerId": "local",
+        "providerId": "local-codex-cli",
         "capabilityTags": ["Vite React", "UI changes", "diff artifacts"],
+        "supportedRoles": ["frontend"],
         "supportedTargets": ["demo-frontend", "external-frontend"],
         "supportedModes": ["direct-assignment", "scheduled-task"],
         "safeForWrite": True,
@@ -249,8 +250,48 @@ def test_workspace_agent_profiles_return_minimal_profile_contract(client: TestCl
 
     backend = profiles[2]
     assert backend["supportedTargets"] == ["demo-backend", "external-backend"]
+    assert backend["supportedRoles"] == ["backend"]
     assert backend["safeForWrite"] is True
     assert "AgentHub platform backend" in backend["description"]
+
+
+def test_workspace_agent_profiles_match_provider_assignment_matrix(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX",
+        json.dumps(
+            {
+                "roles": {
+                    "frontend": {
+                        "adapterType": "claude_code",
+                        "providerId": "local-claude-code-cli",
+                    },
+                    "review": {
+                        "adapterType": "scripted_mock",
+                        "providerId": "local-scripted-review",
+                    },
+                }
+            }
+        ),
+    )
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+
+    response = client.get(f"/workspaces/{workspace.id}/agent-profiles")
+
+    assert response.status_code == 200
+    profiles = response.json()
+    frontend = next(profile for profile in profiles if profile["role"] == "frontend")
+    qa = next(profile for profile in profiles if profile["role"] == "qa")
+
+    assert frontend["adapterType"] == "claude_code"
+    assert frontend["providerId"] == "local-claude-code-cli"
+    assert frontend["supportedRoles"] == ["frontend"]
+    assert qa["adapterType"] == "scripted_mock"
+    assert qa["providerId"] == "local-scripted-review"
+    assert qa["supportedRoles"] == ["qa", "review"]
 
 
 def test_disabled_mention_returns_user_facing_parse_error(client: TestClient) -> None:

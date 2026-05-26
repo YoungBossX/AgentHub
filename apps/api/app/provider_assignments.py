@@ -102,6 +102,39 @@ def resolve_provider_assignment(
     )
 
 
+def resolve_profile_provider_assignment(
+    role: str,
+    agent: Agent,
+) -> ProviderAssignment:
+    matrix = _configured_matrix()
+    raw_role_assignment = matrix.get("roles", {}).get(role)
+    if isinstance(raw_role_assignment, dict):
+        return _assignment_from_raw(
+            raw_role_assignment,
+            role=role,
+            target_id=None,
+            source="role_default",
+        )
+
+    raw_default = BUILT_IN_ROLE_PROVIDER_DEFAULTS.get(role)
+    if isinstance(raw_default, dict):
+        return _assignment_from_raw(
+            raw_default,
+            role=role,
+            target_id=None,
+            source="built_in_default",
+        )
+
+    return _assignment_from_adapter(
+        role=role,
+        adapter_type=agent.adapter_type,
+        provider_id=agent.provider,
+        source="agent_metadata",
+        target_id=None,
+        fallback_policy="agent_metadata",
+    )
+
+
 def _configured_assignment(
     matrix: dict[str, Any],
     *,

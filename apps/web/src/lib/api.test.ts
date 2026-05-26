@@ -191,8 +191,9 @@ describe("workspace and session API", () => {
             avatarInitials: "FE",
             role: "frontend",
             adapterType: "codex",
-            providerId: "local",
+            providerId: "local-codex-cli",
             capabilityTags: ["Vite React", "UI changes"],
+            supportedRoles: ["frontend"],
             supportedTargets: ["demo-frontend", "external-frontend"],
             supportedModes: ["direct-assignment", "scheduled-task"],
             safeForWrite: true,
@@ -216,7 +217,8 @@ describe("workspace and session API", () => {
         cache: "no-store",
       },
     )
-    expect(profiles[0].providerId).toBe("local")
+    expect(profiles[0].providerId).toBe("local-codex-cli")
+    expect(profiles[0].supportedRoles).toEqual(["frontend"])
     expect(profiles[0].supportedTargets).toContain("demo-frontend")
   })
 })

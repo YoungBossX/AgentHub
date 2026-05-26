@@ -5,6 +5,36 @@ reference instead of repeating long context blocks.
 
 ## P13 Status
 
+### P13-2 Provider-aware Agent Profile
+
+P13-2 completed on 2026-05-26.
+
+AgentProfile responses now expose provider-aware role capability metadata for
+built-in agents. The API response includes:
+
+- `providerId`;
+- `adapterType`;
+- `supportedRoles`;
+- `supportedTargets`;
+- `supportedModes`;
+- `safeForWrite`;
+- `safeForReview`.
+
+Built-in profile defaults now map roles to concrete provider identities:
+
+- frontend/backend coding agents default to `local-codex-cli`;
+- QA/review defaults to `local-scripted-review`;
+- orchestrator defaults to `local-scripted-mock`.
+
+If `AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.roles` configures a role, the
+corresponding AgentProfile reflects the configured adapter/provider pair. This
+keeps visible agent metadata aligned with P13-1 TaskRun provider assignment
+without changing adapter dispatch semantics.
+
+P13-2 does not add a provider marketplace, OpenCode, user-created custom-agent
+UI, canonical context enforcement, handoff protocol changes, or real mixed
+provider execution.
+
 ### P13-1 Provider Assignment Matrix
 
 P13-1 completed on 2026-05-26.
