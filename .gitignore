@@ -28,6 +28,31 @@ out/
 # logs
 *.log
 
+# public documentation
+# Keep the small set of files a public repo normally exposes.
+/*.md
+/*.pdf
+/*.doc
+/*.docx
+/*.ppt
+/*.pptx
+/*.xls
+/*.xlsx
+!/README.md
+!/AGENTS.md
+!/CHANGELOG.md
+!/CONTRIBUTING.md
+!/LICENSE.md
+!/SECURITY.md
+!/CODE_OF_CONDUCT.md
+
+# internal planning and demo evidence
+.codex/skills/
+docs/*
+!docs/
+!docs/change-log.md
+openspec/
+
 # OS / IDE
 .DS_Store
 .idea/

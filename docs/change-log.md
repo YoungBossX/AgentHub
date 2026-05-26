@@ -1,5 +1,24 @@
 # AgentHub Change Log
 
+## Repository Hygiene
+
+**Date:** 2026-05-25
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `.gitignore` | Added public-doc allowlist rules and ignored internal planning, OpenSpec, research, PDF, Office, and demo evidence documents. |
+| `docs/change-log.md` | Recorded repository hygiene cleanup. |
+
+### What Changed
+
+The repository now keeps common public project documents visible while ignoring
+internal planning and research documents by default. This keeps future GitHub
+pushes focused on source, configuration, tests, and public project entrypoints.
+
+---
+
 ## P11-6 E2E Rehearsal And Freeze Review
 
 **Date:** 2026-05-25
