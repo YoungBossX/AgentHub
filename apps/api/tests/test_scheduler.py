@@ -33,6 +33,7 @@ from app.task_runs import (
     retry_with_scripted_mock,
     transition_task_run,
 )
+from app.provider_assignments import PROVIDER_ASSIGNMENT_MATRIX_ENV
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
@@ -626,6 +627,166 @@ def test_completed_fallback_unblocks_downstream_dependency() -> None:
         assert scheduler["blockingDependencyIds"] == []
 
 
+def test_mixed_provider_dependency_waits_then_frontend_uses_claude_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        PROVIDER_ASSIGNMENT_MATRIX_ENV,
+        json.dumps(
+            {
+                "roles": {
+                    "backend": {
+                        "adapterType": "codex",
+                        "providerId": "local-codex-cli",
+                    },
+                    "frontend": {
+                        "adapterType": "claude_code",
+                        "providerId": "local-claude-code-cli",
+                    },
+                }
+            },
+            separators=(",", ":"),
+        ),
+    )
+    with scheduler_db() as db:
+        _, _, backend_task, frontend_task = seed_mixed_provider_task_graph(db)
+
+        auto_start_safe_tasks(db, [frontend_task], BackgroundTasks())
+
+        assert db.exec(select(TaskRun).where(TaskRun.task_id == frontend_task.id)).all() == []
+        waiting_frontend = db.get(Task, frontend_task.id)
+        waiting_scheduler = json.loads(waiting_frontend.plan_json)["scheduler"]
+        assert waiting_frontend.status == "waiting_dependency"
+        assert waiting_scheduler["state"] == SCHEDULER_WAITING_DEPENDENCY
+        assert waiting_scheduler["blockingDependencyIds"] == [backend_task.id]
+
+        backend_run = create_task_run(db, backend_task.id)
+        backend_metrics = json.loads(backend_run.metrics_json)
+        assert backend_metrics["providerAssignment"]["adapterType"] == "codex"
+        transition_task_run(db, backend_run.id, "completed")
+
+        auto_start_safe_tasks(db, [frontend_task], BackgroundTasks())
+
+        frontend_runs = db.exec(select(TaskRun).where(TaskRun.task_id == frontend_task.id)).all()
+        frontend_run = frontend_runs[0]
+        frontend_metrics = json.loads(frontend_run.metrics_json)
+        stored_frontend = db.get(Task, frontend_task.id)
+        scheduler = json.loads(stored_frontend.plan_json)["scheduler"]
+
+        assert len(frontend_runs) == 1
+        assert frontend_run.state == "queued"
+        assert frontend_metrics["providerAssignment"]["adapterType"] == "claude_code"
+        assert frontend_metrics["providerAssignment"]["providerId"] == "local-claude-code-cli"
+        assert scheduler["state"] == SCHEDULER_READY
+        assert scheduler["targetId"] == DEMO_FRONTEND_TARGET_ID
+
+
+def test_target_lock_is_provider_independent_for_same_frontend_target() -> None:
+    with scheduler_db() as db:
+        _, _, first, second = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        first_run = create_task_run(db, first.id, adapter_type="codex")
+
+        with pytest.raises(TaskRunLifecycleError, match=DEMO_FRONTEND_TARGET_ID):
+            create_task_run(db, second.id, adapter_type="claude_code")
+
+        first_metrics = json.loads(first_run.metrics_json)
+        stored_second = db.get(Task, second.id)
+        scheduler = json.loads(stored_second.plan_json)["scheduler"]
+
+        assert first_metrics["providerAssignment"]["adapterType"] == "codex"
+        assert stored_second.status == "waiting_target_lock"
+        assert scheduler["state"] == SCHEDULER_WAITING_TARGET_LOCK
+        assert scheduler["targetId"] == DEMO_FRONTEND_TARGET_ID
+        assert scheduler["lockHolderTaskRunIds"] == [first_run.id]
+
+
+def test_different_targets_can_queue_with_different_providers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        PROVIDER_ASSIGNMENT_MATRIX_ENV,
+        json.dumps(
+            {
+                "roles": {
+                    "backend": {
+                        "adapterType": "codex",
+                        "providerId": "local-codex-cli",
+                    },
+                    "frontend": {
+                        "adapterType": "claude_code",
+                        "providerId": "local-claude-code-cli",
+                    },
+                }
+            },
+            separators=(",", ":"),
+        ),
+    )
+    with scheduler_db() as db:
+        _, _, backend_task, frontend_task = seed_mixed_provider_task_graph(
+            db,
+            frontend_depends_on_backend=False,
+        )
+
+        backend_run = create_task_run(db, backend_task.id)
+        frontend_run = create_task_run(db, frontend_task.id)
+
+        backend_metrics = json.loads(backend_run.metrics_json)
+        frontend_metrics = json.loads(frontend_run.metrics_json)
+
+        assert backend_run.state == "queued"
+        assert frontend_run.state == "queued"
+        assert backend_metrics["providerAssignment"]["adapterType"] == "codex"
+        assert frontend_metrics["providerAssignment"]["adapterType"] == "claude_code"
+
+
+def test_failed_mixed_provider_run_preserves_provider_assignment_in_scheduler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        PROVIDER_ASSIGNMENT_MATRIX_ENV,
+        json.dumps(
+            {
+                "roles": {
+                    "frontend": {
+                        "adapterType": "claude_code",
+                        "providerId": "local-claude-code-cli",
+                    }
+                }
+            },
+            separators=(",", ":"),
+        ),
+    )
+    with scheduler_db() as db:
+        _, _, _, frontend_task = seed_mixed_provider_task_graph(
+            db,
+            frontend_depends_on_backend=False,
+        )
+        frontend_run = create_task_run(db, frontend_task.id)
+
+        transition_task_run(
+            db,
+            frontend_run.id,
+            "failed",
+            error_code="CLAUDE_CODE_TEST_FAILURE",
+            error_message="Claude Code failed in scheduler test.",
+        )
+
+        stored = db.get(Task, frontend_task.id)
+        scheduler = json.loads(stored.plan_json)["scheduler"]
+
+        assert stored.status == "failed"
+        assert scheduler["state"] == "retryable"
+        assert scheduler["adapterType"] == "claude_code"
+        assert scheduler["providerId"] == "local-claude-code-cli"
+        assert scheduler["providerAssignment"]["adapterType"] == "claude_code"
+        assert scheduler["providerAssignment"]["providerId"] == "local-claude-code-cli"
+
+
 @contextmanager
 def scheduler_db() -> Iterator[DbSession]:
     engine = create_engine(
@@ -759,3 +920,94 @@ def seed_same_target_write_tasks(
     db.refresh(first)
     db.refresh(second)
     return workspace, session, first, second
+
+
+def seed_mixed_provider_task_graph(
+    db: DbSession,
+    *,
+    frontend_depends_on_backend: bool = True,
+) -> tuple[Workspace, Session, Task, Task]:
+    workspace = Workspace(
+        name="AgentHub Demo",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="Mixed provider scheduler session",
+        bound_branch="main",
+        worktree_path=".worktrees/mixed-provider-session",
+    )
+    backend = Agent(
+        name="Backend Agent",
+        role="backend",
+        adapter_type="codex",
+        provider="local",
+    )
+    frontend = Agent(
+        name="Frontend Agent",
+        role="frontend",
+        adapter_type="codex",
+        provider="local",
+    )
+    contract = {
+        "contractId": "contract-mini-crm",
+        "appType": "mini_crm_contacts",
+        "backendTargetId": DEMO_BACKEND_TARGET_ID,
+        "frontendTargetId": DEMO_FRONTEND_TARGET_ID,
+    }
+    backend_task = Task(
+        session_id=session.id,
+        title="Implement mini CRM backend",
+        intent_type="backend_change",
+        status="pending",
+        priority=1,
+        assigned_agent_id=backend.id,
+        plan_json=json.dumps(
+            {
+                "planner": "contract_first_v1",
+                "targetId": DEMO_BACKEND_TARGET_ID,
+                "safeTarget": "apps/demo-api",
+                "files": ["apps/demo-api/app/main.py"],
+                "autoStart": True,
+                "contractId": contract["contractId"],
+                "appContract": contract,
+            },
+            separators=(",", ":"),
+        ),
+    )
+    frontend_task = Task(
+        session_id=session.id,
+        title="Implement mini CRM frontend",
+        intent_type="frontend_change",
+        status="pending",
+        priority=2,
+        assigned_agent_id=frontend.id,
+        plan_json=json.dumps(
+            {
+                "planner": "contract_first_v1",
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+                "autoStart": True,
+                "contractId": contract["contractId"],
+                "appContract": contract,
+            },
+            separators=(",", ":"),
+        ),
+        depends_on_task_ids=json.dumps(
+            [backend_task.id] if frontend_depends_on_backend else [],
+            separators=(",", ":"),
+        ),
+    )
+    db.add(workspace)
+    db.add(session)
+    db.add(backend)
+    db.add(frontend)
+    db.add(backend_task)
+    db.add(frontend_task)
+    db.commit()
+    db.refresh(backend_task)
+    db.refresh(frontend_task)
+    return workspace, session, backend_task, frontend_task

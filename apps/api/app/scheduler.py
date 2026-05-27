@@ -375,6 +375,15 @@ def mark_task_run_terminal_scheduler_state(
     scheduler.setdefault("lockHolderTaskRunIds", [])
     scheduler["taskRunId"] = task_run_id
     scheduler["adapterType"] = adapter_type
+    provider_metadata = _provider_metadata_for_task_run(db, task_run_id)
+    if provider_metadata.get("providerId") is not None:
+        scheduler["providerId"] = provider_metadata["providerId"]
+    if provider_metadata.get("providerAssignment") is not None:
+        scheduler["providerAssignment"] = provider_metadata["providerAssignment"]
+    if provider_metadata.get("fallbackFromRunId") is not None:
+        scheduler["fallbackFromRunId"] = provider_metadata["fallbackFromRunId"]
+    if provider_metadata.get("retryOfRunId") is not None:
+        scheduler["retryOfRunId"] = provider_metadata["retryOfRunId"]
 
     if run_state == "completed":
         scheduler.update(
@@ -410,6 +419,30 @@ def mark_task_run_terminal_scheduler_state(
     db.commit()
     db.refresh(task)
     return task
+
+
+def _provider_metadata_for_task_run(
+    db: DbSession,
+    task_run_id: str,
+) -> dict[str, Any]:
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        return {}
+    metrics = _json_dict(task_run.metrics_json)
+    assignment = metrics.get("providerAssignment")
+    provider_id = None
+    if isinstance(assignment, dict):
+        provider_id = assignment.get("providerId")
+    return {
+        "providerId": provider_id if isinstance(provider_id, str) else None,
+        "providerAssignment": assignment if isinstance(assignment, dict) else None,
+        "fallbackFromRunId": metrics.get("fallbackFromRunId")
+        if isinstance(metrics.get("fallbackFromRunId"), str)
+        else None,
+        "retryOfRunId": metrics.get("retryOfRunId")
+        if isinstance(metrics.get("retryOfRunId"), str)
+        else None,
+    }
 
 
 def refresh_downstream_scheduler_state(
@@ -697,3 +730,11 @@ def _plan_for_task(task: Task) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return value if isinstance(value, dict) else {}
+
+
+def _json_dict(value: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}

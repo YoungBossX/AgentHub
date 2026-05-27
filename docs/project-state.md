@@ -5,6 +5,32 @@ reference instead of repeating long context blocks.
 
 ## P13 Status
 
+### P13-7 Mixed-provider Scheduler Integration
+
+P13-7 completed on 2026-05-27.
+
+Scheduler state now preserves provider coordination metadata on terminal runs:
+
+- `adapterType`;
+- `providerId`;
+- `providerAssignment`;
+- `retryOfRunId` when present;
+- `fallbackFromRunId` when present.
+
+Regression coverage verifies that mixed-provider task graphs continue to obey
+P8-P10 scheduler rules:
+
+- a frontend Claude Code task waits for a backend Codex dependency;
+- same-target write locks apply regardless of provider identity;
+- different frontend/backend targets can queue with different providers when no
+  dependency or conflict blocks them;
+- failed mixed-provider runs remain retryable and keep provider assignment
+  evidence in scheduler metadata.
+
+P13-7 does not run real Claude/Codex, add a provider marketplace, change
+adapter dispatch semantics, or replace the scheduler. Mixed-provider rehearsal
+and freeze review remain P13-8.
+
 ### P13-6 Cross-provider Evidence Normalization
 
 P13-6 completed on 2026-05-27.

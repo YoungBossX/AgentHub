@@ -1,5 +1,41 @@
 # AgentHub Change Log
 
+## P13-7 Mixed-provider Scheduler Integration
+
+**Date:** 2026-05-27
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/scheduler.py` | Preserved provider ID, provider assignment, retry ID, and fallback ID in terminal scheduler metadata. |
+| `apps/api/tests/test_scheduler.py` | Added mixed-provider scheduler coverage for dependencies, target locks, different-target concurrency, and failure metadata. |
+| `docs/project-state.md` | Recorded P13-7 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-7 complete after verification. |
+
+### What Changed
+
+Scheduler terminal metadata now keeps provider assignment details alongside the
+existing adapter type. Retry and fallback references are also preserved when
+present, so recovery state remains auditable in mixed-provider workflows.
+
+Regression coverage verifies:
+
+- frontend Claude Code tasks wait for backend Codex dependencies;
+- same-target write locks are provider independent;
+- different frontend/backend targets can queue with different providers;
+- failed mixed-provider runs preserve provider assignment in scheduler state.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted mixed-provider scheduler tests | Pass: 4 tests. |
+| Full scheduler tests | Pass: 23 tests. |
+
+---
+
 ## P13-6 Cross-provider Evidence Normalization
 
 **Date:** 2026-05-27
