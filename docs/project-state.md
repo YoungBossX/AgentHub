@@ -5,6 +5,40 @@ reference instead of repeating long context blocks.
 
 ## P13 Status
 
+### P13-3 Canonical Context Usage Enforcement
+
+P13-3 completed on 2026-05-27.
+
+Provider-backed TaskRun instructions now render a `Canonical Shared Context`
+section sourced from the filtered `canonical_shared_context_v1` contract.
+Instructions no longer include the legacy session context payload as
+`legacyContext`.
+
+The canonical context includes safe provider-visible representations of:
+
+- session and user goal;
+- current task;
+- task graph when available;
+- target context and related targets;
+- safe paths;
+- recent messages;
+- relevant artifacts;
+- latest diff/review/preview/deployment;
+- handoff notes;
+- guardrails and validation expectations.
+
+TaskRun `metricsJson.canonicalContextSnapshot` remains the auditable snapshot
+of the context prepared for provider execution.
+
+P13-3 also prevents raw plan `files` from being copied directly into frontend
+instructions. Preferred file lists are derived from canonical safe paths, so
+protected plan values such as dependency directory paths, absolute host paths,
+or secret-bearing metadata do not leak through instruction text.
+
+P13-3 does not implement Handoff Protocol v1 changes, provider-specific
+semantic mapping tests, evidence normalization, mixed-provider scheduler
+integration, or real Claude/Codex rehearsal. Those remain later P13 tasks.
+
 ### P13-2 Provider-aware Agent Profile
 
 P13-2 completed on 2026-05-26.

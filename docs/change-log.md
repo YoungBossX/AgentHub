@@ -1,5 +1,44 @@
 # AgentHub Change Log
 
+## P13-3 Canonical Context Usage Enforcement
+
+**Date:** 2026-05-27
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/instruction_adapters/shared_sections.py` | Rendered provider-visible instruction context from the filtered Canonical Shared Context instead of the legacy session context payload. |
+| `apps/api/app/instruction_builder.py` | Used canonical safe paths when listing preferred frontend files so protected plan paths are not copied into provider instructions. |
+| `apps/api/tests/test_task_runs.py` | Added coverage for Canonical Shared Context rendering, legacy context exclusion, protected path filtering, and snapshot persistence. |
+| `docs/project-state.md` | Recorded P13-3 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-3 complete after verification. |
+
+### What Changed
+
+CodexAdapter and ClaudeCodeAdapter TaskRun instructions now include a
+`Canonical Shared Context` JSON section sourced from the filtered
+`canonical_shared_context_v1` contract. The old `legacyContext` payload is no
+longer rendered into provider instructions.
+
+Frontend role instructions now derive preferred file lists from canonical safe
+paths instead of raw plan files, preventing protected values such as dependency
+directory paths, host absolute paths, or secret-bearing metadata from leaking
+through the human-readable instruction body.
+
+TaskRun metadata continues to persist `canonicalContextSnapshot`, preserving an
+auditable record of what context was prepared for provider execution.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted canonical-context instruction tests | Pass: 3 tests. |
+| Full TaskRun tests | Pass: 50 tests. |
+
+---
+
 ## P13-2 Provider-aware Agent Profile
 
 **Date:** 2026-05-26

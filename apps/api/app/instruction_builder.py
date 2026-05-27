@@ -27,7 +27,7 @@ def build_role_instruction(
     original_request = str(context_pack.get("originalUserRequest") or task.title).strip()
     target = _target_for_role(role, plan, context_pack)
     sections = [
-        _role_body(role, task, plan, original_request, target),
+        _role_body(role, task, plan, original_request, target, context_pack),
         _target_section(role, plan, target),
         _contract_guidance(role, plan, target),
         _context_section(context_pack),
@@ -53,11 +53,12 @@ def _role_body(
     plan: dict[str, Any],
     original_request: str,
     target: TargetProject,
+    context_pack: dict[str, Any],
 ) -> str:
     if target.type == "platform":
         return _platform_body(original_request, target)
     if role == "frontend":
-        return _frontend_body(task, plan, original_request, target)
+        return _frontend_body(task, plan, original_request, target, context_pack)
     if role == "backend":
         return _backend_body(original_request, target)
     if role in {"qa", "review"}:
@@ -76,6 +77,7 @@ def _frontend_body(
     plan: dict[str, Any],
     original_request: str,
     target: TargetProject,
+    context_pack: dict[str, Any],
 ) -> str:
     allowed_path = _primary_allowed_path(target)
     if target.target_id != DEMO_FRONTEND_TARGET_ID:
@@ -170,8 +172,8 @@ def _frontend_body(
             "do not run setup or dependency install commands."
         )
 
-    files = plan.get("files")
-    file_list = ", ".join(files) if isinstance(files, list) else allowed_path
+    safe_files = _canonical_safe_paths(context_pack)
+    file_list = ", ".join(safe_files) if safe_files else allowed_path
     return (
         "You are the Frontend Agent for AgentHub's demo app.\n"
         f"Original user request: {original_request}\n"
@@ -365,6 +367,20 @@ def _target_section(
 
 def _context_section(context_pack: dict[str, Any]) -> str:
     return context_section(context_pack)
+
+
+def _canonical_safe_paths(context_pack: dict[str, Any]) -> list[str]:
+    canonical_context = context_pack.get("canonicalContext")
+    if not isinstance(canonical_context, dict):
+        return []
+    fields = canonical_context.get("fields")
+    if not isinstance(fields, dict):
+        return []
+    safe_paths = fields.get("safePaths")
+    if not isinstance(safe_paths, dict):
+        return []
+    value = safe_paths.get("value")
+    return _string_list(value)
 
 
 def _contract_guidance(

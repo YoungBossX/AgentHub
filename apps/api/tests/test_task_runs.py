@@ -623,8 +623,50 @@ def test_provider_instruction_adapters_dispatch_without_losing_context(
         request = agent_run_request_for(db, task_run, adapter_type="claude_code")
 
     assert "Update the demo dashboard" in request.instruction
+    assert "Canonical Shared Context" in request.instruction
     assert "canonical_shared_context_v1" in request.instruction
+    assert "legacyContext" not in request.instruction
     assert request.adapter_type == "claude_code"
+
+
+def test_provider_backed_instruction_filters_protected_context_values(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "target": "demo_frontend_request",
+                "safeTarget": "apps/demo/src",
+                "files": [
+                    "apps/demo/src/App.tsx",
+                    "apps/demo/node_modules/pkg/index.js",
+                    "/Users/example/secrets/token.txt",
+                ],
+                "originalRequest": "Build a dashboard",
+                "secretToken": "should-not-leak",
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id, adapter_type="codex")
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+        stored_run = db.get(TaskRun, task_run.id)
+        metrics = json.loads(stored_run.metrics_json)
+
+    assert "Canonical Shared Context" in request.instruction
+    assert "apps/demo/src/App.tsx" in request.instruction
+    assert "apps/demo/node_modules/pkg/index.js" not in request.instruction
+    assert "/Users/example/secrets/token.txt" not in request.instruction
+    assert "should-not-leak" not in request.instruction
+    assert "legacyContext" not in request.instruction
+    snapshot = metrics["canonicalContextSnapshot"]
+    assert snapshot["fields"]["safePaths"]["value"] == [
+        "apps/demo/src",
+        "apps/demo/src/App.tsx",
+    ]
 
 
 def test_agent_run_request_bounds_followup_button_instruction(
@@ -708,7 +750,7 @@ def test_agent_run_request_preserves_generic_demo_frontend_request(
     assert "production deploy" in request.instruction
     assert "login-page-slot" not in request.instruction
     assert request.plan_context["originalRequest"] == original_request
-    assert "Session Context Pack" in request.instruction
+    assert "Canonical Shared Context" in request.instruction
     assert request.plan_context["sessionContext"]["originalUserRequest"] == original_request
     assert request.plan_context["sessionContext"]["safeTargetPaths"] == [
         "apps/demo/src",
