@@ -1,5 +1,45 @@
 # AgentHub Change Log
 
+## P13-4 Handoff Protocol v1
+
+**Date:** 2026-05-27
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/handoffs.py` | Added provider-aware handoff metadata, diff-based changed files, implemented route/component hints, review warnings, and suggested follow-up scope. |
+| `apps/api/tests/test_task_runs.py` | Added handoff protocol coverage for frontend-to-review and review-to-fix transitions, downstream canonical context, and mission trace visibility. |
+| `docs/project-state.md` | Recorded P13-4 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-4 complete after verification. |
+
+### What Changed
+
+Handoff artifacts now carry provider-aware metadata for cross-provider
+transitions:
+
+- `fromProviderId` / `fromAdapterType`;
+- `toProviderId` / `toAdapterType`;
+- changed files from the latest diff artifact when available;
+- implemented route and component hints;
+- artifact references;
+- review warnings and suggested follow-up scope;
+- verification status and risk notes.
+
+Downstream session context and Canonical Shared Context include the enriched
+handoff metadata, and mission trace exposes the same artifact metadata through
+existing artifact navigation.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted handoff protocol tests | Pass: 2 tests. |
+| Full TaskRun tests | Pass: 51 tests. |
+
+---
+
 ## P13-3 Canonical Context Usage Enforcement
 
 **Date:** 2026-05-27

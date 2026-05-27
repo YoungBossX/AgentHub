@@ -1145,7 +1145,19 @@ def test_completed_dependency_creates_handoff_context_for_downstream_task(
         db.refresh(upstream)
         db.refresh(downstream)
 
-        upstream_run = create_task_run(db, upstream.id)
+        upstream_run = create_task_run(db, upstream.id, adapter_type="claude_code")
+        diff_artifact = Artifact(
+            task_run_id=upstream_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+            meta_json=json.dumps(
+                {"changedFiles": ["apps/demo/src/App.tsx"]},
+                separators=(",", ":"),
+            ),
+        )
+        db.add(diff_artifact)
+        db.commit()
         transition_task_run(db, upstream_run.id, "completed")
         handoff = db.exec(
             select(Artifact).where(Artifact.artifact_type == "handoff")
@@ -1157,19 +1169,128 @@ def test_completed_dependency_creates_handoff_context_for_downstream_task(
         upstream_id = upstream.id
         upstream_run_id = upstream_run.id
         downstream_id = downstream.id
+        session_id = upstream.session_id
 
     assert handoff_status == "ready"
     assert handoff_meta["fromTaskId"] == upstream_id
     assert handoff_meta["fromTaskRunId"] == upstream_run_id
     assert handoff_meta["fromAgentRole"] == "frontend"
+    assert handoff_meta["fromProviderId"] == "local-claude-code-cli"
+    assert handoff_meta["fromAdapterType"] == "claude_code"
     assert handoff_meta["toTaskId"] == downstream_id
     assert handoff_meta["toAgentRole"] == "qa"
+    assert handoff_meta["toProviderId"] == "local-scripted-review"
+    assert handoff_meta["toAdapterType"] == "scripted_mock"
     assert handoff_meta["changedFiles"] == ["apps/demo/src/App.tsx"]
+    assert handoff_meta["implementedComponents"] == ["apps/demo/src/App.tsx"]
+    assert handoff_meta["implementedRoutes"] == []
+    assert handoff_meta["warnings"] == []
     assert handoff_meta["verificationStatus"] == "completed"
     assert context["handoffNotes"][0]["artifactId"] == handoff_id
     assert context["canonicalContext"]["fields"]["handoffNotes"]["value"][0][
         "toTaskId"
     ] == downstream_id
+    assert context["canonicalContext"]["fields"]["handoffNotes"]["value"][0][
+        "fromProviderId"
+    ] == "local-claude-code-cli"
+
+    response = client.get(f"/sessions/{session_id}/mission-trace")
+    assert response.status_code == 200
+    trace = response.json()
+    handoff_trace = next(
+        artifact
+        for artifact in trace["artifacts"]
+        if artifact["artifactType"] == "handoff"
+    )
+    assert handoff_trace["meta"]["fromProviderId"] == "local-claude-code-cli"
+    assert handoff_trace["meta"]["toProviderId"] == "local-scripted-review"
+
+
+def test_review_handoff_carries_provider_warnings_to_fix_task(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        qa_agent = db.exec(select(Agent).where(Agent.role == "qa")).one()
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        review_task = Task(
+            session_id=session_id,
+            title="Review dashboard diff",
+            intent_type="review",
+            status="pending",
+            assigned_agent_id=qa_agent.id,
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "review",
+                    "target": "session_review_request",
+                    "files": ["apps/demo/src/App.tsx"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        fix_task = Task(
+            session_id=session_id,
+            title="Fix review warnings",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend_agent.id,
+            depends_on_task_ids="[]",
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "frontend",
+                    "target": "demo_frontend_request",
+                    "safeTarget": "apps/demo/src",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(review_task)
+        db.add(fix_task)
+        db.commit()
+        db.refresh(review_task)
+        db.refresh(fix_task)
+        fix_task.depends_on_task_ids = json.dumps([review_task.id], separators=(",", ":"))
+        db.add(fix_task)
+        db.commit()
+
+        review_run = create_task_run(db, review_task.id, adapter_type="scripted_mock")
+        review_artifact = Artifact(
+            task_run_id=review_run.id,
+            artifact_type="review",
+            title="Review Agent report",
+            status="warning",
+            meta_json=json.dumps(
+                {
+                    "summary": "Needs a loading state.",
+                    "findings": [
+                        {
+                            "severity": "warning",
+                            "message": "Add a loading state before rendering contacts.",
+                        }
+                    ],
+                    "suggestedChanges": ["Add loading state."],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(review_artifact)
+        db.commit()
+        transition_task_run(db, review_run.id, "completed")
+
+        handoff = db.exec(
+            select(Artifact).where(Artifact.artifact_type == "handoff")
+        ).one()
+        context = build_session_context_pack(db, fix_task)
+        handoff_meta = json.loads(handoff.meta_json)
+
+    assert handoff_meta["fromAgentRole"] == "qa"
+    assert handoff_meta["fromAdapterType"] == "scripted_mock"
+    assert handoff_meta["toAgentRole"] == "frontend"
+    assert handoff_meta["warnings"] == ["Add a loading state before rendering contacts."]
+    assert handoff_meta["suggestedFollowUpScope"] == ["Add loading state."]
+    assert context["canonicalContext"]["fields"]["handoffNotes"]["value"][0][
+        "warnings"
+    ] == ["Add a loading state before rendering contacts."]
 
 
 def test_backend_instruction_targets_demo_backend_without_platform_api_access(

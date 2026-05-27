@@ -5,6 +5,31 @@ reference instead of repeating long context blocks.
 
 ## P13 Status
 
+### P13-4 Handoff Protocol v1
+
+P13-4 completed on 2026-05-27.
+
+Handoff artifacts now include provider-aware metadata for cross-provider task
+transitions:
+
+- `fromProviderId` and `fromAdapterType`;
+- `toProviderId` and `toAdapterType`;
+- `fromTaskRunId` and task role metadata;
+- changed files, preferring latest diff artifact metadata;
+- implemented route and component hints;
+- artifact references;
+- review warnings and suggested follow-up scope;
+- verification status and risk notes.
+
+Frontend-to-review and review-to-fix handoffs now preserve enough provider
+identity for downstream context, mission trace, and later mixed-provider
+rehearsal. Downstream Canonical Shared Context includes enriched handoff notes
+through the existing `handoffNotes` field.
+
+P13-4 does not implement provider-specific instruction semantic comparison,
+evidence normalization across all artifact types, scheduler mixed-provider
+integration, or real Claude/Codex rehearsal. Those remain later P13 tasks.
+
 ### P13-3 Canonical Context Usage Enforcement
 
 P13-3 completed on 2026-05-27.
