@@ -1,5 +1,36 @@
 # AgentHub Change Log
 
+## P13-8 Mixed-provider Rehearsal and Freeze Review
+
+**Date:** 2026-05-27
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_cross_provider_rehearsal.py` | Added deterministic P13 freeze rehearsal for backend=Codex and frontend=Claude Code provider assignments through diff/review/preview/local staging deploy evidence. |
+| `docs/p13-freeze-review.md` | Recorded P13 freeze decision, rehearsal path, evidence, and caveats. |
+| `docs/project-state.md` | Recorded P13-8 freeze result and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-8 and explicit non-goals complete after verification. |
+
+### What Changed
+
+P13 now has a deterministic freeze rehearsal that simulates a bounded mixed
+provider workflow without claiming live Claude/Codex execution. The rehearsal
+creates a shared mini CRM contract, assigns backend work to Codex and frontend
+work to Claude Code, verifies provider-aware handoff metadata, captures diff
+and review evidence, starts a healthy preview, records a local staging
+deployment, and checks mission trace provider visibility.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P13 mixed-provider rehearsal test | Pass: 1 test. |
+
+---
+
 ## P13-7 Mixed-provider Scheduler Integration
 
 **Date:** 2026-05-27

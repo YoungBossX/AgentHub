@@ -5,6 +5,35 @@ reference instead of repeating long context blocks.
 
 ## P13 Status
 
+### P13-8 Mixed-provider Rehearsal and Freeze Review
+
+P13-8 completed on 2026-05-27.
+
+P13 is ready to freeze as Cross-provider Agent Coordination.
+
+The freeze rehearsal uses deterministic local execution rather than a live
+Claude Code or Codex mutation, so it does not claim real provider success. The
+rehearsal verifies a bounded mixed-provider graph:
+
+```text
+shared mini CRM contract
+-> backend task assigned to Codex
+-> backend diff/review
+-> provider-aware handoff
+-> frontend task assigned to Claude Code
+-> frontend diff/review
+-> healthy preview
+-> local staging deploy
+-> mission trace evidence
+```
+
+Evidence is documented in `docs/p13-freeze-review.md` and covered by
+`apps/api/tests/test_cross_provider_rehearsal.py`.
+
+P13 does not add provider marketplace support, OpenCode, user-created custom
+agents, multi-user IM, production deploy, distributed workers, or a scheduler
+replacement.
+
 ### P13-7 Mixed-provider Scheduler Integration
 
 P13-7 completed on 2026-05-27.

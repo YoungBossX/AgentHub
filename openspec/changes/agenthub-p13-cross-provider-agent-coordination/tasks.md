@@ -7,16 +7,16 @@
 - [x] 1.5 P13-5 Provider-specific Instruction Mapping: add regression coverage proving Codex and Claude Code instructions derived from the same canonical context preserve the same contract, target, handoff, validation, and guardrail facts while allowing provider-specific formatting differences.
 - [x] 1.6 P13-6 Cross-provider Evidence Normalization: normalize provider identity, run status, errors, logs/event summaries, changed files, diff metadata, review metadata, preview evidence, and staging deploy evidence; preserve real provider identity; ensure failed provider runs are not masked unless fallback is explicitly recorded.
 - [x] 1.7 P13-7 Mixed-provider Scheduler Integration: verify scheduler dependencies, target locks, recovery states, retry/fallback metadata, and staging deploy prerequisites work when backend and frontend tasks use different providers; add tests for backend=Codex and frontend=Claude Code task graphs.
-- [ ] 1.8 P13-8 Mixed-provider Rehearsal and Freeze Review: run or simulate one bounded workflow with backend=codex and frontend=claude_code; verify shared contract, provider assignments, handoffs, diff/review/preview/staging deploy evidence, and P6-P12 baseline preservation; if a real provider is blocked by auth/quota/runtime, record the exact normalized error and do not claim success.
+- [x] 1.8 P13-8 Mixed-provider Rehearsal and Freeze Review: run or simulate one bounded workflow with backend=codex and frontend=claude_code; verify shared contract, provider assignments, handoffs, diff/review/preview/staging deploy evidence, and P6-P12 baseline preservation; if a real provider is blocked by auth/quota/runtime, record the exact normalized error and do not claim success.
 
 ## 2. Explicit Non-goals
 
-- [ ] 2.1 Confirm P13 does not implement provider marketplace, OpenCode integration, user-created custom agents UI, multi-user IM, desktop/mobile clients, production deploy, distributed worker cluster, full autonomous free-form agent negotiation, or scheduler replacement with LangGraph/CrewAI.
+- [x] 2.1 Confirm P13 does not implement provider marketplace, OpenCode integration, user-created custom agents UI, multi-user IM, desktop/mobile clients, production deploy, distributed worker cluster, full autonomous free-form agent negotiation, or scheduler replacement with LangGraph/CrewAI.
 
 ## 3. Validation
 
-- [ ] 3.1 Run `pnpm check`.
-- [ ] 3.2 Run `pnpm test`.
-- [ ] 3.3 Run targeted backend/frontend tests added for each P13 task.
-- [ ] 3.4 Run `git diff --check`.
-- [ ] 3.5 Run `openspec validate agenthub-p13-cross-provider-agent-coordination --strict`.
+- [x] 3.1 Run `pnpm check`.
+- [x] 3.2 Run `pnpm test`.
+- [x] 3.3 Run targeted backend/frontend tests added for each P13 task.
+- [x] 3.4 Run `git diff --check`.
+- [x] 3.5 Run `openspec validate agenthub-p13-cross-provider-agent-coordination --strict`.
