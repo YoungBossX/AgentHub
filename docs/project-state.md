@@ -5,6 +5,28 @@ reference instead of repeating long context blocks.
 
 ## P13 Status
 
+### P13-5 Provider-specific Instruction Mapping
+
+P13-5 completed on 2026-05-27.
+
+Codex and Claude Code instruction adapters now add provider-specific wrapper
+text while preserving the same shared role instruction and Canonical Shared
+Context. The Codex wrapper emphasizes patch-oriented execution; the Claude Code
+wrapper asks for a concise implementation plan before editing.
+
+Regression coverage verifies that both provider instructions preserve the same
+critical facts:
+
+- shared app contract ID;
+- frontend/backend target IDs;
+- upstream handoff artifact/provider references;
+- implemented route details;
+- validation expectations;
+- guardrails.
+
+P13-5 does not normalize execution evidence, alter scheduler behavior, or run
+real Claude/Codex rehearsal. Those remain later P13 tasks.
+
 ### P13-4 Handoff Protocol v1
 
 P13-4 completed on 2026-05-27.

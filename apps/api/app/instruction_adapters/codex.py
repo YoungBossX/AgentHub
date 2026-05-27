@@ -8,4 +8,10 @@ class CodexInstructionAdapter(ProviderInstructionAdapter):
     provider_id = "codex"
 
     def render(self, request: ProviderInstructionRequest) -> str:
-        return request.core_instruction
+        return (
+            "Codex Provider Instruction\n"
+            "Use the canonical context below as the source of truth. "
+            "Keep changes patch-oriented and preserve all target, contract, "
+            "handoff, validation, and guardrail facts.\n\n"
+            f"{request.core_instruction}"
+        )

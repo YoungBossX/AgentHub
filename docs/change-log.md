@@ -1,5 +1,40 @@
 # AgentHub Change Log
 
+## P13-5 Provider-specific Instruction Mapping
+
+**Date:** 2026-05-27
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/instruction_adapters/codex.py` | Added a Codex-specific instruction wrapper while preserving the shared core instruction. |
+| `apps/api/app/instruction_adapters/claude_code.py` | Added a Claude Code-specific instruction wrapper while preserving the shared core instruction. |
+| `apps/api/tests/test_task_runs.py` | Added regression coverage that Codex and Claude Code instructions preserve the same canonical contract, target, handoff, validation, and guardrail facts. |
+| `docs/project-state.md` | Recorded P13-5 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-5 complete after verification. |
+
+### What Changed
+
+Codex and Claude Code instruction adapters now apply provider-specific wrapper
+text while keeping the shared role instruction and Canonical Shared Context
+unchanged. This lets provider prompt formatting differ without dropping shared
+mission facts.
+
+Regression coverage verifies both providers preserve the same contract ID,
+frontend/backend target IDs, upstream handoff references, implemented route
+details, validation expectations, and guardrails.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted provider instruction mapping tests | Pass: 2 tests. |
+| Full TaskRun tests | Pass: 52 tests. |
+
+---
+
 ## P13-4 Handoff Protocol v1
 
 **Date:** 2026-05-27

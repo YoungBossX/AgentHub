@@ -669,6 +669,70 @@ def test_provider_backed_instruction_filters_protected_context_values(
     ]
 
 
+def test_codex_and_claude_instructions_preserve_same_canonical_facts(
+    client: TestClient,
+) -> None:
+    contract = {
+        "contractId": "contract-mini_crm_contacts",
+        "appName": "Mini CRM",
+        "backendTargetId": DEMO_BACKEND_TARGET_ID,
+        "frontendTargetId": DEMO_FRONTEND_TARGET_ID,
+        "apiRoutes": [{"method": "GET", "path": "/contacts"}],
+    }
+    handoff = {
+        "artifactId": "handoff-1",
+        "fromProviderId": "local-codex-cli",
+        "fromAdapterType": "codex",
+        "fromTaskRunId": "backend-run-1",
+        "changedFiles": ["apps/demo-api/app/main.py"],
+        "implementedRoutes": ["GET /contacts"],
+        "warnings": [],
+    }
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.title = "Frontend: render mini CRM contacts"
+        task.plan_json = json.dumps(
+            {
+                "target": "demo_frontend_request",
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "backendTargetId": DEMO_BACKEND_TARGET_ID,
+                "appContract": contract,
+                "contractId": contract["contractId"],
+                "handoffNotes": [handoff],
+                "expectedArtifactTypes": ["diff"],
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+                "originalRequest": "Build the mini CRM contacts UI",
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        task_run = create_task_run(db, task.id)
+
+        codex_request = agent_run_request_for(db, task_run, adapter_type="codex")
+        claude_request = agent_run_request_for(db, task_run, adapter_type="claude_code")
+
+    shared_facts = [
+        "canonical_shared_context_v1",
+        "contract-mini_crm_contacts",
+        "demo-frontend",
+        "demo-backend",
+        "handoff-1",
+        "local-codex-cli",
+        "GET /contacts",
+        "Produce a focused git diff in the assigned safe target.",
+        "Do not edit .env files",
+    ]
+    for fact in shared_facts:
+        assert fact in codex_request.instruction
+        assert fact in claude_request.instruction
+
+    assert "Codex Provider Instruction" in codex_request.instruction
+    assert "Claude Code Provider Instruction" in claude_request.instruction
+    assert codex_request.instruction != claude_request.instruction
+
+
 def test_agent_run_request_bounds_followup_button_instruction(
     client: TestClient,
 ) -> None:
