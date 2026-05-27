@@ -11,6 +11,7 @@ from app.events import append_task_run_event
 from app.external_evidence import list_task_run_command_evidence
 from app.models import Artifact, Diff, Review, Task, TaskRun, utc_now
 from app.models import Session as AgentHubSession
+from app.provider_evidence import provider_evidence_for_task_run, scripted_provider_evidence
 from app.target_registry import (
     DEMO_BACKEND_TARGET_ID,
     DEMO_FRONTEND_TARGET_ID,
@@ -92,6 +93,16 @@ def create_scripted_review_for_diff(
     status, risk_level = _status_and_risk_for(findings)
     summary = _summary_for(status, risk_level, files_reviewed, findings, contract=contract)
     now = utc_now()
+    task_run = db.get(TaskRun, diff_artifact.task_run_id)
+    if task_run is None:
+        raise ReviewError(f"TaskRun not found for diff artifact: {diff_artifact.id}")
+    origin_provider_evidence = provider_evidence_for_task_run(
+        db,
+        task_run,
+        changed_files=files_reviewed,
+        artifact_refs={"diffArtifactId": diff_artifact.id},
+    )
+    review_provider_evidence = scripted_provider_evidence(origin_provider_evidence)
 
     artifact = Artifact(
         task_run_id=diff_artifact.task_run_id,
@@ -105,6 +116,8 @@ def create_scripted_review_for_diff(
                 "riskLevel": risk_level,
                 "adapterType": SCRIPTED_REVIEW_ADAPTER,
                 "contractId": contract.get("contractId") if contract else None,
+                "providerEvidence": review_provider_evidence,
+                "originProviderEvidence": origin_provider_evidence,
             },
             separators=(",", ":"),
         ),
@@ -154,6 +167,14 @@ def create_scripted_review_for_diff(
                 "status": status,
                 "riskLevel": risk_level,
                 "adapterType": SCRIPTED_REVIEW_ADAPTER,
+                "providerEvidence": {
+                    **review_provider_evidence,
+                    "artifactRefs": {
+                        **review_provider_evidence.get("artifactRefs", {}),
+                        "reviewArtifactId": artifact.id,
+                    },
+                },
+                "originProviderEvidence": origin_provider_evidence,
             },
             separators=(",", ":"),
         ),

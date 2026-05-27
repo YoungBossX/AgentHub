@@ -26,6 +26,7 @@ from app.models import (
 )
 from app.models import Session as AgentHubSession
 from app.previews import UrlPreviewHealthChecker, reserve_preview_port
+from app.provider_evidence import provider_evidence_for_task_run
 from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
 from app.target_registry import (
     DEMO_FRONTEND_TARGET_ID,
@@ -391,6 +392,18 @@ class DeployService:
         commit_sha = task_run.head_ref or task_run.base_ref or f"worktree:{task_run.id}"
         source = _source_metadata_for_task_run(db, preview, preview_artifact, task_run)
         status_history = _status_history_for_provider_result(provider_result)
+        provider_evidence = provider_evidence_for_task_run(
+            db,
+            task_run,
+            changed_files=_latest_changed_files_for_task_run(db, task_run.id),
+            logs=list(provider_result.logs),
+            artifact_refs={
+                "previewId": preview.id,
+                "previewArtifactId": preview_artifact.id,
+                "diffArtifactId": source.get("diffArtifactId"),
+                "reviewArtifactId": source.get("reviewArtifactId"),
+            },
+        )
         artifact = Artifact(
             task_run_id=task_run.id,
             artifact_type="deployment",
@@ -409,6 +422,7 @@ class DeployService:
                     "logs": list(provider_result.logs),
                     "statusHistory": status_history,
                     "providerResult": provider_result.to_metadata(),
+                    "providerEvidence": provider_evidence,
                 },
                 separators=(",", ":"),
             ),
@@ -464,6 +478,14 @@ class DeployService:
                     "logs": list(provider_result.logs),
                     "statusHistory": status_history,
                     "source": source,
+                    "providerEvidence": {
+                        **provider_evidence,
+                        "artifactRefs": {
+                            **provider_evidence["artifactRefs"],
+                            "deploymentArtifactId": artifact.id,
+                            "deploymentId": deployment.id,
+                        },
+                    },
                 },
                 separators=(",", ":"),
             ),

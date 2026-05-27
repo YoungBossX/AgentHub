@@ -16,6 +16,7 @@ from app.artifact_versions import record_artifact_version
 from app.events import append_task_run_event
 from app.models import Artifact, Preview, Task, TaskRun, Workspace, utc_now
 from app.models import Session as AgentHubSession
+from app.provider_evidence import provider_evidence_for_task_run
 from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
 
 
@@ -144,6 +145,11 @@ class PreviewService:
         status_reason = None if healthy else "Preview did not respond to the health check."
         artifact_status = "ready" if healthy else "unhealthy"
         now = utc_now()
+        provider_evidence = provider_evidence_for_task_run(
+            db,
+            task_run,
+            logs=[f"Preview health status: {health_status}."],
+        )
 
         artifact = Artifact(
             task_run_id=task_run.id,
@@ -156,6 +162,7 @@ class PreviewService:
                     "url": url,
                     "command": command_text(command),
                     "healthStatus": health_status,
+                    "providerEvidence": provider_evidence,
                 },
                 separators=(",", ":"),
             ),
@@ -204,6 +211,10 @@ class PreviewService:
                         "url": url,
                         "port": port,
                         "healthStatus": health_status,
+                        "providerEvidence": {
+                            **provider_evidence,
+                            "artifactRefs": {"previewArtifactId": artifact.id},
+                        },
                     },
                     separators=(",", ":"),
                 ),

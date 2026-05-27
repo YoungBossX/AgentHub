@@ -250,11 +250,24 @@ def test_external_task_run_diff_uses_allowed_paths_and_excludes_denied(
     (external_root / ".env").write_text("SECRET=hidden\n")
 
     diff_artifact = collect_task_run_diff(db, task_run.id)
+    stored_artifact = db.get(Artifact, diff_artifact.artifact_id)
+    assert stored_artifact is not None
+    metadata = json.loads(stored_artifact.meta_json)
+    ready_event = db.exec(
+        select(TaskRunEvent)
+        .where(TaskRunEvent.task_run_id == task_run.id)
+        .where(TaskRunEvent.event_type == "artifact.diff.ready")
+    ).one()
+    event_payload = json.loads(ready_event.payload_json)
 
     assert task_run.worktree_path == str(external_root.resolve())
     assert diff_artifact.changed_files == ["src/App.tsx"]
     assert ".env" not in diff_artifact.patch_text
     assert "export default 'after'" in diff_artifact.patch_text
+    assert metadata["providerEvidence"]["taskRunId"] == task_run.id
+    assert metadata["providerEvidence"]["adapterType"] == "codex"
+    assert metadata["providerEvidence"]["changedFiles"] == ["src/App.tsx"]
+    assert event_payload["providerEvidence"]["adapterType"] == "codex"
 
 
 def test_diff_api_returns_stored_diff_artifacts(
@@ -305,6 +318,11 @@ def test_diff_api_returns_stored_diff_artifacts(
     stored_review = db.get(Review, reviews[0]["id"])
     assert stored_review is not None
     assert stored_review.reviewed_diff_artifact_id == created["artifactId"]
+    review_artifact = db.get(Artifact, reviews[0]["artifactId"])
+    assert review_artifact is not None
+    review_metadata = json.loads(review_artifact.meta_json)
+    assert review_metadata["providerEvidence"]["adapterType"] == "scripted_mock"
+    assert review_metadata["originProviderEvidence"]["adapterType"] == "scripted_mock"
 
     versions_response = client.get(f"/artifacts/{created['artifactId']}/versions")
     assert versions_response.status_code == 200

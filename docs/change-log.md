@@ -1,5 +1,45 @@
 # AgentHub Change Log
 
+## P13-6 Cross-provider Evidence Normalization
+
+**Date:** 2026-05-27
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/provider_evidence.py` | Added a shared provider evidence normalizer for TaskRun-backed artifacts. |
+| `apps/api/app/diffs.py` | Added provider evidence to diff artifact metadata and diff-ready events. |
+| `apps/api/app/reviews.py` | Added scripted review provider evidence and origin provider evidence to review artifacts/events. |
+| `apps/api/app/previews.py` | Added provider evidence to preview artifact metadata and preview-ready events. |
+| `apps/api/app/deployments.py` | Added provider evidence to deployment artifact metadata and deploy events. |
+| `apps/api/tests/test_diffs.py` | Added coverage for diff and review evidence metadata. |
+| `apps/api/tests/test_previews.py` | Added coverage for preview evidence metadata. |
+| `apps/api/tests/test_deployments.py` | Added coverage for deployment evidence metadata. |
+| `docs/project-state.md` | Recorded P13-6 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-6 complete after verification. |
+
+### What Changed
+
+Diff, scripted review, preview, and deployment artifacts now include normalized
+provider evidence derived from TaskRun metadata. The evidence records task run
+ID, run status, adapter type, provider ID, provider assignment metadata,
+changed files, logs where relevant, artifact references, and retry/fallback
+references when present.
+
+Scripted review artifacts also record `originProviderEvidence`, preserving the
+identity of the provider-backed coding run that produced the reviewed diff
+instead of masking it behind the deterministic review adapter.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted diff/review/preview/deploy evidence tests | Pass: 4 tests. |
+
+---
+
 ## P13-5 Provider-specific Instruction Mapping
 
 **Date:** 2026-05-27

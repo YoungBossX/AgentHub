@@ -289,6 +289,13 @@ def test_deploy_provider_result_records_standard_metadata(tmp_path: Path) -> Non
         assert metadata["logs"] == provider_result["logs"]
         assert metadata["statusHistory"][-1]["status"] == "ready"
         assert metadata["source"]["previewId"] == preview_id
+        assert metadata["providerEvidence"]["taskRunId"] == stored.task_run_id
+        assert metadata["providerEvidence"]["adapterType"] == "scripted_mock"
+        assert metadata["providerEvidence"]["artifactRefs"]["previewId"] == stored.source_preview_id
+        assert (
+            metadata["providerEvidence"]["artifactRefs"]["previewArtifactId"]
+            == metadata["source"]["previewArtifactId"]
+        )
 
 
 def test_deploy_service_rejects_unknown_provider(tmp_path: Path) -> None:

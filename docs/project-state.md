@@ -5,6 +5,29 @@ reference instead of repeating long context blocks.
 
 ## P13 Status
 
+### P13-6 Cross-provider Evidence Normalization
+
+P13-6 completed on 2026-05-27.
+
+TaskRun-backed artifacts now carry normalized provider evidence for
+cross-provider coordination. Diff, scripted review, preview, and deployment
+artifact metadata/events include:
+
+- task run ID and run status;
+- adapter type and provider ID;
+- provider assignment metadata when available;
+- changed files and logs where relevant;
+- artifact references such as diff, preview, review, and deployment IDs;
+- retry/fallback references when present.
+
+Scripted review artifacts also store `originProviderEvidence`, so a
+deterministic review does not hide the provider identity of the coding run that
+produced the reviewed diff.
+
+P13-6 does not change scheduler behavior, run real Claude/Codex, implement a
+provider marketplace, or add user-created custom agents. Mixed-provider
+scheduler integration and rehearsal remain later P13 tasks.
+
 ### P13-5 Provider-specific Instruction Mapping
 
 P13-5 completed on 2026-05-27.

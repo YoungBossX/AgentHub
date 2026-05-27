@@ -147,6 +147,11 @@ def test_start_preview_persists_vite_command_health_and_ready_event(
     assert preview.process_id == 4242
     assert preview.health_status == "healthy"
     assert preview.last_checked_at is not None
+    metadata = json.loads(artifact.meta_json)
+    payload = json.loads(event.payload_json)
+    assert metadata["providerEvidence"]["taskRunId"] == task_run_id
+    assert metadata["providerEvidence"]["adapterType"] == "scripted_mock"
+    assert payload["providerEvidence"]["adapterType"] == "scripted_mock"
     assert runner.started == [
         StartedCommand(
             command=["pnpm", "dev", "--host", "127.0.0.1", "--port", "4317"],

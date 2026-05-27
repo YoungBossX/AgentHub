@@ -12,6 +12,7 @@ from app.events import append_task_run_event
 from app.models import Artifact, Diff, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
+from app.provider_evidence import provider_evidence_for_task_run
 from app.target_registry import TargetRegistryError, get_target_for_workspace
 
 
@@ -88,6 +89,11 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
     task_run.base_ref = base_ref
     task_run.head_ref = head_ref
     task_run.updated_at = now
+    provider_evidence = provider_evidence_for_task_run(
+        db,
+        task_run,
+        changed_files=changed_files,
+    )
     artifact = Artifact(
         task_run_id=task_run.id,
         artifact_type="diff",
@@ -99,6 +105,7 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
                 "headRef": head_ref,
                 "changedFiles": changed_files,
                 "stats": stats,
+                "providerEvidence": provider_evidence,
             },
             separators=(",", ":"),
         ),
@@ -146,6 +153,10 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
                 "headRef": head_ref,
                 "changedFiles": changed_files,
                 "stats": stats,
+                "providerEvidence": {
+                    **provider_evidence,
+                    "artifactRefs": {"diffArtifactId": artifact.id},
+                },
             },
             separators=(",", ":"),
         ),
