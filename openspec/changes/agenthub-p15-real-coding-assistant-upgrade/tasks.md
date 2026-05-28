@@ -6,17 +6,17 @@
 - [x] 1.4 P15-4 Project Command Policy: derive allowed validation commands from Target Registry, Project Analyzer, and explicit target config; support configured pnpm/npm/pytest-style test/build/lint/dev/check commands; record stdout, stderr, exit code, target ID, command, and status as honest command evidence.
 - [x] 1.5 P15-5 Planner Rationale And Task Review Metadata: expose planner mode, rationale, task breakdown, assigned role, target, dependencies, planned files, acceptance criteria, and validation expectations through API/UI surfaces; keep plan review read-only unless existing safe adjustment actions already support changes.
 - [x] 1.6 P15-6 Breakout Game Real Coding Smoke: run the final acceptance request in a registered frontend target; require `llm_v1` or `passthrough_v1` frontend task; preserve the original Breakout request in provider instruction; use real ClaudeCodeAdapter or CodexAdapter if auth/quota permits; verify diff, review, build/check, preview, staging deploy, and browser playability; record exact provider error if blocked; do not use ScriptedMock to claim Breakout success.
-- [ ] 1.7 P15-7 P15 Freeze Review: verify P15 real coding assistant behavior, Breakout evidence or honest provider blockage, deterministic demo fallback preservation, ScriptedMock fallback labeling, Target Registry policy, scheduler locks/recovery, provider assignment, Agent Selection Policy, review/preview/staging deploy evidence, and P6-P14 baseline preservation.
+- [x] 1.7 P15-7 P15 Freeze Review: verify P15 real coding assistant behavior, Breakout evidence or honest provider blockage, deterministic demo fallback preservation, ScriptedMock fallback labeling, Target Registry policy, scheduler locks/recovery, provider assignment, Agent Selection Policy, review/preview/staging deploy evidence, and P6-P14 baseline preservation.
 
 ## 2. Explicit Non-goals
 
-- [ ] 2.1 Confirm P15 does not implement a hardcoded Breakout planner template, provider marketplace, user-created arbitrary command agents, production deploy, cloud provider integration, multi-user IM, desktop/IDE/CLI clients, full artifact editor, scheduler replacement, or removal of deterministic demo fallback.
+- [x] 2.1 Confirm P15 does not implement a hardcoded Breakout planner template, provider marketplace, user-created arbitrary command agents, production deploy, cloud provider integration, multi-user IM, desktop/IDE/CLI clients, full artifact editor, scheduler replacement, or removal of deterministic demo fallback.
 
 ## 3. Validation
 
-- [ ] 3.1 Run targeted planner, instruction, guardrail, command policy, metadata, and Breakout smoke tests added for P15.
-- [ ] 3.2 Run `pnpm check`.
-- [ ] 3.3 Run `pnpm test`.
-- [ ] 3.4 Run `pnpm demo:api:test`.
-- [ ] 3.5 Run `git diff --check`.
-- [ ] 3.6 Run `openspec validate agenthub-p15-real-coding-assistant-upgrade --strict`.
+- [x] 3.1 Run targeted planner, instruction, guardrail, command policy, metadata, and Breakout smoke tests added for P15.
+- [x] 3.2 Run `pnpm check`.
+- [x] 3.3 Run `pnpm test`.
+- [x] 3.4 Run `pnpm demo:api:test`.
+- [x] 3.5 Run `git diff --check`.
+- [x] 3.6 Run `openspec validate agenthub-p15-real-coding-assistant-upgrade --strict`.

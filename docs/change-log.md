@@ -1,5 +1,33 @@
 # AgentHub Change Log
 
+## P15-7 Freeze Review
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p15-freeze-review.md` | Added P15 freeze decision, Breakout evidence, non-goals, caveats, and recommended tag. |
+| `docs/project-state.md` | Recorded P15 freeze status. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-7, explicit non-goals, and validation complete after verification. |
+
+### What Changed
+
+P15 freeze review confirms AgentHub is ready to freeze as Real Coding Assistant
+Upgrade. The phase preserves prior baselines while enabling bounded
+target-scoped frontend implementation requests to run through passthrough
+instructions and real Claude Code execution.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Final P15 validation suite | Pass. |
+
+---
+
 ## P15-6 Breakout Game Real Coding Smoke
 
 **Date:** 2026-05-28

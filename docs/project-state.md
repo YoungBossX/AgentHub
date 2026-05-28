@@ -5,6 +5,26 @@ reference instead of repeating long context blocks.
 
 ## P15 Status
 
+### P15-7 Freeze Review
+
+P15-7 completed on 2026-05-28.
+
+P15 is ready to freeze as Real Coding Assistant Upgrade.
+
+The freeze review confirms:
+
+- P15 preserved P6-P14 baselines;
+- old deterministic demo fallback remains available;
+- ScriptedMock remains clearly labeled as fallback/review evidence and was not
+  used to claim Breakout success;
+- Target Registry, Agent Selection Policy, scheduler locks/recovery, review,
+  preview, and staging deploy paths still validate;
+- Breakout final acceptance was completed with real `ClaudeCodeAdapter`
+  execution through `passthrough_v1`.
+
+Detailed freeze notes are recorded in `docs/p15-freeze-review.md`.
+Recommended tag: `p15-real-coding-assistant-upgrade-freeze`.
+
 ### P15-6 Breakout Game Real Coding Smoke
 
 P15-6 completed on 2026-05-28.
