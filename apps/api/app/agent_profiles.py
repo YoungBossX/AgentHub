@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+from app.agent_capabilities import validate_capability_tags, validate_supported_modes
 from app.models import Agent
 from app.provider_assignments import resolve_profile_provider_assignment
 
@@ -27,10 +28,10 @@ BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
     "orchestrator": {
         "displayName": "Manager / Orchestrator",
         "avatarInitials": "MO",
-        "capabilityTags": ["planning", "task assignment", "coordination"],
+        "capabilityTags": ["diff_analysis", "code_review"],
         "supportedRoles": ["orchestrator", "manager"],
         "supportedTargets": ["demo-frontend", "demo-backend", "external"],
-        "supportedModes": ["direct-chat", "group-workflow", "contract-planning"],
+        "supportedModes": ["read_only", "debug"],
         "safeForWrite": False,
         "safeForReview": True,
         "description": "Plans the local workflow and coordinates role agents.",
@@ -38,10 +39,10 @@ BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
     "frontend": {
         "displayName": "Frontend Agent",
         "avatarInitials": "FE",
-        "capabilityTags": ["Vite React", "UI changes", "diff artifacts"],
+        "capabilityTags": ["code_write", "diff_analysis", "preview"],
         "supportedRoles": ["frontend"],
         "supportedTargets": ["demo-frontend", "external-frontend"],
-        "supportedModes": ["direct-assignment", "scheduled-task"],
+        "supportedModes": ["frontend"],
         "safeForWrite": True,
         "safeForReview": False,
         "description": "Executes bounded frontend changes inside assigned target paths.",
@@ -49,10 +50,10 @@ BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
     "backend": {
         "displayName": "Backend Agent",
         "avatarInitials": "BE",
-        "capabilityTags": ["FastAPI", "API changes", "SQLite"],
+        "capabilityTags": ["code_write", "test_run", "diff_analysis"],
         "supportedRoles": ["backend"],
         "supportedTargets": ["demo-backend", "external-backend"],
-        "supportedModes": ["direct-assignment", "scheduled-task"],
+        "supportedModes": ["backend"],
         "safeForWrite": True,
         "safeForReview": False,
         "description": "Works on safe application backend targets, not AgentHub platform backend by default.",
@@ -60,10 +61,10 @@ BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
     "qa": {
         "displayName": "QA Agent",
         "avatarInitials": "QA",
-        "capabilityTags": ["demo QA", "preview checks", "workflow review"],
+        "capabilityTags": ["code_review", "test_run", "diff_analysis", "preview"],
         "supportedRoles": ["qa", "review"],
         "supportedTargets": ["demo-frontend", "demo-backend", "external"],
-        "supportedModes": ["review", "qa-check"],
+        "supportedModes": ["qa", "review", "read_only"],
         "safeForWrite": False,
         "safeForReview": True,
         "description": "Reviews workflow evidence and validates target outputs without changing dispatch.",
@@ -71,10 +72,10 @@ BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
     "review": {
         "displayName": "Review Agent",
         "avatarInitials": "RV",
-        "capabilityTags": ["planned", "read-only", "non-blocking review"],
+        "capabilityTags": ["code_review", "diff_analysis"],
         "supportedRoles": ["review", "qa"],
         "supportedTargets": ["demo-frontend", "demo-backend", "external"],
-        "supportedModes": ["review", "read-only"],
+        "supportedModes": ["review", "read_only"],
         "safeForWrite": False,
         "safeForReview": True,
         "description": "Represents the read-oriented review workflow and scripted review fallback.",
@@ -83,10 +84,10 @@ BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
     "fallback": {
         "displayName": "Fallback Agent / ScriptedMock",
         "avatarInitials": "FB",
-        "capabilityTags": ["demo recovery", "scripted fallback", "real file changes"],
+        "capabilityTags": ["code_write", "diff_analysis"],
         "supportedRoles": ["fallback"],
         "supportedTargets": ["demo-frontend"],
-        "supportedModes": ["fallback", "scheduled-task"],
+        "supportedModes": ["frontend"],
         "safeForWrite": True,
         "safeForReview": False,
         "description": "Documents the preserved ScriptedMockAdapter reliability path.",
@@ -128,6 +129,14 @@ def list_agent_profile_registry(
 def profile_for_agent(agent: Agent) -> AgentProfile:
     metadata = BUILT_IN_AGENT_PROFILE_METADATA.get(agent.role, {})
     assignment = resolve_profile_provider_assignment(agent.role, agent)
+    capability_tags = validate_capability_tags(
+        list(metadata.get("capabilityTags") or []),
+        source=f"AgentProfile:{agent.role}",
+    )
+    supported_modes = validate_supported_modes(
+        list(metadata.get("supportedModes") or []),
+        source=f"AgentProfile:{agent.role}",
+    )
     return AgentProfile(
         id=agent.id,
         display_name=str(metadata.get("displayName") or agent.name),
@@ -135,10 +144,10 @@ def profile_for_agent(agent: Agent) -> AgentProfile:
         role=agent.role,
         adapter_type=assignment.adapter_type,
         provider_id=assignment.provider_id,
-        capability_tags=list(metadata.get("capabilityTags") or []),
+        capability_tags=capability_tags,
         supported_roles=list(metadata.get("supportedRoles") or [agent.role]),
         supported_targets=list(metadata.get("supportedTargets") or []),
-        supported_modes=list(metadata.get("supportedModes") or []),
+        supported_modes=supported_modes,
         safe_for_write=bool(metadata.get("safeForWrite", False)),
         safe_for_review=bool(metadata.get("safeForReview", False)),
         description=str(metadata.get("description") or agent.system_prompt),

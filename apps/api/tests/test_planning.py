@@ -201,7 +201,7 @@ def test_workspace_agent_registry_returns_im_contacts(client: TestClient) -> Non
     frontend = contacts[1]
     assert frontend["displayName"] == "Frontend Agent"
     assert frontend["adapterType"] == "codex"
-    assert "Vite React" in frontend["capabilityTags"]
+    assert "code_write" in frontend["capabilityTags"]
     assert frontend["safeForWrite"] is True
 
     review = contacts[-2]
@@ -241,10 +241,10 @@ def test_workspace_agent_profiles_return_registry_profile_contract(client: TestC
         "role": "frontend",
         "adapterType": "codex",
         "providerId": "local-codex-cli",
-        "capabilityTags": ["Vite React", "UI changes", "diff artifacts"],
+        "capabilityTags": ["code_write", "diff_analysis", "preview"],
         "supportedRoles": ["frontend"],
         "supportedTargets": ["demo-frontend", "external-frontend"],
-        "supportedModes": ["direct-assignment", "scheduled-task"],
+        "supportedModes": ["frontend"],
         "safeForWrite": True,
         "safeForReview": False,
         "description": "Executes bounded frontend changes inside assigned target paths.",

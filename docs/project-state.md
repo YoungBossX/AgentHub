@@ -5,6 +5,37 @@ reference instead of repeating long context blocks.
 
 ## P14 Status
 
+### P14-3 Capability And Mode Schema
+
+P14-3 completed on 2026-05-28.
+
+AgentHub now has a controlled schema for agent modes:
+
+- `frontend`;
+- `backend`;
+- `qa`;
+- `review`;
+- `platform_maintenance`;
+- `read_only`;
+- `debug`.
+
+AgentHub now has a controlled schema for capability tags:
+
+- `code_write`;
+- `code_review`;
+- `test_run`;
+- `diff_analysis`;
+- `preview`;
+- `deploy_staging`;
+- `platform_change`.
+
+Built-in AgentProfile metadata and ProviderConfig supported modes are aligned
+to the controlled schema. Unsupported capability tags or modes now fail
+validation rather than becoming ad hoc permission strings.
+
+P14-3 does not yet enforce full Agent Selection Policy or add custom agent
+draft creation. Those remain later P14 tasks.
+
 ### P14-2 Provider Config Registry
 
 P14-2 completed on 2026-05-28.

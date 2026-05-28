@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from app.agent_capabilities import validate_supported_modes
+
 
 @dataclass(frozen=True)
 class ProviderConfig:
@@ -10,6 +12,12 @@ class ProviderConfig:
     available: bool
     default_for_roles: list[str]
     supported_modes: list[str]
+
+    def __post_init__(self) -> None:
+        validate_supported_modes(
+            self.supported_modes,
+            source=f"ProviderConfig:{self.provider_id}",
+        )
 
 
 BUILT_IN_PROVIDER_CONFIGS: tuple[ProviderConfig, ...] = (

@@ -1,5 +1,58 @@
 # AgentHub Change Log
 
+## P14-3 Capability And Mode Schema
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_capabilities.py` | Added controlled supported modes and capability tags with validation helpers. |
+| `apps/api/app/agent_profiles.py` | Aligned built-in AgentProfile capability tags and supported modes to the controlled schema. |
+| `apps/api/app/provider_configs.py` | Validated provider config supported modes against the controlled schema. |
+| `apps/api/tests/test_agent_capabilities.py` | Added schema and rejection coverage for unsupported modes/capability tags. |
+| `apps/api/tests/test_planning.py` | Updated AgentProfile and contact assertions to controlled capability/mode values. |
+| `apps/web/src/lib/api.test.ts` | Updated API fixtures for controlled capability/mode values. |
+| `docs/project-state.md` | Recorded P14-3 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-3 complete after verification. |
+
+### What Changed
+
+AgentHub now defines controlled execution modes:
+
+- `frontend`;
+- `backend`;
+- `qa`;
+- `review`;
+- `platform_maintenance`;
+- `read_only`;
+- `debug`.
+
+AgentHub also defines controlled capability tags:
+
+- `code_write`;
+- `code_review`;
+- `test_run`;
+- `diff_analysis`;
+- `preview`;
+- `deploy_staging`;
+- `platform_change`.
+
+Built-in AgentProfile and ProviderConfig metadata now uses these controlled
+values. Unsupported values fail validation instead of becoming free-form
+permissions.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted capability/profile/provider tests | Pass: 5 tests. |
+| Targeted web API tests | Pass: 40 tests. |
+
+---
+
 ## P14-2 Provider Config Registry
 
 **Date:** 2026-05-28

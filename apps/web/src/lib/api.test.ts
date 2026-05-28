@@ -154,7 +154,7 @@ describe("workspace and session API", () => {
             avatarInitials: "FE",
             role: "frontend",
             adapterType: "codex",
-            capabilityTags: ["Vite React", "UI changes"],
+            capabilityTags: ["code_write", "preview"],
             status: "available",
             safeForWrite: true,
             safeForReview: false,
@@ -179,7 +179,7 @@ describe("workspace and session API", () => {
       },
     )
     expect(agents[0].displayName).toBe("Frontend Agent")
-    expect(agents[0].capabilityTags).toContain("Vite React")
+    expect(agents[0].capabilityTags).toContain("code_write")
   })
 
   it("lists minimal agent profiles for a workspace", async () => {
@@ -193,10 +193,10 @@ describe("workspace and session API", () => {
             role: "frontend",
             adapterType: "codex",
             providerId: "local-codex-cli",
-            capabilityTags: ["Vite React", "UI changes"],
+            capabilityTags: ["code_write", "preview"],
             supportedRoles: ["frontend"],
             supportedTargets: ["demo-frontend", "external-frontend"],
-            supportedModes: ["direct-assignment", "scheduled-task"],
+            supportedModes: ["frontend"],
             safeForWrite: true,
             safeForReview: false,
             description: "Executes bounded frontend changes.",
