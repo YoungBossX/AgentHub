@@ -146,6 +146,7 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     )
     plan_draft = frontend_task["planJson"]["planDraft"]
     assert plan_draft["planner"] == "deterministic_login_v1"
+    assert plan_draft["plannerMode"] == "deterministic_login_v1"
     assert plan_draft["version"] == 1
     assert plan_draft["agentRole"] == "frontend"
     assert plan_draft["targetId"] == DEMO_FRONTEND_TARGET_ID
@@ -430,6 +431,8 @@ def test_plan_draft_boundary_captures_task_graph_contract() -> None:
         "apps/demo/src/styles.css",
     ]
     assert "login-page demo fallback" in metadata["rationale"]
+    assert metadata["plannerMode"] == "deterministic_login_v1"
+    assert metadata["acceptanceCriteria"] == []
 
 
 def test_plan_validator_rejects_unsafe_task_graph_files() -> None:
@@ -541,6 +544,10 @@ def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
     assert task["status"] == "running"
     assert task["title"].startswith("Frontend:")
     assert task["planJson"]["planner"] == "orchestrator_auto_run_v1"
+    assert task["planJson"]["plannerFallback"] == {
+        "attemptedPlanner": "llm_v1",
+        "reason": "disabled",
+    }
     assert task["planJson"]["routing"] == "orchestrator_default"
     assert task["planJson"]["originalRequest"] == (
         "帮我把当前 demo app 改成一个 dashboard，有三张统计卡片和一个最近活动列表"

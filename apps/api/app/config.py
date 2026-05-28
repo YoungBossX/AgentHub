@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "AgentHub API"
     database_url: str = "sqlite:///data/agenthub.sqlite3"
     frontend_origin: str = "http://127.0.0.1:3000"
+    llm_planner_enabled: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

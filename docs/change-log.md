@@ -1,5 +1,40 @@
 # AgentHub Change Log
 
+## P15-1 LLM Planner v1
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/llm_planner.py` | Added LLM planner input builder, structured JSON parser, PlanDraft/task creation service, target/role validation, and fallback metadata helper. |
+| `apps/api/app/planner_service.py` | Extended PlanDraft metadata with planner mode, acceptance criteria, validation expectations, guardrail notes, and fallback reason. |
+| `apps/api/app/plan_validator.py` | Allowed validation against registered target allowed paths for LLM planner outputs while preserving old demo defaults. |
+| `apps/api/app/config.py` | Added `AGENTHUB_LLM_PLANNER_ENABLED` setting, disabled by default. |
+| `apps/api/app/planning.py` | Recorded explicit `llm_v1` fallback metadata on orchestrator deterministic fallback plans. |
+| `apps/api/tests/test_llm_planner.py` | Added LLM planner input, valid output, task persistence, and unsafe output rejection coverage. |
+| `apps/api/tests/test_planning.py` | Added regression assertions for PlanDraft planner mode and disabled LLM fallback metadata. |
+| `docs/project-state.md` | Recorded P15-1 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-1 complete after targeted verification. |
+
+### What Changed
+
+P15 now has an `llm_v1` planning foundation without claiming a live LLM planner
+success. The new planner service can build provider-visible planning context,
+parse structured JSON output, validate target/role/file safety through
+PlanValidator, and persist validated tasks. Existing deterministic paths remain
+the runtime default and now record why `llm_v1` was not used.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15-1 targeted planner tests | Pass: 7 tests. |
+
+---
+
 ## P14-7 Rehearsal And Freeze Review
 
 **Date:** 2026-05-28

@@ -3,6 +3,34 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P15 Status
+
+### P15-1 LLM Planner v1
+
+P15-1 completed on 2026-05-28.
+
+AgentHub now has an `llm_v1` planner foundation:
+
+- `apps/api/app/llm_planner.py` builds LLM planner input from the original
+  user request, CanonicalSharedContext, Target Registry summaries, Project
+  Analyzer-style target metadata, recent messages, artifact reference slot,
+  and guardrails.
+- LLM planner output must be structured PlanDraft JSON with tasks, roles,
+  targets, dependencies, planned files, rationale, acceptance criteria, and
+  validation expectations.
+- LLM output is parsed and validated through PlanValidator before task
+  persistence.
+- `PlanDraft` metadata now includes planner mode, acceptance criteria,
+  validation expectations, guardrail notes, and fallback reason fields.
+- Existing deterministic planner paths remain intact. Because no real LLM
+  planning provider is enabled by default, orchestrator fallback tasks record
+  `plannerFallback: { attemptedPlanner: "llm_v1", reason: "disabled" }`
+  instead of claiming LLM planner success.
+
+P15-1 does not implement passthrough provider instructions, expanded command
+policy, Breakout execution, or real Claude/Codex planner calls. Those remain
+later P15 tasks.
+
 ## P14 Status
 
 ### P14-7 Rehearsal And Freeze Review

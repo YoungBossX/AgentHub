@@ -7,6 +7,8 @@ from typing import Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.config import get_settings
+from app.llm_planner import llm_planner_fallback_metadata
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.plan_validator import PlanValidationError, validate_task_graph
@@ -124,6 +126,11 @@ def plan_for_message(
     parsed = parse_mentions(db, content)
     existing_tasks = list_session_tasks(db, message.session_id)
     routed_role = parsed.roles[0] if parsed.roles else "orchestrator"
+    llm_fallback = None
+    if routed_role == "orchestrator" and not existing_tasks:
+        llm_fallback = llm_planner_fallback_metadata(
+            "provider_unavailable" if get_settings().llm_planner_enabled else "disabled"
+        )
 
     if routed_role in {"frontend", "backend", "qa", "review"}:
         return _create_direct_assignment_tasks(
@@ -136,12 +143,21 @@ def plan_for_message(
     contract_intent = parse_app_contract_intent(content)
     bounded_intent = parse_frontend_intent(content)
     if contract_intent is not None and not existing_tasks:
-        return _create_contract_first_plan(db, message, contract_intent)
+        return _create_contract_first_plan(
+            db,
+            message,
+            contract_intent,
+            llm_fallback=llm_fallback,
+        )
     if contract_intent is not None and existing_tasks:
         return []
 
     if _is_explicit_platform_mode_request(content) and not existing_tasks:
-        return _create_platform_maintenance_task(db, message)
+        return _create_platform_maintenance_task(
+            db,
+            message,
+            llm_fallback=llm_fallback,
+        )
 
     if bounded_intent is not None and existing_tasks:
         return _create_dynamic_frontend_tasks(
@@ -163,21 +179,37 @@ def plan_for_message(
                     db,
                     message,
                     active_frontend_target,
+                    llm_fallback=llm_fallback,
                 )
             if _is_safe_demo_frontend_request(content):
-                return _create_orchestrator_demo_frontend_task(db, message)
+                return _create_orchestrator_demo_frontend_task(
+                    db,
+                    message,
+                    llm_fallback=llm_fallback,
+                )
             _create_orchestrator_boundary_message(
                 db,
                 message,
                 "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
             )
             return []
-        return _create_dynamic_frontend_tasks(db, message, bounded_intent, auto_start=True)
+        return _create_dynamic_frontend_tasks(
+            db,
+            message,
+            bounded_intent,
+            auto_start=True,
+            llm_fallback=llm_fallback,
+        )
 
-    return _create_login_page_plan(db, message)
+    return _create_login_page_plan(db, message, llm_fallback=llm_fallback)
 
 
-def _create_login_page_plan(db: DbSession, message: Message) -> list[Task]:
+def _create_login_page_plan(
+    db: DbSession,
+    message: Message,
+    *,
+    llm_fallback: Optional[dict] = None,
+) -> list[Task]:
     agents = {
         agent.role: agent
         for agent in db.exec(select(Agent).where(Agent.role.in_(SUPPORTED_MENTION_ROLES))).all()
@@ -250,6 +282,7 @@ def _create_login_page_plan(db: DbSession, message: Message) -> list[Task]:
             "expectedArtifactTypes": spec.expected_artifact_types,
             "taskGraph": graph,
             "planDraft": plan_draft,
+            **_fallback_plan_metadata(llm_fallback),
         }
         task = Task(
             session_id=message.session_id,
@@ -401,6 +434,8 @@ def _create_contract_first_plan(
     db: DbSession,
     message: Message,
     intent: AppContractIntent,
+    *,
+    llm_fallback: Optional[dict] = None,
 ) -> list[Task]:
     agents = {
         agent.role: agent
@@ -536,6 +571,7 @@ def _create_contract_first_plan(
             "taskGraph": graph,
             "planDraft": plan_draft,
             "autoStart": spec.intent_type in {"backend_change", "frontend_change"},
+            **_fallback_plan_metadata(llm_fallback),
         }
         task = Task(
             session_id=message.session_id,
@@ -662,6 +698,7 @@ def _create_dynamic_frontend_tasks(
     intent: FrontendIntent,
     existing_tasks: Optional[list[Task]] = None,
     auto_start: bool = False,
+    llm_fallback: Optional[dict] = None,
 ) -> list[Task]:
     existing_tasks = existing_tasks or []
     frontend = db.exec(select(Agent).where(Agent.role == "frontend")).first()
@@ -755,6 +792,7 @@ def _create_dynamic_frontend_tasks(
             "expectedArtifactTypes": spec.expected_artifact_types,
             "taskGraph": graph,
             "planDraft": plan_draft,
+            **_fallback_plan_metadata(llm_fallback),
         }
         if auto_start and spec.intent_type == "frontend_change":
             plan["autoStart"] = True
@@ -947,6 +985,8 @@ def _create_direct_assignment_tasks(
 def _create_orchestrator_demo_frontend_task(
     db: DbSession,
     message: Message,
+    *,
+    llm_fallback: Optional[dict] = None,
 ) -> list[Task]:
     frontend = _enabled_agent_or_raise(db, "frontend")
     frontend_target = get_target(DEMO_FRONTEND_TARGET_ID)
@@ -974,6 +1014,7 @@ def _create_orchestrator_demo_frontend_task(
             "originalRequest": message.content_md,
             "expectedArtifactTypes": ["diff", "review"],
             "autoStart": True,
+            **_fallback_plan_metadata(llm_fallback),
         },
     )
     _create_orchestrator_boundary_message(
@@ -988,6 +1029,8 @@ def _create_orchestrator_external_frontend_task(
     db: DbSession,
     message: Message,
     target: TargetProject,
+    *,
+    llm_fallback: Optional[dict] = None,
 ) -> list[Task]:
     frontend = _enabled_agent_or_raise(db, "frontend")
     task = _create_external_assignment_task(
@@ -1002,6 +1045,7 @@ def _create_orchestrator_external_frontend_task(
         auto_start=True,
         planner="orchestrator_external_target_v1",
         routing="orchestrator_default",
+        extra_plan=_fallback_plan_metadata(llm_fallback),
     )
     _create_orchestrator_boundary_message(
         db,
@@ -1024,6 +1068,7 @@ def _create_external_assignment_task(
     auto_start: bool = False,
     planner: str = "direct_assignment_v1",
     routing: str = "direct_mention",
+    extra_plan: Optional[dict] = None,
 ) -> Task:
     allowed_path = _primary_allowed_path(target)
     files = _external_task_files(target)
@@ -1048,6 +1093,7 @@ def _create_external_assignment_task(
         "originalRequest": message.content_md,
         "expectedArtifactTypes": ["diff", "review"],
         "autoStart": auto_start,
+        **(extra_plan or {}),
     }
     if role == "frontend":
         plan["frontendTargetId"] = target.target_id
@@ -1071,6 +1117,7 @@ def _create_platform_maintenance_task(
     *,
     depends_on: Optional[list[str]] = None,
     priority: int = 0,
+    llm_fallback: Optional[dict] = None,
 ) -> list[Task]:
     backend = _enabled_agent_or_raise(db, "backend")
     platform_target = get_target(AGENTHUB_PLATFORM_TARGET_ID)
@@ -1097,6 +1144,7 @@ def _create_platform_maintenance_task(
             "originalRequest": message.content_md,
             "expectedArtifactTypes": ["diff", "review"],
             "autoStart": False,
+            **_fallback_plan_metadata(llm_fallback),
         },
     )
     _create_orchestrator_boundary_message(
@@ -1333,6 +1381,10 @@ def _plan_draft_metadata(
         planner=planner,
         task_specs=task_specs,
     ).to_metadata()
+
+
+def _fallback_plan_metadata(llm_fallback: Optional[dict]) -> dict:
+    return {"plannerFallback": llm_fallback} if llm_fallback else {}
 
 
 def _validate_task_graph(task_specs: list[TaskSpec]) -> None:
