@@ -1,5 +1,42 @@
 # AgentHub Change Log
 
+## P14-4 Agent Selection Policy
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_selection_policy.py` | Added target, mode, capability, write-safety, and review-safety validation for TaskRun agent selection. |
+| `apps/api/app/task_runs.py` | Applied Agent Selection Policy during TaskRun creation and recorded selection metadata in TaskRun metrics. |
+| `apps/api/app/agent_profiles.py` | Added explicit platform-maintenance support metadata to the backend profile while preserving scheduler approval gates. |
+| `apps/api/tests/test_agent_selection_policy.py` | Added selection-policy coverage for metadata, unsupported targets, missing capabilities, and unsafe review assignment. |
+| `docs/project-state.md` | Recorded P14-4 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-4 complete after verification. |
+
+### What Changed
+
+TaskRun creation now validates the assigned agent profile against the task's
+target, required mode, required capabilities, and write/review safety flags.
+Invalid target or capability assignments fail honestly before adapter
+execution. Successful runs record `agentSelection` metadata in
+`TaskRun.metricsJson`.
+
+Platform maintenance remains approval-gated by the existing scheduler and
+guardrail path; P14-4 only makes profile support explicit enough for the
+selection policy.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted agent selection policy tests | Pass: 4 tests. |
+| Platform maintenance TaskRun regression test | Pass: 1 test. |
+
+---
+
 ## P14-3 Capability And Mode Schema
 
 **Date:** 2026-05-28

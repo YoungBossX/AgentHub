@@ -2003,40 +2003,8 @@ def test_target_aware_review_detects_task_target_mismatch(
         )
         db.add(task)
         db.commit()
-        task_run = create_task_run(db, task.id)
-        transition_task_run(db, task_run.id, "completed")
-        diff_artifact = Artifact(
-            task_run_id=task_run.id,
-            artifact_type="diff",
-            title="Git diff",
-            status="ready",
-            meta_json="{}",
-        )
-        db.add(diff_artifact)
-        db.commit()
-        db.refresh(diff_artifact)
-        diff = Diff(
-            artifact_id=diff_artifact.id,
-            base_ref="base",
-            head_ref="head+worktree",
-            patch_text=(
-                "diff --git a/apps/demo-api/app/main.py b/apps/demo-api/app/main.py\n"
-                "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\n"
-            ),
-            changed_files_json=json.dumps(
-                ["apps/demo-api/app/main.py", "apps/demo/src/App.tsx"],
-                separators=(",", ":"),
-            ),
-            stats_json=json.dumps({"filesChanged": 2}, separators=(",", ":")),
-        )
-        db.add(diff)
-        db.commit()
-
-        review = create_scripted_review_for_task_run(db, task_run.id)
-
-    assert review.status == "failed"
-    assert review.risk_level == "high"
-    assert any("expected task target demo-backend" in finding["message"] for finding in review.findings)
+        with pytest.raises(TaskRunLifecycleError, match="does not support target"):
+            create_task_run(db, task.id)
 
 
 def test_transition_helper_rejects_unknown_states(client: TestClient) -> None:

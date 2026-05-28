@@ -50,10 +50,10 @@ BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
     "backend": {
         "displayName": "Backend Agent",
         "avatarInitials": "BE",
-        "capabilityTags": ["code_write", "test_run", "diff_analysis"],
+        "capabilityTags": ["code_write", "test_run", "diff_analysis", "platform_change"],
         "supportedRoles": ["backend"],
-        "supportedTargets": ["demo-backend", "external-backend"],
-        "supportedModes": ["backend"],
+        "supportedTargets": ["demo-backend", "external-backend", "agenthub-platform"],
+        "supportedModes": ["backend", "platform_maintenance"],
         "safeForWrite": True,
         "safeForReview": False,
         "description": "Works on safe application backend targets, not AgentHub platform backend by default.",

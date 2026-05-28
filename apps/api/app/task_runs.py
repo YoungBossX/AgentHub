@@ -12,6 +12,7 @@ from sqlmodel import select
 
 from app.events import append_task_run_event
 from app.diffs import capture_base_ref_for_worktree
+from app.agent_selection_policy import AgentSelectionError, validate_agent_selection
 from app.models import Agent, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
@@ -80,6 +81,15 @@ def create_task_run(
     except ProviderAssignmentError as exc:
         raise TaskRunLifecycleError(str(exc)) from exc
     selected_adapter = provider_assignment.adapter_type
+    try:
+        agent_selection = validate_agent_selection(
+            db,
+            task,
+            agent,
+            explicit_adapter_type=adapter_type,
+        )
+    except AgentSelectionError as exc:
+        raise TaskRunLifecycleError(str(exc)) from exc
     _ensure_target_write_lock_available(db, task)
 
     now = utc_now()
@@ -88,6 +98,7 @@ def create_task_run(
     metrics = {
         "adapterType": selected_adapter,
         "providerAssignment": provider_assignment.to_metadata(),
+        "agentSelection": agent_selection.to_metadata(),
     }
     if retry_of_run_id is not None:
         metrics["retryOfRunId"] = retry_of_run_id

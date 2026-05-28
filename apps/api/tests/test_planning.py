@@ -252,7 +252,11 @@ def test_workspace_agent_profiles_return_registry_profile_contract(client: TestC
     }
 
     backend = profiles[2]
-    assert backend["supportedTargets"] == ["demo-backend", "external-backend"]
+    assert backend["supportedTargets"] == [
+        "demo-backend",
+        "external-backend",
+        "agenthub-platform",
+    ]
     assert backend["supportedRoles"] == ["backend"]
     assert backend["safeForWrite"] is True
     assert "AgentHub platform backend" in backend["description"]

@@ -5,6 +5,30 @@ reference instead of repeating long context blocks.
 
 ## P14 Status
 
+### P14-4 Agent Selection Policy
+
+P14-4 completed on 2026-05-28.
+
+TaskRun creation now applies Agent Selection Policy before adapter execution.
+The policy validates:
+
+- target support;
+- required execution mode;
+- required capabilities;
+- `safeForWrite`;
+- `safeForReview`.
+
+Successful TaskRuns persist `agentSelection` metadata in `metricsJson`, making
+the selected role, target, required mode, required capabilities, and safety
+flags auditable.
+
+Unsupported target, unsupported mode, missing capability, unsafe write, or
+unsafe review assignments fail honestly before adapter execution. ScriptedMock
+fallback remains explicit through the existing retry/fallback path.
+
+Platform maintenance remains guarded by the existing platform mode and approval
+flow; P14-4 only makes backend profile support explicit enough for validation.
+
 ### P14-3 Capability And Mode Schema
 
 P14-3 completed on 2026-05-28.
