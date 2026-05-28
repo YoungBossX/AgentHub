@@ -9,6 +9,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.agent_capabilities import SUPPORTED_AGENT_MODES, SUPPORTED_CAPABILITY_TAGS
+from app.agent_profiles import profile_for_agent
 from app.canonical_context import build_canonical_shared_context, filter_protected_values
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
@@ -170,7 +171,11 @@ def create_llm_plan_tasks(
     }
     task_specs = task_specs_from_llm_plan(raw_output)
     try:
-        validate_task_graph(task_specs, allowed_targets=targets)
+        validate_task_graph(
+            task_specs,
+            allowed_targets=targets,
+            agent_profiles=_agent_profiles_by_role(db),
+        )
     except PlanValidationError as exc:
         raise LLMPlannerError(str(exc)) from exc
 
@@ -411,6 +416,14 @@ def _validate_llm_targets_and_roles(
             raise LLMPlannerError(
                 f"LLM planner selected role {spec.role} for unsupported target {target_id}."
             )
+
+
+def _agent_profiles_by_role(db: DbSession) -> dict[str, Any]:
+    agents = db.exec(select(Agent)).all()
+    return {
+        profile.role: profile
+        for profile in (profile_for_agent(agent) for agent in agents if agent.enabled)
+    }
 
 
 def _target_summary(target: TargetProject) -> dict[str, Any]:

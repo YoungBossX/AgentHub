@@ -1,5 +1,38 @@
 # AgentHub Change Log
 
+## P15b-5 PlanValidator Hardening For Real LLM Output
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/plan_validator.py` | Hardened task graph validation for registered target policy, platform mode, agent profile capability/safety, validation command policy, and dependency keys. |
+| `apps/api/app/llm_planner.py` | Passed enabled AgentProfile metadata into PlanValidator for `llm_v1` task creation. |
+| `apps/api/tests/test_llm_planner.py` | Added rejection coverage for unsafe role/write capability and unsupported validation command output. |
+| `docs/project-state.md` | Recorded P15b-5 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-5 complete after verification. |
+
+### What Changed
+
+Real LLM candidate task graphs now pass through stricter policy validation
+before tasks are persisted. Validation checks known targets, target path policy,
+platform mode/approval requirements, AgentProfile supported targets/modes,
+safe-for-write and safe-for-review flags, dependency key references, and
+target-scoped validation command policy.
+
+Unsafe plans fail honestly before TaskRun auto-start or persistence.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15b-5 targeted LLM planner/contract/planning tests | Pass: 40 tests. |
+
+---
+
 ## P15b-4 Structured Output Parsing And Validation
 
 **Date:** 2026-05-28

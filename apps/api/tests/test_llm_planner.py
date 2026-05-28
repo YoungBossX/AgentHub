@@ -165,6 +165,45 @@ def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None
         create_llm_plan_tasks(db, message, provider=provider)
 
 
+def test_llm_planner_rejects_role_capability_target_and_command_policy_violations(
+    db: DbSession,
+) -> None:
+    message = _message(db, "Create unsafe LLM plan")
+
+    qa_writes_diff = _provider_for_single_task(
+        {
+            "title": "QA writes code",
+            "intentType": "frontend_change",
+            "role": "qa",
+            "targetId": DEMO_FRONTEND_TARGET_ID,
+            "plannedFiles": ["apps/demo/src/App.tsx"],
+            "expectedArtifactTypes": ["diff"],
+            "acceptanceCriteria": ["QA should not write code"],
+            "riskLevel": "high",
+            "requiresApproval": False,
+        }
+    )
+    with pytest.raises(LLMPlannerError, match="not safe for write"):
+        create_llm_plan_tasks(db, message, provider=qa_writes_diff)
+
+    unsupported_command = _provider_for_single_task(
+        {
+            "title": "Run unsafe command",
+            "intentType": "frontend_change",
+            "role": "frontend",
+            "targetId": DEMO_FRONTEND_TARGET_ID,
+            "plannedFiles": ["apps/demo/src/App.tsx"],
+            "expectedArtifactTypes": ["diff"],
+            "acceptanceCriteria": ["Command policy must reject install"],
+            "validationExpectations": ["pnpm install"],
+            "riskLevel": "medium",
+            "requiresApproval": False,
+        }
+    )
+    with pytest.raises(LLMPlannerError, match="unsupported validation command"):
+        create_llm_plan_tasks(db, message, provider=unsupported_command)
+
+
 def _message(db: DbSession, content: str) -> Message:
     session = db.exec(select(Session).where(Session.title == "LLM planning session")).one()
     message = Message(
@@ -176,3 +215,17 @@ def _message(db: DbSession, content: str) -> Message:
     db.commit()
     db.refresh(message)
     return message
+
+
+def _provider_for_single_task(task: dict) -> FakePlannerProvider:
+    return FakePlannerProvider(
+        payload={
+            "planId": "plan-policy-test",
+            "planner": "llm_v1",
+            "plannerMode": "llm_v1",
+            "rationale": "Policy tests should reject this plan.",
+            "acceptanceCriteria": ["Reject unsafe plan"],
+            "validationExpectations": ["pnpm build"],
+            "tasks": [task],
+        },
+    )

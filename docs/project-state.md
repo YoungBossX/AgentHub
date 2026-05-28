@@ -5,6 +5,24 @@ reference instead of repeating long context blocks.
 
 ## P15b Status
 
+### P15b-5 PlanValidator Hardening For Real LLM Output
+
+P15b-5 completed on 2026-05-28.
+
+PlanValidator is now a stronger safety gate for real LLM planner output:
+
+- validates registered target path policy and protected target boundaries;
+- requires platform mode and approval metadata for `agenthub-platform` work;
+- checks AgentProfile supported targets and supported modes;
+- rejects write-producing plans assigned to agents that are not safe for write;
+- rejects review plans assigned to agents that are not safe for review;
+- validates dependency key references inside the candidate task graph;
+- rejects validation commands that are not configured for the target.
+
+Unsafe LLM candidate plans are rejected before task persistence or TaskRun
+auto-start. P15b-5 does not yet add planner evidence to mission trace or run the
+real Breakout planner rehearsal.
+
 ### P15b-4 Structured Output Parsing And Validation
 
 P15b-4 completed on 2026-05-28.
