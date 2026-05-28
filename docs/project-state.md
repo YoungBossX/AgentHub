@@ -3,6 +3,30 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P15b Status
+
+### P15b-1 Planner Provider Abstraction
+
+P15b-1 completed on 2026-05-28.
+
+AgentHub now has a planner-provider foundation for `llm_v1`:
+
+- `PlannerProvider` interface with standard provider result metadata;
+- disabled planner provider with planner source `disabled`;
+- fake/test planner provider with planner source `fake_test`;
+- explicit provider selection through `AGENTHUB_LLM_PLANNER_PROVIDER`;
+- normalized planner provider errors for unknown provider configuration;
+- LLM planner task metadata records provider ID, provider type, planner source,
+  status, and safe planner-provider metadata;
+- deterministic fallback plans record the selected planner provider instead of
+  only saying `llm_v1` was disabled.
+
+The default planner provider remains `disabled`, preserving P15 deterministic
+fallback behavior. P15b-1 does not implement the real LLM planner provider,
+structured output extraction beyond the existing parser, PlanValidator
+hardening, mission trace evidence expansion, or the real Breakout planner
+rehearsal.
+
 ## P15 Status
 
 ### P15-7 Freeze Review

@@ -13,19 +13,8 @@ from app.llm_planner import (
     parse_llm_plan_output,
 )
 from app.models import Agent, Message, Session, Workspace
+from app.planner_providers import FakePlannerProvider
 from app.target_registry import DEMO_FRONTEND_TARGET_ID
-
-
-class StaticPlannerProvider:
-    provider_id = "test-llm-planner"
-
-    def __init__(self, payload: dict) -> None:
-        self.payload = payload
-
-    def create_plan(self, planner_input: dict) -> str:
-        assert planner_input["plannerMode"] == "llm_v1"
-        assert planner_input["originalUserRequest"]
-        return json.dumps(self.payload)
 
 
 @pytest.fixture
@@ -78,8 +67,9 @@ def test_llm_planner_input_includes_context_targets_messages_and_guardrails(
 
 def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> None:
     message = _message(db, "Build a playable canvas game")
-    provider = StaticPlannerProvider(
-        {
+    provider = FakePlannerProvider(
+        provider_id="test-llm-planner",
+        payload={
             "plannerMode": "llm_v1",
             "version": 1,
             "intent": "frontend_game",
@@ -113,7 +103,7 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
                     "validationExpectations": ["Inspect diff"],
                 },
             ],
-        }
+        },
     )
 
     outcome = create_llm_plan_tasks(db, message, provider=provider)
@@ -123,6 +113,9 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
     frontend_plan = json.loads(frontend_task.plan_json)
     assert frontend_plan["planner"] == "llm_v1"
     assert frontend_plan["plannerProviderId"] == "test-llm-planner"
+    assert frontend_plan["plannerProvider"]["providerId"] == "test-llm-planner"
+    assert frontend_plan["plannerProvider"]["plannerSource"] == "fake_test"
+    assert frontend_plan["llmPlanner"]["plannerSource"] == "fake_test"
     assert frontend_plan["originalRequest"] == "Build a playable canvas game"
     assert frontend_plan["planDraft"]["plannerMode"] == "llm_v1"
     assert frontend_plan["planDraft"]["acceptanceCriteria"] == [
@@ -138,8 +131,8 @@ def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None
         parse_llm_plan_output("not json")
 
     message = _message(db, "Edit unsafe file")
-    provider = StaticPlannerProvider(
-        {
+    provider = FakePlannerProvider(
+        payload={
             "plannerMode": "llm_v1",
             "rationale": "Unsafe file should be rejected.",
             "acceptanceCriteria": ["No unsafe paths"],
@@ -154,7 +147,7 @@ def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None
                     "expectedArtifactTypes": ["diff"],
                 }
             ],
-        }
+        },
     )
 
     with pytest.raises(LLMPlannerError, match="unsupported target files"):

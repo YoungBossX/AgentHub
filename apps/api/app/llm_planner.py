@@ -12,6 +12,11 @@ from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_service import build_plan_draft
+from app.planner_providers import (
+    PlannerProvider,
+    PlannerProviderError,
+    PlannerProviderResult,
+)
 from app.repositories import create_session_message
 from app.target_registry import TargetProject, list_targets_for_workspace
 from app.task_graph_builder import TaskGraphTaskSpec, task_graph_metadata
@@ -24,11 +29,8 @@ class LLMPlannerError(ValueError):
     pass
 
 
-class LLMPlannerProvider(Protocol):
-    provider_id: str
-
-    def create_plan(self, planner_input: dict[str, Any]) -> str:
-        ...
+class LLMPlannerProvider(PlannerProvider, Protocol):
+    pass
 
 
 @dataclass(frozen=True)
@@ -39,11 +41,36 @@ class LLMPlanningOutcome:
     plan_draft: dict[str, Any]
 
 
-def llm_planner_fallback_metadata(reason: str) -> dict[str, str]:
-    return {
+def llm_planner_fallback_metadata(
+    reason: str,
+    *,
+    provider: PlannerProvider | None = None,
+    provider_result: PlannerProviderResult | None = None,
+) -> dict[str, str]:
+    metadata = {
         "attemptedPlanner": LLM_PLANNER_MODE,
         "reason": reason,
     }
+    if provider_result is not None:
+        metadata.update(
+            {
+                "providerId": provider_result.provider_id,
+                "providerType": provider_result.provider_type,
+                "plannerSource": provider_result.planner_source,
+                "status": provider_result.status,
+            }
+        )
+        return metadata
+    if provider is not None:
+        metadata.update(
+            {
+                "providerId": provider.provider_id,
+                "providerType": provider.provider_type,
+                "plannerSource": provider.planner_source,
+                "status": "disabled" if provider.planner_source == "disabled" else "not_started",
+            }
+        )
+    return metadata
 
 
 def build_llm_planner_input(db: DbSession, message: Message) -> dict[str, Any]:
@@ -111,11 +138,19 @@ def create_llm_plan_tasks(
 ) -> LLMPlanningOutcome:
     planner_input = build_llm_planner_input(db, message)
     try:
-        raw_text = provider.create_plan(planner_input)
+        provider_result = provider.create_plan(planner_input)
+    except PlannerProviderError as exc:
+        raise LLMPlannerError(f"LLM planner provider failed: {exc.summary}") from exc
     except Exception as exc:
         raise LLMPlannerError(f"LLM planner provider failed: {exc}") from exc
 
-    raw_output = parse_llm_plan_output(raw_text)
+    if provider_result.status != "succeeded":
+        raise LLMPlannerError(
+            provider_result.error_summary
+            or f"LLM planner provider did not succeed: {provider_result.status}"
+        )
+
+    raw_output = parse_llm_plan_output(provider_result.raw_output)
     targets = {
         target.target_id: target
         for target in list_targets_for_workspace(
@@ -139,6 +174,7 @@ def create_llm_plan_tasks(
         db,
         message=message,
         provider_id=provider.provider_id,
+        provider_result=provider_result,
         raw_output=raw_output,
         task_specs=task_specs,
         plan_draft=plan_draft,
@@ -212,6 +248,7 @@ def _persist_llm_plan_tasks(
     *,
     message: Message,
     provider_id: str,
+    provider_result: PlannerProviderResult,
     raw_output: dict[str, Any],
     task_specs: list[TaskGraphTaskSpec],
     plan_draft: dict[str, Any],
@@ -257,8 +294,12 @@ def _persist_llm_plan_tasks(
             "llmPlanner": {
                 "plannerMode": LLM_PLANNER_MODE,
                 "providerId": provider_id,
+                "providerType": provider_result.provider_type,
+                "plannerSource": provider_result.planner_source,
+                "status": provider_result.status,
                 "rationale": _string_value(raw_output.get("rationale")),
             },
+            "plannerProvider": provider_result.to_metadata(),
             "autoStart": False,
         }
         task = Task(

@@ -558,6 +558,10 @@ def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
     assert task["planJson"]["plannerFallback"] == {
         "attemptedPlanner": "llm_v1",
         "reason": "disabled",
+        "providerId": "disabled",
+        "providerType": "disabled",
+        "plannerSource": "disabled",
+        "status": "disabled",
     }
     assert task["planJson"]["routing"] == "orchestrator_default"
     assert task["planJson"]["originalRequest"] == (

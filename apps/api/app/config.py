@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///data/agenthub.sqlite3"
     frontend_origin: str = "http://127.0.0.1:3000"
     llm_planner_enabled: bool = False
+    llm_planner_provider: str = "disabled"
 
     model_config = SettingsConfigDict(
         env_file=".env",

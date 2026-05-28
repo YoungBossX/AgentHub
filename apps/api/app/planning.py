@@ -13,6 +13,7 @@ from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_service import build_plan_draft
+from app.planner_providers import PlannerProviderError, resolve_planner_provider
 from app.repositories import create_session_message, list_session_tasks
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
@@ -128,9 +129,22 @@ def plan_for_message(
     routed_role = parsed.roles[0] if parsed.roles else "orchestrator"
     llm_fallback = None
     if routed_role == "orchestrator" and not existing_tasks:
-        llm_fallback = llm_planner_fallback_metadata(
-            "provider_unavailable" if get_settings().llm_planner_enabled else "disabled"
-        )
+        try:
+            planner_provider = resolve_planner_provider(get_settings())
+            llm_fallback = llm_planner_fallback_metadata(
+                "provider_unavailable" if get_settings().llm_planner_enabled else "disabled",
+                provider=planner_provider,
+            )
+        except PlannerProviderError as exc:
+            llm_fallback = {
+                "attemptedPlanner": "llm_v1",
+                "reason": "invalid_provider",
+                "providerId": exc.provider_id or "unknown",
+                "plannerSource": "fallback",
+                "status": "failed",
+                "errorCode": exc.code,
+                "errorSummary": exc.summary,
+            }
 
     if routed_role in {"frontend", "backend", "qa", "review"}:
         return _create_direct_assignment_tasks(

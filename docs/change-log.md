@@ -1,5 +1,44 @@
 # AgentHub Change Log
 
+## P15b-1 Planner Provider Abstraction
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added planner provider interface, result/error metadata, disabled provider, fake/test provider, and explicit provider resolver. |
+| `apps/api/app/config.py` | Added `AGENTHUB_LLM_PLANNER_PROVIDER` setting with disabled default. |
+| `apps/api/app/llm_planner.py` | Wired planner provider result metadata into LLM planner task metadata and fallback metadata. |
+| `apps/api/app/planning.py` | Recorded selected planner provider metadata in deterministic fallback plans and rejected unknown planner provider configuration honestly. |
+| `apps/api/tests/test_planner_providers.py` | Added provider abstraction, disabled/fake provider, selection, invalid provider, and fallback metadata coverage. |
+| `apps/api/tests/test_llm_planner.py` | Updated LLM planner tests to use the fake/test planner provider result contract. |
+| `apps/api/tests/test_planning.py` | Updated fallback metadata expectations to include planner provider identity and source. |
+| `docs/project-state.md` | Recorded P15b-1 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-1 complete after verification. |
+
+### What Changed
+
+AgentHub now has an explicit planner-provider foundation for `llm_v1`:
+disabled and fake/test providers, standard provider result/error metadata,
+explicit provider selection by `AGENTHUB_LLM_PLANNER_PROVIDER`, and planner
+fallback metadata that records provider ID, provider type, planner source, and
+status.
+
+This does not add a real LLM planner call yet. Unknown provider configuration
+is reported as an invalid provider fallback instead of silently substituting a
+different provider.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15b-1 targeted planner/provider tests | Pass: 35 tests. |
+
+---
+
 ## P15-7 Freeze Review
 
 **Date:** 2026-05-28
