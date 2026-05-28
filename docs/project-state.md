@@ -5,6 +5,24 @@ reference instead of repeating long context blocks.
 
 ## P15b Status
 
+### P15b-4 Structured Output Parsing And Validation
+
+P15b-4 completed on 2026-05-28.
+
+AgentHub planner parsing now supports real-provider output more safely:
+
+- direct JSON is still accepted;
+- a single outer JSON object embedded in prose or a fenced block can be
+  extracted;
+- multiple outer JSON payloads are rejected as ambiguous;
+- extracted payloads must pass the `PlannerResponse` schema;
+- unknown targets, roles, and paths are not silently normalized into valid
+  values.
+
+P15b-4 does not yet harden PlanValidator policy checks beyond the existing
+target/task graph validation, does not expand mission trace evidence, and does
+not run the real Breakout planner rehearsal.
+
 ### P15b-3 Real Planner Provider Implementation
 
 P15b-3 completed on 2026-05-28.

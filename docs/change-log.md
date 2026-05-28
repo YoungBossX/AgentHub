@@ -1,5 +1,38 @@
 # AgentHub Change Log
 
+## P15b-4 Structured Output Parsing And Validation
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/llm_planner.py` | Added safe JSON extraction for a single embedded planner JSON object and rejection for ambiguous multiple payloads. |
+| `apps/api/tests/test_planner_contracts.py` | Added embedded JSON extraction, ambiguous JSON rejection, missing-field rejection, and no-silent-normalization coverage. |
+| `docs/project-state.md` | Recorded P15b-4 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-4 complete after verification. |
+
+### What Changed
+
+Planner output parsing now accepts either direct JSON or one safely extracted
+outer JSON object from provider prose/fenced output. Multiple outer JSON
+payloads are treated as ambiguous and rejected. The extracted payload still
+must satisfy the `PlannerResponse` schema before task graph validation.
+
+The parser does not silently rewrite unknown targets, roles, paths, or unsafe
+values into allowed values; those continue into policy validation unchanged and
+must be rejected there.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15b-4 targeted planner contract/LLM planner/provider tests | Pass: 24 tests. |
+
+---
+
 ## P15b-3 Real Planner Provider Implementation
 
 **Date:** 2026-05-28

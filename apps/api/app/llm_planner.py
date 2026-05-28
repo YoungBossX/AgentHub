@@ -198,10 +198,7 @@ def create_llm_plan_tasks(
 
 
 def parse_llm_plan_output(raw_text: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(raw_text)
-    except json.JSONDecodeError as exc:
-        raise LLMPlannerError("LLM planner returned invalid JSON.") from exc
+    payload = _extract_json_payload(raw_text)
     if not isinstance(payload, dict):
         raise LLMPlannerError("LLM planner output must be a JSON object.")
     try:
@@ -217,6 +214,41 @@ def parse_llm_plan_output(raw_text: str) -> dict[str, Any]:
     if not response.rationale.strip():
         raise LLMPlannerError("LLM planner output must include rationale.")
     return response.to_payload()
+
+
+def _extract_json_payload(raw_text: str) -> Any:
+    try:
+        return json.loads(raw_text)
+    except json.JSONDecodeError:
+        pass
+
+    decoder = json.JSONDecoder()
+    candidates: list[tuple[int, int, Any]] = []
+    for index, char in enumerate(raw_text):
+        if char != "{":
+            continue
+        try:
+            payload, end = decoder.raw_decode(raw_text[index:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            candidates.append((index, index + end, payload))
+
+    outermost = [
+        candidate
+        for candidate in candidates
+        if not any(
+            other_start <= candidate[0]
+            and candidate[1] <= other_end
+            and (other_start, other_end) != (candidate[0], candidate[1])
+            for other_start, other_end, _ in candidates
+        )
+    ]
+    if not outermost:
+        raise LLMPlannerError("LLM planner returned invalid JSON.")
+    if len(outermost) > 1:
+        raise LLMPlannerError("LLM planner returned ambiguous JSON payloads.")
+    return outermost[0][2]
 
 
 def task_specs_from_llm_plan(payload: dict[str, Any]) -> list[TaskGraphTaskSpec]:

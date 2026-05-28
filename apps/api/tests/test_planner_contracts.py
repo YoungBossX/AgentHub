@@ -7,7 +7,11 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.llm_planner import build_llm_planner_request, parse_llm_plan_output
+from app.llm_planner import (
+    LLMPlannerError,
+    build_llm_planner_request,
+    parse_llm_plan_output,
+)
 from app.models import Agent, Message, Session, Workspace
 from app.planner_contracts import PlannerRequest, PlannerResponse
 from app.target_registry import DEMO_FRONTEND_TARGET_ID
@@ -150,6 +154,119 @@ def test_parse_llm_plan_output_returns_contract_validated_payload() -> None:
 
     assert payload["planId"] == "plan-breakout"
     assert payload["tasks"][0]["role"] == "frontend"
+
+
+def test_parse_llm_plan_output_extracts_single_embedded_json_payload() -> None:
+    raw = """
+    Here is the validated plan:
+
+    ```json
+    {
+      "planId": "plan-embedded",
+      "planner": "llm_v1",
+      "plannerMode": "llm_v1",
+      "rationale": "One frontend task is enough.",
+      "acceptanceCriteria": ["Game is playable"],
+      "validationExpectations": ["pnpm build"],
+      "tasks": [
+        {
+          "title": "Build game",
+          "role": "frontend",
+          "targetId": "demo-frontend",
+          "intentType": "frontend_change",
+          "plannedFiles": ["apps/demo/src/App.tsx"],
+          "dependsOn": [],
+          "expectedArtifactTypes": ["diff"],
+          "acceptanceCriteria": ["Keyboard controls work"],
+          "riskLevel": "medium",
+          "requiresApproval": false
+        }
+      ]
+    }
+    ```
+    """
+
+    payload = parse_llm_plan_output(raw)
+
+    assert payload["planId"] == "plan-embedded"
+
+
+def test_parse_llm_plan_output_rejects_ambiguous_json_payloads() -> None:
+    valid_plan = json.dumps(
+        {
+            "planId": "plan-a",
+            "planner": "llm_v1",
+            "plannerMode": "llm_v1",
+            "rationale": "Plan A.",
+            "acceptanceCriteria": ["A"],
+            "validationExpectations": ["pnpm build"],
+            "tasks": [
+                {
+                    "title": "Build A",
+                    "role": "frontend",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "intentType": "frontend_change",
+                    "plannedFiles": ["apps/demo/src/App.tsx"],
+                    "dependsOn": [],
+                    "expectedArtifactTypes": ["diff"],
+                    "acceptanceCriteria": ["A"],
+                    "riskLevel": "low",
+                    "requiresApproval": False,
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(LLMPlannerError, match="ambiguous JSON"):
+        parse_llm_plan_output(f"{valid_plan}\n{valid_plan}")
+
+
+def test_parse_llm_plan_output_rejects_missing_required_fields() -> None:
+    with pytest.raises(LLMPlannerError, match="PlannerResponse schema"):
+        parse_llm_plan_output(
+            json.dumps(
+                {
+                    "planId": "plan-incomplete",
+                    "planner": "llm_v1",
+                    "plannerMode": "llm_v1",
+                    "rationale": "Missing required task fields.",
+                    "acceptanceCriteria": ["No missing fields"],
+                    "validationExpectations": ["pnpm build"],
+                    "tasks": [{"title": "Incomplete"}],
+                }
+            )
+        )
+
+
+def test_parse_llm_plan_output_does_not_normalize_unknown_target() -> None:
+    payload = parse_llm_plan_output(
+        json.dumps(
+            {
+                "planId": "plan-unknown-target",
+                "planner": "llm_v1",
+                "plannerMode": "llm_v1",
+                "rationale": "Schema allows parsing but policy validation must reject later.",
+                "acceptanceCriteria": ["Target policy is checked later"],
+                "validationExpectations": ["pnpm build"],
+                "tasks": [
+                    {
+                        "title": "Build game",
+                        "role": "frontend",
+                        "targetId": "unknown-target",
+                        "intentType": "frontend_change",
+                        "plannedFiles": ["apps/demo/src/App.tsx"],
+                        "dependsOn": [],
+                        "expectedArtifactTypes": ["diff"],
+                        "acceptanceCriteria": ["Keyboard controls work"],
+                        "riskLevel": "medium",
+                        "requiresApproval": False,
+                    }
+                ],
+            }
+        )
+    )
+
+    assert payload["tasks"][0]["targetId"] == "unknown-target"
 
 
 def _message(db: DbSession, content: str) -> Message:
