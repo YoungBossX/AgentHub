@@ -791,7 +791,7 @@ def auto_start_safe_tasks(
             plan = json.loads(task.plan_json)
         except json.JSONDecodeError:
             continue
-        if not _should_auto_start_task(task, plan):
+        if not _should_auto_start_task(db, task, plan):
             continue
         decision = evaluate_and_apply_scheduler_readiness(db, task)
         if not decision.runnable:
@@ -805,51 +805,47 @@ def auto_start_safe_tasks(
         )
 
 
-def _should_auto_start_task(task: Task, plan: dict[str, Any]) -> bool:
+def _should_auto_start_task(db: DbSession, task: Task, plan: dict[str, Any]) -> bool:
     if not plan.get("autoStart"):
         return False
     files = plan.get("files", [])
     if not isinstance(files, list) or not files:
         return False
-    if task.intent_type == "frontend_change":
-        target_id = plan.get("targetId")
-        if isinstance(target_id, str) and target_id.startswith("external-"):
-            safe_target = plan.get("safeTarget")
-            return (
-                isinstance(safe_target, str)
-                and bool(safe_target)
-                and all(_is_safe_relative_external_path(path) for path in files)
-            )
-        if plan.get("targetId") not in {None, DEMO_FRONTEND_TARGET_ID}:
-            return False
-        if plan.get("safeTarget") != "apps/demo/src":
-            return False
-        return all(
-            isinstance(path, str) and path.startswith("apps/demo/src/")
-            for path in files
+    if task.intent_type not in {"frontend_change", "backend_change"}:
+        return False
+
+    target_id = plan.get("targetId")
+    if not isinstance(target_id, str):
+        target_id = (
+            DEMO_FRONTEND_TARGET_ID
+            if task.intent_type == "frontend_change"
+            else DEMO_BACKEND_TARGET_ID
         )
-    if task.intent_type == "backend_change":
-        if plan.get("targetId") != DEMO_BACKEND_TARGET_ID:
-            return False
-        if plan.get("safeTarget") != "apps/demo-api":
-            return False
-        return all(
-            isinstance(path, str) and path.startswith("apps/demo-api/")
-            for path in files
-        )
-    return False
+    session = db.get(AgentHubSession, task.session_id)
+    if session is None:
+        return False
+    try:
+        target = get_target_for_workspace(db, session.workspace_id, target_id)
+    except TargetRegistryError:
+        return False
+    if target.requires_platform_mode or target.requires_approval:
+        return False
+    expected_role = "frontend" if task.intent_type == "frontend_change" else "backend"
+    if not target.allows_agent(expected_role):
+        return False
+    safe_target = plan.get("safeTarget")
+    if isinstance(safe_target, str) and safe_target and not target.permits_path(safe_target):
+        return False
+    return all(_is_safe_target_path(path, target) for path in files)
 
 
-def _is_safe_relative_external_path(path: object) -> bool:
+def _is_safe_target_path(path: object, target: TargetProject) -> bool:
     if not isinstance(path, str) or not path.strip():
         return False
     normalized = path.replace("\\", "/").strip()
     if normalized.startswith("/") or normalized.startswith("../") or "/../" in normalized:
         return False
-    return not any(
-        part in {".git", "node_modules", ".venv", "venv", "secrets"}
-        for part in normalized.split("/")
-    )
+    return target.permits_path(normalized)
 
 
 def ledger_response(

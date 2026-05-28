@@ -105,6 +105,37 @@ def evaluate_path(path: Union[str, Path], worktree_path: Union[str, Path]) -> Gu
     return GuardrailDecision(allowed=True)
 
 
+def evaluate_target_path(
+    path: Union[str, Path],
+    worktree_path: Union[str, Path],
+    *,
+    allowed_paths: Sequence[str],
+    denied_paths: Sequence[str],
+) -> GuardrailDecision:
+    base_decision = evaluate_path(path, worktree_path)
+    if not base_decision.allowed:
+        return base_decision
+
+    candidate = Path(path).expanduser()
+    worktree = Path(worktree_path).expanduser().resolve(strict=False)
+    if not candidate.is_absolute():
+        candidate = worktree / candidate
+    candidate = candidate.resolve(strict=False)
+    relative = _normalize_relative(candidate, worktree)
+
+    if _matches_any_path(relative, denied_paths):
+        return _path_approval(
+            candidate,
+            "Path is denied by the registered target policy.",
+        )
+    if not _matches_any_path(relative, allowed_paths):
+        return _path_approval(
+            candidate,
+            "Path is outside the registered target allowed paths.",
+        )
+    return GuardrailDecision(allowed=True)
+
+
 def evaluate_network_access(network_approved: bool = False) -> GuardrailDecision:
     if network_approved:
         return GuardrailDecision(allowed=True)
@@ -262,6 +293,29 @@ def _is_protected_path(path: Path, worktree: Path) -> bool:
 
     name = relative.name
     return name in PROTECTED_FILE_NAMES or name.startswith(".env.")
+
+
+def _normalize_relative(path: Path, worktree: Path) -> str:
+    try:
+        return path.relative_to(worktree).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _matches_any_path(path: str, patterns: Sequence[str]) -> bool:
+    normalized = path.replace("\\", "/").strip().strip("/")
+    return any(_matches_path_pattern(normalized, pattern) for pattern in patterns)
+
+
+def _matches_path_pattern(path: str, pattern: str) -> bool:
+    normalized_pattern = pattern.replace("\\", "/").strip().strip("/")
+    if not normalized_pattern:
+        return False
+    if normalized_pattern.endswith("*"):
+        return path.startswith(normalized_pattern[:-1])
+    if "/" not in normalized_pattern:
+        return normalized_pattern in path.split("/")
+    return path == normalized_pattern or path.startswith(f"{normalized_pattern}/")
 
 
 def _approval_decision(

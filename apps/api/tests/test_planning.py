@@ -12,6 +12,7 @@ from app.external_workspaces import (
     register_external_project_target,
 )
 from app.main import app, get_db
+from app.main import _should_auto_start_task
 from app.models import Agent, Message, Session, Task, Workspace
 from app.planning import (
     MentionParseError,
@@ -566,6 +567,49 @@ def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
 
     assert len(messages) == 1
     assert "started it automatically" in messages[0].content_md
+
+
+def test_auto_start_policy_allows_registered_target_allowed_paths(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="Frontend: add game component",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend_agent.id,
+            plan_json=json.dumps({}),
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+
+        assert _should_auto_start_task(
+            db,
+            task,
+            {
+                "autoStart": True,
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "safeTarget": "apps/demo/src",
+                "files": [
+                    "apps/demo/src/App.tsx",
+                    "apps/demo/src/game/Breakout.tsx",
+                ],
+            },
+        ) is True
+        assert _should_auto_start_task(
+            db,
+            task,
+            {
+                "autoStart": True,
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo-api/app/main.py"],
+            },
+        ) is False
 
 
 def test_no_mention_mini_crm_request_creates_contract_first_task_graph(

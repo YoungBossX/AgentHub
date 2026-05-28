@@ -14,6 +14,7 @@ from app.guardrails import (
     evaluate_command,
     evaluate_network_access,
     evaluate_path,
+    evaluate_target_path,
     request_task_run_approval,
 )
 from app.models import Agent, Session, Task, TaskRun, Workspace
@@ -157,6 +158,37 @@ def test_path_policy_protects_sensitive_and_out_of_worktree_paths() -> None:
         assert decision.allowed is False
         assert decision.approval is not None
         assert decision.approval.path == str(path.resolve(strict=False))
+
+
+def test_target_path_policy_allows_registered_allowed_paths_only() -> None:
+    worktree = Path("/tmp/agenthub-session")
+
+    allowed = evaluate_target_path(
+        "apps/demo/src/game/Breakout.tsx",
+        worktree,
+        allowed_paths=["apps/demo/src"],
+        denied_paths=["apps/api", ".git", ".env", "node_modules", ".venv", "secrets"],
+    )
+    outside_target = evaluate_target_path(
+        "apps/demo-api/app/main.py",
+        worktree,
+        allowed_paths=["apps/demo/src"],
+        denied_paths=["apps/api", ".git", ".env", "node_modules", ".venv", "secrets"],
+    )
+    protected = evaluate_target_path(
+        "apps/demo/src/node_modules/cache.js",
+        worktree,
+        allowed_paths=["apps/demo/src"],
+        denied_paths=["apps/api", ".git", ".env", "node_modules", ".venv", "secrets"],
+    )
+
+    assert allowed.allowed is True
+    assert outside_target.allowed is False
+    assert outside_target.approval is not None
+    assert "outside the registered target allowed paths" in outside_target.approval.reason
+    assert protected.allowed is False
+    assert protected.approval is not None
+    assert "protected" in protected.approval.reason.lower()
 
 
 def test_network_policy_defaults_to_approval_required() -> None:

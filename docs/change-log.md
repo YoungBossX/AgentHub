@@ -1,5 +1,40 @@
 # AgentHub Change Log
 
+## P15-3 Permissive Target Guardrails
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/guardrails.py` | Added target-aware path evaluation that combines registered target allowed/denied paths with existing protected path checks. |
+| `apps/api/app/main.py` | Updated orchestrator auto-start safety checks to use Target Registry path policy instead of the older narrow demo file allowlist. |
+| `apps/api/tests/test_guardrails.py` | Added target path policy coverage for allowed target files, cross-target files, and protected dependency paths. |
+| `apps/api/tests/test_planning.py` | Added auto-start policy coverage for broader frontend target files under registered allowed paths. |
+| `docs/project-state.md` | Recorded P15-3 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-3 complete after targeted verification. |
+
+### What Changed
+
+Registered target metadata now drives the safety boundary for broader coding
+tasks. Safe frontend auto-run can cover meaningful files inside
+`demo-frontend` allowed paths, such as new components under `apps/demo/src`,
+without falling back to the old login-page-only file list.
+
+The broader permission is still target-scoped. Protected paths, denied paths,
+cross-target backend/platform paths, absolute paths, traversal paths, and
+ordinary platform-code modification remain blocked.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15-3 targeted guardrail and planning tests | Pass: 5 tests. |
+
+---
+
 ## P15-2 Passthrough Instruction Mode
 
 **Date:** 2026-05-28

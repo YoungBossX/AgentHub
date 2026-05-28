@@ -5,6 +5,29 @@ reference instead of repeating long context blocks.
 
 ## P15 Status
 
+### P15-3 Permissive Target Guardrails
+
+P15-3 completed on 2026-05-28.
+
+AgentHub now evaluates write safety against the selected Target Registry
+metadata instead of the older narrow demo-only path list.
+
+Current behavior:
+
+- registered target `allowedPaths` can permit meaningful code changes inside a
+  selected target, such as new frontend files under `apps/demo/src`;
+- target `deniedPaths` and global protected paths still block `.git`, `.env`,
+  secrets, `node_modules`, `.venv`, and similar unsafe locations;
+- cross-target edits, absolute paths, traversal paths, and ordinary
+  AgentHub platform backend edits remain blocked for normal app tasks;
+- orchestrator auto-start for safe demo frontend/backend tasks now checks the
+  selected target metadata, allowed role, safe target, and planned files before
+  creating an automatic TaskRun.
+
+P15-3 does not add arbitrary repository-wide permissions, production deploy,
+network access, or platform-code write access. Platform maintenance still
+requires the existing explicit platform mode and approval path.
+
 ### P15-2 Passthrough Instruction Mode
 
 P15-2 completed on 2026-05-28.
