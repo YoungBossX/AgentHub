@@ -12,6 +12,7 @@ from app.llm_planner import (
     create_llm_plan_tasks,
     parse_llm_plan_output,
 )
+from app.mission_trace import build_session_mission_trace
 from app.models import Agent, Message, Session, Workspace
 from app.planner_providers import FakePlannerProvider
 from app.target_registry import DEMO_FRONTEND_TARGET_ID
@@ -122,6 +123,12 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
     assert frontend_plan["plannerProvider"]["providerId"] == "test-llm-planner"
     assert frontend_plan["plannerProvider"]["plannerSource"] == "fake_test"
     assert frontend_plan["llmPlanner"]["plannerSource"] == "fake_test"
+    assert frontend_plan["plannerEvidence"]["plannerSource"] == "fake_test"
+    assert frontend_plan["plannerEvidence"]["validationResult"] == "passed"
+    assert frontend_plan["plannerEvidence"]["createdTaskIds"] == [
+        task.id for task in outcome.tasks
+    ]
+    assert "raw_output" not in frontend_plan["plannerEvidence"]
     assert frontend_plan["originalRequest"] == "Build a playable canvas game"
     assert frontend_plan["planDraft"]["plannerMode"] == "llm_v1"
     assert frontend_plan["planDraft"]["acceptanceCriteria"] == [
@@ -130,6 +137,11 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
     ]
     assert frontend_plan["planDraft"]["validationExpectations"] == ["pnpm build"]
     assert json.loads(outcome.tasks[1].depends_on_task_ids) == [frontend_task.id]
+
+    trace = build_session_mission_trace(db, message.session_id)
+    traced_task = next(task for task in trace.tasks if task["id"] == frontend_task.id)
+    assert traced_task["plannerEvidence"]["providerId"] == "test-llm-planner"
+    assert traced_task["plannerEvidence"]["plannerSource"] == "fake_test"
 
 
 def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None:

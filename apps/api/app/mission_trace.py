@@ -86,6 +86,7 @@ def _task_trace(task: Task) -> dict[str, Any]:
         "assignedAgentId": task.assigned_agent_id,
         "dependsOnTaskIds": _json_list(task.depends_on_task_ids),
         "scheduler": scheduler,
+        "plannerEvidence": _planner_evidence(plan),
         "navigation": {"taskId": task.id},
     }
 
@@ -155,6 +156,33 @@ def _blockers_for_tasks(tasks: list[Task]) -> list[dict[str, Any]]:
             }
         )
     return blockers
+
+
+def _planner_evidence(plan: dict[str, Any]) -> dict[str, Any]:
+    evidence = plan.get("plannerEvidence")
+    if isinstance(evidence, dict):
+        return evidence
+    fallback = plan.get("plannerFallback")
+    if isinstance(fallback, dict):
+        return {
+            "providerId": fallback.get("providerId"),
+            "providerType": fallback.get("providerType"),
+            "plannerSource": fallback.get("plannerSource") or "fallback",
+            "status": fallback.get("status") or "fallback",
+            "fallbackReason": fallback.get("reason"),
+            "errorCode": fallback.get("errorCode"),
+            "errorSummary": fallback.get("errorSummary"),
+            "validationResult": "not_run",
+        }
+    planner = plan.get("planner")
+    if isinstance(planner, str) and planner:
+        return {
+            "plannerSource": "deterministic",
+            "status": "succeeded",
+            "validationResult": "passed",
+            "planner": planner,
+        }
+    return {}
 
 
 def _next_actions(tasks: list[Task], blockers: list[dict[str, Any]]) -> list[dict[str, str]]:

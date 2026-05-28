@@ -194,6 +194,13 @@ def create_llm_plan_tasks(
         task_specs=task_specs,
         plan_draft=plan_draft,
     )
+    _attach_planner_evidence(
+        db,
+        tasks=tasks,
+        provider_result=provider_result,
+        raw_output=raw_output,
+        plan_draft=plan_draft,
+    )
     return LLMPlanningOutcome(
         tasks=tasks,
         planner_input=planner_input,
@@ -381,6 +388,48 @@ def _persist_llm_plan_tasks(
     )
     create_session_message(db, _session_for_message(db, message), summary)
     return tasks
+
+
+def _attach_planner_evidence(
+    db: DbSession,
+    *,
+    tasks: list[Task],
+    provider_result: PlannerProviderResult,
+    raw_output: dict[str, Any],
+    plan_draft: dict[str, Any],
+) -> None:
+    created_task_ids = [task.id for task in tasks]
+    evidence = {
+        "providerId": provider_result.provider_id,
+        "providerType": provider_result.provider_type,
+        "plannerSource": provider_result.planner_source,
+        "durationMs": provider_result.duration_ms,
+        "validationResult": "passed",
+        "status": provider_result.status,
+        "planRationale": _string_value(raw_output.get("rationale")),
+        "planId": plan_draft.get("planId"),
+        "createdTaskIds": created_task_ids,
+    }
+    if provider_result.fallback_reason:
+        evidence["fallbackReason"] = provider_result.fallback_reason
+    if provider_result.error_code:
+        evidence["errorCode"] = provider_result.error_code
+    if provider_result.error_summary:
+        evidence["errorSummary"] = provider_result.error_summary
+
+    for task in tasks:
+        plan = json.loads(task.plan_json)
+        plan["plannerEvidence"] = evidence
+        llm_planner = plan.get("llmPlanner")
+        if isinstance(llm_planner, dict):
+            llm_planner["validationResult"] = "passed"
+            llm_planner["createdTaskIds"] = created_task_ids
+            plan["llmPlanner"] = llm_planner
+        task.plan_json = json.dumps(plan, separators=(",", ":"))
+        db.add(task)
+    db.commit()
+    for task in tasks:
+        db.refresh(task)
 
 
 def _llm_plan_draft_metadata(

@@ -5,6 +5,29 @@ reference instead of repeating long context blocks.
 
 ## P15b Status
 
+### P15b-6 Planner Evidence And Mission Trace
+
+P15b-6 completed on 2026-05-28.
+
+AgentHub now records planner evidence for created `llm_v1` tasks:
+
+- provider ID and provider type;
+- planner source such as `real_llm`, `fake_test`, `disabled`, `fallback`, or
+  `deterministic`;
+- provider duration;
+- validation result;
+- planner status;
+- plan rationale and plan ID;
+- created task IDs;
+- fallback reason and normalized error summary when available.
+
+Mission trace task entries expose `plannerEvidence` for LLM-created tasks,
+disabled/fallback deterministic plans, and ordinary deterministic plans. The
+evidence does not include raw provider output, credentials, or protected host
+paths.
+
+P15b-6 does not run the real Breakout planner rehearsal; that remains P15b-7.
+
 ### P15b-5 PlanValidator Hardening For Real LLM Output
 
 P15b-5 completed on 2026-05-28.

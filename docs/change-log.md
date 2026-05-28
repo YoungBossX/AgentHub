@@ -1,5 +1,35 @@
 # AgentHub Change Log
 
+## P15b-6 Planner Evidence And Mission Trace
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/llm_planner.py` | Recorded safe planner evidence on created `llm_v1` tasks, including provider identity, source, duration, validation result, rationale, plan ID, and created task IDs. |
+| `apps/api/app/mission_trace.py` | Exposed planner evidence for real/fake LLM, disabled/fallback, and deterministic planning paths in mission trace task entries. |
+| `apps/api/tests/test_llm_planner.py` | Added planner evidence and mission trace coverage for fake/test planner output without raw provider output leakage. |
+| `docs/project-state.md` | Recorded P15b-6 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-6 complete after verification. |
+
+### What Changed
+
+`llm_v1` task plans now keep auditable planner evidence after successful schema
+and policy validation. Mission trace exposes planner source as real/fake,
+disabled/fallback, or deterministic depending on the path. Evidence is metadata
+only; raw provider output and credentials are not included.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15b-6 targeted planner evidence / mission trace tests | Pass: 6 tests. |
+
+---
+
 ## P15b-5 PlanValidator Hardening For Real LLM Output
 
 **Date:** 2026-05-28
