@@ -1318,6 +1318,7 @@ def command_evidence_response(evidence: StoredCommandEvidence) -> CommandEvidenc
         exitCode=evidence.exit_code,
         stdout=evidence.stdout,
         stderr=evidence.stderr,
+        targetId=evidence.target_id,
         createdAt=evidence.created_at,
     )
 
@@ -1586,6 +1587,7 @@ def create_command_evidence_for_task_run(
             exit_code=request.exit_code,
             stdout=request.stdout,
             stderr=request.stderr,
+            target_id=request.target_id,
         )
     except ExternalEvidenceError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

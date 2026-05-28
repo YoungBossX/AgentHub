@@ -5,6 +5,28 @@ reference instead of repeating long context blocks.
 
 ## P15 Status
 
+### P15-4 Project Command Policy
+
+P15-4 completed on 2026-05-28.
+
+AgentHub now has target-scoped command evidence policy:
+
+- target command validation is derived from Target Registry metadata;
+- `check`, `test`, and `build` evidence must match the selected target's
+  configured `checkCommand`, `testCommand`, or `buildCommand` when a target is
+  provided or inferable from the task plan;
+- command evidence artifacts now preserve `targetId` alongside command type,
+  command string, exit code, stdout, stderr, and pass/fail status;
+- command evidence events also include `targetId` for mission trace/recovery
+  consumers.
+
+This supports configured pnpm/npm/pytest-style project commands without
+opening arbitrary host command execution. Legacy evidence without target
+context remains compatible with the existing global allowlist.
+
+P15-4 does not execute commands automatically, add arbitrary command agents,
+enable production deploy, or allow unconfigured project commands.
+
 ### P15-3 Permissive Target Guardrails
 
 P15-3 completed on 2026-05-28.

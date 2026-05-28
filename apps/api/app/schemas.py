@@ -424,6 +424,7 @@ class CommandEvidenceCreateRequest(BaseModel):
     exit_code: int = Field(alias="exitCode")
     stdout: str = ""
     stderr: str = ""
+    target_id: Optional[str] = Field(default=None, alias="targetId")
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -440,4 +441,5 @@ class CommandEvidenceResponse(ApiModel):
     exit_code: int = Field(alias="exitCode")
     stdout: str
     stderr: str
+    target_id: Optional[str] = Field(default=None, alias="targetId")
     created_at: datetime = Field(alias="createdAt")

@@ -7,9 +7,14 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.external_evidence import list_task_run_command_evidence, record_command_evidence
+from app.external_evidence import (
+    ExternalEvidenceError,
+    list_task_run_command_evidence,
+    record_command_evidence,
+)
 from app.main import app, get_db
-from app.models import Agent, Artifact, Session, Task, TaskRunEvent, Workspace
+from app.models import Agent, Artifact, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.target_registry import DEMO_BACKEND_TARGET_ID
 from app.task_runs import create_task_run
 
 
@@ -100,6 +105,50 @@ def test_records_passed_and_failed_command_evidence(db: DbSession) -> None:
     assert failed.stderr == "build failed"
     assert len(events) == 2
     assert db.get(Artifact, passed.artifact_id).artifact_type == "command_evidence"
+
+
+def test_target_command_evidence_uses_registered_target_policy(db: DbSession) -> None:
+    task_run_id = create_task_run_fixture(db)
+    task_run = db.get(TaskRun, task_run_id)
+    task = db.get(Task, task_run.task_id)
+    task.plan_json = json.dumps({"targetId": DEMO_BACKEND_TARGET_ID}, separators=(",", ":"))
+    db.add(task)
+    db.commit()
+
+    evidence = record_command_evidence(
+        db,
+        task_run_id,
+        command_type="test",
+        command="pnpm demo:api:test",
+        exit_code=0,
+        stdout="5 passed",
+    )
+    event = db.exec(
+        select(TaskRunEvent).where(
+            TaskRunEvent.task_run_id == task_run_id,
+            TaskRunEvent.event_type == "artifact.command_evidence.ready",
+        )
+    ).one()
+    event_payload = json.loads(event.payload_json)
+    artifact_meta = json.loads(db.get(Artifact, evidence.artifact_id).meta_json)
+
+    assert evidence.target_id == DEMO_BACKEND_TARGET_ID
+    assert artifact_meta["targetId"] == DEMO_BACKEND_TARGET_ID
+    assert event_payload["targetId"] == DEMO_BACKEND_TARGET_ID
+
+
+def test_target_command_evidence_rejects_unregistered_command(db: DbSession) -> None:
+    task_run_id = create_task_run_fixture(db)
+
+    with pytest.raises(ExternalEvidenceError, match="not allowed for target"):
+        record_command_evidence(
+            db,
+            task_run_id,
+            command_type="test",
+            command="pnpm test",
+            exit_code=0,
+            target_id=DEMO_BACKEND_TARGET_ID,
+        )
 
 
 def test_command_evidence_api_records_failed_output_honestly(

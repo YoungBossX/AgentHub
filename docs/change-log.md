@@ -1,5 +1,41 @@
 # AgentHub Change Log
 
+## P15-4 Project Command Policy
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/project_command_policy.py` | Added target-scoped command policy evaluation derived from Target Registry check/test/build commands. |
+| `apps/api/app/external_evidence.py` | Validated target-scoped command evidence against the selected target policy and recorded `targetId` in artifact metadata/events. |
+| `apps/api/app/schemas.py` | Added optional `targetId` to command evidence create/response schemas. |
+| `apps/api/app/main.py` | Passed `targetId` through the command evidence API and response mapping. |
+| `apps/api/tests/test_external_evidence.py` | Added coverage for target-scoped command evidence acceptance, target ID recording, and wrong-command rejection. |
+| `docs/project-state.md` | Recorded P15-4 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-4 complete after targeted verification. |
+
+### What Changed
+
+Command evidence can now be target-aware. When a command evidence request or
+task plan identifies a target, AgentHub checks the command against that target's
+registered `checkCommand`, `testCommand`, or `buildCommand` before storing the
+evidence. Stored command evidence records stdout, stderr, exit code, status,
+command type, command string, and target ID honestly.
+
+Legacy command evidence without a target remains compatible with the existing
+global allowlist path.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15-4 targeted command evidence/review/instruction tests | Pass: 9 tests. |
+
+---
+
 ## P15-3 Permissive Target Guardrails
 
 **Date:** 2026-05-28

@@ -1,11 +1,14 @@
 import json
 from dataclasses import dataclass
+from typing import Optional
 
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
-from app.models import Artifact, TaskRun, utc_now
+from app.models import Artifact, Session as AgentHubSession, Task, TaskRun, utc_now
+from app.project_command_policy import evaluate_project_command
+from app.target_registry import TargetRegistryError, get_target_for_workspace
 
 
 COMMAND_EVIDENCE_TYPES = {"check", "test", "build"}
@@ -29,6 +32,7 @@ class StoredCommandEvidence:
     exit_code: int
     stdout: str
     stderr: str
+    target_id: Optional[str]
     created_at: object
 
 
@@ -41,6 +45,7 @@ def record_command_evidence(
     exit_code: int,
     stdout: str = "",
     stderr: str = "",
+    target_id: Optional[str] = None,
 ) -> StoredCommandEvidence:
     task_run = db.get(TaskRun, task_run_id)
     if task_run is None:
@@ -52,6 +57,24 @@ def record_command_evidence(
         )
     if not command.strip():
         raise ExternalEvidenceError("Command evidence requires a command string")
+
+    resolved_target_id = _resolve_target_id(db, task_run, target_id)
+    if resolved_target_id is not None:
+        task = db.get(Task, task_run.task_id)
+        session = db.get(AgentHubSession, task.session_id) if task is not None else None
+        if task is None or session is None:
+            raise ExternalEvidenceError("Command evidence target validation requires task context")
+        try:
+            target = get_target_for_workspace(db, session.workspace_id, resolved_target_id)
+        except TargetRegistryError as exc:
+            raise ExternalEvidenceError(str(exc)) from exc
+        decision = evaluate_project_command(
+            target=target,
+            command_type=normalized_type,
+            command=command,
+        )
+        if not decision.allowed:
+            raise ExternalEvidenceError(decision.reason)
 
     now = utc_now()
     status = "passed" if exit_code == 0 else "failed"
@@ -67,6 +90,7 @@ def record_command_evidence(
                 "exitCode": exit_code,
                 "stdout": _truncate(stdout),
                 "stderr": _truncate(stderr),
+                "targetId": resolved_target_id,
             },
             separators=(",", ":"),
         ),
@@ -88,6 +112,7 @@ def record_command_evidence(
                 "command": command,
                 "exitCode": exit_code,
                 "status": status,
+                "targetId": resolved_target_id,
             },
             separators=(",", ":"),
         ),
@@ -122,6 +147,7 @@ def _to_stored_command_evidence(artifact: Artifact) -> StoredCommandEvidence:
         exit_code=int(meta.get("exitCode") or 0),
         stdout=str(meta.get("stdout") or ""),
         stderr=str(meta.get("stderr") or ""),
+        target_id=_string_or_none(meta.get("targetId")),
         created_at=artifact.created_at,
     )
 
@@ -138,3 +164,22 @@ def _truncate(value: str) -> str:
     if len(value) <= MAX_COMMAND_OUTPUT_CHARS:
         return value
     return f"{value[:MAX_COMMAND_OUTPUT_CHARS - 1].rstrip()}..."
+
+
+def _resolve_target_id(
+    db: DbSession,
+    task_run: TaskRun,
+    explicit_target_id: Optional[str],
+) -> Optional[str]:
+    if isinstance(explicit_target_id, str) and explicit_target_id.strip():
+        return explicit_target_id.strip()
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        return None
+    plan = _json_dict(task.plan_json)
+    target_id = plan.get("targetId")
+    return target_id if isinstance(target_id, str) and target_id.strip() else None
+
+
+def _string_or_none(value: object) -> Optional[str]:
+    return value if isinstance(value, str) and value else None
