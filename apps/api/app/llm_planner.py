@@ -4,13 +4,16 @@ import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from pydantic import ValidationError
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
+from app.agent_capabilities import SUPPORTED_AGENT_MODES, SUPPORTED_CAPABILITY_TAGS
 from app.canonical_context import build_canonical_shared_context, filter_protected_values
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.plan_validator import PlanValidationError, validate_task_graph
+from app.planner_contracts import PlannerRequest, PlannerResponse
 from app.planner_service import build_plan_draft
 from app.planner_providers import (
     PlannerProvider,
@@ -74,6 +77,10 @@ def llm_planner_fallback_metadata(
 
 
 def build_llm_planner_input(db: DbSession, message: Message) -> dict[str, Any]:
+    return build_llm_planner_request(db, message).to_provider_payload()
+
+
+def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest:
     session = db.get(AgentHubSession, message.session_id)
     if session is None:
         raise LLMPlannerError("Session is unavailable for LLM planning.")
@@ -112,22 +119,25 @@ def build_llm_planner_input(db: DbSession, message: Message) -> dict[str, Any]:
         "validationExpectations": _validation_expectations(targets),
     }
     canonical_context = build_canonical_shared_context(session_context_pack)
-    return {
-        "plannerMode": LLM_PLANNER_MODE,
-        "version": LLM_PLANNER_VERSION,
-        "originalUserRequest": message.content_md,
-        "canonicalSharedContext": filter_protected_values(canonical_context),
-        "targetRegistry": [_target_summary(target) for target in targets],
-        "projectAnalyzer": [_project_analyzer_summary(target) for target in targets],
-        "recentMessages": filter_protected_values(recent_messages),
-        "artifactReferences": [],
-        "guardrails": {
+    return PlannerRequest(
+        plannerMode=LLM_PLANNER_MODE,
+        version=LLM_PLANNER_VERSION,
+        originalUserRequest=message.content_md,
+        canonicalSharedContext=filter_protected_values(canonical_context),
+        targetRegistry=[_target_summary(target) for target in targets],
+        projectAnalyzer=[_project_analyzer_summary(target) for target in targets],
+        recentMessages=filter_protected_values(recent_messages),
+        artifactReferences=[],
+        supportedRoles=sorted({"orchestrator", "frontend", "backend", "qa", "review"}),
+        supportedModes=sorted(SUPPORTED_AGENT_MODES),
+        supportedCapabilities=sorted(SUPPORTED_CAPABILITY_TAGS),
+        guardrails={
             "protectedPaths": [".git", ".env", ".env.*", "secrets", "node_modules", ".venv"],
             "denyProductionDeploy": True,
             "denyUnapprovedNetworkAccess": True,
             "platformMaintenanceRequiresExplicitMode": True,
         },
-    }
+    )
 
 
 def create_llm_plan_tasks(
@@ -194,17 +204,19 @@ def parse_llm_plan_output(raw_text: str) -> dict[str, Any]:
         raise LLMPlannerError("LLM planner returned invalid JSON.") from exc
     if not isinstance(payload, dict):
         raise LLMPlannerError("LLM planner output must be a JSON object.")
-    if payload.get("plannerMode") != LLM_PLANNER_MODE:
-        raise LLMPlannerError("LLM planner output must use plannerMode llm_v1.")
-    if not isinstance(payload.get("tasks"), list) or not payload["tasks"]:
+    try:
+        response = PlannerResponse.model_validate(payload)
+    except ValidationError as exc:
+        raise LLMPlannerError(
+            "LLM planner output failed PlannerResponse schema validation."
+        ) from exc
+    if response.planner != LLM_PLANNER_MODE or response.planner_mode != LLM_PLANNER_MODE:
+        raise LLMPlannerError("LLM planner output must use planner llm_v1.")
+    if not response.tasks:
         raise LLMPlannerError("LLM planner output must include tasks.")
-    if not isinstance(payload.get("rationale"), str) or not payload["rationale"].strip():
+    if not response.rationale.strip():
         raise LLMPlannerError("LLM planner output must include rationale.")
-    if not isinstance(payload.get("acceptanceCriteria"), list):
-        raise LLMPlannerError("LLM planner output must include acceptanceCriteria.")
-    if not isinstance(payload.get("validationExpectations"), list):
-        raise LLMPlannerError("LLM planner output must include validationExpectations.")
-    return payload
+    return response.to_payload()
 
 
 def task_specs_from_llm_plan(payload: dict[str, Any]) -> list[TaskGraphTaskSpec]:
@@ -235,6 +247,8 @@ def task_specs_from_llm_plan(payload: dict[str, Any]) -> list[TaskGraphTaskSpec]
                     "dependsOn": _string_list(item.get("dependsOn")),
                     "acceptanceCriteria": _string_list(item.get("acceptanceCriteria")),
                     "validationExpectations": _string_list(item.get("validationExpectations")),
+                    "riskLevel": _string_value(item.get("riskLevel")),
+                    "requiresApproval": bool(item.get("requiresApproval")),
                     "rationale": _string_value(item.get("rationale")),
                 },
                 expected_artifact_types=expected,

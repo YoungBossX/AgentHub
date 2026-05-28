@@ -1,5 +1,41 @@
 # AgentHub Change Log
 
+## P15b-2 Planner Request / Response Contract
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_contracts.py` | Added `PlannerRequest`, `PlannerResponse`, planner task response schema, and provider-visible redaction helper. |
+| `apps/api/app/llm_planner.py` | Added `build_llm_planner_request`, routed existing planner input through the request contract, and schema-validates planner output with `PlannerResponse`. |
+| `apps/api/tests/test_planner_contracts.py` | Added request context, protected-value redaction, response schema, incomplete response rejection, and parse integration coverage. |
+| `apps/api/tests/test_llm_planner.py` | Updated fake planner payloads to the formal response contract. |
+| `docs/project-state.md` | Recorded P15b-2 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-2 complete after verification. |
+
+### What Changed
+
+`llm_v1` planning now has formal request and response contracts. The request
+preserves the original user request, includes canonical context, target
+registry/project analyzer summaries, recent messages, artifact references,
+supported roles/modes/capabilities, and guardrails, then redacts provider-visible
+secret-like values and protected absolute paths.
+
+Planner output is now checked against `PlannerResponse` before the existing
+PlanValidator path. This defines the required plan/task fields that later real
+provider output must satisfy.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15b-2 targeted planner contract/provider/planning tests | Pass: 40 tests. |
+
+---
+
 ## P15b-1 Planner Provider Abstraction
 
 **Date:** 2026-05-28

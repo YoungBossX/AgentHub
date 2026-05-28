@@ -5,6 +5,28 @@ reference instead of repeating long context blocks.
 
 ## P15b Status
 
+### P15b-2 Planner Request / Response Contract
+
+P15b-2 completed on 2026-05-28.
+
+AgentHub now formalizes `llm_v1` planner I/O:
+
+- `PlannerRequest` carries the original user request, CanonicalSharedContext
+  summary, Target Registry summary, Project Analyzer summary, recent messages,
+  artifact references, supported roles/modes/capabilities, and guardrails;
+- provider-visible request payloads redact secret-like values and protected
+  absolute paths before leaving the contract boundary;
+- `PlannerResponse` defines required plan/task fields including `planId`,
+  `planner`, `plannerMode`, rationale, task role, target ID, intent type,
+  planned files, dependencies, acceptance criteria, risk level, and approval
+  requirement;
+- `parse_llm_plan_output` now validates planner output against this contract
+  before the existing task graph and PlanValidator checks.
+
+P15b-2 does not add real provider execution, JSON extraction from prose,
+additional PlanValidator hardening, mission trace evidence expansion, or the
+real Breakout planner rehearsal.
+
 ### P15b-1 Planner Provider Abstraction
 
 P15b-1 completed on 2026-05-28.

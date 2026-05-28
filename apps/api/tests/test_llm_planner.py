@@ -70,6 +70,8 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
     provider = FakePlannerProvider(
         provider_id="test-llm-planner",
         payload={
+            "planId": "plan-test-game",
+            "planner": "llm_v1",
             "plannerMode": "llm_v1",
             "version": 1,
             "intent": "frontend_game",
@@ -79,31 +81,35 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
             "guardrailNotes": ["Stay inside demo-frontend allowed paths"],
             "tasks": [
                 {
-                    "title": "Implement playable game",
-                    "intentType": "frontend_change",
-                    "assignedAgentRole": "frontend",
-                    "targetId": DEMO_FRONTEND_TARGET_ID,
-                    "plannedFiles": [
-                        "apps/demo/src/App.tsx",
+                        "title": "Implement playable game",
+                        "intentType": "frontend_change",
+                        "role": "frontend",
+                        "targetId": DEMO_FRONTEND_TARGET_ID,
+                        "plannedFiles": [
+                            "apps/demo/src/App.tsx",
                         "apps/demo/src/styles.css",
                     ],
-                    "expectedArtifactTypes": ["diff", "review"],
-                    "acceptanceCriteria": ["Keyboard controls work"],
-                    "validationExpectations": ["pnpm build"],
-                },
-                {
-                    "title": "Review playable game",
-                    "intentType": "review",
-                    "assignedAgentRole": "qa",
-                    "targetId": DEMO_FRONTEND_TARGET_ID,
-                    "plannedFiles": [],
-                    "expectedArtifactTypes": ["review"],
-                    "dependsOn": ["1-frontend-frontend_change"],
-                    "acceptanceCriteria": ["Review gameplay criteria"],
-                    "validationExpectations": ["Inspect diff"],
-                },
-            ],
-        },
+                        "expectedArtifactTypes": ["diff", "review"],
+                        "acceptanceCriteria": ["Keyboard controls work"],
+                        "validationExpectations": ["pnpm build"],
+                        "riskLevel": "medium",
+                        "requiresApproval": False,
+                    },
+                    {
+                        "title": "Review playable game",
+                        "intentType": "review",
+                        "role": "qa",
+                        "targetId": DEMO_FRONTEND_TARGET_ID,
+                        "plannedFiles": [],
+                        "expectedArtifactTypes": ["review"],
+                        "dependsOn": ["1-frontend-frontend_change"],
+                        "acceptanceCriteria": ["Review gameplay criteria"],
+                        "validationExpectations": ["Inspect diff"],
+                        "riskLevel": "low",
+                        "requiresApproval": False,
+                    },
+                ],
+            },
     )
 
     outcome = create_llm_plan_tasks(db, message, provider=provider)
@@ -133,6 +139,8 @@ def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None
     message = _message(db, "Edit unsafe file")
     provider = FakePlannerProvider(
         payload={
+            "planId": "plan-unsafe",
+            "planner": "llm_v1",
             "plannerMode": "llm_v1",
             "rationale": "Unsafe file should be rejected.",
             "acceptanceCriteria": ["No unsafe paths"],
@@ -141,10 +149,13 @@ def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None
                 {
                     "title": "Edit platform file",
                     "intentType": "frontend_change",
-                    "assignedAgentRole": "frontend",
+                    "role": "frontend",
                     "targetId": DEMO_FRONTEND_TARGET_ID,
                     "plannedFiles": ["apps/api/app/main.py"],
                     "expectedArtifactTypes": ["diff"],
+                    "acceptanceCriteria": ["Do not edit unsafe files"],
+                    "riskLevel": "high",
+                    "requiresApproval": False,
                 }
             ],
         },

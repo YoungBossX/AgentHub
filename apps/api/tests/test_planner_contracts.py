@@ -1,0 +1,165 @@
+import json
+from collections.abc import Iterator
+
+import pytest
+from pydantic import ValidationError
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session as DbSession
+from sqlmodel import SQLModel, create_engine, select
+
+from app.llm_planner import build_llm_planner_request, parse_llm_plan_output
+from app.models import Agent, Message, Session, Workspace
+from app.planner_contracts import PlannerRequest, PlannerResponse
+from app.target_registry import DEMO_FRONTEND_TARGET_ID
+
+
+@pytest.fixture
+def db() -> Iterator[DbSession]:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    with DbSession(engine) as session:
+        workspace = Workspace(
+            name="AgentHub Demo",
+            repo_url="local://apps/demo",
+            root_path="apps/demo",
+            default_branch="main",
+        )
+        planning_session = Session(
+            workspace_id=workspace.id,
+            title="Planner contract session",
+            bound_branch="main",
+            worktree_path=".worktrees/planner-contract-session",
+        )
+        session.add(workspace)
+        session.add(planning_session)
+        session.add(Agent(name="Orchestrator", role="orchestrator", adapter_type="scripted_mock", provider="local"))
+        session.add(Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local"))
+        session.add(Agent(name="QA Agent", role="qa", adapter_type="scripted_mock", provider="local"))
+        session.commit()
+        yield session
+
+
+def test_planner_request_contract_preserves_user_request_and_policy_context(
+    db: DbSession,
+) -> None:
+    message = _message(db, "帮我实现一个 Breakout 游戏")
+
+    request = build_llm_planner_request(db, message)
+    payload = request.to_provider_payload()
+
+    assert isinstance(request, PlannerRequest)
+    assert payload["plannerMode"] == "llm_v1"
+    assert payload["originalUserRequest"] == "帮我实现一个 Breakout 游戏"
+    assert payload["canonicalSharedContext"]["version"] == "canonical_shared_context_v1"
+    assert payload["targetRegistry"]
+    assert payload["projectAnalyzer"]
+    assert payload["recentMessages"][0]["contentMd"] == "帮我实现一个 Breakout 游戏"
+    assert payload["artifactReferences"] == []
+    assert "frontend" in payload["supportedRoles"]
+    assert "code_write" in payload["supportedCapabilities"]
+    assert ".env" in payload["guardrails"]["protectedPaths"]
+
+
+def test_planner_request_provider_payload_excludes_secret_like_values(
+    db: DbSession,
+) -> None:
+    message = _message(db, "Do not leak SECRET_TOKEN=abc123 or /Users/me/.env")
+
+    payload = build_llm_planner_request(db, message).to_provider_payload()
+    serialized = json.dumps(payload)
+
+    assert "SECRET_TOKEN=abc123" not in serialized
+    assert "/Users/me/.env" not in serialized
+    assert "[protected]" in serialized
+
+
+def test_planner_response_contract_requires_plan_and_task_fields() -> None:
+    response = PlannerResponse.model_validate(
+        {
+            "planId": "plan-breakout",
+            "planner": "llm_v1",
+            "plannerMode": "llm_v1",
+            "rationale": "Implement this as one target-scoped frontend task.",
+            "acceptanceCriteria": ["Game is playable"],
+            "validationExpectations": ["pnpm build"],
+            "tasks": [
+                {
+                    "title": "Build Breakout game",
+                    "role": "frontend",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "intentType": "frontend_change",
+                    "plannedFiles": ["apps/demo/src/App.tsx"],
+                    "dependsOn": [],
+                    "expectedArtifactTypes": ["diff", "review"],
+                    "acceptanceCriteria": ["Keyboard controls work"],
+                    "riskLevel": "medium",
+                    "requiresApproval": False,
+                }
+            ],
+        }
+    )
+
+    assert response.plan_id == "plan-breakout"
+    assert response.tasks[0].role == "frontend"
+    assert response.tasks[0].requires_approval is False
+
+
+def test_planner_response_contract_rejects_incomplete_plan() -> None:
+    with pytest.raises(ValidationError):
+        PlannerResponse.model_validate(
+            {
+                "planner": "llm_v1",
+                "plannerMode": "llm_v1",
+                "rationale": "Missing required task fields.",
+                "tasks": [{"title": "Incomplete"}],
+            }
+        )
+
+
+def test_parse_llm_plan_output_returns_contract_validated_payload() -> None:
+    payload = parse_llm_plan_output(
+        json.dumps(
+            {
+                "planId": "plan-breakout",
+                "planner": "llm_v1",
+                "plannerMode": "llm_v1",
+                "rationale": "Implement a playable game in the frontend target.",
+                "acceptanceCriteria": ["Game is playable"],
+                "validationExpectations": ["pnpm build"],
+                "tasks": [
+                    {
+                        "title": "Build Breakout game",
+                        "role": "frontend",
+                        "targetId": DEMO_FRONTEND_TARGET_ID,
+                        "intentType": "frontend_change",
+                        "plannedFiles": ["apps/demo/src/App.tsx"],
+                        "dependsOn": [],
+                        "expectedArtifactTypes": ["diff"],
+                        "acceptanceCriteria": ["Keyboard controls work"],
+                        "riskLevel": "medium",
+                        "requiresApproval": False,
+                    }
+                ],
+            }
+        )
+    )
+
+    assert payload["planId"] == "plan-breakout"
+    assert payload["tasks"][0]["role"] == "frontend"
+
+
+def _message(db: DbSession, content: str) -> Message:
+    session = db.exec(select(Session).where(Session.title == "Planner contract session")).one()
+    message = Message(
+        session_id=session.id,
+        sender_type="user",
+        content_md=content,
+    )
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return message
