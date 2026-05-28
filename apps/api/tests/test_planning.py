@@ -195,17 +195,22 @@ def test_workspace_agent_registry_returns_im_contacts(client: TestClient) -> Non
     ]
     assert contacts[0]["displayName"] == "Manager / Orchestrator"
     assert contacts[0]["adapterType"] == "scripted_mock"
+    assert contacts[0]["providerId"] == "local-scripted-mock"
     assert contacts[0]["safeForWrite"] is False
     assert contacts[0]["safeForReview"] is True
 
     frontend = contacts[1]
     assert frontend["displayName"] == "Frontend Agent"
     assert frontend["adapterType"] == "codex"
+    assert frontend["providerId"] == "local-codex-cli"
     assert "code_write" in frontend["capabilityTags"]
+    assert "demo-frontend" in frontend["supportedTargets"]
+    assert frontend["supportedModes"] == ["frontend"]
     assert frontend["safeForWrite"] is True
 
     review = contacts[-2]
     assert review["displayName"] == "Review Agent"
+    assert review["providerId"] == "local-claude-code-cli"
     assert review["status"] == "planned"
     assert review["contactType"] == "placeholder"
     assert review["safeForReview"] is True
@@ -213,6 +218,7 @@ def test_workspace_agent_registry_returns_im_contacts(client: TestClient) -> Non
     fallback = contacts[-1]
     assert fallback["displayName"] == "Fallback Agent / ScriptedMock"
     assert fallback["adapterType"] == "scripted_mock"
+    assert fallback["providerId"] == "local-scripted-mock"
     assert fallback["contactType"] == "service"
 
 

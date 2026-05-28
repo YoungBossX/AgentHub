@@ -19,7 +19,10 @@ export type AgentContact = {
   avatarInitials: string
   role: string
   adapterType: string
+  providerId: string
   capabilityTags: string[]
+  supportedTargets: string[]
+  supportedModes: string[]
   status: string
   safeForWrite: boolean
   safeForReview: boolean

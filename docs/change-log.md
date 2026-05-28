@@ -1,5 +1,41 @@
 # AgentHub Change Log
 
+## P14-5 Agent Contact UI Upgrade
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/schemas.py` | Added provider ID, supported targets, and supported modes to the Agent contact response contract. |
+| `apps/api/app/main.py` | Returned P14 profile metadata from `/workspaces/{workspace_id}/agents`, including virtual review/fallback contacts. |
+| `apps/api/tests/test_planning.py` | Added contact API assertions for provider and target/mode metadata. |
+| `apps/web/src/lib/api.ts` | Added provider/target/mode fields to the AgentContact client type. |
+| `apps/web/src/components/agent-contact-list.tsx` | Rendered provider badges, supported target chips, capability chips, and unavailable/auth/draft/disabled status labels. |
+| `apps/web/src/lib/api.test.ts` | Updated contact API client fixture coverage for provider and target metadata. |
+| `apps/web/src/app/page.test.tsx` | Updated page fixture AgentContact metadata. |
+| `apps/web/src/components/workspace-shell.test.tsx` | Added UI assertions for provider and supported target display. |
+| `docs/project-state.md` | Recorded P14-5 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-5 complete after targeted verification. |
+
+### What Changed
+
+The existing Agent Contact UI now exposes the P14 registry metadata already
+used by backend policy: provider identity, adapter type, supported targets,
+capability tags, and availability status. The visual Direct chat / Group
+workflow modes and all task execution controls are unchanged.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Web contact/API/page targeted tests | Pass: 40 tests. |
+| Workspace agent contact API targeted test | Pass: 1 test. |
+
+---
+
 ## P14-4 Agent Selection Policy
 
 **Date:** 2026-05-28

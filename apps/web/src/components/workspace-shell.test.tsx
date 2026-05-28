@@ -89,10 +89,13 @@ const initialAgents = [
     description: "Plans the local demo workflow.",
     displayName: "Manager / Orchestrator",
     id: "agent-orchestrator",
+    providerId: "local-scripted-mock",
     role: "orchestrator",
     safeForReview: true,
     safeForWrite: false,
     status: "available",
+    supportedModes: ["read_only"],
+    supportedTargets: ["demo-frontend", "demo-backend"],
   },
   {
     adapterType: "codex",
@@ -102,10 +105,13 @@ const initialAgents = [
     description: "Executes bounded frontend changes.",
     displayName: "Frontend Agent",
     id: "agent-frontend",
+    providerId: "local-codex-cli",
     role: "frontend",
     safeForReview: false,
     safeForWrite: true,
     status: "available",
+    supportedModes: ["frontend"],
+    supportedTargets: ["demo-frontend", "external-frontend"],
   },
   {
     adapterType: "claude_code",
@@ -115,10 +121,13 @@ const initialAgents = [
     description: "Future non-blocking review workflow.",
     displayName: "Review Agent",
     id: "virtual-review-agent",
+    providerId: "local-claude-code-cli",
     role: "review",
     safeForReview: true,
     safeForWrite: false,
     status: "planned",
+    supportedModes: ["review", "read_only"],
+    supportedTargets: ["demo-frontend", "demo-backend"],
   },
 ]
 
@@ -187,6 +196,8 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("Review Agent")).toBeTruthy()
     expect(screen.getByText("@frontend · codex")).toBeTruthy()
     expect(screen.getByText("@review · claude_code")).toBeTruthy()
+    expect(screen.getByText("local-codex-cli")).toBeTruthy()
+    expect(screen.getAllByText("demo-frontend").length).toBeGreaterThan(0)
     expect(screen.getByText("计划中")).toBeTruthy()
   })
 

@@ -86,14 +86,27 @@ export function AgentContactList({
                 </span>
               </span>
               <span className="flex flex-wrap gap-1">
-                {agent.capabilityTags.slice(0, 3).map((tag) => (
-                  <span
-                    className="rounded border border-[var(--border)] bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
-                    key={tag}
-                  >
-                    {tag}
-                  </span>
+                <AgentMetaPill label={agent.providerId} tone="provider" />
+                {agent.supportedTargets.slice(0, 2).map((target) => (
+                  <AgentMetaPill key={target} label={target} tone="target" />
                 ))}
+                {agent.supportedTargets.length > 2 ? (
+                  <AgentMetaPill
+                    label={`+${agent.supportedTargets.length - 2} targets`}
+                    tone="target"
+                  />
+                ) : null}
+              </span>
+              <span className="flex flex-wrap gap-1">
+                {agent.capabilityTags.slice(0, 3).map((tag) => (
+                  <AgentMetaPill key={tag} label={tag} tone="capability" />
+                ))}
+                {agent.capabilityTags.length > 3 ? (
+                  <AgentMetaPill
+                    label={`+${agent.capabilityTags.length - 3} caps`}
+                    tone="capability"
+                  />
+                ) : null}
               </span>
             </button>
           )
@@ -131,15 +144,57 @@ function AgentModeButton({
   )
 }
 
+function AgentMetaPill({
+  label,
+  tone,
+}: {
+  label: string
+  tone: "provider" | "target" | "capability"
+}) {
+  return (
+    <span
+      className={cn(
+        "max-w-full truncate rounded border px-1.5 py-0.5 text-[10px] font-medium",
+        tone === "provider"
+          ? "border-blue-200 bg-blue-50 text-blue-700"
+          : tone === "target"
+            ? "border-slate-200 bg-slate-50 text-slate-600"
+            : "border-[var(--border)] bg-white text-slate-600",
+      )}
+      title={label}
+    >
+      {label}
+    </span>
+  )
+}
+
 function AgentStatus({ status }: { status: string }) {
-  const label = status === "planned" ? "计划中" : status === "available" ? "在线" : status
+  const label =
+    status === "planned"
+      ? "计划中"
+      : status === "available"
+        ? "在线"
+        : status === "auth_blocked"
+          ? "需认证"
+          : status === "unavailable"
+            ? "不可用"
+            : status === "draft_only"
+              ? "草稿"
+              : status === "disabled"
+                ? "停用"
+                : status
+  const unavailable = ["auth_blocked", "unavailable", "disabled", "draft_only"].includes(
+    status,
+  )
   return (
     <span
       className={cn(
         "shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
         status === "planned"
           ? "border-amber-200 bg-amber-50 text-amber-700"
-          : "border-emerald-200 bg-emerald-50 text-emerald-700",
+          : unavailable
+            ? "border-rose-200 bg-rose-50 text-rose-700"
+            : "border-emerald-200 bg-emerald-50 text-emerald-700",
       )}
     >
       {label}

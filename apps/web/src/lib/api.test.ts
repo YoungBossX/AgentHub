@@ -154,7 +154,10 @@ describe("workspace and session API", () => {
             avatarInitials: "FE",
             role: "frontend",
             adapterType: "codex",
+            providerId: "local-codex-cli",
             capabilityTags: ["code_write", "preview"],
+            supportedTargets: ["demo-frontend", "external-frontend"],
+            supportedModes: ["frontend"],
             status: "available",
             safeForWrite: true,
             safeForReview: false,
@@ -179,7 +182,9 @@ describe("workspace and session API", () => {
       },
     )
     expect(agents[0].displayName).toBe("Frontend Agent")
+    expect(agents[0].providerId).toBe("local-codex-cli")
     expect(agents[0].capabilityTags).toContain("code_write")
+    expect(agents[0].supportedTargets).toContain("demo-frontend")
   })
 
   it("lists minimal agent profiles for a workspace", async () => {

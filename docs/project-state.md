@@ -5,6 +5,26 @@ reference instead of repeating long context blocks.
 
 ## P14 Status
 
+### P14-5 Agent Contact UI Upgrade
+
+P14-5 completed on 2026-05-28.
+
+The workspace agent contact API now exposes provider and target metadata in
+the same contact payload used by the command-center sidebar:
+
+- `providerId`;
+- `supportedTargets`;
+- `supportedModes`.
+
+The Agent Contact UI now renders provider badges, supported target chips,
+compact capability chips, and clearer unavailable/auth/draft/disabled status
+labels. Direct chat and Group workflow remain local visual modes only, and
+Start, Retry, Fallback, Review, Preview, and Deploy behavior is unchanged.
+
+P14-5 is informational UI work. It does not add provider marketplace behavior,
+custom agent creation, cloud token management, adapter dispatch changes, or
+multi-user collaboration.
+
 ### P14-4 Agent Selection Policy
 
 P14-4 completed on 2026-05-28.

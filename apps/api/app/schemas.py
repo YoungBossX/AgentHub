@@ -123,7 +123,10 @@ class AgentContactResponse(ApiModel):
     avatar_initials: str = Field(alias="avatarInitials")
     role: str
     adapter_type: str = Field(alias="adapterType")
+    provider_id: str = Field(alias="providerId")
     capability_tags: list[str] = Field(alias="capabilityTags")
+    supported_targets: list[str] = Field(alias="supportedTargets")
+    supported_modes: list[str] = Field(alias="supportedModes")
     status: str
     safe_for_write: bool = Field(alias="safeForWrite")
     safe_for_review: bool = Field(alias="safeForReview")
