@@ -75,6 +75,44 @@ describe("TaskCardList", () => {
     expect(screen.getByText("retryable")).toBeTruthy()
   })
 
+  it("renders read-only planner rationale and task review metadata", () => {
+    const plannedTask: SessionTask = {
+      ...baseTask,
+      planReviewMetadata: {
+        plannerMode: "llm_v1",
+        rationale: "Implement a game inside the registered frontend target.",
+        assignedRole: "frontend",
+        targetId: "demo-frontend",
+        plannedFiles: ["apps/demo/src/App.tsx", "apps/demo/src/game/Breakout.tsx"],
+        acceptanceCriteria: ["Keyboard controls work", "Score updates"],
+        validationExpectations: ["pnpm build"],
+        taskBreakdown: [
+          {
+            title: "Build Breakout",
+            role: "frontend",
+            targetId: "demo-frontend",
+            plannedFiles: ["apps/demo/src/game/Breakout.tsx"],
+          },
+        ],
+        readOnly: true,
+      },
+    }
+
+    render(createElement(TaskCardList, { tasks: [plannedTask] }))
+
+    expect(screen.getByText("计划审阅")).toBeTruthy()
+    expect(screen.getByText("llm_v1")).toBeTruthy()
+    expect(screen.getAllByText("demo-frontend").length).toBeGreaterThan(0)
+    expect(
+      screen.getByText("Implement a game inside the registered frontend target."),
+    ).toBeTruthy()
+    expect(screen.getByText("apps/demo/src/game/Breakout.tsx")).toBeTruthy()
+    expect(screen.getByText("task graph 1")).toBeTruthy()
+    expect(screen.getByText("acceptance 2")).toBeTruthy()
+    expect(screen.getByText("validation 1")).toBeTruthy()
+    expect(screen.getByText("read-only")).toBeTruthy()
+  })
+
   it("renders run history and P0 run controls", () => {
     const onCreateRun = vi.fn()
     const onForceCodexFailure = vi.fn()

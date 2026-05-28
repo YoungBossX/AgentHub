@@ -1328,6 +1328,8 @@ def task_response(db: DbSession, task: Task) -> TaskResponse:
     if task.assigned_agent_id is not None:
         agent = db.get(Agent, task.assigned_agent_id)
         assigned_role = agent.role if agent is not None else None
+    plan = plan_json_for_task(task)
+    dependency_ids = json.loads(task.depends_on_task_ids)
 
     return TaskResponse(
         id=task.id,
@@ -1337,14 +1339,99 @@ def task_response(db: DbSession, task: Task) -> TaskResponse:
         intentType=task.intent_type,
         status=task.status,
         priority=task.priority,
-        planJson=json.loads(task.plan_json),
-        dependsOnTaskIds=json.loads(task.depends_on_task_ids),
+        planJson=plan,
+        planReviewMetadata=plan_review_metadata_for_task(
+            task,
+            plan=plan,
+            dependency_ids=dependency_ids,
+        ),
+        dependsOnTaskIds=dependency_ids,
         assignedAgentId=task.assigned_agent_id,
         assignedAgentRole=assigned_role,
         taskRuns=[task_run_response(db, task_run) for task_run in list_task_runs(db, task.id)],
         createdAt=task.created_at,
         updatedAt=task.updated_at,
     )
+
+
+def plan_review_metadata_for_task(
+    task: Task,
+    *,
+    plan: dict[str, Any],
+    dependency_ids: list[str],
+) -> dict[str, Any]:
+    plan_draft = _dict_value(plan.get("planDraft"))
+    task_graph = _dict_value(plan.get("taskGraph"))
+    return {
+        "plannerMode": _first_string(
+            plan.get("plannerMode"),
+            plan.get("planner"),
+            plan_draft.get("plannerMode"),
+            plan_draft.get("planner"),
+        ),
+        "rationale": _first_string(plan.get("rationale"), plan_draft.get("rationale")),
+        "assignedRole": _first_string(plan.get("assignedRole")),
+        "targetId": _first_string(
+            plan.get("targetId"),
+            plan.get("frontendTargetId"),
+            plan.get("backendTargetId"),
+            plan_draft.get("targetId"),
+        ),
+        "dependencies": dependency_ids,
+        "plannedFiles": _string_list(
+            plan.get("plannedFiles"),
+            plan.get("files"),
+            plan_draft.get("plannedFiles"),
+        ),
+        "acceptanceCriteria": _string_list(
+            plan.get("acceptanceCriteria"),
+            plan_draft.get("acceptanceCriteria"),
+        ),
+        "validationExpectations": _string_list(
+            plan.get("validationExpectations"),
+            plan_draft.get("validationExpectations"),
+        ),
+        "taskBreakdown": _task_breakdown(task_graph.get("tasks")),
+        "readOnly": True,
+        "sourceTaskId": task.id,
+    }
+
+
+def _task_breakdown(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    items: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        items.append(
+            {
+                "title": _first_string(item.get("title"), item.get("name")),
+                "role": _first_string(item.get("role"), item.get("assignedRole")),
+                "targetId": _first_string(item.get("targetId")),
+                "dependsOn": _string_list(item.get("dependsOn")),
+                "plannedFiles": _string_list(item.get("plannedFiles"), item.get("files")),
+            }
+        )
+    return items
+
+
+def _dict_value(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _first_string(*values: object) -> str:
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _string_list(*values: object) -> list[str]:
+    for value in values:
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, str) and item]
+    return []
 
 
 @app.get("/sessions/{session_id}/tasks", response_model=list[TaskResponse])

@@ -155,6 +155,16 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
         "apps/demo/src/App.tsx",
         "apps/demo/src/styles.css",
     ]
+    plan_review = frontend_task["planReviewMetadata"]
+    assert plan_review["plannerMode"] == "deterministic_login_v1"
+    assert "login-page demo fallback" in plan_review["rationale"]
+    assert plan_review["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert plan_review["plannedFiles"] == [
+        "apps/demo/src/App.tsx",
+        "apps/demo/src/styles.css",
+    ]
+    assert plan_review["taskBreakdown"]
+    assert plan_review["readOnly"] is True
 
     with next(db_from_override()) as db:
         messages = db.exec(

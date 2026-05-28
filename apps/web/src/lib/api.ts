@@ -111,12 +111,33 @@ export type SessionTask = {
   status: string
   priority: number
   planJson: Record<string, unknown>
+  planReviewMetadata?: PlanReviewMetadata
   dependsOnTaskIds: string[]
   assignedAgentId: string | null
   assignedAgentRole: string | null
   taskRuns: TaskRun[]
   createdAt: string
   updatedAt: string
+}
+
+export type PlanReviewMetadata = {
+  plannerMode?: string
+  rationale?: string
+  assignedRole?: string
+  targetId?: string
+  dependencies?: string[]
+  plannedFiles?: string[]
+  acceptanceCriteria?: string[]
+  validationExpectations?: string[]
+  taskBreakdown?: Array<{
+    title?: string
+    role?: string
+    targetId?: string
+    dependsOn?: string[]
+    plannedFiles?: string[]
+  }>
+  readOnly?: boolean
+  sourceTaskId?: string
 }
 
 export type ApprovalRequest = {

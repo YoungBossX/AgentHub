@@ -1,5 +1,41 @@
 # AgentHub Change Log
 
+## P15-5 Planner Rationale And Task Review Metadata
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/schemas.py` | Added `planReviewMetadata` to task responses. |
+| `apps/api/app/main.py` | Derived read-only plan review metadata from `planJson`, `planDraft`, task graph, dependencies, planned files, acceptance criteria, and validation expectations. |
+| `apps/api/tests/test_planning.py` | Added API coverage for planner mode, rationale, target, planned files, task graph, and read-only metadata. |
+| `apps/web/src/lib/api.ts` | Added client type support for plan review metadata. |
+| `apps/web/src/components/task-card-list.tsx` | Rendered a compact read-only plan review summary in task cards. |
+| `apps/web/src/components/task-card-list.test.tsx` | Added UI coverage for planner rationale, task graph count, target, planned files, acceptance, validation, and read-only state. |
+| `docs/project-state.md` | Recorded P15-5 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-5 complete after targeted verification. |
+
+### What Changed
+
+Task responses now expose a read-only `planReviewMetadata` summary so the UI can
+show how a task was planned without mutating the plan. The task card timeline
+shows planner mode, target, rationale, assigned role, planned files, task graph
+count, acceptance criteria count, and validation expectation count.
+
+The metadata is derived from existing plan data and does not alter scheduling,
+adapter dispatch, task execution, or plan editing behavior.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15-5 targeted API/UI metadata tests | Pass: 46 tests. |
+
+---
+
 ## P15-4 Project Command Policy
 
 **Date:** 2026-05-28

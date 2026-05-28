@@ -5,6 +5,32 @@ reference instead of repeating long context blocks.
 
 ## P15 Status
 
+### P15-5 Planner Rationale And Task Review Metadata
+
+P15-5 completed on 2026-05-28.
+
+AgentHub task responses now include read-only `planReviewMetadata` derived from
+existing plan data:
+
+- planner mode;
+- rationale;
+- assigned role;
+- target ID;
+- dependencies;
+- planned files;
+- acceptance criteria;
+- validation expectations;
+- task graph breakdown;
+- source task ID and read-only marker.
+
+The task timeline renders this metadata as a compact plan review summary so a
+user can inspect why a task exists and what it is expected to change before or
+after execution.
+
+P15-5 does not add editable plan review, change scheduler behavior, alter
+adapter dispatch, or introduce new planner modes. It only exposes existing plan
+metadata through API/UI surfaces.
+
 ### P15-4 Project Command Policy
 
 P15-4 completed on 2026-05-28.

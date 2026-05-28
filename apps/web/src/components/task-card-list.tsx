@@ -28,6 +28,7 @@ import {
   listTaskRunReviews,
   type DeploymentArtifact,
   type DiffArtifact,
+  type PlanReviewMetadata,
   type PreviewArtifact,
   type ReviewArtifact,
   type SessionTask,
@@ -319,6 +320,9 @@ export function TaskCardList({
                   依赖 {task.dependsOnTaskIds.join(", ")}
                 </p>
               ) : null}
+              <PlanReviewSummary
+                metadata={task.planReviewMetadata ?? planReviewMetadataFromPlan(task)}
+              />
               <SchedulerSummary scheduler={scheduler} />
               <ArtifactChips
                 deployments={taskDeployments}
@@ -476,6 +480,144 @@ function ArtifactMessageCards({
       </div>
     </section>
   )
+}
+
+function PlanReviewSummary({ metadata }: { metadata: PlanReviewMetadata | null }) {
+  if (!metadata) {
+    return null
+  }
+  const plannedFiles = metadata.plannedFiles ?? []
+  const acceptanceCriteria = metadata.acceptanceCriteria ?? []
+  const validationExpectations = metadata.validationExpectations ?? []
+  const taskBreakdown = metadata.taskBreakdown ?? []
+  const hasContent = Boolean(
+    metadata.plannerMode ||
+      metadata.rationale ||
+      metadata.targetId ||
+      plannedFiles.length ||
+      acceptanceCriteria.length ||
+      validationExpectations.length ||
+      taskBreakdown.length,
+  )
+  if (!hasContent) {
+    return null
+  }
+
+  return (
+    <section className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-bold text-slate-700">计划审阅</span>
+        {metadata.plannerMode ? (
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-600">
+            {metadata.plannerMode}
+          </span>
+        ) : null}
+        {metadata.targetId ? (
+          <span className="rounded-full bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
+            {metadata.targetId}
+          </span>
+        ) : null}
+        {metadata.readOnly ? (
+          <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+            read-only
+          </span>
+        ) : null}
+      </div>
+      {metadata.rationale ? (
+        <p className="mt-2 line-clamp-2 text-slate-600">{metadata.rationale}</p>
+      ) : null}
+      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium text-slate-500">
+        {metadata.assignedRole ? (
+          <span className="rounded bg-slate-50 px-2 py-0.5">@{metadata.assignedRole}</span>
+        ) : null}
+        {taskBreakdown.length > 0 ? (
+          <span className="rounded bg-slate-50 px-2 py-0.5">
+            task graph {taskBreakdown.length}
+          </span>
+        ) : null}
+        {plannedFiles.slice(0, 3).map((file) => (
+          <span className="rounded bg-slate-50 px-2 py-0.5 font-mono" key={file}>
+            {file}
+          </span>
+        ))}
+        {plannedFiles.length > 3 ? (
+          <span className="rounded bg-slate-50 px-2 py-0.5">
+            +{plannedFiles.length - 3} files
+          </span>
+        ) : null}
+        {acceptanceCriteria.length > 0 ? (
+          <span className="rounded bg-green-50 px-2 py-0.5 text-green-700">
+            acceptance {acceptanceCriteria.length}
+          </span>
+        ) : null}
+        {validationExpectations.length > 0 ? (
+          <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
+            validation {validationExpectations.length}
+          </span>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
+function planReviewMetadataFromPlan(task: SessionTask): PlanReviewMetadata | null {
+  const plan = task.planJson
+  const planDraft = objectValue(plan.planDraft)
+  const taskGraph = objectValue(plan.taskGraph)
+  return {
+    plannerMode: stringValue(plan.plannerMode) || stringValue(plan.planner) || stringValue(planDraft.plannerMode),
+    rationale: stringValue(plan.rationale) || stringValue(planDraft.rationale),
+    assignedRole: stringValue(plan.assignedRole) || task.assignedAgentRole || undefined,
+    targetId:
+      stringValue(plan.targetId) ||
+      stringValue(plan.frontendTargetId) ||
+      stringValue(plan.backendTargetId),
+    dependencies: task.dependsOnTaskIds,
+    plannedFiles:
+      stringList(plan.plannedFiles) ||
+      stringList(plan.files) ||
+      stringList(planDraft.plannedFiles),
+    acceptanceCriteria:
+      stringList(plan.acceptanceCriteria) || stringList(planDraft.acceptanceCriteria),
+    validationExpectations:
+      stringList(plan.validationExpectations) || stringList(planDraft.validationExpectations),
+    taskBreakdown: taskBreakdownFromPlan(taskGraph.tasks),
+    readOnly: true,
+    sourceTaskId: task.id,
+  }
+}
+
+function taskBreakdownFromPlan(value: unknown): PlanReviewMetadata["taskBreakdown"] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)))
+    .map((item) => ({
+      title: stringValue(item.title) || stringValue(item.name),
+      role: stringValue(item.role) || stringValue(item.assignedRole),
+      targetId: stringValue(item.targetId),
+      dependsOn: stringList(item.dependsOn) ?? [],
+      plannedFiles: stringList(item.plannedFiles) || stringList(item.files) || [],
+    }))
+}
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined
+}
+
+function stringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+  const values = value.filter((item): item is string => typeof item === "string" && item.length > 0)
+  return values.length > 0 ? values : undefined
 }
 
 type SchedulerMeta = {

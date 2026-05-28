@@ -277,6 +277,7 @@ class TaskResponse(ApiModel):
     status: str
     priority: int
     plan_json: dict[str, Any] = Field(alias="planJson")
+    plan_review_metadata: dict[str, Any] = Field(alias="planReviewMetadata")
     depends_on_task_ids: list[str] = Field(alias="dependsOnTaskIds")
     assigned_agent_id: Optional[str] = Field(alias="assignedAgentId")
     assigned_agent_role: Optional[str] = Field(alias="assignedAgentRole")
