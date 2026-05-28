@@ -5,6 +5,7 @@ from uuid import uuid4
 from app.db import create_db_and_tables, engine
 from app.models import (
     Agent,
+    AgentProfileDraft,
     Artifact,
     ArtifactVersion,
     Deployment,
@@ -27,6 +28,7 @@ from app.seed import seed_demo_data
 
 EXPECTED_TABLES = {
     "agent",
+    "agentprofiledraft",
     "artifact",
     "artifactversion",
     "deployment",
@@ -110,6 +112,24 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "capabilities_json",
             "permission_profile_json",
             "enabled",
+            "created_at",
+            "updated_at",
+        },
+        AgentProfileDraft: {
+            "id",
+            "workspace_id",
+            "display_name",
+            "avatar_initials",
+            "role",
+            "adapter_type",
+            "provider_id",
+            "capability_tags_json",
+            "supported_targets_json",
+            "supported_modes_json",
+            "safe_for_write",
+            "safe_for_review",
+            "description",
+            "status",
             "created_at",
             "updated_at",
         },

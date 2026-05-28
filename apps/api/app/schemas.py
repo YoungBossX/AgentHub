@@ -151,6 +151,29 @@ class AgentProfileResponse(ApiModel):
     status: str
 
 
+class AgentProfileDraftCreateRequest(BaseModel):
+    display_name: str = Field(alias="displayName")
+    avatar_initials: Optional[str] = Field(default=None, alias="avatarInitials")
+    role: str
+    adapter_type: str = Field(alias="adapterType")
+    provider_id: str = Field(alias="providerId")
+    capability_tags: list[str] = Field(default_factory=list, alias="capabilityTags")
+    supported_targets: list[str] = Field(alias="supportedTargets")
+    supported_modes: list[str] = Field(default_factory=lambda: ["review"], alias="supportedModes")
+    safe_for_write: bool = Field(default=False, alias="safeForWrite")
+    safe_for_review: bool = Field(default=True, alias="safeForReview")
+    description: str = ""
+    status: str = "draft_only"
+    shell_commands: list[str] = Field(default_factory=list, alias="shellCommands")
+    tool_permissions: list[str] = Field(default_factory=list, alias="toolPermissions")
+    unrestricted_filesystem_access: bool = Field(
+        default=False,
+        alias="unrestrictedFilesystemAccess",
+    )
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
 class ProviderConfigResponse(ApiModel):
     provider_id: str = Field(alias="providerId")
     display_name: str = Field(alias="displayName")

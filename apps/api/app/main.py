@@ -10,6 +10,12 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
+from app.agent_profile_drafts import (
+    AgentProfileDraftError,
+    AgentProfileDraftInput,
+    create_agent_profile_draft,
+    list_agent_profile_drafts,
+)
 from app.agent_profiles import AgentProfile, list_agent_profile_registry, profile_for_agent
 from app.artifact_versions import (
     ArtifactVersionError,
@@ -88,6 +94,7 @@ from app.target_registry import (
 )
 from app.schemas import (
     AgentContactResponse,
+    AgentProfileDraftCreateRequest,
     AgentProfileResponse,
     ApprovalDecisionRequest,
     ApprovalRequestResponse,
@@ -458,6 +465,26 @@ def agent_profile_response(profile: AgentProfile) -> AgentProfileResponse:
     )
 
 
+def draft_input_from_request(request: AgentProfileDraftCreateRequest) -> AgentProfileDraftInput:
+    return AgentProfileDraftInput(
+        display_name=request.display_name,
+        avatar_initials=request.avatar_initials,
+        role=request.role,
+        adapter_type=request.adapter_type,
+        provider_id=request.provider_id,
+        capability_tags=request.capability_tags,
+        supported_targets=request.supported_targets,
+        supported_modes=request.supported_modes,
+        safe_for_write=request.safe_for_write,
+        safe_for_review=request.safe_for_review,
+        description=request.description,
+        status=request.status,
+        shell_commands=request.shell_commands,
+        tool_permissions=request.tool_permissions,
+        unrestricted_filesystem_access=request.unrestricted_filesystem_access,
+    )
+
+
 def provider_config_response(config: ProviderConfig) -> ProviderConfigResponse:
     return ProviderConfigResponse(
         providerId=config.provider_id,
@@ -505,8 +532,56 @@ def read_workspace_agent_profiles(
 
     return [
         agent_profile_response(profile)
-        for profile in list_agent_profile_registry(_ordered_enabled_agents(db))
+        for profile in list_agent_profile_registry(
+            _ordered_enabled_agents(db),
+            drafts=list_agent_profile_drafts(db, workspace_id=workspace_id),
+        )
     ]
+
+
+@app.get(
+    "/workspaces/{workspace_id}/agent-profile-drafts",
+    response_model=list[AgentProfileResponse],
+)
+def read_agent_profile_drafts(
+    workspace_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[AgentProfileResponse]:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return [
+        agent_profile_response(profile)
+        for profile in list_agent_profile_registry(
+            [],
+            drafts=list_agent_profile_drafts(db, workspace_id=workspace_id),
+            include_virtual=False,
+        )
+    ]
+
+
+@app.post(
+    "/workspaces/{workspace_id}/agent-profile-drafts",
+    response_model=AgentProfileResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_profile_draft(
+    workspace_id: str,
+    request: AgentProfileDraftCreateRequest,
+    db: DbSession = Depends(get_db),
+) -> AgentProfileResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    try:
+        draft = create_agent_profile_draft(
+            db,
+            workspace_id=workspace_id,
+            draft_input=draft_input_from_request(request),
+        )
+    except AgentProfileDraftError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return agent_profile_response(
+        list_agent_profile_registry([], drafts=[draft], include_virtual=False)[0]
+    )
 
 
 def _ordered_enabled_agents(db: DbSession) -> list[Agent]:

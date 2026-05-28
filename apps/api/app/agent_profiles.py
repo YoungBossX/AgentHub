@@ -1,8 +1,15 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 
 from app.agent_capabilities import validate_capability_tags, validate_supported_modes
-from app.models import Agent
+from app.agent_profile_drafts import (
+    capability_tags_for_draft,
+    supported_modes_for_draft,
+    supported_targets_for_draft,
+)
+from app.models import Agent, AgentProfileDraft
 from app.provider_assignments import resolve_profile_provider_assignment
 
 
@@ -118,11 +125,13 @@ VIRTUAL_AGENT_PROFILE_AGENTS: tuple[Agent, ...] = (
 def list_agent_profile_registry(
     agents: list[Agent],
     *,
+    drafts: list[AgentProfileDraft] | None = None,
     include_virtual: bool = True,
 ) -> list[AgentProfile]:
     profiles = [profile_for_agent(agent) for agent in agents]
     if include_virtual:
         profiles.extend(profile_for_agent(agent) for agent in VIRTUAL_AGENT_PROFILE_AGENTS)
+    profiles.extend(profile_for_draft(draft) for draft in (drafts or []))
     return profiles
 
 
@@ -152,6 +161,25 @@ def profile_for_agent(agent: Agent) -> AgentProfile:
         safe_for_review=bool(metadata.get("safeForReview", False)),
         description=str(metadata.get("description") or agent.system_prompt),
         status=_status_for_agent(agent, metadata),
+    )
+
+
+def profile_for_draft(draft: AgentProfileDraft) -> AgentProfile:
+    return AgentProfile(
+        id=draft.id,
+        display_name=draft.display_name,
+        avatar_initials=draft.avatar_initials,
+        role=draft.role,
+        adapter_type=draft.adapter_type,
+        provider_id=draft.provider_id,
+        capability_tags=capability_tags_for_draft(draft),
+        supported_roles=[draft.role],
+        supported_targets=supported_targets_for_draft(draft),
+        supported_modes=supported_modes_for_draft(draft),
+        safe_for_write=False,
+        safe_for_review=draft.safe_for_review,
+        description=draft.description,
+        status=draft.status,
     )
 
 

@@ -1,5 +1,42 @@
 # AgentHub Change Log
 
+## P14-6 Safe Custom Agent Draft
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/models.py` | Added `AgentProfileDraft` metadata table for safe draft profiles. |
+| `apps/api/app/agent_profile_drafts.py` | Added draft creation/listing service with safety validation. |
+| `apps/api/app/agent_profiles.py` | Converted draft rows into AgentProfile registry responses. |
+| `apps/api/app/schemas.py` | Added draft creation request schema. |
+| `apps/api/app/main.py` | Added draft create/list endpoints and included drafts in workspace AgentProfile registry responses. |
+| `apps/api/tests/test_agent_profile_drafts.py` | Added API coverage for review-only draft creation and unsafe draft rejection. |
+| `apps/api/tests/test_models.py` | Updated model boundary coverage for the new metadata table. |
+| `docs/project-state.md` | Recorded P14-6 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-6 complete after targeted verification. |
+
+### What Changed
+
+AgentHub can now define safe custom AgentProfile draft metadata without making
+drafts executable write agents. Draft profiles are forced to review-only or
+disabled states and are included in the AgentProfile registry for inspection.
+
+Draft creation rejects arbitrary shell commands, unsafe tool permissions,
+unrestricted filesystem access, write capability, unknown providers, and
+adapter/provider mismatch.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Safe draft/model/profile targeted tests | Pass: 6 tests. |
+
+---
+
 ## P14-5 Agent Contact UI Upgrade
 
 **Date:** 2026-05-28

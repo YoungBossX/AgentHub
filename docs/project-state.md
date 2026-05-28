@@ -5,6 +5,28 @@ reference instead of repeating long context blocks.
 
 ## P14 Status
 
+### P14-6 Safe Custom Agent Draft
+
+P14-6 completed on 2026-05-28.
+
+AgentHub now has a controlled safe custom AgentProfile draft foundation:
+
+- `AgentProfileDraft` SQLite metadata table;
+- `POST /workspaces/{workspace_id}/agent-profile-drafts`;
+- `GET /workspaces/{workspace_id}/agent-profile-drafts`;
+- workspace AgentProfile registry responses include created draft profiles.
+
+Draft profiles are metadata-only. They are forced to `safeForWrite=false`,
+can only use `draft_only` or `disabled` status, and may only use
+`review`/`read_only`/`debug` modes. Draft creation rejects write capability,
+unknown providers, adapter/provider mismatch, arbitrary shell commands,
+unsafe tool permissions, unrestricted filesystem access, and unsafe target
+identifiers.
+
+P14-6 does not add marketplace behavior, arbitrary custom shell command
+agents, custom provider installation, cloud token management, or execution of
+draft agents.
+
 ### P14-5 Agent Contact UI Upgrade
 
 P14-5 completed on 2026-05-28.

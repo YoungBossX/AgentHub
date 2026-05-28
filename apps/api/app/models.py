@@ -96,6 +96,25 @@ class Agent(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
+class AgentProfileDraft(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    workspace_id: str = Field(foreign_key="workspace.id", index=True)
+    display_name: str
+    avatar_initials: str
+    role: str = Field(index=True)
+    adapter_type: str
+    provider_id: str
+    capability_tags_json: str = "[]"
+    supported_targets_json: str = "[]"
+    supported_modes_json: str = "[]"
+    safe_for_write: bool = False
+    safe_for_review: bool = True
+    description: str = ""
+    status: str = "draft_only"
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
 class Task(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     session_id: str = Field(foreign_key="session.id", index=True)
