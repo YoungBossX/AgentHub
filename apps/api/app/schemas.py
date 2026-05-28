@@ -145,6 +145,7 @@ class AgentProfileResponse(ApiModel):
     safe_for_write: bool = Field(alias="safeForWrite")
     safe_for_review: bool = Field(alias="safeForReview")
     description: str
+    status: str
 
 
 class SessionResponse(ApiModel):

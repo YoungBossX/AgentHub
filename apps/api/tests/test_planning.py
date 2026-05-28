@@ -216,7 +216,7 @@ def test_workspace_agent_registry_returns_im_contacts(client: TestClient) -> Non
     assert fallback["contactType"] == "service"
 
 
-def test_workspace_agent_profiles_return_minimal_profile_contract(client: TestClient) -> None:
+def test_workspace_agent_profiles_return_registry_profile_contract(client: TestClient) -> None:
     with next(db_from_override()) as db:
         workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
 
@@ -229,6 +229,8 @@ def test_workspace_agent_profiles_return_minimal_profile_contract(client: TestCl
         "frontend",
         "backend",
         "qa",
+        "review",
+        "fallback",
     ]
 
     frontend = profiles[1]
@@ -246,6 +248,7 @@ def test_workspace_agent_profiles_return_minimal_profile_contract(client: TestCl
         "safeForWrite": True,
         "safeForReview": False,
         "description": "Executes bounded frontend changes inside assigned target paths.",
+        "status": "available",
     }
 
     backend = profiles[2]
@@ -253,6 +256,20 @@ def test_workspace_agent_profiles_return_minimal_profile_contract(client: TestCl
     assert backend["supportedRoles"] == ["backend"]
     assert backend["safeForWrite"] is True
     assert "AgentHub platform backend" in backend["description"]
+
+    review = profiles[-2]
+    assert review["id"] == "virtual-review-agent"
+    assert review["role"] == "review"
+    assert review["status"] == "planned"
+    assert review["safeForWrite"] is False
+    assert review["safeForReview"] is True
+
+    fallback = profiles[-1]
+    assert fallback["id"] == "virtual-fallback-agent"
+    assert fallback["role"] == "fallback"
+    assert fallback["adapterType"] == "scripted_mock"
+    assert fallback["providerId"] == "local-scripted-mock"
+    assert fallback["status"] == "available"
 
 
 def test_workspace_agent_profiles_match_provider_assignment_matrix(
@@ -285,6 +302,7 @@ def test_workspace_agent_profiles_match_provider_assignment_matrix(
     profiles = response.json()
     frontend = next(profile for profile in profiles if profile["role"] == "frontend")
     qa = next(profile for profile in profiles if profile["role"] == "qa")
+    review = next(profile for profile in profiles if profile["role"] == "review")
 
     assert frontend["adapterType"] == "claude_code"
     assert frontend["providerId"] == "local-claude-code-cli"
@@ -292,6 +310,8 @@ def test_workspace_agent_profiles_match_provider_assignment_matrix(
     assert qa["adapterType"] == "scripted_mock"
     assert qa["providerId"] == "local-scripted-review"
     assert qa["supportedRoles"] == ["qa", "review"]
+    assert review["providerId"] == "local-scripted-review"
+    assert review["status"] == "planned"
 
 
 def test_disabled_mention_returns_user_facing_parse_error(client: TestClient) -> None:

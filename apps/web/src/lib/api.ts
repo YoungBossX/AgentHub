@@ -41,6 +41,7 @@ export type AgentProfile = {
   safeForWrite: boolean
   safeForReview: boolean
   description: string
+  status: string
 }
 
 export type WorkspaceSession = {

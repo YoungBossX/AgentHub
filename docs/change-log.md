@@ -1,5 +1,43 @@
 # AgentHub Change Log
 
+## P14-1 Agent Profile Registry
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_profiles.py` | Promoted AgentProfile into a registry-style service, added status, and added virtual review/fallback profiles. |
+| `apps/api/app/schemas.py` | Added AgentProfile `status` to API responses. |
+| `apps/api/app/main.py` | Returned registry profiles, including built-in review and fallback profiles, from the workspace profile API. |
+| `apps/api/tests/test_planning.py` | Updated profile API coverage for registry fields, status, review profile, and fallback profile. |
+| `apps/web/src/lib/api.ts` | Added `status` to the AgentProfile client type. |
+| `apps/web/src/lib/api.test.ts` | Updated client API fixture coverage for AgentProfile status. |
+| `docs/project-state.md` | Recorded P14-1 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-1 complete after verification. |
+
+### What Changed
+
+AgentHub now exposes a stable Agent Profile Registry contract for built-in
+profiles. The workspace profile API includes active database-backed agents plus
+virtual review and fallback profiles. Profiles now include `status` so
+available, planned, disabled, or future draft-only states can be represented
+without implying write execution.
+
+P14-1 does not add provider config, capability enforcement, custom draft
+creation, marketplace behavior, or adapter dispatch changes.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted profile API tests | Pass: 2 tests. |
+| Targeted web API tests | Pass: 39 tests. |
+
+---
+
 ## P13-8 Mixed-provider Rehearsal and Freeze Review
 
 **Date:** 2026-05-27

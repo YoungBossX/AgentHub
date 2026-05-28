@@ -20,6 +20,7 @@ class AgentProfile:
     safe_for_write: bool
     safe_for_review: bool
     description: str
+    status: str
 
 
 BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
@@ -67,7 +68,61 @@ BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
         "safeForReview": True,
         "description": "Reviews workflow evidence and validates target outputs without changing dispatch.",
     },
+    "review": {
+        "displayName": "Review Agent",
+        "avatarInitials": "RV",
+        "capabilityTags": ["planned", "read-only", "non-blocking review"],
+        "supportedRoles": ["review", "qa"],
+        "supportedTargets": ["demo-frontend", "demo-backend", "external"],
+        "supportedModes": ["review", "read-only"],
+        "safeForWrite": False,
+        "safeForReview": True,
+        "description": "Represents the read-oriented review workflow and scripted review fallback.",
+        "status": "planned",
+    },
+    "fallback": {
+        "displayName": "Fallback Agent / ScriptedMock",
+        "avatarInitials": "FB",
+        "capabilityTags": ["demo recovery", "scripted fallback", "real file changes"],
+        "supportedRoles": ["fallback"],
+        "supportedTargets": ["demo-frontend"],
+        "supportedModes": ["fallback", "scheduled-task"],
+        "safeForWrite": True,
+        "safeForReview": False,
+        "description": "Documents the preserved ScriptedMockAdapter reliability path.",
+        "status": "available",
+    },
 }
+
+VIRTUAL_AGENT_PROFILE_AGENTS: tuple[Agent, ...] = (
+    Agent(
+        id="virtual-review-agent",
+        name="Review Agent",
+        role="review",
+        adapter_type="scripted_mock",
+        provider="local-scripted-review",
+        enabled=True,
+    ),
+    Agent(
+        id="virtual-fallback-agent",
+        name="Fallback Agent / ScriptedMock",
+        role="fallback",
+        adapter_type="scripted_mock",
+        provider="local-scripted-mock",
+        enabled=True,
+    ),
+)
+
+
+def list_agent_profile_registry(
+    agents: list[Agent],
+    *,
+    include_virtual: bool = True,
+) -> list[AgentProfile]:
+    profiles = [profile_for_agent(agent) for agent in agents]
+    if include_virtual:
+        profiles.extend(profile_for_agent(agent) for agent in VIRTUAL_AGENT_PROFILE_AGENTS)
+    return profiles
 
 
 def profile_for_agent(agent: Agent) -> AgentProfile:
@@ -87,4 +142,12 @@ def profile_for_agent(agent: Agent) -> AgentProfile:
         safe_for_write=bool(metadata.get("safeForWrite", False)),
         safe_for_review=bool(metadata.get("safeForReview", False)),
         description=str(metadata.get("description") or agent.system_prompt),
+        status=_status_for_agent(agent, metadata),
     )
+
+
+def _status_for_agent(agent: Agent, metadata: dict[str, Any]) -> str:
+    metadata_status = metadata.get("status")
+    if isinstance(metadata_status, str) and metadata_status:
+        return metadata_status
+    return "available" if agent.enabled else "disabled"

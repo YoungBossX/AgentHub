@@ -10,7 +10,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
-from app.agent_profiles import AgentProfile, profile_for_agent
+from app.agent_profiles import AgentProfile, list_agent_profile_registry, profile_for_agent
 from app.artifact_versions import (
     ArtifactVersionError,
     StoredArtifactVersion,
@@ -443,6 +443,7 @@ def agent_profile_response(profile: AgentProfile) -> AgentProfileResponse:
         safeForWrite=profile.safe_for_write,
         safeForReview=profile.safe_for_review,
         description=profile.description,
+        status=profile.status,
     )
 
 
@@ -475,8 +476,8 @@ def read_workspace_agent_profiles(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
 
     return [
-        agent_profile_response(profile_for_agent(agent))
-        for agent in _ordered_enabled_agents(db)
+        agent_profile_response(profile)
+        for profile in list_agent_profile_registry(_ordered_enabled_agents(db))
     ]
 
 

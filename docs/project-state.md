@@ -3,6 +3,42 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P14 Status
+
+### P14-1 Agent Profile Registry
+
+P14-1 completed on 2026-05-28.
+
+AgentHub now exposes a registry-style AgentProfile contract. Workspace
+AgentProfile responses include:
+
+- `id`;
+- `displayName`;
+- `avatarInitials`;
+- `role`;
+- `adapterType`;
+- `providerId`;
+- `capabilityTags`;
+- `supportedRoles`;
+- `supportedTargets`;
+- `supportedModes`;
+- `safeForWrite`;
+- `safeForReview`;
+- `description`;
+- `status`.
+
+The registry preserves current database-backed built-in agents and adds
+virtual built-in review and fallback profiles:
+
+- review profile: `virtual-review-agent`, status `planned`,
+  `safeForReview=true`;
+- fallback profile: `virtual-fallback-agent`, status `available`,
+  ScriptedMock-backed fallback metadata.
+
+P14-1 does not add provider config, capability enforcement, safe custom agent
+draft creation, marketplace behavior, or adapter dispatch changes. Those remain
+later P14 tasks.
+
 ## P13 Status
 
 ### P13-8 Mixed-provider Rehearsal and Freeze Review

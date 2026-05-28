@@ -199,6 +199,7 @@ describe("workspace and session API", () => {
             safeForWrite: true,
             safeForReview: false,
             description: "Executes bounded frontend changes.",
+            status: "available",
           },
         ]),
         { status: 200 },
@@ -220,6 +221,7 @@ describe("workspace and session API", () => {
     expect(profiles[0].providerId).toBe("local-codex-cli")
     expect(profiles[0].supportedRoles).toEqual(["frontend"])
     expect(profiles[0].supportedTargets).toContain("demo-frontend")
+    expect(profiles[0].status).toBe("available")
   })
 })
 
