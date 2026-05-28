@@ -101,7 +101,7 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
             "--permission-mode",
             "dontAsk",
             "--allowedTools",
-            "Read,Edit,MultiEdit",
+            "Read,Write,Edit,MultiEdit",
             "--no-session-persistence",
             "--max-budget-usd",
             "1.00",

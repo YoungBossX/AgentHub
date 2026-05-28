@@ -79,11 +79,18 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
     if base_ref is None:
         raise DiffCollectionError("TaskRun does not have a usable baseRef.")
 
-    pathspec = git_diff_pathspec(**_external_diff_policy(db, task_run))
-    patch_text = _run_git(worktree_path, ["diff", "-p", base_ref, "--", *pathspec])
+    pathspec = git_diff_pathspec(**_target_diff_policy(db, task_run))
+    tracked_patch = _run_git(worktree_path, ["diff", "-p", base_ref, "--", *pathspec])
+    untracked_files = _untracked_files(worktree_path, pathspec)
+    untracked_patch = _untracked_patch(worktree_path, untracked_files)
+    patch_text = _join_patches(tracked_patch, untracked_patch)
     changed_files = _changed_files(worktree_path, base_ref, pathspec)
-    stats = _diff_stats(worktree_path, base_ref, pathspec)
-    head_ref = _head_ref(worktree_path, has_worktree_changes=bool(patch_text))
+    changed_files = [*changed_files, *[path for path in untracked_files if path not in changed_files]]
+    stats = _merge_stats(
+        _diff_stats(worktree_path, base_ref, pathspec),
+        _untracked_stats(worktree_path, untracked_files),
+    )
+    head_ref = _head_ref(worktree_path, has_worktree_changes=bool(changed_files))
 
     now = utc_now()
     task_run.base_ref = base_ref
@@ -184,6 +191,30 @@ def _changed_files(worktree_path: Path, base_ref: str, pathspec: list[str]) -> l
     return [line for line in output.splitlines() if line]
 
 
+def _untracked_files(worktree_path: Path, pathspec: list[str]) -> list[str]:
+    output = _run_git(
+        worktree_path,
+        ["ls-files", "--others", "--exclude-standard", "--", *pathspec],
+    )
+    return [line for line in output.splitlines() if line]
+
+
+def _untracked_patch(worktree_path: Path, files: list[str]) -> str:
+    patches: list[str] = []
+    for path in files:
+        output = _run_git_diff_no_index(worktree_path, ["/dev/null", path])
+        if output:
+            patches.append(output)
+    return "\n".join(patch.rstrip() for patch in patches if patch.strip())
+
+
+def _join_patches(*patches: str) -> str:
+    clean = [patch.rstrip() for patch in patches if patch.strip()]
+    if not clean:
+        return ""
+    return "\n".join(clean) + "\n"
+
+
 def _diff_stats(worktree_path: Path, base_ref: str, pathspec: list[str]) -> dict[str, Any]:
     output = _run_git(worktree_path, ["diff", "--numstat", base_ref, "--", *pathspec])
     files: list[dict[str, Any]] = []
@@ -205,6 +236,48 @@ def _diff_stats(worktree_path: Path, base_ref: str, pathspec: list[str]) -> dict
         "deletions": deletions,
         "files": files,
     }
+
+
+def _untracked_stats(worktree_path: Path, files: list[str]) -> dict[str, Any]:
+    file_stats = [
+        {
+            "path": path,
+            "additions": _line_count(worktree_path / path),
+            "deletions": 0,
+        }
+        for path in files
+    ]
+    return {
+        "filesChanged": len(file_stats),
+        "additions": sum(item["additions"] for item in file_stats),
+        "deletions": 0,
+        "files": file_stats,
+    }
+
+
+def _merge_stats(*stats_items: dict[str, Any]) -> dict[str, Any]:
+    files: list[dict[str, Any]] = []
+    additions = 0
+    deletions = 0
+    for stats in stats_items:
+        stat_files = stats.get("files")
+        if isinstance(stat_files, list):
+            files.extend(item for item in stat_files if isinstance(item, dict))
+        additions += int(stats.get("additions") or 0)
+        deletions += int(stats.get("deletions") or 0)
+    return {
+        "filesChanged": len(files),
+        "additions": additions,
+        "deletions": deletions,
+        "files": files,
+    }
+
+
+def _line_count(path: Path) -> int:
+    try:
+        return len(path.read_text().splitlines())
+    except OSError:
+        return 0
 
 
 def _parse_numstat_value(value: str) -> int:
@@ -237,7 +310,24 @@ def _run_git(worktree_path: Path, args: list[str]) -> str:
     return result.stdout
 
 
-def _external_diff_policy(db: DbSession, task_run: TaskRun) -> dict[str, list[str]]:
+def _run_git_diff_no_index(worktree_path: Path, args: list[str]) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--no-index", "--", *args],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        raise DiffCollectionError(str(exc)) from exc
+    if result.returncode not in {0, 1}:
+        message = result.stderr.strip() or result.stdout.strip() or "Git command failed."
+        raise DiffCollectionError(message)
+    return result.stdout
+
+
+def _target_diff_policy(db: DbSession, task_run: TaskRun) -> dict[str, list[str]]:
     task = db.get(Task, task_run.task_id)
     if task is None:
         return {}
@@ -249,7 +339,7 @@ def _external_diff_policy(db: DbSession, task_run: TaskRun) -> dict[str, list[st
     except json.JSONDecodeError:
         return {}
     target_id = plan.get("targetId") if isinstance(plan, dict) else None
-    if not isinstance(target_id, str) or not target_id.startswith("external-"):
+    if not isinstance(target_id, str):
         return {}
     try:
         target = get_target_for_workspace(db, session.workspace_id, target_id)

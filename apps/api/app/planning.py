@@ -991,6 +991,31 @@ def _create_orchestrator_demo_frontend_task(
     frontend = _enabled_agent_or_raise(db, "frontend")
     frontend_target = get_target(DEMO_FRONTEND_TARGET_ID)
     frontend_allowed_path = _primary_allowed_path(frontend_target)
+    passthrough = _is_passthrough_frontend_request(message.content_md)
+    planner = "passthrough_v1" if passthrough else "orchestrator_auto_run_v1"
+    passthrough_plan = (
+        {
+            "plannerMode": "passthrough_v1",
+            "instructionMode": "passthrough_v1",
+            "allowedPaths": list(frontend_target.allowed_paths),
+            "deniedPaths": list(frontend_target.denied_paths),
+            "rationale": (
+                "The user requested bounded frontend implementation work inside "
+                "the registered demo frontend target, so preserve the original "
+                "request instead of rewriting it into a demo template."
+            ),
+            "acceptanceCriteria": [
+                "The implemented UI reflects the user's original request.",
+                "The app remains usable in the browser preview.",
+            ],
+            "validationExpectations": [
+                frontend_target.build_command or "pnpm build",
+                "Preview should remain startable.",
+            ],
+        }
+        if passthrough
+        else {}
+    )
     task = _create_single_task(
         db,
         message,
@@ -1000,7 +1025,7 @@ def _create_orchestrator_demo_frontend_task(
         priority=0,
         depends_on=[],
         plan={
-            "planner": "orchestrator_auto_run_v1",
+            "planner": planner,
             "routing": "orchestrator_default",
             "assignedRole": "frontend",
             "target": "demo_frontend_request",
@@ -1014,13 +1039,18 @@ def _create_orchestrator_demo_frontend_task(
             "originalRequest": message.content_md,
             "expectedArtifactTypes": ["diff", "review"],
             "autoStart": True,
+            **passthrough_plan,
             **_fallback_plan_metadata(llm_fallback),
         },
     )
     _create_orchestrator_boundary_message(
         db,
         message,
-        "I routed this to the Frontend Agent as a safe demo-app task and started it automatically.",
+        (
+            "I routed this to the Frontend Agent in passthrough mode and started it automatically."
+            if passthrough
+            else "I routed this to the Frontend Agent as a safe demo-app task and started it automatically."
+        ),
     )
     return [task]
 
@@ -1220,6 +1250,48 @@ def _is_safe_demo_frontend_request(content: str) -> bool:
         "hero",
     ]
     return any(signal in normalized for signal in safe_signals)
+
+
+def _is_passthrough_frontend_request(content: str) -> bool:
+    normalized = MENTION_PATTERN.sub("", content).lower()
+    implementation_signals = [
+        "implement",
+        "build",
+        "create",
+        "make",
+        "add",
+        "实现",
+        "构建",
+        "创建",
+        "做一个",
+        "做成",
+        "添加",
+        "新增",
+    ]
+    frontend_scope_signals = [
+        "current frontend",
+        "frontend project",
+        "当前前端",
+        "前端项目",
+        "当前项目",
+        "demo app",
+        "apps/demo",
+        "dashboard",
+        "game",
+        "游戏",
+        "页面",
+    ]
+    demo_template_signals = [
+        "login page",
+        "登录页",
+        "button text",
+        "按钮文案",
+    ]
+    return (
+        any(signal in normalized for signal in implementation_signals)
+        and any(signal in normalized for signal in frontend_scope_signals)
+        and not any(signal in normalized for signal in demo_template_signals)
+    )
 
 
 def _is_safe_external_frontend_request(content: str) -> bool:

@@ -622,6 +622,38 @@ def test_auto_start_policy_allows_registered_target_allowed_paths(
         ) is False
 
 
+def test_no_mention_breakout_request_routes_to_passthrough_frontend_task(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+
+    request = (
+        "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏，要求可以用键盘控制挡板，"
+        "球能反弹，能击碎砖块，有得分、胜利/失败状态和重新开始按钮。"
+    )
+    response = client.post(
+        f"/sessions/{session.id}/messages",
+        json={"contentMd": request},
+    )
+    task_response = client.get(f"/sessions/{session.id}/tasks")
+    tasks = task_response.json()
+
+    assert response.status_code == 201
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["assignedAgentRole"] == "frontend"
+    assert task["planJson"]["planner"] == "passthrough_v1"
+    assert task["planJson"]["plannerMode"] == "passthrough_v1"
+    assert task["planJson"]["instructionMode"] == "passthrough_v1"
+    assert task["planJson"]["originalRequest"] == request
+    assert task["planJson"]["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert task["planJson"]["autoStart"] is True
+    assert "Breakout" in task["title"]
+    assert task["planReviewMetadata"]["plannerMode"] == "passthrough_v1"
+    assert "original request" in task["planReviewMetadata"]["rationale"]
+
+
 def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     client: TestClient,
 ) -> None:

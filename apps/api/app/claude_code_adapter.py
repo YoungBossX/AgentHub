@@ -270,7 +270,7 @@ class ClaudeCodeAdapter(AgentAdapter):
             "--permission-mode",
             "dontAsk",
             "--allowedTools",
-            "Read,Edit,MultiEdit",
+            "Read,Write,Edit,MultiEdit",
             "--no-session-persistence",
             "--max-budget-usd",
             self._max_budget_usd,

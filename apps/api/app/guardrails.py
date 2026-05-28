@@ -261,7 +261,10 @@ def _is_claude_code_command(parts: list[str]) -> bool:
         and _option_value(parts, "--output-format") == "stream-json"
         and "--include-partial-messages" in parts
         and _option_value(parts, "--permission-mode") == "dontAsk"
-        and _option_value(parts, "--allowedTools") == "Read,Edit,MultiEdit"
+        and _option_value(parts, "--allowedTools") in {
+            "Read,Edit,MultiEdit",
+            "Read,Write,Edit,MultiEdit",
+        }
         and "--no-session-persistence" in parts
         and _option_value(parts, "--max-budget-usd") is not None
     )

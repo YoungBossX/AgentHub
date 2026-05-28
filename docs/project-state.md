@@ -5,6 +5,44 @@ reference instead of repeating long context blocks.
 
 ## P15 Status
 
+### P15-6 Breakout Game Real Coding Smoke
+
+P15-6 completed on 2026-05-28.
+
+AgentHub verified the P15 final acceptance target with a real Claude Code
+frontend run:
+
+- no-mention Breakout request routed to Orchestrator;
+- Orchestrator created a `passthrough_v1` frontend task, not a hardcoded
+  Breakout template;
+- original user request was preserved in the plan and provider instruction;
+- TaskRun `8d719899-8042-49b0-8e26-79d065841a3c` used
+  `adapterType=claude_code` and completed;
+- diff artifact `96b576ec-d673-49b7-a461-78e937f219b8` includes
+  `apps/demo/src/App.tsx`, `apps/demo/src/styles.css`, and the new
+  `apps/demo/src/BreakoutGame.tsx`;
+- scripted review artifact `706265e5-91dc-4d90-a309-b0ca7c4700ad` passed;
+- target-scoped build evidence artifact
+  `7dddb098-3e84-48c5-9855-4f2479a865f0` recorded `pnpm build` passing for
+  `demo-frontend`;
+- preview `68d04a67-99d1-4fdb-8bfb-5ba584ae6f6c` was healthy at
+  `http://127.0.0.1:50086`;
+- local staging deploy `1747ed90-9999-4919-bfac-8b4cdfea13a4` was ready at
+  `http://127.0.0.1:50424`.
+
+P15-6 added:
+
+- generic passthrough frontend planning for bounded implementation requests;
+- Claude Code `Write` tool permission for creating files inside the assigned
+  worktree;
+- diff collection for untracked files.
+
+Browser-click playability was not automated in this run because no browser
+automation tool was available and Playwright is not installed in the workspace.
+Static and preview evidence shows the generated app includes canvas gameplay,
+keyboard markers, score, restart, and Breakout UI code. Detailed evidence is in
+`docs/p15-breakout-smoke.md`.
+
 ### P15-5 Planner Rationale And Task Review Metadata
 
 P15-5 completed on 2026-05-28.

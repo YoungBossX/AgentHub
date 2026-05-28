@@ -186,6 +186,28 @@ def test_collect_task_run_diff_stores_git_patch_and_excludes_node_modules(
     assert "Diff captured 1 changed file" in version.summary
 
 
+def test_collect_task_run_diff_includes_untracked_files(
+    db: DbSession,
+    demo_worktree: Path,
+) -> None:
+    task_run_id = create_run_fixture(db, demo_worktree)
+    new_component = demo_worktree / "apps/demo/src/BreakoutGame.tsx"
+    new_component.write_text(
+        "export default function BreakoutGame() {\n"
+        "  return <canvas aria-label=\"Breakout game\" />\n"
+        "}\n"
+    )
+
+    diff_artifact = collect_task_run_diff(db, task_run_id)
+
+    assert "apps/demo/src/BreakoutGame.tsx" in diff_artifact.changed_files
+    assert "new file mode" in diff_artifact.patch_text
+    assert "BreakoutGame" in diff_artifact.patch_text
+    assert diff_artifact.stats["filesChanged"] == 1
+    assert diff_artifact.stats["files"][0]["path"] == "apps/demo/src/BreakoutGame.tsx"
+    assert diff_artifact.stats["files"][0]["additions"] == 3
+
+
 def test_external_task_run_diff_uses_allowed_paths_and_excludes_denied(
     db: DbSession,
     tmp_path: Path,

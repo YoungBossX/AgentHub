@@ -1,5 +1,47 @@
 # AgentHub Change Log
 
+## P15-6 Breakout Game Real Coding Smoke
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Added generic `passthrough_v1` routing for bounded frontend implementation requests inside the registered demo frontend target. |
+| `apps/api/app/claude_code_adapter.py` | Allowed Claude Code to use `Write` alongside `Read`, `Edit`, and `MultiEdit` so real runs can create new files inside the assigned worktree. |
+| `apps/api/app/guardrails.py` | Updated the documented Claude Code command allowlist to permit the expanded write tool set. |
+| `apps/api/app/diffs.py` | Included untracked files in diff artifacts, stats, changed files, and downstream review/ledger evidence. |
+| `apps/api/tests/test_planning.py` | Added no-mention Breakout request coverage for `passthrough_v1` routing. |
+| `apps/api/tests/test_claude_code_adapter.py` | Updated Claude Code command-shape coverage for `Write`. |
+| `apps/api/tests/test_guardrails.py` | Updated runtime command policy coverage for the expanded Claude Code tool list. |
+| `apps/api/tests/test_diffs.py` | Added untracked file diff collection coverage. |
+| `docs/p15-breakout-smoke.md` | Recorded real Claude Code Breakout smoke evidence and caveats. |
+| `docs/project-state.md` | Recorded P15-6 behavior, evidence, and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-6 complete after targeted verification and smoke evidence. |
+
+### What Changed
+
+AgentHub can now route a bounded frontend implementation request into
+`passthrough_v1` without rewriting it into the old demo template. The Breakout
+smoke used real `ClaudeCodeAdapter` execution and produced a completed run,
+real diff, scripted review, target-scoped build evidence, healthy preview, and
+local staging deployment.
+
+The smoke also fixed two practical execution blockers discovered by real use:
+Claude Code needed `Write` permission for new files, and diff collection needed
+to include untracked agent-created files.
+
+### Validation
+
+| Command / Smoke | Result |
+|---|---|
+| P15-6 targeted planning/adapter/guardrail/diff tests | Pass: 6 tests. |
+| Real Breakout smoke | Pass with caveat: browser-click automation unavailable. |
+
+---
+
 ## P15-5 Planner Rationale And Task Review Metadata
 
 **Date:** 2026-05-28

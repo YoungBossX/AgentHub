@@ -169,7 +169,7 @@ async def test_claude_code_adapter_builds_documented_command_shape(
         "--permission-mode",
         "dontAsk",
         "--allowedTools",
-        "Read,Edit,MultiEdit",
+        "Read,Write,Edit,MultiEdit",
         "--no-session-persistence",
         "--max-budget-usd",
         "0.25",
