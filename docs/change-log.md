@@ -1,5 +1,35 @@
 # AgentHub Change Log
 
+## P15-2 Passthrough Instruction Mode
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/instruction_builder.py` | Added passthrough instruction rendering for `llm_v1` / `passthrough_v1` plans before deterministic demo-template branches. |
+| `apps/api/tests/test_task_runs.py` | Added Breakout-style instruction coverage proving the original request is preserved and old demo-slot rewrite is skipped. |
+| `docs/project-state.md` | Recorded P15-2 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-2 complete after targeted verification. |
+
+### What Changed
+
+Provider instructions now preserve original request/task descriptions for
+`llm_v1` and `passthrough_v1` plans. The shared target, context, contract,
+artifact, acceptance, validation, and guardrail sections still render through
+the existing provider-specific wrappers, but old login-page/button/demo-slot
+instructions no longer override passthrough plans.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15-2 targeted instruction tests | Pass: 4 tests. |
+
+---
+
 ## P15-1 LLM Planner v1
 
 **Date:** 2026-05-28

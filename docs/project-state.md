@@ -5,6 +5,29 @@ reference instead of repeating long context blocks.
 
 ## P15 Status
 
+### P15-2 Passthrough Instruction Mode
+
+P15-2 completed on 2026-05-28.
+
+Provider instruction generation now recognizes `llm_v1` and
+`passthrough_v1` plans before the old deterministic demo-template branches.
+For passthrough plans, AgentHub preserves:
+
+- the original user request;
+- the task description;
+- target ID and allowed paths;
+- acceptance criteria;
+- validation expectations;
+- CanonicalSharedContext, artifact/handoff context, and existing guardrails.
+
+The passthrough body explicitly tells Claude Code or Codex not to rewrite the
+task into the old login-page, button-copy, or demo-slot template unless the
+plan explicitly selected deterministic demo fallback.
+
+P15-2 does not expand target permissions or command execution policy. It only
+changes provider instruction rendering for plans that already opt into
+`llm_v1` or `passthrough_v1`.
+
 ### P15-1 LLM Planner v1
 
 P15-1 completed on 2026-05-28.

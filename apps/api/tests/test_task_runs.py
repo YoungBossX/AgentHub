@@ -1398,6 +1398,56 @@ def test_backend_instruction_targets_demo_backend_without_platform_api_access(
     assert request.plan_context["sessionContext"]["safeTargetPaths"] == ["apps/demo-api"]
 
 
+def test_passthrough_instruction_preserves_original_request_without_demo_rewrite(
+    client: TestClient,
+) -> None:
+    breakout_request = (
+        "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏，要求可以用键盘控制挡板，"
+        "球能反弹，能击碎砖块，有得分、胜利/失败状态和重新开始按钮。"
+    )
+    with db_from_override() as db:
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        task = Task(
+            session_id=session_id,
+            title="Implement Breakout game",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "planner": "llm_v1",
+                    "plannerMode": "llm_v1",
+                    "target": "login_page",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "safeTarget": "apps/demo/src",
+                    "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+                    "originalRequest": breakout_request,
+                    "description": "Implement a playable Breakout game.",
+                    "acceptanceCriteria": [
+                        "Keyboard controls move the paddle",
+                        "Ball can break bricks",
+                    ],
+                    "validationExpectations": ["pnpm build"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert breakout_request in request.instruction
+    assert "Instruction mode: llm_v1" in request.instruction
+    assert "Do not rewrite this request into the old login-page" in request.instruction
+    assert "Keyboard controls move the paddle" in request.instruction
+    assert "pnpm build" in request.instruction
+    assert 'data-agenthub-target="login-page-slot"' not in request.instruction
+
+
 def test_external_target_context_reaches_instruction_builder(
     client: TestClient,
     tmp_path,

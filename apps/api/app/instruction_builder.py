@@ -57,6 +57,8 @@ def _role_body(
 ) -> str:
     if target.type == "platform":
         return _platform_body(original_request, target)
+    if _is_passthrough_plan(plan):
+        return _passthrough_body(role, task, plan, original_request, target)
     if role == "frontend":
         return _frontend_body(task, plan, original_request, target, context_pack)
     if role == "backend":
@@ -70,6 +72,42 @@ def _role_body(
         f"Original user request: {original_request}\n"
         "Use the session context pack below and stay within the assigned safe target."
     )
+
+
+def _passthrough_body(
+    role: str,
+    task: Task,
+    plan: dict[str, Any],
+    original_request: str,
+    target: TargetProject,
+) -> str:
+    task_description = str(
+        plan.get("description")
+        or plan.get("summary")
+        or task.title
+    ).strip()
+    acceptance = _string_list(plan.get("acceptanceCriteria"))
+    validation = _string_list(plan.get("validationExpectations"))
+    lines = [
+        f"You are the {role.title()} Agent for AgentHub.",
+        f"Instruction mode: {plan.get('plannerMode') or plan.get('instructionMode') or plan.get('planner')}.",
+        f"Original user request: {original_request}",
+        f"Task description: {task_description}",
+        (
+            "Preserve the user's intent. Do not rewrite this request into the "
+            "old login-page, button-copy, or demo-slot template unless the plan "
+            "explicitly says deterministic demo fallback is being used."
+        ),
+        (
+            f"Implement meaningful coding work only inside target `{target.target_id}` "
+            f"allowed paths: {', '.join(target.allowed_paths)}."
+        ),
+    ]
+    if acceptance:
+        lines.append("Acceptance criteria:\n" + "\n".join(f"- {item}" for item in acceptance))
+    if validation:
+        lines.append("Validation expectations:\n" + "\n".join(f"- {item}" for item in validation))
+    return "\n".join(lines)
 
 
 def _frontend_body(
@@ -459,6 +497,16 @@ def _effective_role(
     if task.intent_type == "review":
         return "review"
     return agent.role
+
+
+def _is_passthrough_plan(plan: dict[str, Any]) -> bool:
+    planner = _string_value(plan.get("planner"))
+    planner_mode = _string_value(plan.get("plannerMode"))
+    instruction_mode = _string_value(plan.get("instructionMode"))
+    return any(
+        value in {"llm_v1", "passthrough_v1"}
+        for value in (planner, planner_mode, instruction_mode)
+    )
 
 
 def _task_plan(context_pack: dict[str, Any]) -> dict[str, Any]:
