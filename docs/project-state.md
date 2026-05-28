@@ -5,6 +5,25 @@ reference instead of repeating long context blocks.
 
 ## P14 Status
 
+### P14-7 Rehearsal And Freeze Review
+
+P14-7 completed on 2026-05-28.
+
+P14 is ready to freeze as Custom Agent / Provider / Plugin Foundation.
+
+Rehearsal verified:
+
+- built-in orchestrator, frontend, backend, QA, review, and fallback profiles;
+- provider-aware selection and assignment metadata;
+- backend=Codex/frontend=Claude Code deterministic mixed-provider evidence;
+- invalid target/capability/safety assignment rejection;
+- Agent Contact UI provider/capability/target/status metadata display;
+- safe custom AgentProfile draft creation and unsafe draft rejection;
+- P6-P13 baseline coverage through the full validation suite.
+
+Detailed evidence and caveats are recorded in `docs/p14-freeze-review.md`.
+Recommended tag: `p14-custom-agent-provider-foundation-freeze`.
+
 ### P14-6 Safe Custom Agent Draft
 
 P14-6 completed on 2026-05-28.

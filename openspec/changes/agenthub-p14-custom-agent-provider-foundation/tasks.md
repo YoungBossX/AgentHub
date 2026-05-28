@@ -6,17 +6,17 @@
 - [x] 1.4 P14-4 Agent Selection Policy: resolve agent/provider by explicit mention, ProviderAssignmentMatrix, role, target, capability, and safeForWrite/safeForReview; reject unsupported target/capability assignments honestly; preserve explicit fallback auditability.
 - [x] 1.5 P14-5 Agent Contact UI Upgrade: show provider badge, adapter type, capability tags, supported targets, status/auth issue/unavailable states in the existing contact UI; preserve Direct chat / Group workflow visual modes and current task controls.
 - [x] 1.6 P14-6 Safe Custom Agent Draft: allow draft AgentProfile metadata while keeping draft agents disabled or review-only until validated; reject arbitrary user-supplied shell commands, unsafe tool permissions, unrestricted filesystem access, and marketplace behavior.
-- [ ] 1.7 P14-7 P14 Rehearsal And Freeze Review: verify built-in agents still work, provider-aware selection still works, backend=Codex/frontend=Claude Code metadata remains intact, invalid capability/target assignment is rejected, UI metadata is visible, and P6-P13 baselines remain intact.
+- [x] 1.7 P14-7 P14 Rehearsal And Freeze Review: verify built-in agents still work, provider-aware selection still works, backend=Codex/frontend=Claude Code metadata remains intact, invalid capability/target assignment is rejected, UI metadata is visible, and P6-P13 baselines remain intact.
 
 ## 2. Explicit Non-goals
 
-- [ ] 2.1 Confirm P14 does not implement full provider marketplace, arbitrary custom shell command agents, OpenCode integration, cloud token manager, enterprise RBAC, multi-user agent sharing, production deploy, desktop/IDE/CLI clients, or adapter replacement.
+- [x] 2.1 Confirm P14 does not implement full provider marketplace, arbitrary custom shell command agents, OpenCode integration, cloud token manager, enterprise RBAC, multi-user agent sharing, production deploy, desktop/IDE/CLI clients, or adapter replacement.
 
 ## 3. Validation
 
-- [ ] 3.1 Run targeted backend and frontend tests added for each P14 task.
-- [ ] 3.2 Run `pnpm check`.
-- [ ] 3.3 Run `pnpm test`.
-- [ ] 3.4 Run `pnpm demo:api:test`.
-- [ ] 3.5 Run `git diff --check`.
-- [ ] 3.6 Run `openspec validate agenthub-p14-custom-agent-provider-foundation --strict`.
+- [x] 3.1 Run targeted backend and frontend tests added for each P14 task.
+- [x] 3.2 Run `pnpm check`.
+- [x] 3.3 Run `pnpm test`.
+- [x] 3.4 Run `pnpm demo:api:test`.
+- [x] 3.5 Run `git diff --check`.
+- [x] 3.6 Run `openspec validate agenthub-p14-custom-agent-provider-foundation --strict`.

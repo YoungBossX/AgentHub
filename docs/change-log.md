@@ -1,5 +1,35 @@
 # AgentHub Change Log
 
+## P14-7 Rehearsal And Freeze Review
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p14-freeze-review.md` | Added P14 freeze decision, rehearsal evidence, caveats, and recommended tag. |
+| `docs/project-state.md` | Recorded P14-7 freeze result and current P14 status. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-7, explicit non-goals, and validation complete after verification. |
+
+### What Changed
+
+P14 freeze review confirmed the custom agent/provider foundation is complete
+without adding marketplace behavior or unsafe custom execution. The review
+verified built-in profiles, provider-aware selection, capability/target
+rejection, Agent Contact UI metadata, safe draft metadata, deterministic
+mixed-provider evidence, and P6-P13 baseline preservation.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P14 targeted backend rehearsal tests | Pass: 11 tests. |
+| P14 targeted frontend UI/API tests | Pass: 9 files / 40 tests. |
+
+---
+
 ## P14-6 Safe Custom Agent Draft
 
 **Date:** 2026-05-28
