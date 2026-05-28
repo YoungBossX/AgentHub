@@ -44,27 +44,6 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# public documentation
-# Keep the small set of files a public repo normally exposes.
-/*.md
-/*.pdf
-/*.doc
-/*.docx
-/*.ppt
-/*.pptx
-/*.xls
-/*.xlsx
-!/README.md
-!/AGENTS.md
-!/CHANGELOG.md
-!/CONTRIBUTING.md
-!/LICENSE.md
-!/SECURITY.md
-!/CODE_OF_CONDUCT.md
-
-# internal planning and demo evidence
-openspec/
-
 # OS / IDE
 .DS_Store
 .DS_Store?
@@ -114,9 +93,11 @@ coverage/
 *agent建议*.md
 agenthub_design_v_2.md
 
-# Project docs and specs (local only)
-docs/
+# Internal OpenSpec planning files (not for public repo)
 openspec/
+
+# Internal project docs (for AI/dev workflow, not for public users)
+docs/
 
 # Extra local temp files
 *.local
@@ -128,8 +109,5 @@ openspec/
 *.old.*
 *.orig
 *.rej
-*.swp
-*.swo
-*~
 .*.swp
 .*.swo
