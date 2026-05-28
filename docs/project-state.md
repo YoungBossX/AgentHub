@@ -5,6 +5,28 @@ reference instead of repeating long context blocks.
 
 ## P15b Status
 
+### P15b-3 Real Planner Provider Implementation
+
+P15b-3 completed on 2026-05-28.
+
+AgentHub now has one real planner provider path:
+
+- `AGENTHUB_LLM_PLANNER_PROVIDER=claude_cli` selects the Claude CLI planner
+  provider;
+- the provider uses Claude CLI print mode with a planning-only prompt and asks
+  for PlannerResponse JSON;
+- `AGENTHUB_LLM_PLANNER_TIMEOUT_SEC` controls planner timeout;
+- stdout is preserved as raw planner output for later structured parsing;
+- auth, quota, timeout, missing executable, empty output, and runtime failures
+  are normalized into planner-provider result metadata;
+- provider result metadata remains safe and does not include secrets or raw
+  command credentials.
+
+P15b-3 did not run a real Claude planner smoke. It only implements and tests the
+provider path with fake command runners. Structured output extraction,
+PlanValidator hardening, mission trace evidence expansion, and Breakout
+planner rehearsal remain later P15b tasks.
+
 ### P15b-2 Planner Request / Response Contract
 
 P15b-2 completed on 2026-05-28.

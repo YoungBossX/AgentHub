@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import time
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -8,6 +11,9 @@ from app.config import Settings, get_settings
 
 PLANNER_PROVIDER_DISABLED = "disabled"
 PLANNER_PROVIDER_FAKE_TEST = "fake_test"
+PLANNER_PROVIDER_CLAUDE_CLI = "claude_cli"
+DEFAULT_CLAUDE_PLANNER_BINARY = "claude"
+STDERR_LIMIT = 1200
 
 
 class PlannerProviderError(ValueError):
@@ -69,6 +75,32 @@ class PlannerProvider(Protocol):
         ...
 
 
+class PlannerCommandRunner(Protocol):
+    def run(
+        self,
+        command: list[str],
+        *,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        ...
+
+
+class SubprocessPlannerCommandRunner:
+    def run(
+        self,
+        command: list[str],
+        *,
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+
+
 @dataclass(frozen=True)
 class DisabledPlannerProvider:
     provider_id: str = PLANNER_PROVIDER_DISABLED
@@ -104,6 +136,122 @@ class FakePlannerProvider:
         )
 
 
+class ClaudeCliPlannerProvider:
+    provider_id = "claude-cli-planner"
+    provider_type = PLANNER_PROVIDER_CLAUDE_CLI
+    planner_source = "real_llm"
+
+    def __init__(
+        self,
+        *,
+        command_runner: PlannerCommandRunner | None = None,
+        claude_binary: str | None = None,
+        timeout_sec: int = 60,
+    ) -> None:
+        self._command_runner = command_runner or SubprocessPlannerCommandRunner()
+        self._claude_binary = (
+            claude_binary
+            or os.environ.get("AGENTHUB_LLM_PLANNER_CLAUDE_CLI_PATH")
+            or DEFAULT_CLAUDE_PLANNER_BINARY
+        )
+        self._timeout_sec = timeout_sec
+
+    def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
+        command = self._build_command(planner_input)
+        started = time.monotonic()
+        try:
+            completed = self._command_runner.run(command, timeout=self._timeout_sec)
+        except subprocess.TimeoutExpired:
+            return self._error_result(
+                "PLANNER_TIMEOUT",
+                f"Claude CLI planner timed out after {self._timeout_sec} seconds.",
+                started,
+            )
+        except FileNotFoundError:
+            return self._error_result(
+                "PLANNER_PROVIDER_UNAVAILABLE",
+                "Claude CLI planner executable was not found.",
+                started,
+            )
+        except Exception as exc:
+            return self._error_result(
+                "PLANNER_RUNTIME_ERROR",
+                str(exc) or "Claude CLI planner failed before producing output.",
+                started,
+            )
+
+        duration_ms = _duration_ms(started)
+        stderr = _excerpt(completed.stderr or "")
+        stdout = completed.stdout or ""
+        if completed.returncode != 0:
+            code = _planner_error_code_for_text(stderr or stdout)
+            return PlannerProviderResult(
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+                planner_source=self.planner_source,
+                status="failed",
+                duration_ms=duration_ms,
+                error_code=code,
+                error_summary=stderr or f"Claude CLI planner exited with code {completed.returncode}.",
+            )
+        if not stdout.strip():
+            return PlannerProviderResult(
+                provider_id=self.provider_id,
+                provider_type=self.provider_type,
+                planner_source=self.planner_source,
+                status="failed",
+                duration_ms=duration_ms,
+                error_code="PLANNER_EMPTY_OUTPUT",
+                error_summary="Claude CLI planner returned no output.",
+            )
+        return PlannerProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            planner_source=self.planner_source,
+            status="succeeded",
+            raw_output=stdout.strip(),
+            duration_ms=duration_ms,
+        )
+
+    def _build_command(self, planner_input: dict[str, Any]) -> list[str]:
+        prompt = (
+            "You are AgentHub's llm_v1 planning engine. Return only JSON that "
+            "matches the PlannerResponse contract. Do not edit files, run "
+            "commands, deploy, or call external services. Use only the provided "
+            "target registry, roles, capabilities, and guardrails.\n\n"
+            "PlannerRequest JSON:\n"
+            f"{json.dumps(planner_input, ensure_ascii=False, sort_keys=True)}"
+        )
+        return [
+            self._claude_binary,
+            "--print",
+            "--output-format",
+            "text",
+            "--permission-mode",
+            "dontAsk",
+            "--allowedTools",
+            "Read",
+            "--no-session-persistence",
+            prompt,
+        ]
+
+    def _error_result(
+        self,
+        code: str,
+        summary: str,
+        started: float,
+    ) -> PlannerProviderResult:
+        return PlannerProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            planner_source=self.planner_source,
+            status="failed",
+            duration_ms=_duration_ms(started),
+            error_code=code,
+            error_summary=summary,
+        )
+
+
 def resolve_planner_provider(
     settings: Settings | None = None,
     *,
@@ -121,8 +269,39 @@ def resolve_planner_provider(
                 provider_id=provider_id,
             )
         return FakePlannerProvider(payload=fake_payload)
+    if provider_id == PLANNER_PROVIDER_CLAUDE_CLI:
+        return ClaudeCliPlannerProvider(
+            timeout_sec=resolved_settings.llm_planner_timeout_sec,
+        )
     raise PlannerProviderError(
         code="UNKNOWN_PLANNER_PROVIDER",
         summary=f"Unknown LLM planner provider: {provider_id}",
         provider_id=provider_id,
     )
+
+
+def _duration_ms(started: float) -> int:
+    return max(0, int((time.monotonic() - started) * 1000))
+
+
+def _excerpt(value: str) -> str:
+    if len(value) <= STDERR_LIMIT:
+        return value
+    return value[:STDERR_LIMIT]
+
+
+def _planner_error_code_for_text(text: str) -> str:
+    normalized = text.lower()
+    if "usage limit" in normalized or "rate limit" in normalized or "quota" in normalized:
+        return "PLANNER_QUOTA_LIMIT"
+    if (
+        "auth" in normalized
+        or "login" in normalized
+        or "not logged in" in normalized
+        or "unauthorized" in normalized
+        or "api key" in normalized
+    ):
+        return "PLANNER_AUTH_REQUIRED"
+    if "timeout" in normalized or "timed out" in normalized:
+        return "PLANNER_TIMEOUT"
+    return "PLANNER_RUNTIME_ERROR"

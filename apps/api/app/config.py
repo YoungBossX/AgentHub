@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://127.0.0.1:3000"
     llm_planner_enabled: bool = False
     llm_planner_provider: str = "disabled"
+    llm_planner_timeout_sec: int = 60
 
     model_config = SettingsConfigDict(
         env_file=".env",

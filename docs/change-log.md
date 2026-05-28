@@ -1,5 +1,40 @@
 # AgentHub Change Log
 
+## P15b-3 Real Planner Provider Implementation
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added `claude_cli` real planner provider path, constrained command shape, timeout handling, and normalized auth/quota/runtime/unavailable errors. |
+| `apps/api/app/config.py` | Added `AGENTHUB_LLM_PLANNER_TIMEOUT_SEC` for real planner provider timeout control. |
+| `apps/api/tests/test_planner_providers.py` | Added `claude_cli` resolver, command-shape, success, timeout, missing binary, and normalized error coverage. |
+| `docs/project-state.md` | Recorded P15b-3 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-3 complete after verification. |
+
+### What Changed
+
+AgentHub can now explicitly select `AGENTHUB_LLM_PLANNER_PROVIDER=claude_cli`
+as a real planner provider. The provider invokes Claude CLI in print mode with
+a planning-only prompt, captures stdout/stderr, applies a timeout, and records
+normalized failures for auth, quota, timeout, unavailable executable, empty
+output, and runtime errors.
+
+This only adds the real provider path. It does not run a real planner smoke,
+does not claim planner success, and still requires structured parsing,
+validation, and later rehearsal before freeze.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15b-3 targeted planner provider/contract/LLM planner tests | Pass: 20 tests. |
+
+---
+
 ## P15b-2 Planner Request / Response Contract
 
 **Date:** 2026-05-28
