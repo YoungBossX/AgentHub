@@ -5,6 +5,27 @@ reference instead of repeating long context blocks.
 
 ## P14 Status
 
+### P14-2 Provider Config Registry
+
+P14-2 completed on 2026-05-28.
+
+AgentHub now exposes non-secret provider config metadata through the
+read-only `/provider-configs` API and the web client helper
+`listProviderConfigs`.
+
+Current provider configs:
+
+- `local-claude-code-cli` / `claude_code` / auth status `unchecked`;
+- `local-codex-cli` / `codex` / auth status `unchecked`;
+- `local-scripted-mock` / `scripted_mock` / auth status `not_required`.
+
+Provider config responses include provider ID, display name, adapter type,
+auth status, availability, default roles, and supported modes. They do not
+include secrets, tokens, API keys, raw credentials, or cloud token management.
+
+P14-2 does not implement provider installation, marketplace behavior, cloud
+credential setup, or adapter dispatch changes.
+
 ### P14-1 Agent Profile Registry
 
 P14-1 completed on 2026-05-28.

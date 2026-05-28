@@ -148,6 +148,16 @@ class AgentProfileResponse(ApiModel):
     status: str
 
 
+class ProviderConfigResponse(ApiModel):
+    provider_id: str = Field(alias="providerId")
+    display_name: str = Field(alias="displayName")
+    adapter_type: str = Field(alias="adapterType")
+    auth_status: str = Field(alias="authStatus")
+    available: bool
+    default_for_roles: list[str] = Field(alias="defaultForRoles")
+    supported_modes: list[str] = Field(alias="supportedModes")
+
+
 class SessionResponse(ApiModel):
     id: str
     workspace_id: str = Field(alias="workspaceId")

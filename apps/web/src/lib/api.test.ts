@@ -13,6 +13,7 @@ import {
   getBackendHealth,
   getDemoWorkspace,
   interruptTaskRun,
+  listProviderConfigs,
   listWorkspaceAgentProfiles,
   listWorkspaceAgents,
   listTaskRunDeployments,
@@ -222,6 +223,33 @@ describe("workspace and session API", () => {
     expect(profiles[0].supportedRoles).toEqual(["frontend"])
     expect(profiles[0].supportedTargets).toContain("demo-frontend")
     expect(profiles[0].status).toBe("available")
+  })
+
+  it("lists provider config metadata without secrets", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify([
+          {
+            providerId: "local-claude-code-cli",
+            displayName: "Claude Code CLI",
+            adapterType: "claude_code",
+            authStatus: "unchecked",
+            available: true,
+            defaultForRoles: ["frontend", "backend"],
+            supportedModes: ["frontend", "backend", "review", "debug"],
+          },
+        ]),
+        { status: 200 },
+      )
+    })
+
+    const configs = await listProviderConfigs("http://127.0.0.1:8000", fetchMock)
+
+    expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:8000/provider-configs", {
+      cache: "no-store",
+    })
+    expect(configs[0].providerId).toBe("local-claude-code-cli")
+    expect(configs[0].authStatus).toBe("unchecked")
   })
 })
 

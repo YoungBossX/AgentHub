@@ -1,5 +1,48 @@
 # AgentHub Change Log
 
+## P14-2 Provider Config Registry
+
+**Date:** 2026-05-28
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/provider_configs.py` | Added non-secret provider config metadata for Claude Code CLI, Codex CLI, and Scripted Mock. |
+| `apps/api/app/schemas.py` | Added ProviderConfig API response schema. |
+| `apps/api/app/main.py` | Added read-only `/provider-configs` endpoint. |
+| `apps/api/tests/test_provider_configs.py` | Added provider config API coverage and secret-field guard. |
+| `apps/web/src/lib/api.ts` | Added ProviderConfig client type and `listProviderConfigs`. |
+| `apps/web/src/lib/api.test.ts` | Added web API coverage for provider config metadata. |
+| `docs/project-state.md` | Recorded P14-2 behavior and limitations. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-2 complete after verification. |
+
+### What Changed
+
+AgentHub now exposes a read-only Provider Config Registry for current local
+providers:
+
+- Claude Code CLI;
+- Codex CLI;
+- Scripted Mock.
+
+Provider config metadata includes provider ID, display name, adapter type,
+auth status, availability, default roles, and supported modes. The registry
+does not store or expose secrets, tokens, API keys, or raw credentials.
+
+P14-2 does not implement cloud token management, provider marketplace behavior,
+provider installation, or adapter dispatch changes.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| Targeted provider config API test | Pass: 1 test. |
+| Targeted web API tests | Pass: 40 tests. |
+
+---
+
 ## P14-1 Agent Profile Registry
 
 **Date:** 2026-05-28

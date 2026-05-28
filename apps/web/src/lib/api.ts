@@ -44,6 +44,16 @@ export type AgentProfile = {
   status: string
 }
 
+export type ProviderConfig = {
+  providerId: string
+  displayName: string
+  adapterType: string
+  authStatus: string
+  available: boolean
+  defaultForRoles: string[]
+  supportedModes: string[]
+}
+
 export type WorkspaceSession = {
   id: string
   workspaceId: string
@@ -315,6 +325,21 @@ export async function listWorkspaceAgentProfiles(
   }
 
   return (await response.json()) as AgentProfile[]
+}
+
+export async function listProviderConfigs(
+  backendUrl: string,
+  fetcher: Fetcher = fetch,
+): Promise<ProviderConfig[]> {
+  const response = await fetcher(apiUrl(backendUrl, "/provider-configs"), {
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as ProviderConfig[]
 }
 
 export async function createWorkspaceSession(

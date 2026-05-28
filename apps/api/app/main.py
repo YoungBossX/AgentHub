@@ -57,6 +57,7 @@ from app.models import utc_now
 from app.planning import MentionParseError, plan_for_message
 from app.project_analyzer import ProjectAnalysisResult, analyze_external_project
 from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
+from app.provider_configs import ProviderConfig, list_provider_configs
 from app.repositories import (
     create_session_message,
     get_demo_workspace,
@@ -104,6 +105,7 @@ from app.schemas import (
     MessageCreateRequest,
     MessageResponse,
     PreviewResponse,
+    ProviderConfigResponse,
     ReviewArtifactResponse,
     SessionCreateRequest,
     SessionExecutionLedgerResponse,
@@ -445,6 +447,23 @@ def agent_profile_response(profile: AgentProfile) -> AgentProfileResponse:
         description=profile.description,
         status=profile.status,
     )
+
+
+def provider_config_response(config: ProviderConfig) -> ProviderConfigResponse:
+    return ProviderConfigResponse(
+        providerId=config.provider_id,
+        displayName=config.display_name,
+        adapterType=config.adapter_type,
+        authStatus=config.auth_status,
+        available=config.available,
+        defaultForRoles=config.default_for_roles,
+        supportedModes=config.supported_modes,
+    )
+
+
+@app.get("/provider-configs", response_model=list[ProviderConfigResponse])
+def read_provider_configs() -> list[ProviderConfigResponse]:
+    return [provider_config_response(config) for config in list_provider_configs()]
 
 
 @app.get(
