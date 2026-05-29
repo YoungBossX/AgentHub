@@ -14,7 +14,7 @@ from app.canonical_context import build_canonical_shared_context, filter_protect
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.plan_validator import PlanValidationError, validate_task_graph
-from app.planner_contracts import PlannerRequest, PlannerResponse
+from app.planner_contracts import ConversationOutcome, PlannerRequest, PlannerResponse
 from app.planner_service import build_plan_draft
 from app.planner_providers import (
     PlannerProvider,
@@ -210,9 +210,46 @@ def create_llm_plan_tasks(
 
 
 def parse_llm_plan_output(raw_text: str) -> dict[str, Any]:
+    outcome_payload = parse_conversation_outcome_output(raw_text)
+    if outcome_payload["outcomeType"] != "task_plan":
+        raise LLMPlannerError(
+            f"LLM conversation outcome did not create a task plan: {outcome_payload['outcomeType']}."
+        )
+    plan_draft = outcome_payload.get("planDraft")
+    if not isinstance(plan_draft, dict):
+        raise LLMPlannerError("LLM task_plan outcome must include a PlanDraft object.")
+    return plan_draft
+
+
+def parse_conversation_outcome_output(raw_text: str) -> dict[str, Any]:
     payload = _extract_json_payload(raw_text)
     if not isinstance(payload, dict):
         raise LLMPlannerError("LLM planner output must be a JSON object.")
+    if "outcomeType" in payload:
+        try:
+            outcome = ConversationOutcome.model_validate(payload)
+        except ValidationError as exc:
+            raise LLMPlannerError(
+                "LLM conversation outcome failed ConversationOutcome schema validation."
+            ) from exc
+        outcome_payload = outcome.to_payload()
+        if outcome.outcome_type == "task_plan":
+            _validate_plan_response_payload(outcome_payload["planDraft"])
+        return outcome_payload
+    # Backward compatibility for existing tests and deterministic fake planner
+    # payloads that still emit a raw PlannerResponse.
+    _validate_plan_response_payload(payload)
+    return ConversationOutcome(
+        outcomeType="task_plan",
+        planDraft=PlannerResponse.model_validate(payload),
+        riskLevel="medium",
+        reason=_string_value(payload.get("rationale")) or "Legacy PlannerResponse payload.",
+        plannerProvider={},
+        validationResult="pending",
+    ).to_payload()
+
+
+def _validate_plan_response_payload(payload: dict[str, Any]) -> None:
     try:
         response = PlannerResponse.model_validate(payload)
     except ValidationError as exc:
@@ -225,7 +262,6 @@ def parse_llm_plan_output(raw_text: str) -> dict[str, Any]:
         raise LLMPlannerError("LLM planner output must include tasks.")
     if not response.rationale.strip():
         raise LLMPlannerError("LLM planner output must include rationale.")
-    return response.to_payload()
 
 
 def _extract_json_payload(raw_text: str) -> Any:

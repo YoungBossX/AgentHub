@@ -1,5 +1,29 @@
 # AgentHub Change Log
 
+## P17-2b LLM-first Orchestrator Entry
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/llm_planner.py` | Added ConversationOutcome parsing for LLM planner output while preserving PlannerResponse compatibility for existing tests and fake providers. |
+| `apps/api/app/planner_providers.py` | Updated the Claude CLI planner prompt to request a single ConversationOutcome and separate chat/routing decisions from coding execution. |
+| `apps/api/tests/test_planner_contracts.py` | Added ConversationOutcome parser coverage for task plans and assistant replies. |
+| `apps/api/tests/test_planner_providers.py` | Updated prompt assertions for the ConversationOutcome contract. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-2b complete after targeted validation. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py tests/test_planner_providers.py tests/test_llm_planner.py -q` | Pass: 34 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_no_mention_message_uses_configured_llm_planner_provider tests/test_planning.py::test_runtime_config_selects_planner_provider_for_no_mention_message tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | Pass: 3 tests. |
+
+---
+
 ## P17-2a Retire Legacy Signal Gates From Primary Routing
 
 **Date:** 2026-05-29

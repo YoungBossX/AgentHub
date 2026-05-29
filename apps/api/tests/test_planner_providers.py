@@ -120,6 +120,9 @@ def test_claude_cli_planner_provider_returns_real_llm_result() -> None:
     assert runner.command[:2] == ["claude", "--print"]
     assert "--allowedTools" in runner.command
     assert "Return ONLY one JSON object" in runner.command[-1]
+    assert "ConversationOutcome contract" in runner.command[-1]
+    assert "For normal chat, greetings, or capability questions, return assistant_reply" in runner.command[-1]
+    assert "planDraft must match this PlannerResponse contract" in runner.command[-1]
     assert "Each task must include title, role, targetId" in runner.command[-1]
     assert "Create at most 4 tasks" in runner.command[-1]
     assert "1-frontend-frontend_change" in runner.command[-1]

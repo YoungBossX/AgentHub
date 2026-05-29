@@ -10,6 +10,7 @@ from sqlmodel import SQLModel, create_engine, select
 from app.llm_planner import (
     LLMPlannerError,
     build_llm_planner_request,
+    parse_conversation_outcome_output,
     parse_llm_plan_output,
 )
 from app.models import Agent, Message, Session, Workspace
@@ -186,6 +187,45 @@ def test_parse_llm_plan_output_returns_contract_validated_payload() -> None:
 
     assert payload["planId"] == "plan-breakout"
     assert payload["tasks"][0]["role"] == "frontend"
+
+
+def test_parse_conversation_outcome_output_accepts_task_plan_wrapper() -> None:
+    outcome = parse_conversation_outcome_output(
+        json.dumps(
+            {
+                "outcomeType": "task_plan",
+                "reply": None,
+                "planDraft": _valid_plan_response_payload(),
+                "riskLevel": "medium",
+                "reason": "A frontend task can satisfy the request.",
+                "plannerProvider": {"providerId": "fake-test-planner"},
+                "validationResult": "pending",
+            }
+        )
+    )
+
+    assert outcome["outcomeType"] == "task_plan"
+    assert outcome["planDraft"]["planId"] == "plan-breakout"
+    assert outcome["plannerProvider"]["providerId"] == "fake-test-planner"
+
+
+def test_parse_conversation_outcome_output_accepts_assistant_reply() -> None:
+    outcome = parse_conversation_outcome_output(
+        json.dumps(
+            {
+                "outcomeType": "assistant_reply",
+                "reply": "你好，我可以帮你规划和执行代码任务。",
+                "riskLevel": "low",
+                "reason": "Pure greeting.",
+                "plannerProvider": {"providerId": "fake-test-planner"},
+                "validationResult": "not_required",
+            }
+        )
+    )
+
+    assert outcome["outcomeType"] == "assistant_reply"
+    assert outcome["reply"].startswith("你好")
+    assert outcome["planDraft"] is None
 
 
 def test_conversation_outcome_supports_assistant_reply_without_task_plan() -> None:
