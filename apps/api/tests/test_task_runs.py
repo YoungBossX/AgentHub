@@ -385,11 +385,14 @@ def test_runtime_config_frontend_adapter_overrides_default_adapter(
 
         task_run = create_task_run(db, task_id())
         metrics = json.loads(task_run.metrics_json)
+        response = task_run_response(db, task_run).model_dump(by_alias=True)
 
         assert metrics["adapterType"] == "claude_code"
         assert metrics["providerAssignment"]["source"] == "runtime_config"
         assert metrics["providerAssignment"]["providerId"] == "local-claude-code-cli"
         assert metrics["runtimeConfigResolution"]["configSource"] == "workspace"
+        assert response["providerAssignment"]["source"] == "runtime_config"
+        assert response["runtimeConfigResolution"]["providerId"] == "local-claude-code-cli"
 
 
 def test_runtime_config_backend_adapter_overrides_environment_default(
@@ -656,6 +659,40 @@ def test_provider_assignment_is_visible_in_mission_trace(
     run_trace = next(run for run in trace["taskRuns"] if run["id"] == run_id)
     assert run_trace["adapterType"] == "claude_code"
     assert run_trace["providerAssignment"]["providerId"] == "local-claude-code-cli"
+
+
+def test_runtime_config_resolution_is_visible_in_mission_trace(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        session = db.exec(select(Session)).first()
+        upsert_runtime_config(
+            db,
+            session.workspace_id,
+            {
+                "frontend": RuntimeRoleConfig(
+                    role="frontend",
+                    agent_profile_id="agent-frontend",
+                    provider_id="local-claude-code-cli",
+                    adapter_type="claude_code",
+                    mode="frontend",
+                    enabled=True,
+                    fallback_policy="explicit_only",
+                )
+            },
+        )
+        task = db.get(Task, task_id())
+        task_run = create_task_run(db, task.id)
+        session_id = task.session_id
+        run_id = task_run.id
+
+    response = client.get(f"/sessions/{session_id}/mission-trace")
+
+    assert response.status_code == 200
+    trace = response.json()
+    run_trace = next(run for run in trace["taskRuns"] if run["id"] == run_id)
+    assert run_trace["runtimeConfigResolution"]["configSource"] == "workspace"
+    assert run_trace["runtimeConfigResolution"]["providerId"] == "local-claude-code-cli"
 
 
 def test_agent_run_request_bounds_frontend_login_demo_instruction(

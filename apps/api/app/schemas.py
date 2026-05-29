@@ -363,6 +363,14 @@ class TaskRunResponse(ApiModel):
     error_code: Optional[str] = Field(alias="errorCode")
     error_message: Optional[str] = Field(alias="errorMessage")
     metrics_json: dict[str, Any] = Field(alias="metricsJson")
+    provider_assignment: Optional[dict[str, Any]] = Field(
+        default=None,
+        alias="providerAssignment",
+    )
+    runtime_config_resolution: Optional[dict[str, Any]] = Field(
+        default=None,
+        alias="runtimeConfigResolution",
+    )
     approval_request: Optional[ApprovalRequestResponse] = Field(
         default=None,
         alias="approvalRequest",

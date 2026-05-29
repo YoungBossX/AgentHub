@@ -1,5 +1,37 @@
 # AgentHub Change Log
 
+## P16-5 Runtime Config Evidence
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/schemas.py` | Added top-level `providerAssignment` and `runtimeConfigResolution` fields to TaskRun responses. |
+| `apps/api/app/main.py` | Returned provider/runtime config resolution metadata in TaskRun API responses. |
+| `apps/api/app/mission_trace.py` | Included runtime config resolution in mission trace task-run entries. |
+| `apps/api/app/planning.py` | Attached runtime config resolution to planner evidence for runtime-selected planner runs. |
+| `apps/api/tests/test_planning.py` | Added planner evidence assertions for runtime-selected Planner provider. |
+| `apps/api/tests/test_task_runs.py` | Added TaskRun response and mission trace runtime config evidence coverage. |
+| `docs/project-state.md` | Recorded P16-5 evidence behavior. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-5 complete after validation. |
+
+### What Changed
+
+Runtime config choices are now visible in API and mission trace evidence, making
+Planner/Frontend/Backend provider resolution auditable without exposing
+secrets or protected paths.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P16-5 targeted planner/task-run/mission-trace tests | Pass: 3 tests. |
+
+---
+
 ## P16-4 Runtime Config Resolution
 
 **Date:** 2026-05-29

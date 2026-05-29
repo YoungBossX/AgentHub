@@ -131,6 +131,34 @@ def _planner_runtime_resolution(db: DbSession, message: Message):
     return resolve_runtime_role_config(db, session.workspace_id, "planner")
 
 
+def _attach_planner_runtime_evidence(
+    db: DbSession,
+    tasks: list[Task],
+    runtime_resolution,
+) -> None:
+    if runtime_resolution is None:
+        return
+    metadata = runtime_resolution.to_metadata()
+    for task in tasks:
+        try:
+            plan = json.loads(task.plan_json)
+        except json.JSONDecodeError:
+            plan = {}
+        if not isinstance(plan, dict):
+            plan = {}
+        planner_evidence = plan.get("plannerEvidence")
+        if not isinstance(planner_evidence, dict):
+            planner_evidence = {}
+        planner_evidence["runtimeConfigResolution"] = metadata
+        plan["plannerEvidence"] = planner_evidence
+        plan["runtimeConfigResolution"] = metadata
+        task.plan_json = json.dumps(plan, separators=(",", ":"))
+        db.add(task)
+    db.commit()
+    for task in tasks:
+        db.refresh(task)
+
+
 def plan_for_message(
     db: DbSession,
     message: Message,
@@ -165,6 +193,11 @@ def plan_for_message(
                     )
                     llm_tasks = llm_outcome.tasks
                     if llm_tasks:
+                        _attach_planner_runtime_evidence(
+                            db,
+                            llm_tasks,
+                            planner_runtime,
+                        )
                         return llm_tasks
                 except LLMPlannerError as exc:
                     llm_fallback = llm_planner_fallback_metadata(

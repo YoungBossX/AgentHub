@@ -1054,6 +1054,7 @@ def read_session_mission_trace(
 
 def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
     task = db.get(Task, task_run.task_id)
+    metrics = metrics_for_run(task_run)
     return TaskRunResponse(
         id=task_run.id,
         taskId=task_run.task_id,
@@ -1074,7 +1075,9 @@ def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
         headRef=task_run.head_ref,
         errorCode=task_run.error_code,
         errorMessage=task_run.error_message,
-        metricsJson=metrics_for_run(task_run),
+        metricsJson=metrics,
+        providerAssignment=metrics.get("providerAssignment"),
+        runtimeConfigResolution=metrics.get("runtimeConfigResolution"),
         approvalRequest=latest_approval_request(db, task_run),
         createdAt=task_run.created_at,
         updatedAt=task_run.updated_at,

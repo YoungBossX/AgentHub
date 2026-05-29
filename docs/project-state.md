@@ -5,6 +5,22 @@ reference instead of repeating long context blocks.
 
 ## P16 Status
 
+### P16-5 Runtime Config Evidence
+
+P16-5 completed on 2026-05-29.
+
+Runtime config resolution is now explicit in execution evidence:
+
+- Planner evidence records the selected runtime config source/provider/profile
+  when runtime config selects the Planner provider;
+- TaskRun API responses expose `providerAssignment` and
+  `runtimeConfigResolution` as top-level fields in addition to `metricsJson`;
+- Mission trace task run entries include `runtimeConfigResolution` so the UI
+  and downstream tooling can audit which saved config affected execution.
+
+Evidence includes provider/profile/adapter/config-source/fallback-policy
+metadata only. It does not expose secrets or protected host paths.
+
 ### P16-4 Runtime Config Resolution
 
 P16-4 completed on 2026-05-29.

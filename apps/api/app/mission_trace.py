@@ -100,6 +100,7 @@ def _task_run_trace(task_run: TaskRun) -> dict[str, Any]:
         "state": task_run.state,
         "adapterType": metrics.get("adapterType"),
         "providerAssignment": metrics.get("providerAssignment"),
+        "runtimeConfigResolution": metrics.get("runtimeConfigResolution"),
         "errorCode": task_run.error_code,
         "errorMessage": task_run.error_message,
         "navigation": {

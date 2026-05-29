@@ -733,6 +733,14 @@ def test_runtime_config_selects_planner_provider_for_no_mention_message(
         "adapter_type": "claude_cli",
     }
     assert tasks[0]["planJson"]["plannerProviderId"] == "runtime-planner-test"
+    assert (
+        tasks[0]["planJson"]["plannerEvidence"]["runtimeConfigResolution"]["providerId"]
+        == "claude-cli-planner"
+    )
+    assert (
+        tasks[0]["planJson"]["runtimeConfigResolution"]["configSource"]
+        == "workspace"
+    )
 
 
 def test_auto_start_policy_allows_registered_target_allowed_paths(
