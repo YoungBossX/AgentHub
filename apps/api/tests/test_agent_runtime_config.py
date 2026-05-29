@@ -245,6 +245,35 @@ def test_runtime_config_api_rejects_invalid_profile_provider_role_combo() -> Non
         assert any("write-safe" in error for error in errors)
 
 
+def test_runtime_config_api_rejects_backend_platform_maintenance_mode() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/validate",
+            json={
+                "roles": {
+                    "backend": {
+                        "agentProfileId": profiles["backend"]["id"],
+                        "providerId": "local-codex-cli",
+                        "adapterType": "codex",
+                        "mode": "platform_maintenance",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["valid"] is False
+        assert any(
+            "cannot use mode `platform_maintenance`" in error
+            for error in payload["errors"]
+        )
+
+
 def _workspace(db: DbSession) -> Workspace:
     workspace = Workspace(
         name="AgentHub Demo",

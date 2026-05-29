@@ -2050,6 +2050,56 @@ def test_platform_instruction_requires_explicit_platform_mode_and_approval(
     assert request.plan_context["sessionContext"]["targetProject"]["targetId"] == AGENTHUB_PLATFORM_TARGET_ID
 
 
+def test_runtime_config_backend_does_not_bypass_platform_approval(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        backend_agent = db.exec(select(Agent).where(Agent.role == "backend")).one()
+        session = db.exec(select(Session)).first()
+        upsert_runtime_config(
+            db,
+            session.workspace_id,
+            {
+                "backend": RuntimeRoleConfig(
+                    role="backend",
+                    agent_profile_id="agent-backend",
+                    provider_id="local-codex-cli",
+                    adapter_type="codex",
+                    mode="backend",
+                    enabled=True,
+                    fallback_policy="explicit_only",
+                )
+            },
+        )
+        platform_task = Task(
+            session_id=session.id,
+            title="Platform maintenance with runtime backend config",
+            intent_type="platform_maintenance",
+            status="pending",
+            assigned_agent_id=backend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "assignedRole": "backend",
+                    "targetId": AGENTHUB_PLATFORM_TARGET_ID,
+                    "platformMode": True,
+                    "requiresApproval": True,
+                    "originalRequest": "platform mode: adjust AgentHub API",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(platform_task)
+        db.commit()
+        db.refresh(platform_task)
+
+        task_run = create_task_run(db, platform_task.id)
+        metrics = json.loads(task_run.metrics_json)
+
+        assert task_run.state == "waiting_approval"
+        assert metrics["runtimeConfigResolution"]["providerId"] == "local-codex-cli"
+        assert metrics["providerAssignment"]["source"] == "runtime_config"
+
+
 def test_contract_aware_review_validates_backend_and_frontend_targets(
     client: TestClient,
 ) -> None:

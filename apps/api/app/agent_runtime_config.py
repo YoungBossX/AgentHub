@@ -213,6 +213,10 @@ def validate_runtime_config(
             errors.append(
                 f"Runtime config role `{role}` references unavailable provider `{provider.provider_id}`."
             )
+        if not _mode_allowed_for_runtime_role(role, role_config.mode):
+            errors.append(
+                f"Runtime config role `{role}` cannot use mode `{role_config.mode}`."
+            )
         if role_config.adapter_type != provider.adapter_type:
             errors.append(
                 f"Runtime config role `{role}` adapter `{role_config.adapter_type}` does not match provider `{provider.adapter_type}`."
@@ -330,3 +334,15 @@ def _profile_supports_runtime_role(profile: AgentProfile, role: str) -> bool:
         "qa" if role == "review" else role,
     }
     return bool(accepted_roles.intersection(profile.supported_roles))
+
+
+def _mode_allowed_for_runtime_role(role: str, mode: Optional[str]) -> bool:
+    if mode is None:
+        return False
+    allowed_modes = {
+        "planner": {"read_only"},
+        "frontend": {"frontend"},
+        "backend": {"backend"},
+        "review": {"review", "qa", "read_only"},
+    }
+    return mode in allowed_modes.get(role, set())

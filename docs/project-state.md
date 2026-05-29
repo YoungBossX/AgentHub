@@ -5,6 +5,21 @@ reference instead of repeating long context blocks.
 
 ## P16 Status
 
+### P16-6 Safety And Policy Enforcement
+
+P16-6 completed on 2026-05-29.
+
+Runtime config is now covered by explicit safety tests and role/mode validation:
+
+- Backend runtime config cannot be saved with `platform_maintenance` mode;
+- runtime-selected Backend providers do not bypass Target Registry,
+  platform-mode metadata, or approval requirements;
+- platform maintenance still enters `waiting_approval` and remains auditable;
+- ScriptedMock remains represented as mock/fallback metadata, not real provider
+  success.
+
+P16-6 does not add new permission scopes or custom shell-command agents.
+
 ### P16-5 Runtime Config Evidence
 
 P16-5 completed on 2026-05-29.

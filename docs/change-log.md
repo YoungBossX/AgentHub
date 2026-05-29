@@ -1,5 +1,34 @@
 # AgentHub Change Log
 
+## P16-6 Safety And Policy Enforcement
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_runtime_config.py` | Added role/mode policy validation so runtime config cannot assign backend to platform maintenance mode. |
+| `apps/api/tests/test_agent_runtime_config.py` | Added negative API validation coverage for backend platform maintenance mode. |
+| `apps/api/tests/test_task_runs.py` | Added execution coverage proving backend runtime config does not bypass platform approval. |
+| `docs/project-state.md` | Recorded P16-6 safety policy behavior. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-6 complete after validation. |
+
+### What Changed
+
+Runtime config remains subordinate to existing Target Registry, platform mode,
+and approval policy. It can choose safe role providers, but it cannot turn an
+ordinary backend role into unapproved AgentHub platform maintenance.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P16-6 targeted negative policy tests | Pass: 2 tests. |
+
+---
+
 ## P16-5 Runtime Config Evidence
 
 **Date:** 2026-05-29
