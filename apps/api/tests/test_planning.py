@@ -653,6 +653,73 @@ def test_no_mention_message_uses_configured_llm_planner_provider(
     assert task["planJson"]["originalRequest"] == "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏"
 
 
+def test_llm_task_plan_bypasses_legacy_signal_gates(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "planId": "plan-breakout",
+                "planner": "llm_v1",
+                "plannerMode": "llm_v1",
+                "rationale": "A bounded frontend task can implement Breakout.",
+                "acceptanceCriteria": ["Game is playable"],
+                "validationExpectations": ["pnpm build"],
+                "tasks": [
+                    {
+                        "title": "Build Breakout game",
+                        "role": "frontend",
+                        "targetId": DEMO_FRONTEND_TARGET_ID,
+                        "intentType": "frontend_change",
+                        "plannedFiles": ["apps/demo/src/App.tsx"],
+                        "dependsOn": [],
+                        "expectedArtifactTypes": ["diff", "review"],
+                        "acceptanceCriteria": ["Keyboard controls work"],
+                        "validationExpectations": ["pnpm build"],
+                        "riskLevel": "medium",
+                        "requiresApproval": False,
+                    }
+                ],
+            },
+        ),
+    )
+
+    def fail_if_called(_content: str) -> bool:
+        raise AssertionError("legacy signal gate should not run for LLM task_plan")
+
+    monkeypatch.setattr(planning_module, "_is_safe_demo_frontend_request", fail_if_called)
+    monkeypatch.setattr(planning_module, "_is_safe_external_frontend_request", fail_if_called)
+    monkeypatch.setattr(planning_module, "_is_passthrough_frontend_request", fail_if_called)
+    monkeypatch.setattr(planning_module, "_is_unsupported_broad_request", fail_if_called)
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "帮我做打砖块"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert len(tasks) == 1
+    assert tasks[0]["planJson"]["planner"] == "llm_v1"
+    assert tasks[0]["planJson"]["plannerProviderId"] == "fake-llm-planner"
+
+
 def test_runtime_config_selects_planner_provider_for_no_mention_message(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

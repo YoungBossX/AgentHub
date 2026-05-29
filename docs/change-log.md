@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17-2a Retire Legacy Signal Gates From Primary Routing
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planning.py` | Added coverage proving an LLM `task_plan` bypasses legacy safe/unsupported signal gates and reaches PlanValidator/task persistence directly. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-2a complete after targeted validation. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | Pass: 1 test. |
+
+---
+
 ## P17-1 ConversationOutcome Schema
 
 **Date:** 2026-05-29
