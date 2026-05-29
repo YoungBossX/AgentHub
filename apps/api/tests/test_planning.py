@@ -905,6 +905,62 @@ def test_non_task_conversation_outcomes_do_not_create_tasks(
     assert messages[-1].content_md == reply_text
 
 
+def test_followup_message_still_routes_through_llm_router(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, bool] = {"called": False}
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+
+    def fake_resolver(settings: Settings, **_kwargs) -> FakePlannerProvider:
+        captured["called"] = True
+        return FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "assistant_reply",
+                "reply": "我会基于当前任务上下文继续处理。",
+                "riskLevel": "low",
+                "reason": "Follow-up routed through LLM.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "not_required",
+            },
+        )
+
+    monkeypatch.setattr(planning_module, "resolve_planner_provider", fake_resolver)
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="Existing frontend task",
+            intent_type="frontend_change",
+            status="completed",
+            assigned_agent_id=frontend_agent.id,
+            plan_json=json.dumps({"planner": "llm_v1"}),
+        )
+        db.add(task)
+        db.commit()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "继续把按钮加大一点"},
+    )
+
+    assert response.status_code == 201
+    assert captured["called"] is True
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert len(tasks) == 1
+
+
 def test_runtime_config_selects_planner_provider_for_no_mention_message(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

@@ -1,5 +1,30 @@
 # AgentHub Change Log
 
+## P17-6 Follow-up Routing Context
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/canonical_context.py` | Added `missionTrace` to CanonicalSharedContext provider-visible fields. |
+| `apps/api/app/llm_planner.py` | Added mission trace to planner context and allowed follow-up sessions to preserve current task evidence. |
+| `apps/api/app/planning.py` | Allowed Orchestrator messages with existing tasks to enter the LLM router instead of limiting LLM routing to empty sessions. |
+| `apps/api/tests/test_llm_planner.py` | Added planner input coverage for follow-up mission trace context. |
+| `apps/api/tests/test_planning.py` | Added coverage that follow-up messages still call the LLM router. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-6 complete after targeted validation. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_llm_planner_input_includes_followup_mission_trace -q` | Pass: 1 test. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_followup_message_still_routes_through_llm_router -q` | Pass: 1 test. |
+
+---
+
 ## P17-5 Clarification Refusal And Approval Outcomes
 
 **Date:** 2026-05-29

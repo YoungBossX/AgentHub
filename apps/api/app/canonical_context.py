@@ -100,6 +100,12 @@ def build_canonical_shared_context(
             created_at=timestamp,
             trust_level="system",
         ),
+        "missionTrace": _field(
+            filter_protected_values(session_context_pack.get("missionTrace")),
+            source="mission_trace",
+            created_at=timestamp,
+            trust_level="system",
+        ),
         "latestDiff": _field(
             filter_protected_values(session_context_pack.get("latestDiff")),
             source="artifact.diff",

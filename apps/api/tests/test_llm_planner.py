@@ -13,7 +13,7 @@ from app.llm_planner import (
     parse_llm_plan_output,
 )
 from app.mission_trace import build_session_mission_trace
-from app.models import Agent, Message, Session, Workspace
+from app.models import Agent, Message, Session, Task, Workspace
 from app.planner_providers import FakePlannerProvider
 from app.target_registry import DEMO_FRONTEND_TARGET_ID
 
@@ -64,6 +64,39 @@ def test_llm_planner_input_includes_context_targets_messages_and_guardrails(
     )
     assert ".env" in planner_input["guardrails"]["protectedPaths"]
     assert planner_input["guardrails"]["denyProductionDeploy"] is True
+
+
+def test_llm_planner_input_includes_followup_mission_trace(db: DbSession) -> None:
+    session = db.exec(select(Session).where(Session.title == "LLM planning session")).one()
+    frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+    task = Task(
+        session_id=session.id,
+        title="Existing frontend task",
+        intent_type="frontend_change",
+        status="completed",
+        assigned_agent_id=frontend_agent.id,
+        plan_json=json.dumps(
+            {
+                "planner": "llm_v1",
+                "plannerEvidence": {
+                    "providerId": "test-llm-planner",
+                    "plannerSource": "fake_test",
+                    "validationResult": "passed",
+                },
+            }
+        ),
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    message = _message(db, "继续基于上一次结果加一个重新开始按钮")
+
+    planner_input = build_llm_planner_input(db, message)
+    mission_trace = planner_input["canonicalSharedContext"]["fields"]["missionTrace"]["value"]
+
+    assert mission_trace["tasks"][0]["id"] == task.id
+    assert mission_trace["tasks"][0]["status"] == "completed"
+    assert mission_trace["tasks"][0]["plannerEvidence"]["providerId"] == "test-llm-planner"
 
 
 def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> None:

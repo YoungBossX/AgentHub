@@ -13,6 +13,7 @@ from app.agent_profiles import profile_for_agent
 from app.canonical_context import build_canonical_shared_context, filter_protected_values
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
+from app.mission_trace import build_session_mission_trace
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_contracts import ConversationOutcome, PlannerRequest, PlannerResponse
 from app.planner_service import build_plan_draft
@@ -95,6 +96,7 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
 
     targets = list_targets_for_workspace(db, session.workspace_id)
     recent_messages = _recent_messages(db, message.session_id)
+    mission_trace = build_session_mission_trace(db, message.session_id).model_dump(by_alias=True)
     session_context_pack = {
         "sessionId": session.id,
         "workspaceId": session.workspace_id,
@@ -111,6 +113,7 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
             },
         },
         "recentMessages": recent_messages,
+        "missionTrace": mission_trace,
         "ledger": {},
         "latestDiff": None,
         "latestReview": None,

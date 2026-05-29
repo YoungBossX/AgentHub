@@ -169,7 +169,7 @@ def plan_for_message(
     existing_tasks = list_session_tasks(db, message.session_id)
     routed_role = parsed.roles[0] if parsed.roles else "orchestrator"
     llm_fallback = None
-    if routed_role == "orchestrator" and not existing_tasks:
+    if routed_role == "orchestrator":
         try:
             planner_runtime = _planner_runtime_resolution(db, message)
             planner_provider = resolve_planner_provider(
