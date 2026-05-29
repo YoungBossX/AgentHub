@@ -5,6 +5,23 @@ reference instead of repeating long context blocks.
 
 ## P16 Status
 
+### P16-3 Agent Runtime Settings UI
+
+P16-3 completed on 2026-05-29.
+
+The web workspace now includes an Agent Runtime Settings panel in the sidebar.
+It loads the workspace runtime config and lets the user configure the core
+Planner, Frontend, and Backend roles from existing safe AgentProfile and
+ProviderConfig options only.
+
+The UI shows provider badge data, adapter type, capability tags, supported
+targets, mode, status/auth availability, config source, and validation
+warnings/errors returned by the runtime config API. Saving persists the
+workspace config through the P16-2 API.
+
+P16-3 is UI-only. It does not yet make planner/frontend/backend execution use
+the saved runtime config; that remains P16-4.
+
 ### P16-2 Runtime Config API
 
 P16-2 completed on 2026-05-29.

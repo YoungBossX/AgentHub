@@ -1,5 +1,39 @@
 # AgentHub Change Log
 
+## P16-3 Agent Runtime Settings UI
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/lib/api.ts` | Added Agent Runtime Config types plus GET/PUT client helpers. |
+| `apps/web/src/components/agent-runtime-settings.tsx` | Added the sidebar runtime settings UI for Planner, Frontend, and Backend roles. |
+| `apps/web/src/components/session-sidebar.tsx` | Added a slot for the runtime settings panel. |
+| `apps/web/src/components/workspace-shell.tsx` | Loaded/saved workspace runtime config and wired the runtime settings panel. |
+| `apps/web/src/lib/api.test.ts` | Added runtime config client helper coverage. |
+| `apps/web/src/components/workspace-shell.test.tsx` | Added runtime settings render coverage. |
+| `docs/project-state.md` | Recorded P16-3 behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-3 complete after validation. |
+
+### What Changed
+
+AgentHub now has a user-facing runtime settings panel for configuring Planner,
+Frontend, and Backend Agent defaults from existing safe profile/provider
+metadata. The UI persists through the runtime config API but does not yet affect
+actual provider resolution.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm --filter @agenthub/web check` | Pass. |
+| `pnpm --filter @agenthub/web test` | Pass: 43 tests. |
+
+---
+
 ## P16-2 Runtime Config API
 
 **Date:** 2026-05-29

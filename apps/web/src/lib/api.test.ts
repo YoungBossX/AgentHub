@@ -9,6 +9,7 @@ import {
   createWorkspaceSession,
   denyTaskRun,
   forceCodexFailure,
+  getAgentRuntimeConfig,
   getSessionLedger,
   getBackendHealth,
   getDemoWorkspace,
@@ -28,6 +29,7 @@ import {
   sessionEventsUrl,
   startTaskRunPreview,
   stopPreview,
+  updateAgentRuntimeConfig,
 } from "./api"
 
 describe("getBackendHealth", () => {
@@ -255,6 +257,106 @@ describe("workspace and session API", () => {
     })
     expect(configs[0].providerId).toBe("local-claude-code-cli")
     expect(configs[0].authStatus).toBe("unchecked")
+  })
+
+  it("reads and updates agent runtime config for a workspace", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input.toString()
+      if (url.endsWith("/runtime-config") && init?.method === "PUT") {
+        return new Response(
+          JSON.stringify({
+            workspaceId: "workspace-1",
+            configSource: "workspace",
+            roles: {
+              frontend: {
+                role: "frontend",
+                agentProfileId: "agent-frontend",
+                providerId: "local-claude-code-cli",
+                adapterType: "claude_code",
+                mode: "frontend",
+                enabled: true,
+                fallbackPolicy: "explicit_only",
+              },
+            },
+            availableProfiles: [],
+            availableProviders: [],
+            validation: { valid: true, errors: [], warnings: [] },
+          }),
+          { status: 200 },
+        )
+      }
+
+      return new Response(
+        JSON.stringify({
+          workspaceId: "workspace-1",
+          configSource: "default",
+          roles: {
+            frontend: {
+              role: "frontend",
+              agentProfileId: null,
+              providerId: null,
+              adapterType: null,
+              mode: "frontend",
+              enabled: false,
+              fallbackPolicy: "environment_default",
+            },
+          },
+          availableProfiles: [],
+          availableProviders: [],
+          validation: { valid: true, errors: [], warnings: [] },
+        }),
+        { status: 200 },
+      )
+    })
+
+    const runtimeConfig = await getAgentRuntimeConfig(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      fetchMock,
+    )
+    const updated = await updateAgentRuntimeConfig(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      {
+        frontend: {
+          agentProfileId: "agent-frontend",
+          providerId: "local-claude-code-cli",
+          adapterType: "claude_code",
+          mode: "frontend",
+          enabled: true,
+          fallbackPolicy: "explicit_only",
+        },
+      },
+      fetchMock,
+    )
+
+    expect(runtimeConfig?.configSource).toBe("default")
+    expect(updated.roles.frontend.providerId).toBe("local-claude-code-cli")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/runtime-config",
+      {
+        cache: "no-store",
+      },
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/runtime-config",
+      {
+        body: JSON.stringify({
+          roles: {
+            frontend: {
+              agentProfileId: "agent-frontend",
+              providerId: "local-claude-code-cli",
+              adapterType: "claude_code",
+              mode: "frontend",
+              enabled: true,
+              fallbackPolicy: "explicit_only",
+            },
+          },
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "PUT",
+      },
+    )
   })
 })
 

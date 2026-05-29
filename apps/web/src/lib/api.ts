@@ -57,6 +57,40 @@ export type ProviderConfig = {
   supportedModes: string[]
 }
 
+export type RuntimeRoleConfig = {
+  role: string
+  agentProfileId: string | null
+  providerId: string | null
+  adapterType: string | null
+  mode: string | null
+  enabled: boolean
+  fallbackPolicy: string | null
+}
+
+export type RuntimeConfigValidation = {
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+}
+
+export type AgentRuntimeConfig = {
+  workspaceId: string | null
+  configSource: string
+  roles: Record<string, RuntimeRoleConfig>
+  availableProfiles: AgentProfile[]
+  availableProviders: ProviderConfig[]
+  validation: RuntimeConfigValidation
+}
+
+export type RuntimeRoleConfigInput = {
+  agentProfileId?: string | null
+  providerId?: string | null
+  adapterType?: string | null
+  mode?: string | null
+  enabled: boolean
+  fallbackPolicy?: string | null
+}
+
 export type WorkspaceSession = {
   id: string
   workspaceId: string
@@ -364,6 +398,47 @@ export async function listProviderConfigs(
   }
 
   return (await response.json()) as ProviderConfig[]
+}
+
+export async function getAgentRuntimeConfig(
+  backendUrl: string,
+  workspaceId: string,
+  fetcher: Fetcher = fetch,
+): Promise<AgentRuntimeConfig | null> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/runtime-config`),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return null
+  }
+
+  return (await response.json()) as AgentRuntimeConfig
+}
+
+export async function updateAgentRuntimeConfig(
+  backendUrl: string,
+  workspaceId: string,
+  roles: Record<string, RuntimeRoleConfigInput>,
+  fetcher: Fetcher = fetch,
+): Promise<AgentRuntimeConfig> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/runtime-config`),
+    {
+      body: JSON.stringify({ roles }),
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error("Could not update runtime config")
+  }
+
+  return (await response.json()) as AgentRuntimeConfig
 }
 
 export async function createWorkspaceSession(

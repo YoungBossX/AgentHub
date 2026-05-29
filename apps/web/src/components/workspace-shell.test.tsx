@@ -16,6 +16,7 @@ const apiMocks = vi.hoisted(() => ({
   createWorkspaceSession: vi.fn(),
   denyTaskRun: vi.fn(),
   forceCodexFailure: vi.fn(),
+  getAgentRuntimeConfig: vi.fn(),
   getSessionLedger: vi.fn(),
   interruptTaskRun: vi.fn(),
   listSessionMessages: vi.fn(),
@@ -26,6 +27,7 @@ const apiMocks = vi.hoisted(() => ({
   sessionEventsUrl: vi.fn(),
   startTaskRunPreview: vi.fn(),
   stopPreview: vi.fn(),
+  updateAgentRuntimeConfig: vi.fn(),
 }))
 
 vi.mock("next/navigation", () => ({
@@ -44,6 +46,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   createWorkspaceSession: apiMocks.createWorkspaceSession,
   denyTaskRun: apiMocks.denyTaskRun,
   forceCodexFailure: apiMocks.forceCodexFailure,
+  getAgentRuntimeConfig: apiMocks.getAgentRuntimeConfig,
   getSessionLedger: apiMocks.getSessionLedger,
   interruptTaskRun: apiMocks.interruptTaskRun,
   listSessionMessages: apiMocks.listSessionMessages,
@@ -54,6 +57,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   sessionEventsUrl: apiMocks.sessionEventsUrl,
   startTaskRunPreview: apiMocks.startTaskRunPreview,
   stopPreview: apiMocks.stopPreview,
+  updateAgentRuntimeConfig: apiMocks.updateAgentRuntimeConfig,
 }))
 
 const workspace = {
@@ -131,6 +135,129 @@ const initialAgents = [
   },
 ]
 
+const runtimeConfig = {
+  availableProfiles: [
+    {
+      adapterType: "scripted_mock",
+      avatarInitials: "MO",
+      capabilityTags: ["diff_analysis", "code_review"],
+      description: "Plans the local workflow.",
+      displayName: "Manager / Orchestrator",
+      id: "agent-orchestrator",
+      providerId: "local-scripted-mock",
+      role: "orchestrator",
+      safeForReview: true,
+      safeForWrite: false,
+      status: "available",
+      supportedModes: ["read_only"],
+      supportedRoles: ["orchestrator", "manager"],
+      supportedTargets: ["demo-frontend", "demo-backend"],
+    },
+    {
+      adapterType: "codex",
+      avatarInitials: "FE",
+      capabilityTags: ["code_write", "preview"],
+      description: "Executes bounded frontend changes.",
+      displayName: "Frontend Agent",
+      id: "agent-frontend",
+      providerId: "local-codex-cli",
+      role: "frontend",
+      safeForReview: false,
+      safeForWrite: true,
+      status: "available",
+      supportedModes: ["frontend"],
+      supportedRoles: ["frontend"],
+      supportedTargets: ["demo-frontend", "external-frontend"],
+    },
+    {
+      adapterType: "codex",
+      avatarInitials: "BE",
+      capabilityTags: ["code_write", "test_run"],
+      description: "Executes bounded backend changes.",
+      displayName: "Backend Agent",
+      id: "agent-backend",
+      providerId: "local-codex-cli",
+      role: "backend",
+      safeForReview: false,
+      safeForWrite: true,
+      status: "available",
+      supportedModes: ["backend"],
+      supportedRoles: ["backend"],
+      supportedTargets: ["demo-backend", "external-backend"],
+    },
+  ],
+  availableProviders: [
+    {
+      adapterType: "claude_cli",
+      authStatus: "unchecked",
+      available: true,
+      defaultForRoles: ["planner"],
+      displayName: "Claude CLI Planner",
+      providerId: "claude-cli-planner",
+      supportedModes: ["read_only"],
+    },
+    {
+      adapterType: "claude_code",
+      authStatus: "unchecked",
+      available: true,
+      defaultForRoles: ["frontend", "backend"],
+      displayName: "Claude Code CLI",
+      providerId: "local-claude-code-cli",
+      supportedModes: ["frontend", "backend", "review", "debug"],
+    },
+    {
+      adapterType: "codex",
+      authStatus: "unchecked",
+      available: true,
+      defaultForRoles: ["frontend", "backend"],
+      displayName: "Codex CLI",
+      providerId: "local-codex-cli",
+      supportedModes: ["frontend", "backend", "debug"],
+    },
+  ],
+  configSource: "default",
+  roles: {
+    backend: {
+      adapterType: null,
+      agentProfileId: null,
+      enabled: false,
+      fallbackPolicy: "environment_default",
+      mode: "backend",
+      providerId: null,
+      role: "backend",
+    },
+    frontend: {
+      adapterType: null,
+      agentProfileId: null,
+      enabled: false,
+      fallbackPolicy: "environment_default",
+      mode: "frontend",
+      providerId: null,
+      role: "frontend",
+    },
+    planner: {
+      adapterType: null,
+      agentProfileId: null,
+      enabled: false,
+      fallbackPolicy: "environment_default",
+      mode: "read_only",
+      providerId: null,
+      role: "planner",
+    },
+    review: {
+      adapterType: null,
+      agentProfileId: null,
+      enabled: false,
+      fallbackPolicy: "environment_default",
+      mode: "read_only",
+      providerId: null,
+      role: "review",
+    },
+  },
+  validation: { errors: [], valid: true, warnings: [] },
+  workspaceId: "workspace-1",
+}
+
 class MockEventSource {
   onerror: (() => void) | null = null
   onmessage: ((event: MessageEvent) => void) | null = null
@@ -148,6 +275,11 @@ describe("WorkspaceShell", () => {
       "http://127.0.0.1:8000/sessions/session-1/events?after=0&stream=true",
     )
     apiMocks.getSessionLedger.mockResolvedValue(null)
+    apiMocks.getAgentRuntimeConfig.mockResolvedValue(runtimeConfig)
+    apiMocks.updateAgentRuntimeConfig.mockResolvedValue({
+      ...runtimeConfig,
+      configSource: "workspace",
+    })
   })
 
   afterEach(() => {
@@ -199,6 +331,32 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("local-codex-cli")).toBeTruthy()
     expect(screen.getAllByText("demo-frontend").length).toBeGreaterThan(0)
     expect(screen.getByText("计划中")).toBeTruthy()
+  })
+
+  it("renders agent runtime settings for planner, frontend, and backend", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Agent Runtime Settings")).toBeTruthy()
+      expect(screen.getByText("Planner Agent")).toBeTruthy()
+      expect(screen.getAllByText("Frontend Agent").length).toBeGreaterThan(0)
+      expect(screen.getByText("Backend Agent")).toBeTruthy()
+      expect(screen.getByText("Source: default")).toBeTruthy()
+      expect(screen.getByText("Claude CLI Planner · unchecked")).toBeTruthy()
+      expect(screen.getAllByText("Claude Code CLI · unchecked").length).toBeGreaterThan(0)
+      expect(screen.getAllByText("Codex CLI · unchecked").length).toBeGreaterThan(0)
+      expect(screen.getByText("Save runtime config")).toBeTruthy()
+    })
   })
 
   it("renders the workspace context ledger for the selected session", async () => {
