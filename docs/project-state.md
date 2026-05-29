@@ -3,6 +3,33 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P17 Status
+
+### P17-8 Rehearsal And Freeze Review
+
+P17-8 completed on 2026-05-29.
+
+P17 is ready to freeze. AgentHub now has a ConversationOutcome-first
+Orchestrator boundary for no-mention and `@orchestrator` messages:
+
+- normal chat such as `你好` can produce an `orchestrator` reply without
+  creating a Task or TaskRun;
+- programming requests can produce a validated `task_plan` that enters
+  PlanValidator and then the existing scheduler/execution path;
+- LLM task plans bypass legacy signal-word gates and go directly to schema
+  validation plus PlanValidator;
+- clarification, refusal, approval-required, and unsupported outcomes remain
+  non-executable replies;
+- follow-up messages can route through the same LLM boundary with mission trace
+  and session context;
+- disabled/unavailable LLM routing returns friendly chat fallback and audited
+  frontend fallback metadata when a safe fallback task is created.
+
+P17 preserves the runtime boundary established by P16: Planner runtime handles
+conversation and PlanDraft generation, while Frontend/Backend/Review coding
+agents run only after validated executable tasks are scheduled. Details are
+recorded in `docs/p17-freeze-review.md`.
+
 ## P16 Status
 
 ### P16-7 Rehearsal And Freeze Review

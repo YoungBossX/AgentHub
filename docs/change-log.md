@@ -1,5 +1,39 @@
 # AgentHub Change Log
 
+## P17-8 Rehearsal And Freeze Review
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planning.py` | Updated runtime config planner-provider test to use the new ConversationOutcome provider path. |
+| `docs/p17-freeze-review.md` | Added P17 freeze evidence, runtime boundary, validation results, caveats, and recommended tag. |
+| `docs/project-state.md` | Recorded P17 freeze readiness and conversational routing baseline. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-8, non-goals, and validation complete after verification. |
+
+### What Changed
+
+P17 freeze review confirms AgentHub now treats no-mention and `@orchestrator`
+messages as conversation outcomes first: chat stays chat, task plans are
+validated before scheduling, and coding agents are not invoked for normal
+conversation.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P17 targeted conversational router/schema/reply/plan/fallback/follow-up tests | Pass: 44 tests. |
+| `pnpm check` | Pass. |
+| `pnpm test` | Pass: web 44 tests, API 319 tests, demo-api 5 tests. |
+| `pnpm demo:api:test` | Pass: 5 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17-conversational-orchestrator-routing --strict` | Pass. |
+
+---
+
 ## P17-7 Friendly Fallback
 
 **Date:** 2026-05-29

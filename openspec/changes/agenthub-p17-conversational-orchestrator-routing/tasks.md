@@ -8,17 +8,17 @@
 - [x] 1.6 P17-5 Clarification, Refusal, And Approval Outcomes: ambiguous requests create `orchestrator` clarification replies; unsafe target-outside requests create `orchestrator` refusal replies; platform maintenance or high-risk requests produce approval-required outcomes without bypassing guardrails.
 - [x] 1.7 P17-6 Follow-up Routing Context: route follow-up messages through the same LLM router with recent messages, CanonicalSharedContext, mission trace, selected artifact, latest diff/review/build/preview/deploy evidence, active tasks, and current goal; do not limit LLM routing to empty sessions.
 - [x] 1.8 P17-7 Friendly Fallback: when LLM routing is disabled, unavailable, invalid, or blocked by auth/quota/runtime, pure chat returns a friendly `orchestrator` reply; clear safe frontend coding intent may create one audited passthrough frontend task with `plannerSource: fallback`; backend/platform/high-risk/ambiguous requests ask clarification, require approval, or refuse; never return a demo-boundary rejection for normal chat.
-- [ ] 1.9 P17-8 Rehearsal And Freeze Review: verify `你好` -> `orchestrator` assistant reply/no task/no coding agent invocation, `你能做什么` -> `orchestrator` assistant reply/no task/no coding agent invocation, `帮我做打砖块` -> LLM `task_plan` with no demo signal gate rejection, LLM `task_plan` enters PlanValidator directly, legacy signal gates do not block LLM `task_plan`, Planner provider evidence is recorded separately from coding agent provider evidence, LLM disabled + clear safe frontend coding request may create audited fallback passthrough task, LLM disabled + pure chat returns friendly reply, unsafe request returns refusal or approval_required, and follow-up goes through LLM Router with session/artifact context; verify P6-P16 baselines; document evidence and caveats.
+- [x] 1.9 P17-8 Rehearsal And Freeze Review: verify `你好` -> `orchestrator` assistant reply/no task/no coding agent invocation, `你能做什么` -> `orchestrator` assistant reply/no task/no coding agent invocation, `帮我做打砖块` -> LLM `task_plan` with no demo signal gate rejection, LLM `task_plan` enters PlanValidator directly, legacy signal gates do not block LLM `task_plan`, Planner provider evidence is recorded separately from coding agent provider evidence, LLM disabled + clear safe frontend coding request may create audited fallback passthrough task, LLM disabled + pure chat returns friendly reply, unsafe request returns refusal or approval_required, and follow-up goes through LLM Router with session/artifact context; verify P6-P16 baselines; document evidence and caveats.
 
 ## 2. Explicit Non-goals
 
-- [ ] 2.1 Confirm P17 does not remove Target Registry, remove PlanValidator, remove scheduler/recovery, replace ClaudeCodeAdapter or CodexAdapter, make Claude Code/Codex handle normal chat directly, add arbitrary shell-command agents, add full multi-user IM, add artifact editor, add provider marketplace, or add production deploy.
+- [x] 2.1 Confirm P17 does not remove Target Registry, remove PlanValidator, remove scheduler/recovery, replace ClaudeCodeAdapter or CodexAdapter, make Claude Code/Codex handle normal chat directly, add arbitrary shell-command agents, add full multi-user IM, add artifact editor, add provider marketplace, or add production deploy.
 
 ## 3. Validation
 
-- [ ] 3.1 Run targeted conversational router/schema/reply/plan/fallback/follow-up tests added for P17.
-- [ ] 3.2 Run `pnpm check`.
-- [ ] 3.3 Run `pnpm test`.
-- [ ] 3.4 Run `pnpm demo:api:test`.
-- [ ] 3.5 Run `git diff --check`.
-- [ ] 3.6 Run `openspec validate agenthub-p17-conversational-orchestrator-routing --strict`.
+- [x] 3.1 Run targeted conversational router/schema/reply/plan/fallback/follow-up tests added for P17.
+- [x] 3.2 Run `pnpm check`.
+- [x] 3.3 Run `pnpm test`.
+- [x] 3.4 Run `pnpm demo:api:test`.
+- [x] 3.5 Run `git diff --check`.
+- [x] 3.6 Run `openspec validate agenthub-p17-conversational-orchestrator-routing --strict`.

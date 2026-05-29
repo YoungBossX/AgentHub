@@ -1,6 +1,5 @@
 from collections.abc import Iterator
 import json
-from types import SimpleNamespace
 from typing import Optional
 
 import pytest
@@ -1015,37 +1014,42 @@ def test_runtime_config_selects_planner_provider_for_no_mention_message(
     def fake_resolver(settings: Settings, **kwargs: Optional[str]) -> FakePlannerProvider:
         captured["provider_id"] = kwargs.get("provider_id")
         captured["adapter_type"] = kwargs.get("adapter_type")
-        return FakePlannerProvider(provider_id="runtime-planner-test", payload={})
-
-    def fake_create_llm_plan_tasks(db: DbSession, message: Message, *, provider):
-        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
-        task = Task(
-            session_id=message.session_id,
-            created_by_message_id=message.id,
-            title="Build settings-aware frontend",
-            intent_type="frontend_change",
-            status="pending",
-            assigned_agent_id=frontend_agent.id,
-            plan_json=json.dumps(
-                {
+        return FakePlannerProvider(
+            provider_id="runtime-planner-test",
+            payload={
+                "outcomeType": "task_plan",
+                "reply": None,
+                "riskLevel": "medium",
+                "reason": "Runtime planner config selected the provider.",
+                "plannerProvider": {"providerId": "runtime-planner-test"},
+                "validationResult": "pending",
+                "planDraft": {
+                    "planId": "plan-runtime-config",
                     "planner": "llm_v1",
-                    "plannerProviderId": provider.provider_id,
-                    "assignedRole": "frontend",
-                    "targetId": DEMO_FRONTEND_TARGET_ID,
-                }
-            ),
+                    "plannerMode": "llm_v1",
+                    "rationale": "Create one frontend task from the configured planner.",
+                    "acceptanceCriteria": ["Task is created"],
+                    "validationExpectations": ["pnpm build"],
+                    "tasks": [
+                        {
+                            "title": "Build settings-aware frontend",
+                            "role": "frontend",
+                            "targetId": DEMO_FRONTEND_TARGET_ID,
+                            "intentType": "frontend_change",
+                            "plannedFiles": ["apps/demo/src/App.tsx"],
+                            "dependsOn": [],
+                            "expectedArtifactTypes": ["diff"],
+                            "acceptanceCriteria": ["Task is created"],
+                            "validationExpectations": ["pnpm build"],
+                            "riskLevel": "medium",
+                            "requiresApproval": False,
+                        }
+                    ],
+                },
+            },
         )
-        db.add(task)
-        db.commit()
-        db.refresh(task)
-        return SimpleNamespace(tasks=[task])
 
     monkeypatch.setattr(planning_module, "resolve_planner_provider", fake_resolver)
-    monkeypatch.setattr(
-        planning_module,
-        "create_llm_plan_tasks",
-        fake_create_llm_plan_tasks,
-    )
     with next(db_from_override()) as db:
         session = db.exec(select(Session).where(Session.title == "Planning session")).one()
         session_id = session.id
