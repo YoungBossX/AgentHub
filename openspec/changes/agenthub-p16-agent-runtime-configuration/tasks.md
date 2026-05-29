@@ -6,17 +6,17 @@
 - [x] 1.4 P16-4 Runtime Config Resolution: connect runtime config to PlannerProvider selection, ProviderAssignmentMatrix, and AgentSelectionPolicy; planner uses configured planner provider, frontend uses configured frontend provider, backend uses configured backend provider, review remains review-capable and safe; preserve explicit/auditable fallback behavior; add resolution tests.
 - [x] 1.5 P16-5 Runtime Config Evidence: record resolved agentProfileId, providerId, adapterType, configSource, and fallbackReason in planner evidence, TaskRun metadata/API responses, and mission trace where appropriate; exclude secrets/protected host paths; add evidence tests.
 - [x] 1.6 P16-6 Safety And Policy Enforcement: ensure runtime config cannot bypass Target Registry, PlanValidator, scheduler locks/recovery, platform maintenance approval, or protected-path policy; ensure ordinary backend config cannot edit `apps/api`; ensure ScriptedMock remains labeled as fallback/mock; add negative policy tests.
-- [ ] 1.7 P16-7 Rehearsal And Freeze Review: configure Planner = `claude_cli`, Frontend = `claude_code`, Backend = `codex`; run a bounded workflow or reuse a Breakout-style frontend workflow; verify runtime config affects actual planner/provider resolution; verify invalid config rejection; verify P6-P15b baselines; document evidence and caveats; update docs/project-state.md, docs/change-log.md, and a P16 freeze review doc.
+- [x] 1.7 P16-7 Rehearsal And Freeze Review: configure Planner = `claude_cli`, Frontend = `claude_code`, Backend = `codex`; run a bounded workflow or reuse a Breakout-style frontend workflow; verify runtime config affects actual planner/provider resolution; verify invalid config rejection; verify P6-P15b baselines; document evidence and caveats; update docs/project-state.md, docs/change-log.md, and a P16 freeze review doc.
 
 ## 2. Explicit Non-goals
 
-- [ ] 2.1 Confirm P16 does not add a provider marketplace, arbitrary custom shell command agents, OpenCode integration, cloud token manager, production deploy, multi-user RBAC, desktop/IDE/CLI clients, full artifact editor, or new adapters.
+- [x] 2.1 Confirm P16 does not add a provider marketplace, arbitrary custom shell command agents, OpenCode integration, cloud token manager, production deploy, multi-user RBAC, desktop/IDE/CLI clients, full artifact editor, or new adapters.
 
 ## 3. Validation
 
-- [ ] 3.1 Run targeted runtime config model/API/resolution/evidence/policy/UI tests added for P16.
-- [ ] 3.2 Run `pnpm check`.
-- [ ] 3.3 Run `pnpm test`.
-- [ ] 3.4 Run `pnpm demo:api:test`.
-- [ ] 3.5 Run `git diff --check`.
-- [ ] 3.6 Run `openspec validate agenthub-p16-agent-runtime-configuration --strict`.
+- [x] 3.1 Run targeted runtime config model/API/resolution/evidence/policy/UI tests added for P16.
+- [x] 3.2 Run `pnpm check`.
+- [x] 3.3 Run `pnpm test`.
+- [x] 3.4 Run `pnpm demo:api:test`.
+- [x] 3.5 Run `git diff --check`.
+- [x] 3.6 Run `openspec validate agenthub-p16-agent-runtime-configuration --strict`.

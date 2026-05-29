@@ -1,5 +1,36 @@
 # AgentHub Change Log
 
+## P16-7 Rehearsal And Freeze Review
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/p16-freeze-review.md` | Added P16 freeze decision, runtime config evidence, safety caveats, and recommended tag. |
+| `docs/project-state.md` | Recorded P16 freeze readiness and configured role/provider target. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-7, non-goals, and validation complete after verification. |
+
+### What Changed
+
+P16 freeze review confirms that runtime config can configure Planner,
+Frontend, and Backend provider defaults while preserving P6-P15b baselines and
+the existing target/approval safety model.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass. |
+| `pnpm test` | Pass: web 43 tests, API 304 tests, demo-api 5 tests. |
+| `pnpm demo:api:test` | Pass: 5 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p16-agent-runtime-configuration --strict` | Pass. |
+
+---
+
 ## P16-6 Safety And Policy Enforcement
 
 **Date:** 2026-05-29

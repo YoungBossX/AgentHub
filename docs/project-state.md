@@ -5,6 +5,25 @@ reference instead of repeating long context blocks.
 
 ## P16 Status
 
+### P16-7 Rehearsal And Freeze Review
+
+P16-7 completed on 2026-05-29.
+
+P16 is ready to freeze. The freeze review reused the P15b Breakout-style real
+planner/coding evidence and verified the new P16 runtime configuration layer
+through automated model, API, UI, resolution, evidence, and safety tests.
+
+The configured P16 target is:
+
+- Planner: `claude-cli-planner` / `claude_cli`;
+- Frontend: `local-claude-code-cli` / `claude_code`;
+- Backend: `local-codex-cli` / `codex`.
+
+Runtime config now affects actual Planner/Frontend/Backend resolution and is
+visible in TaskRun responses and mission trace. Invalid or unsafe config is
+rejected, and platform maintenance still requires explicit platform mode and
+approval. Details are recorded in `docs/p16-freeze-review.md`.
+
 ### P16-6 Safety And Policy Enforcement
 
 P16-6 completed on 2026-05-29.
