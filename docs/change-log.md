@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17-4 Task Plan Path
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planning.py` | Added coverage for `ConversationOutcome(task_plan)` producing a validated frontend task through the LLM path. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-4 complete after targeted validation. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_conversation_task_plan_creates_validated_task tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | Pass: 2 tests. |
+
+---
+
 ## P17-3 Conversational Reply Path
 
 **Date:** 2026-05-29

@@ -772,6 +772,77 @@ def test_llm_assistant_reply_creates_orchestrator_message_without_task(
     assert messages[-1].message_kind == "chat"
 
 
+def test_conversation_task_plan_creates_validated_task(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "task_plan",
+                "reply": None,
+                "riskLevel": "medium",
+                "reason": "A frontend game request should become a validated task plan.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "pending",
+                "planDraft": {
+                    "planId": "plan-breakout",
+                    "planner": "llm_v1",
+                    "plannerMode": "llm_v1",
+                    "rationale": "A bounded frontend task can implement Breakout.",
+                    "acceptanceCriteria": ["Game is playable"],
+                    "validationExpectations": ["pnpm build"],
+                    "tasks": [
+                        {
+                            "title": "Build Breakout game",
+                            "role": "frontend",
+                            "targetId": DEMO_FRONTEND_TARGET_ID,
+                            "intentType": "frontend_change",
+                            "plannedFiles": ["apps/demo/src/App.tsx"],
+                            "dependsOn": [],
+                            "expectedArtifactTypes": ["diff", "review"],
+                            "acceptanceCriteria": ["Keyboard controls work"],
+                            "validationExpectations": ["pnpm build"],
+                            "riskLevel": "medium",
+                            "requiresApproval": False,
+                        }
+                    ],
+                },
+            },
+        ),
+    )
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "帮我做打砖块"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["assignedAgentRole"] == "frontend"
+    assert task["planJson"]["planner"] == "llm_v1"
+    assert task["planJson"]["planDraft"]["plannerMode"] == "llm_v1"
+    assert task["planJson"]["planDraft"]["acceptanceCriteria"] == ["Game is playable"]
+    assert task["planJson"]["plannerEvidence"]["validationResult"] == "passed"
+
+
 def test_runtime_config_selects_planner_provider_for_no_mention_message(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
