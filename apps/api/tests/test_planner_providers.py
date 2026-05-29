@@ -78,6 +78,17 @@ def test_resolve_planner_provider_supports_claude_cli() -> None:
     assert provider.planner_source == "real_llm"
 
 
+def test_resolve_planner_provider_supports_runtime_config_provider_id() -> None:
+    provider = resolve_planner_provider(
+        Settings(llm_planner_provider="disabled"),
+        provider_id="claude-cli-planner",
+        adapter_type="claude_cli",
+    )
+
+    assert isinstance(provider, ClaudeCliPlannerProvider)
+    assert provider.provider_id == "claude-cli-planner"
+
+
 def test_resolve_planner_provider_rejects_unknown_provider() -> None:
     with pytest.raises(PlannerProviderError) as exc_info:
         resolve_planner_provider(Settings(llm_planner_provider="mystery_ai"))

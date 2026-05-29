@@ -1,5 +1,7 @@
 from collections.abc import Iterator
 import json
+from types import SimpleNamespace
+from typing import Optional
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,6 +16,7 @@ from app.external_workspaces import (
 from app.main import app, get_db
 from app.main import _should_auto_start_task
 from app.models import Agent, Message, Session, Task, Workspace
+from app.agent_runtime_config import RuntimeRoleConfig, upsert_runtime_config
 from app.config import Settings
 from app.planner_providers import FakePlannerProvider
 import app.planning as planning_module
@@ -601,7 +604,7 @@ def test_no_mention_message_uses_configured_llm_planner_provider(
     monkeypatch.setattr(
         planning_module,
         "resolve_planner_provider",
-        lambda settings: FakePlannerProvider(
+        lambda settings, **_kwargs: FakePlannerProvider(
             provider_id="fake-llm-planner",
             payload={
                 "planId": "plan-breakout",
@@ -648,6 +651,88 @@ def test_no_mention_message_uses_configured_llm_planner_provider(
     assert task["planJson"]["plannerProviderId"] == "fake-llm-planner"
     assert task["planJson"]["plannerEvidence"]["plannerSource"] == "fake_test"
     assert task["planJson"]["originalRequest"] == "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏"
+
+
+def test_runtime_config_selects_planner_provider_for_no_mention_message(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, str | None] = {}
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="disabled",
+        ),
+    )
+
+    def fake_resolver(settings: Settings, **kwargs: Optional[str]) -> FakePlannerProvider:
+        captured["provider_id"] = kwargs.get("provider_id")
+        captured["adapter_type"] = kwargs.get("adapter_type")
+        return FakePlannerProvider(provider_id="runtime-planner-test", payload={})
+
+    def fake_create_llm_plan_tasks(db: DbSession, message: Message, *, provider):
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=message.session_id,
+            created_by_message_id=message.id,
+            title="Build settings-aware frontend",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "planner": "llm_v1",
+                    "plannerProviderId": provider.provider_id,
+                    "assignedRole": "frontend",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                }
+            ),
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        return SimpleNamespace(tasks=[task])
+
+    monkeypatch.setattr(planning_module, "resolve_planner_provider", fake_resolver)
+    monkeypatch.setattr(
+        planning_module,
+        "create_llm_plan_tasks",
+        fake_create_llm_plan_tasks,
+    )
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+        upsert_runtime_config(
+            db,
+            session.workspace_id,
+            {
+                "planner": RuntimeRoleConfig(
+                    role="planner",
+                    agent_profile_id="agent-orchestrator",
+                    provider_id="claude-cli-planner",
+                    adapter_type="claude_cli",
+                    mode="read_only",
+                    enabled=True,
+                    fallback_policy="deterministic",
+                )
+            },
+        )
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "请规划一个小功能"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert captured == {
+        "provider_id": "claude-cli-planner",
+        "adapter_type": "claude_cli",
+    }
+    assert tasks[0]["planJson"]["plannerProviderId"] == "runtime-planner-test"
 
 
 def test_auto_start_policy_allows_registered_target_allowed_paths(

@@ -63,6 +63,24 @@ class RuntimeConfigValidationResult:
     warnings: list[str]
 
 
+@dataclass(frozen=True)
+class RuntimeRoleResolution:
+    role_config: RuntimeRoleConfig
+    config_source: str
+
+    def to_metadata(self) -> dict[str, object]:
+        return {
+            "role": self.role_config.role,
+            "agentProfileId": self.role_config.agent_profile_id,
+            "providerId": self.role_config.provider_id,
+            "adapterType": self.role_config.adapter_type,
+            "mode": self.role_config.mode,
+            "enabled": self.role_config.enabled,
+            "fallbackPolicy": self.role_config.fallback_policy,
+            "configSource": self.config_source,
+        }
+
+
 def default_runtime_config(workspace_id: Optional[str]) -> RuntimeConfigSnapshot:
     return RuntimeConfigSnapshot(
         workspace_id=workspace_id,
@@ -93,6 +111,23 @@ def get_effective_runtime_config(
         workspace_id=stored.workspace_id,
         config_source=stored.scope or "workspace",
         roles=_roles_from_json(stored.roles_json),
+    )
+
+
+def resolve_runtime_role_config(
+    db: DbSession,
+    workspace_id: Optional[str],
+    role: str,
+) -> Optional[RuntimeRoleResolution]:
+    if role not in RUNTIME_CONFIG_ROLES:
+        return None
+    snapshot = get_effective_runtime_config(db, workspace_id)
+    role_config = snapshot.roles.get(role)
+    if role_config is None or not role_config.enabled:
+        return None
+    return RuntimeRoleResolution(
+        role_config=role_config,
+        config_source=snapshot.config_source,
     )
 
 

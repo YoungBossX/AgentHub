@@ -16,6 +16,7 @@ from app.external_workspaces import (
     register_external_project_target,
 )
 from app.instruction_adapters import adapter_for_provider
+from app.agent_runtime_config import RuntimeRoleConfig, upsert_runtime_config
 from app.main import (
     _complete_ready_pipeline_review_tasks,
     agent_run_request_for,
@@ -356,6 +357,84 @@ def test_default_code_adapter_env_selects_claude_code_for_frontend_task(
 
         assert json.loads(task_run.metrics_json)["adapterType"] == "claude_code"
         assert json.loads(event.payload_json)["adapterType"] == "claude_code"
+
+
+def test_runtime_config_frontend_adapter_overrides_default_adapter(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENTHUB_DEFAULT_CODE_ADAPTER", "codex")
+
+    with db_from_override() as db:
+        workspace_id = db.exec(select(Session)).first().workspace_id
+        upsert_runtime_config(
+            db,
+            workspace_id,
+            {
+                "frontend": RuntimeRoleConfig(
+                    role="frontend",
+                    agent_profile_id="agent-frontend",
+                    provider_id="local-claude-code-cli",
+                    adapter_type="claude_code",
+                    mode="frontend",
+                    enabled=True,
+                    fallback_policy="explicit_only",
+                )
+            },
+        )
+
+        task_run = create_task_run(db, task_id())
+        metrics = json.loads(task_run.metrics_json)
+
+        assert metrics["adapterType"] == "claude_code"
+        assert metrics["providerAssignment"]["source"] == "runtime_config"
+        assert metrics["providerAssignment"]["providerId"] == "local-claude-code-cli"
+        assert metrics["runtimeConfigResolution"]["configSource"] == "workspace"
+
+
+def test_runtime_config_backend_adapter_overrides_environment_default(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENTHUB_DEFAULT_CODE_ADAPTER", "claude_code")
+
+    with db_from_override() as db:
+        workspace_id = db.exec(select(Session)).first().workspace_id
+        backend_agent_id = db.exec(select(Agent).where(Agent.role == "backend")).one().id
+        session_id = db.exec(select(Session)).first().id
+        backend_task = Task(
+            session_id=session_id,
+            title="Build contacts API",
+            intent_type="backend_change",
+            status="pending",
+            assigned_agent_id=backend_agent_id,
+            plan_json=json.dumps({"assignedRole": "backend"}),
+        )
+        db.add(backend_task)
+        db.commit()
+        db.refresh(backend_task)
+        upsert_runtime_config(
+            db,
+            workspace_id,
+            {
+                "backend": RuntimeRoleConfig(
+                    role="backend",
+                    agent_profile_id="agent-backend",
+                    provider_id="local-codex-cli",
+                    adapter_type="codex",
+                    mode="backend",
+                    enabled=True,
+                    fallback_policy="explicit_only",
+                )
+            },
+        )
+
+        task_run = create_task_run(db, backend_task.id)
+        metrics = json.loads(task_run.metrics_json)
+
+        assert metrics["adapterType"] == "codex"
+        assert metrics["providerAssignment"]["source"] == "runtime_config"
+        assert metrics["providerAssignment"]["providerId"] == "local-codex-cli"
 
 
 def test_default_code_adapter_env_preserves_explicit_and_non_code_adapters(

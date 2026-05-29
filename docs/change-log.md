@@ -1,5 +1,38 @@
 # AgentHub Change Log
 
+## P16-4 Runtime Config Resolution
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_runtime_config.py` | Added enabled role resolution metadata for workspace runtime config. |
+| `apps/api/app/planner_providers.py` | Allowed explicit runtime provider IDs such as `claude-cli-planner` to resolve the real Claude CLI planner. |
+| `apps/api/app/planning.py` | Routed no-mention Orchestrator planning through enabled Planner runtime config when present. |
+| `apps/api/app/provider_assignments.py` | Added runtime-config provider assignment source before legacy matrix/default selection. |
+| `apps/api/app/task_runs.py` | Applied enabled Frontend/Backend runtime config to TaskRun adapter/provider selection. |
+| `apps/api/tests/test_planner_providers.py` | Added runtime provider ID resolver coverage. |
+| `apps/api/tests/test_planning.py` | Added Planner runtime config routing coverage. |
+| `apps/api/tests/test_task_runs.py` | Added Frontend/Backend runtime adapter override coverage. |
+| `docs/project-state.md` | Recorded P16-4 behavior and next evidence step. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-4 complete after validation. |
+
+### What Changed
+
+Runtime config now affects actual planner and code-agent resolution while
+preserving explicit adapter overrides and legacy defaults when no config exists.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P16-4 targeted planner/provider/task-run tests | Pass: 5 tests. |
+
+---
+
 ## P16-3 Agent Runtime Settings UI
 
 **Date:** 2026-05-29

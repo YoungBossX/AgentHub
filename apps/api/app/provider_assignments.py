@@ -72,6 +72,9 @@ def resolve_provider_assignment(
     *,
     selected_adapter: str,
     explicit_adapter_type: Optional[str] = None,
+    runtime_adapter_type: Optional[str] = None,
+    runtime_provider_id: Optional[str] = None,
+    runtime_fallback_policy: Optional[str] = None,
 ) -> ProviderAssignment:
     plan = _plan_json(task)
     role = _role_for_task(plan, agent)
@@ -86,6 +89,19 @@ def resolve_provider_assignment(
             source="explicit",
             target_id=target_id,
             fallback_policy="explicit_only",
+        )
+
+    if runtime_adapter_type is not None:
+        return _assignment_from_adapter(
+            role=role,
+            adapter_type=runtime_adapter_type,
+            provider_id=runtime_provider_id or _provider_id_for_adapter(
+                runtime_adapter_type,
+                agent,
+            ),
+            source="runtime_config",
+            target_id=target_id,
+            fallback_policy=runtime_fallback_policy or "explicit_only",
         )
 
     configured = _configured_assignment(matrix, role=role, target_id=target_id)

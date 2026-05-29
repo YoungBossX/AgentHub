@@ -272,27 +272,35 @@ def resolve_planner_provider(
     settings: Settings | None = None,
     *,
     fake_payload: dict[str, Any] | None = None,
+    provider_id: str | None = None,
+    adapter_type: str | None = None,
 ) -> PlannerProvider:
     resolved_settings = settings or get_settings()
-    provider_id = resolved_settings.llm_planner_provider.strip().lower()
-    if provider_id == PLANNER_PROVIDER_DISABLED:
+    selected_provider_id = (
+        provider_id or resolved_settings.llm_planner_provider
+    ).strip().lower()
+    selected_adapter_type = (adapter_type or "").strip().lower()
+    if selected_provider_id == PLANNER_PROVIDER_DISABLED:
         return DisabledPlannerProvider()
-    if provider_id == PLANNER_PROVIDER_FAKE_TEST:
+    if selected_provider_id == PLANNER_PROVIDER_FAKE_TEST:
         if fake_payload is None:
             raise PlannerProviderError(
                 code="FAKE_PLANNER_PAYLOAD_REQUIRED",
                 summary="Fake planner provider requires an explicit test payload.",
-                provider_id=provider_id,
+                provider_id=selected_provider_id,
             )
         return FakePlannerProvider(payload=fake_payload)
-    if provider_id == PLANNER_PROVIDER_CLAUDE_CLI:
+    if (
+        selected_provider_id in {PLANNER_PROVIDER_CLAUDE_CLI, "claude-cli-planner"}
+        or selected_adapter_type == PLANNER_PROVIDER_CLAUDE_CLI
+    ):
         return ClaudeCliPlannerProvider(
             timeout_sec=resolved_settings.llm_planner_timeout_sec,
         )
     raise PlannerProviderError(
         code="UNKNOWN_PLANNER_PROVIDER",
-        summary=f"Unknown LLM planner provider: {provider_id}",
-        provider_id=provider_id,
+        summary=f"Unknown LLM planner provider: {selected_provider_id}",
+        provider_id=selected_provider_id,
     )
 
 

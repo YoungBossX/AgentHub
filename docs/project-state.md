@@ -5,6 +5,25 @@ reference instead of repeating long context blocks.
 
 ## P16 Status
 
+### P16-4 Runtime Config Resolution
+
+P16-4 completed on 2026-05-29.
+
+Saved workspace runtime config now participates in provider resolution:
+
+- enabled Planner config selects the planner provider before environment
+  defaults;
+- enabled Frontend config selects the TaskRun adapter/provider before
+  `AGENTHUB_DEFAULT_CODE_ADAPTER`;
+- enabled Backend config selects the TaskRun adapter/provider before
+  `AGENTHUB_DEFAULT_CODE_ADAPTER`;
+- explicit TaskRun adapter overrides still remain explicit and auditable;
+- unconfigured roles preserve the previous default behavior.
+
+Runtime selections are recorded in TaskRun metrics under provider assignment
+metadata and `runtimeConfigResolution`. P16-5 will expand where this evidence is
+exposed in API responses and mission trace.
+
 ### P16-3 Agent Runtime Settings UI
 
 P16-3 completed on 2026-05-29.

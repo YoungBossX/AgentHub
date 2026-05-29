@@ -20,6 +20,7 @@ from app.provider_assignments import (
     ProviderAssignmentError,
     resolve_provider_assignment,
 )
+from app.agent_runtime_config import resolve_runtime_role_config
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     TargetRegistryError,
@@ -70,13 +71,33 @@ def create_task_run(
     task = _task_or_raise(db, task_id)
     session = _session_or_raise(db, task.session_id)
     agent = _agent_or_raise(db, task.assigned_agent_id)
-    selected_adapter = adapter_type or _default_adapter_for_agent(agent)
+    runtime_resolution = _runtime_resolution_for_task(db, task, session, agent)
+    selected_adapter = adapter_type or (
+        runtime_resolution.role_config.adapter_type
+        if runtime_resolution is not None
+        else _default_adapter_for_agent(agent)
+    )
     try:
         provider_assignment = resolve_provider_assignment(
             task,
             agent,
             selected_adapter=selected_adapter,
             explicit_adapter_type=adapter_type,
+            runtime_adapter_type=(
+                runtime_resolution.role_config.adapter_type
+                if adapter_type is None and runtime_resolution is not None
+                else None
+            ),
+            runtime_provider_id=(
+                runtime_resolution.role_config.provider_id
+                if adapter_type is None and runtime_resolution is not None
+                else None
+            ),
+            runtime_fallback_policy=(
+                runtime_resolution.role_config.fallback_policy
+                if adapter_type is None and runtime_resolution is not None
+                else None
+            ),
         )
     except ProviderAssignmentError as exc:
         raise TaskRunLifecycleError(str(exc)) from exc
@@ -100,6 +121,8 @@ def create_task_run(
         "providerAssignment": provider_assignment.to_metadata(),
         "agentSelection": agent_selection.to_metadata(),
     }
+    if runtime_resolution is not None and adapter_type is None:
+        metrics["runtimeConfigResolution"] = runtime_resolution.to_metadata()
     if retry_of_run_id is not None:
         metrics["retryOfRunId"] = retry_of_run_id
     if fallback_from_run_id is not None:
@@ -463,6 +486,26 @@ def _default_adapter_for_agent(agent: Agent) -> str:
         return configured
 
     return agent.adapter_type
+
+
+def _runtime_resolution_for_task(
+    db: DbSession,
+    task: Task,
+    session: AgentHubSession,
+    agent: Agent,
+):
+    role = _role_for_runtime_config(task, agent)
+    return resolve_runtime_role_config(db, session.workspace_id, role)
+
+
+def _role_for_runtime_config(task: Task, agent: Agent) -> str:
+    plan = _plan_json(task)
+    assigned_role = plan.get("assignedRole") or plan.get("assigned_role")
+    if isinstance(assigned_role, str) and assigned_role:
+        return "review" if assigned_role == "qa" else assigned_role
+    if agent.role == "qa":
+        return "review"
+    return agent.role
 
 
 def _retryable_run_or_raise(db: DbSession, task_run_id: str) -> TaskRun:

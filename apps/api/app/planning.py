@@ -13,6 +13,7 @@ from app.llm_planner import (
     create_llm_plan_tasks,
     llm_planner_fallback_metadata,
 )
+from app.agent_runtime_config import resolve_runtime_role_config
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.plan_validator import PlanValidationError, validate_task_graph
@@ -123,6 +124,13 @@ def parse_mentions(db: DbSession, content: str) -> ParsedMentions:
     return ParsedMentions(roles=roles)
 
 
+def _planner_runtime_resolution(db: DbSession, message: Message):
+    session = db.get(AgentHubSession, message.session_id)
+    if session is None:
+        return None
+    return resolve_runtime_role_config(db, session.workspace_id, "planner")
+
+
 def plan_for_message(
     db: DbSession,
     message: Message,
@@ -134,7 +142,20 @@ def plan_for_message(
     llm_fallback = None
     if routed_role == "orchestrator" and not existing_tasks:
         try:
-            planner_provider = resolve_planner_provider(get_settings())
+            planner_runtime = _planner_runtime_resolution(db, message)
+            planner_provider = resolve_planner_provider(
+                get_settings(),
+                provider_id=(
+                    planner_runtime.role_config.provider_id
+                    if planner_runtime is not None
+                    else None
+                ),
+                adapter_type=(
+                    planner_runtime.role_config.adapter_type
+                    if planner_runtime is not None
+                    else None
+                ),
+            )
             if planner_provider.planner_source != "disabled":
                 try:
                     llm_outcome = create_llm_plan_tasks(
