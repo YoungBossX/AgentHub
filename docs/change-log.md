@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17-1 ConversationOutcome Schema
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_contracts.py` | Added the `ConversationOutcome` contract for assistant replies, task plans, clarification, refusal, approval-required, unsupported, planner provider evidence, validation result, and fallback/error metadata. |
+| `apps/api/tests/test_planner_contracts.py` | Added schema tests for assistant replies, required task plan drafts, and planner/coding provider evidence separation. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-1 complete after targeted validation. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py -q` | Pass: 14 tests. |
+
+---
+
 ## P16-7 Rehearsal And Freeze Review
 
 **Date:** 2026-05-29

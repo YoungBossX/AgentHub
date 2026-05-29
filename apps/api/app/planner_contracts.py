@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import Any
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 SECRET_VALUE_PATTERN = re.compile(
@@ -84,6 +84,51 @@ class PlannerResponse(BaseModel):
         if isinstance(value, str) and value.strip():
             return [value.strip()]
         return value
+
+    def to_payload(self) -> dict[str, Any]:
+        return self.model_dump(by_alias=True)
+
+
+ConversationOutcomeType = Literal[
+    "assistant_reply",
+    "task_plan",
+    "clarification",
+    "refusal",
+    "approval_required",
+    "unsupported",
+]
+
+
+class ConversationOutcome(BaseModel):
+    outcome_type: ConversationOutcomeType = Field(alias="outcomeType")
+    reply: Optional[str] = None
+    plan_draft: Optional[PlannerResponse] = Field(default=None, alias="planDraft")
+    risk_level: str = Field(default="low", alias="riskLevel")
+    reason: str = ""
+    planner_provider: dict[str, Any] = Field(default_factory=dict, alias="plannerProvider")
+    coding_agent_provider: Optional[dict[str, Any]] = Field(
+        default=None,
+        alias="codingAgentProvider",
+    )
+    validation_result: str = Field(default="not_run", alias="validationResult")
+    fallback_metadata: dict[str, Any] = Field(default_factory=dict, alias="fallbackMetadata")
+    error_metadata: dict[str, Any] = Field(default_factory=dict, alias="errorMetadata")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def validate_task_plan_boundary(self) -> "ConversationOutcome":
+        if self.outcome_type == "task_plan":
+            if self.plan_draft is None:
+                raise ValueError("task_plan outcomes must include planDraft.")
+            if self.coding_agent_provider is not None:
+                raise ValueError(
+                    "ConversationOutcome must keep coding agent provider evidence downstream of planning."
+                )
+            return self
+        if self.plan_draft is not None:
+            raise ValueError("Non-task conversation outcomes must not include planDraft.")
+        return self
 
     def to_payload(self) -> dict[str, Any]:
         return self.model_dump(by_alias=True)

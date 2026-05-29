@@ -13,7 +13,7 @@ from app.llm_planner import (
     parse_llm_plan_output,
 )
 from app.models import Agent, Message, Session, Workspace
-from app.planner_contracts import PlannerRequest, PlannerResponse
+from app.planner_contracts import ConversationOutcome, PlannerRequest, PlannerResponse
 from app.target_registry import DEMO_FRONTEND_TARGET_ID
 
 
@@ -188,6 +188,77 @@ def test_parse_llm_plan_output_returns_contract_validated_payload() -> None:
     assert payload["tasks"][0]["role"] == "frontend"
 
 
+def test_conversation_outcome_supports_assistant_reply_without_task_plan() -> None:
+    outcome = ConversationOutcome.model_validate(
+        {
+            "outcomeType": "assistant_reply",
+            "reply": "你好，我可以帮你规划和执行代码任务。",
+            "riskLevel": "low",
+            "reason": "Pure greeting.",
+            "plannerProvider": {
+                "providerId": "claude-cli-planner",
+                "providerType": "claude_cli",
+            },
+            "validationResult": "not_required",
+        }
+    )
+
+    payload = outcome.to_payload()
+
+    assert payload["outcomeType"] == "assistant_reply"
+    assert payload["reply"].startswith("你好")
+    assert payload["planDraft"] is None
+    assert payload["plannerProvider"]["providerId"] == "claude-cli-planner"
+    assert payload["codingAgentProvider"] is None
+
+
+def test_conversation_outcome_requires_plan_draft_for_task_plan() -> None:
+    with pytest.raises(ValidationError):
+        ConversationOutcome.model_validate(
+            {
+                "outcomeType": "task_plan",
+                "riskLevel": "medium",
+                "reason": "Coding request.",
+                "plannerProvider": {"providerId": "fake-test-planner"},
+                "validationResult": "pending",
+            }
+        )
+
+
+def test_conversation_outcome_keeps_coding_provider_evidence_downstream() -> None:
+    plan = _valid_plan_response_payload()
+
+    with pytest.raises(ValidationError):
+        ConversationOutcome.model_validate(
+            {
+                "outcomeType": "task_plan",
+                "planDraft": plan,
+                "riskLevel": "medium",
+                "reason": "Coding request.",
+                "plannerProvider": {"providerId": "fake-test-planner"},
+                "codingAgentProvider": {"providerId": "local-claude-code-cli"},
+                "validationResult": "pending",
+            }
+        )
+
+
+def test_conversation_outcome_rejects_plan_draft_for_non_task_outcome() -> None:
+    plan = _valid_plan_response_payload()
+
+    with pytest.raises(ValidationError):
+        ConversationOutcome.model_validate(
+            {
+                "outcomeType": "clarification",
+                "reply": "你想修改哪个前端项目？",
+                "planDraft": plan,
+                "riskLevel": "low",
+                "reason": "Needs target clarification.",
+                "plannerProvider": {"providerId": "fake-test-planner"},
+                "validationResult": "not_required",
+            }
+        )
+
+
 def test_parse_llm_plan_output_extracts_single_embedded_json_payload() -> None:
     raw = """
     Here is the validated plan:
@@ -299,6 +370,31 @@ def test_parse_llm_plan_output_does_not_normalize_unknown_target() -> None:
     )
 
     assert payload["tasks"][0]["targetId"] == "unknown-target"
+
+
+def _valid_plan_response_payload() -> dict[str, object]:
+    return {
+        "planId": "plan-breakout",
+        "planner": "llm_v1",
+        "plannerMode": "llm_v1",
+        "rationale": "Implement a playable game in the frontend target.",
+        "acceptanceCriteria": ["Game is playable"],
+        "validationExpectations": ["pnpm build"],
+        "tasks": [
+            {
+                "title": "Build Breakout game",
+                "role": "frontend",
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "intentType": "frontend_change",
+                "plannedFiles": ["apps/demo/src/App.tsx"],
+                "dependsOn": [],
+                "expectedArtifactTypes": ["diff"],
+                "acceptanceCriteria": ["Keyboard controls work"],
+                "riskLevel": "medium",
+                "requiresApproval": False,
+            }
+        ],
+    }
 
 
 def _message(db: DbSession, content: str) -> Message:
