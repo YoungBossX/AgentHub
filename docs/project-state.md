@@ -3,6 +3,29 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P16 Status
+
+### P16-1 Agent Runtime Config Model
+
+P16-1 completed on 2026-05-29.
+
+AgentHub now has a workspace-scoped Agent Runtime Config persistence model for
+core roles:
+
+- planner;
+- frontend;
+- backend;
+- review.
+
+Each role config can store `agentProfileId`, `providerId`, `adapterType`,
+`mode`, `enabled`, and `fallbackPolicy`. When no runtime config exists, the
+effective config source is `default` and all role overrides remain disabled, so
+existing environment/default provider behavior is preserved.
+
+P16-1 only adds the model, serialization helpers, default resolution, and tests.
+It does not add API endpoints, UI, provider resolution, evidence integration,
+or policy enforcement yet.
+
 ## P15b Status
 
 ### P15b-7 Real LLM Planner Breakout Rehearsal And Freeze Review

@@ -115,6 +115,20 @@ class AgentProfileDraft(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
+class AgentRuntimeConfig(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    workspace_id: Optional[str] = Field(
+        default=None,
+        foreign_key="workspace.id",
+        index=True,
+        unique=True,
+    )
+    scope: str = "workspace"
+    roles_json: str = "{}"
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
 class Task(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     session_id: str = Field(foreign_key="session.id", index=True)

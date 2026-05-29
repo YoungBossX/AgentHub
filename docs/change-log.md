@@ -1,5 +1,35 @@
 # AgentHub Change Log
 
+## P16-1 Agent Runtime Config Model
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/models.py` | Added `AgentRuntimeConfig` table model for workspace/global-scoped runtime role defaults. |
+| `apps/api/app/agent_runtime_config.py` | Added runtime role config dataclasses, default effective config, workspace config upsert, JSON serialization, and unsupported-role validation. |
+| `apps/api/tests/test_agent_runtime_config.py` | Added model/default/round-trip/serialization tests. |
+| `docs/project-state.md` | Recorded P16-1 behavior and limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/*` | Added P16 OpenSpec artifacts and marked P16-1 complete after validation. |
+
+### What Changed
+
+AgentHub can now persist a workspace-level runtime configuration skeleton for
+planner, frontend, backend, and review roles. If no config exists, effective
+runtime config reports `configSource=default` with disabled overrides, so
+existing provider behavior remains unchanged.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py -q` | Pass: 4 tests. |
+
+---
+
 ## P15b-7 Real LLM Planner Breakout Rehearsal And Freeze Review
 
 **Date:** 2026-05-29
