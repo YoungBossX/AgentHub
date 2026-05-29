@@ -1,5 +1,38 @@
 # AgentHub Change Log
 
+## P16-2 Runtime Config API
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/provider_configs.py` | Added `claude-cli-planner` provider metadata for configurable Planner Agent selection. |
+| `apps/api/app/agent_runtime_config.py` | Added runtime config validation against AgentProfile and ProviderConfig metadata. |
+| `apps/api/app/schemas.py` | Added runtime config request/response and validation schemas. |
+| `apps/api/app/main.py` | Added runtime config GET, validate, and PUT workspace endpoints. |
+| `apps/api/tests/test_agent_runtime_config.py` | Added runtime config API default, validation, persistence, and invalid-assignment tests. |
+| `apps/api/tests/test_models.py` | Updated the model boundary whitelist for `AgentRuntimeConfig`. |
+| `apps/api/tests/test_provider_configs.py` | Updated provider registry expectations for the planner provider. |
+| `docs/project-state.md` | Recorded P16-2 behavior and remaining limitation. |
+| `docs/change-log.md` | Recorded this implementation. |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-2 complete after validation. |
+
+### What Changed
+
+Workspace runtime config can now be read, validated, and persisted through API
+endpoints. The API exposes safe selectable provider/profile metadata and blocks
+invalid role/profile/provider/mode combinations before persistence.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py tests/test_provider_configs.py -q` | Pass: 9 tests. |
+
+---
+
 ## P16-1 Agent Runtime Config Model
 
 **Date:** 2026-05-29

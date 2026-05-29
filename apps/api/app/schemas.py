@@ -184,6 +184,48 @@ class ProviderConfigResponse(ApiModel):
     supported_modes: list[str] = Field(alias="supportedModes")
 
 
+class RuntimeRoleConfigRequest(BaseModel):
+    agent_profile_id: Optional[str] = Field(default=None, alias="agentProfileId")
+    provider_id: Optional[str] = Field(default=None, alias="providerId")
+    adapter_type: Optional[str] = Field(default=None, alias="adapterType")
+    mode: Optional[str] = None
+    enabled: bool = False
+    fallback_policy: Optional[str] = Field(default=None, alias="fallbackPolicy")
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+class RuntimeConfigUpdateRequest(BaseModel):
+    roles: dict[str, RuntimeRoleConfigRequest]
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+class RuntimeRoleConfigResponse(ApiModel):
+    role: str
+    agent_profile_id: Optional[str] = Field(alias="agentProfileId")
+    provider_id: Optional[str] = Field(alias="providerId")
+    adapter_type: Optional[str] = Field(alias="adapterType")
+    mode: Optional[str]
+    enabled: bool
+    fallback_policy: Optional[str] = Field(alias="fallbackPolicy")
+
+
+class RuntimeConfigValidationResponse(ApiModel):
+    valid: bool
+    errors: list[str]
+    warnings: list[str]
+
+
+class RuntimeConfigResponse(ApiModel):
+    workspace_id: Optional[str] = Field(alias="workspaceId")
+    config_source: str = Field(alias="configSource")
+    roles: dict[str, RuntimeRoleConfigResponse]
+    available_profiles: list[AgentProfileResponse] = Field(alias="availableProfiles")
+    available_providers: list[ProviderConfigResponse] = Field(alias="availableProviders")
+    validation: RuntimeConfigValidationResponse
+
+
 class SessionResponse(ApiModel):
     id: str
     workspace_id: str = Field(alias="workspaceId")

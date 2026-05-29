@@ -6,6 +6,7 @@ from app.db import create_db_and_tables, engine
 from app.models import (
     Agent,
     AgentProfileDraft,
+    AgentRuntimeConfig,
     Artifact,
     ArtifactVersion,
     Deployment,
@@ -29,6 +30,7 @@ from app.seed import seed_demo_data
 EXPECTED_TABLES = {
     "agent",
     "agentprofiledraft",
+    "agentruntimeconfig",
     "artifact",
     "artifactversion",
     "deployment",
@@ -130,6 +132,14 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "safe_for_review",
             "description",
             "status",
+            "created_at",
+            "updated_at",
+        },
+        AgentRuntimeConfig: {
+            "id",
+            "workspace_id",
+            "scope",
+            "roles_json",
             "created_at",
             "updated_at",
         },

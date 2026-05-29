@@ -11,12 +11,21 @@ def test_provider_config_registry_returns_current_non_secret_providers() -> None
     assert response.status_code == 200
     configs = response.json()
     assert [config["adapterType"] for config in configs] == [
+        "claude_cli",
         "claude_code",
         "codex",
         "scripted_mock",
     ]
 
-    claude = configs[0]
+    planner = configs[0]
+    assert planner["providerId"] == "claude-cli-planner"
+    assert planner["displayName"] == "Claude CLI Planner"
+    assert planner["authStatus"] == "unchecked"
+    assert planner["available"] is True
+    assert "planner" in planner["defaultForRoles"]
+    assert "read_only" in planner["supportedModes"]
+
+    claude = configs[1]
     assert claude["providerId"] == "local-claude-code-cli"
     assert claude["displayName"] == "Claude Code CLI"
     assert claude["authStatus"] == "unchecked"

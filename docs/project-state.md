@@ -5,6 +5,25 @@ reference instead of repeating long context blocks.
 
 ## P16 Status
 
+### P16-2 Runtime Config API
+
+P16-2 completed on 2026-05-29.
+
+AgentHub now exposes workspace runtime config APIs:
+
+- `GET /workspaces/{workspaceId}/runtime-config`;
+- `POST /workspaces/{workspaceId}/runtime-config/validate`;
+- `PUT /workspaces/{workspaceId}/runtime-config`.
+
+The API returns the effective config, config source, selectable AgentProfile
+metadata, selectable ProviderConfig metadata, and validation errors/warnings.
+It rejects invalid profile/provider/role/mode combinations honestly before
+persisting them.
+
+Provider metadata now includes `claude-cli-planner` for the Planner Agent
+configuration path. P16-2 only exposes and validates runtime config; actual
+planner/frontend/backend provider resolution is still deferred to P16-4.
+
 ### P16-1 Agent Runtime Config Model
 
 P16-1 completed on 2026-05-29.

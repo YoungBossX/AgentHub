@@ -2,10 +2,12 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
+from app.agent_profiles import AgentProfile
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.models import AgentRuntimeConfig, utc_now
+from app.provider_configs import ProviderConfig
 
 RUNTIME_CONFIG_ROLES = ("planner", "frontend", "backend", "review")
 DEFAULT_FALLBACK_POLICY = "environment_default"
@@ -52,6 +54,13 @@ class RuntimeConfigSnapshot:
                 for role, role_config in self.roles.items()
             },
         }
+
+
+@dataclass(frozen=True)
+class RuntimeConfigValidationResult:
+    valid: bool
+    errors: list[str]
+    warnings: list[str]
 
 
 def default_runtime_config(workspace_id: Optional[str]) -> RuntimeConfigSnapshot:
@@ -113,6 +122,100 @@ def upsert_runtime_config(
     db.commit()
     db.refresh(stored)
     return stored
+
+
+def validate_runtime_config(
+    roles: dict[str, RuntimeRoleConfig],
+    *,
+    profiles: list[AgentProfile],
+    providers: list[ProviderConfig],
+) -> RuntimeConfigValidationResult:
+    errors: list[str] = []
+    warnings: list[str] = []
+    try:
+        normalized = _normalize_roles(roles)
+    except AgentRuntimeConfigError as exc:
+        return RuntimeConfigValidationResult(valid=False, errors=[str(exc)], warnings=[])
+
+    profiles_by_id = {profile.id: profile for profile in profiles}
+    providers_by_id = {provider.provider_id: provider for provider in providers}
+
+    for role, role_config in normalized.items():
+        if not role_config.enabled:
+            continue
+
+        missing_fields = [
+            field_name
+            for field_name, value in {
+                "agentProfileId": role_config.agent_profile_id,
+                "providerId": role_config.provider_id,
+                "adapterType": role_config.adapter_type,
+                "mode": role_config.mode,
+            }.items()
+            if not value
+        ]
+        if missing_fields:
+            errors.append(
+                f"Runtime config role `{role}` is enabled but missing {', '.join(missing_fields)}."
+            )
+            continue
+
+        profile = profiles_by_id.get(role_config.agent_profile_id or "")
+        if profile is None:
+            errors.append(
+                f"Runtime config role `{role}` references unknown agent profile `{role_config.agent_profile_id}`."
+            )
+            continue
+
+        provider = providers_by_id.get(role_config.provider_id or "")
+        if provider is None:
+            errors.append(
+                f"Runtime config role `{role}` references unknown provider `{role_config.provider_id}`."
+            )
+            continue
+
+        if not provider.available:
+            errors.append(
+                f"Runtime config role `{role}` references unavailable provider `{provider.provider_id}`."
+            )
+        if role_config.adapter_type != provider.adapter_type:
+            errors.append(
+                f"Runtime config role `{role}` adapter `{role_config.adapter_type}` does not match provider `{provider.adapter_type}`."
+            )
+        if role_config.adapter_type != profile.adapter_type:
+            warnings.append(
+                f"Runtime config role `{role}` uses provider adapter `{role_config.adapter_type}` with agent profile adapter `{profile.adapter_type}`."
+            )
+        if role_config.mode not in provider.supported_modes:
+            errors.append(
+                f"Runtime config role `{role}` mode `{role_config.mode}` is not supported by provider `{provider.provider_id}`."
+            )
+        if role_config.mode not in profile.supported_modes:
+            errors.append(
+                f"Runtime config role `{role}` mode `{role_config.mode}` is not supported by agent profile `{profile.id}`."
+            )
+        if not _profile_supports_runtime_role(profile, role):
+            errors.append(
+                f"Runtime config role `{role}` is not supported by agent profile `{profile.id}`."
+            )
+        if role in {"frontend", "backend"} and not profile.safe_for_write:
+            errors.append(
+                f"Runtime config role `{role}` requires a write-safe agent profile."
+            )
+        if role in {"planner", "review"} and not profile.safe_for_review:
+            errors.append(
+                f"Runtime config role `{role}` requires a review-safe agent profile."
+            )
+        if role not in provider.default_for_roles:
+            warnings.append(
+                f"Provider `{provider.provider_id}` is not a default provider for role `{role}`."
+            )
+
+    return RuntimeConfigValidationResult(
+        valid=not errors,
+        errors=errors,
+        warnings=warnings,
+    )
 
 
 def _stored_config_for_workspace(
@@ -182,3 +285,13 @@ def _default_mode_for_role(role: str) -> str:
 
 def _optional_string(value: object) -> Optional[str]:
     return value if isinstance(value, str) and value.strip() else None
+
+
+def _profile_supports_runtime_role(profile: AgentProfile, role: str) -> bool:
+    accepted_roles = {
+        role,
+        "orchestrator" if role == "planner" else role,
+        "manager" if role == "planner" else role,
+        "qa" if role == "review" else role,
+    }
+    return bool(accepted_roles.intersection(profile.supported_roles))

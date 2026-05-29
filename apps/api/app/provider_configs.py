@@ -22,6 +22,15 @@ class ProviderConfig:
 
 BUILT_IN_PROVIDER_CONFIGS: tuple[ProviderConfig, ...] = (
     ProviderConfig(
+        provider_id="claude-cli-planner",
+        display_name="Claude CLI Planner",
+        adapter_type="claude_cli",
+        auth_status="unchecked",
+        available=True,
+        default_for_roles=["planner"],
+        supported_modes=["read_only"],
+    ),
+    ProviderConfig(
         provider_id="local-claude-code-cli",
         display_name="Claude Code CLI",
         adapter_type="claude_code",

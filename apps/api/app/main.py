@@ -17,6 +17,14 @@ from app.agent_profile_drafts import (
     list_agent_profile_drafts,
 )
 from app.agent_profiles import AgentProfile, list_agent_profile_registry, profile_for_agent
+from app.agent_runtime_config import (
+    RuntimeConfigSnapshot,
+    RuntimeConfigValidationResult,
+    RuntimeRoleConfig,
+    get_effective_runtime_config,
+    upsert_runtime_config,
+    validate_runtime_config,
+)
 from app.artifact_versions import (
     ArtifactVersionError,
     StoredArtifactVersion,
@@ -114,6 +122,10 @@ from app.schemas import (
     PreviewResponse,
     ProviderConfigResponse,
     ReviewArtifactResponse,
+    RuntimeConfigResponse,
+    RuntimeConfigUpdateRequest,
+    RuntimeConfigValidationResponse,
+    RuntimeRoleConfigResponse,
     SessionCreateRequest,
     SessionExecutionLedgerResponse,
     SessionMissionTraceResponse,
@@ -497,6 +509,77 @@ def provider_config_response(config: ProviderConfig) -> ProviderConfigResponse:
     )
 
 
+def runtime_role_config_response(role_config: RuntimeRoleConfig) -> RuntimeRoleConfigResponse:
+    return RuntimeRoleConfigResponse(
+        role=role_config.role,
+        agentProfileId=role_config.agent_profile_id,
+        providerId=role_config.provider_id,
+        adapterType=role_config.adapter_type,
+        mode=role_config.mode,
+        enabled=role_config.enabled,
+        fallbackPolicy=role_config.fallback_policy,
+    )
+
+
+def runtime_config_validation_response(
+    validation: RuntimeConfigValidationResult,
+) -> RuntimeConfigValidationResponse:
+    return RuntimeConfigValidationResponse(
+        valid=validation.valid,
+        errors=validation.errors,
+        warnings=validation.warnings,
+    )
+
+
+def runtime_role_config_from_request(
+    role: str,
+    request: Any,
+) -> RuntimeRoleConfig:
+    return RuntimeRoleConfig(
+        role=role,
+        agent_profile_id=request.agent_profile_id,
+        provider_id=request.provider_id,
+        adapter_type=request.adapter_type,
+        mode=request.mode,
+        enabled=request.enabled,
+        fallback_policy=request.fallback_policy,
+    )
+
+
+def runtime_config_response(
+    snapshot: RuntimeConfigSnapshot,
+    *,
+    profiles: list[AgentProfile],
+    providers: list[ProviderConfig],
+) -> RuntimeConfigResponse:
+    validation = validate_runtime_config(
+        snapshot.roles,
+        profiles=profiles,
+        providers=providers,
+    )
+    return RuntimeConfigResponse(
+        workspaceId=snapshot.workspace_id,
+        configSource=snapshot.config_source,
+        roles={
+            role: runtime_role_config_response(role_config)
+            for role, role_config in snapshot.roles.items()
+        },
+        availableProfiles=[agent_profile_response(profile) for profile in profiles],
+        availableProviders=[provider_config_response(provider) for provider in providers],
+        validation=runtime_config_validation_response(validation),
+    )
+
+
+def runtime_config_profiles_for_workspace(
+    db: DbSession,
+    workspace_id: str,
+) -> list[AgentProfile]:
+    return list_agent_profile_registry(
+        _ordered_enabled_agents(db),
+        drafts=list_agent_profile_drafts(db, workspace_id=workspace_id),
+    )
+
+
 @app.get("/provider-configs", response_model=list[ProviderConfigResponse])
 def read_provider_configs() -> list[ProviderConfigResponse]:
     return [provider_config_response(config) for config in list_provider_configs()]
@@ -537,6 +620,77 @@ def read_workspace_agent_profiles(
             drafts=list_agent_profile_drafts(db, workspace_id=workspace_id),
         )
     ]
+
+
+@app.get(
+    "/workspaces/{workspace_id}/runtime-config",
+    response_model=RuntimeConfigResponse,
+)
+def read_runtime_config(
+    workspace_id: str,
+    db: DbSession = Depends(get_db),
+) -> RuntimeConfigResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return runtime_config_response(
+        get_effective_runtime_config(db, workspace_id),
+        profiles=runtime_config_profiles_for_workspace(db, workspace_id),
+        providers=list_provider_configs(),
+    )
+
+
+@app.post(
+    "/workspaces/{workspace_id}/runtime-config/validate",
+    response_model=RuntimeConfigValidationResponse,
+)
+def validate_runtime_config_endpoint(
+    workspace_id: str,
+    request: RuntimeConfigUpdateRequest,
+    db: DbSession = Depends(get_db),
+) -> RuntimeConfigValidationResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    roles = {
+        role: runtime_role_config_from_request(role, role_request)
+        for role, role_request in request.roles.items()
+    }
+    validation = validate_runtime_config(
+        roles,
+        profiles=runtime_config_profiles_for_workspace(db, workspace_id),
+        providers=list_provider_configs(),
+    )
+    return runtime_config_validation_response(validation)
+
+
+@app.put(
+    "/workspaces/{workspace_id}/runtime-config",
+    response_model=RuntimeConfigResponse,
+)
+def update_runtime_config(
+    workspace_id: str,
+    request: RuntimeConfigUpdateRequest,
+    db: DbSession = Depends(get_db),
+) -> RuntimeConfigResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    roles = {
+        role: runtime_role_config_from_request(role, role_request)
+        for role, role_request in request.roles.items()
+    }
+    profiles = runtime_config_profiles_for_workspace(db, workspace_id)
+    providers = list_provider_configs()
+    validation = validate_runtime_config(roles, profiles=profiles, providers=providers)
+    if not validation.valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"errors": validation.errors, "warnings": validation.warnings},
+        )
+    upsert_runtime_config(db, workspace_id, roles)
+    return runtime_config_response(
+        get_effective_runtime_config(db, workspace_id),
+        profiles=profiles,
+        providers=providers,
+    )
 
 
 @app.get(

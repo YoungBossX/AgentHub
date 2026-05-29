@@ -1,6 +1,8 @@
 from collections.abc import Iterator
+from contextlib import contextmanager
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
@@ -12,7 +14,8 @@ from app.agent_runtime_config import (
     get_effective_runtime_config,
     upsert_runtime_config,
 )
-from app.models import Workspace
+from app.main import app, get_db
+from app.models import Agent, Workspace
 
 
 @pytest.fixture
@@ -115,6 +118,133 @@ def test_default_runtime_config_payload_is_serializable() -> None:
     assert payload["roles"]["review"]["fallbackPolicy"] == "environment_default"
 
 
+def test_runtime_config_api_returns_default_and_safe_options() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+
+        response = client.get(f"/workspaces/{workspace_id}/runtime-config")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["configSource"] == "default"
+        assert set(payload["roles"]) == {"planner", "frontend", "backend", "review"}
+        assert payload["validation"]["valid"] is True
+        assert any(
+            provider["providerId"] == "claude-cli-planner"
+            and provider["adapterType"] == "claude_cli"
+            for provider in payload["availableProviders"]
+        )
+        assert any(
+            profile["role"] == "frontend" and profile["safeForWrite"] is True
+            for profile in payload["availableProfiles"]
+        )
+
+
+def test_runtime_config_validate_does_not_persist_candidate() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/validate",
+            json={
+                "roles": {
+                    "frontend": {
+                        "agentProfileId": profiles["frontend"]["id"],
+                        "providerId": "local-claude-code-cli",
+                        "adapterType": "claude_code",
+                        "mode": "frontend",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+        persisted = client.get(f"/workspaces/{workspace_id}/runtime-config")
+
+        assert response.status_code == 200
+        assert response.json()["valid"] is True
+        assert persisted.json()["configSource"] == "default"
+        assert persisted.json()["roles"]["frontend"]["enabled"] is False
+
+
+def test_runtime_config_api_persists_valid_workspace_config() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.put(
+            f"/workspaces/{workspace_id}/runtime-config",
+            json={
+                "roles": {
+                    "planner": {
+                        "agentProfileId": profiles["orchestrator"]["id"],
+                        "providerId": "claude-cli-planner",
+                        "adapterType": "claude_cli",
+                        "mode": "read_only",
+                        "enabled": True,
+                        "fallbackPolicy": "deterministic",
+                    },
+                    "frontend": {
+                        "agentProfileId": profiles["frontend"]["id"],
+                        "providerId": "local-claude-code-cli",
+                        "adapterType": "claude_code",
+                        "mode": "frontend",
+                        "enabled": True,
+                        "fallbackPolicy": "explicit_only",
+                    },
+                    "backend": {
+                        "agentProfileId": profiles["backend"]["id"],
+                        "providerId": "local-codex-cli",
+                        "adapterType": "codex",
+                        "mode": "backend",
+                        "enabled": True,
+                    },
+                    "review": {
+                        "agentProfileId": profiles["review"]["id"],
+                        "providerId": "local-scripted-mock",
+                        "adapterType": "scripted_mock",
+                        "mode": "review",
+                        "enabled": True,
+                    },
+                }
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["configSource"] == "workspace"
+        assert payload["validation"]["valid"] is True
+        assert payload["roles"]["planner"]["providerId"] == "claude-cli-planner"
+        assert payload["roles"]["frontend"]["providerId"] == "local-claude-code-cli"
+        assert payload["roles"]["backend"]["providerId"] == "local-codex-cli"
+
+
+def test_runtime_config_api_rejects_invalid_profile_provider_role_combo() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.put(
+            f"/workspaces/{workspace_id}/runtime-config",
+            json={
+                "roles": {
+                    "frontend": {
+                        "agentProfileId": profiles["qa"]["id"],
+                        "providerId": "local-scripted-mock",
+                        "adapterType": "scripted_mock",
+                        "mode": "review",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 400
+        errors = response.json()["detail"]["errors"]
+        assert any("not supported by agent profile" in error for error in errors)
+        assert any("write-safe" in error for error in errors)
+
+
 def _workspace(db: DbSession) -> Workspace:
     workspace = Workspace(
         name="AgentHub Demo",
@@ -126,3 +256,72 @@ def _workspace(db: DbSession) -> Workspace:
     db.commit()
     db.refresh(workspace)
     return workspace
+
+
+@contextmanager
+def _client() -> Iterator[TestClient]:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    with DbSession(engine) as db:
+        _workspace(db)
+        db.add_all(
+            [
+                Agent(
+                    name="Manager / Orchestrator",
+                    role="orchestrator",
+                    adapter_type="scripted_mock",
+                    provider="local-scripted-mock",
+                ),
+                Agent(
+                    name="Frontend Agent",
+                    role="frontend",
+                    adapter_type="codex",
+                    provider="local-codex-cli",
+                ),
+                Agent(
+                    name="Backend Agent",
+                    role="backend",
+                    adapter_type="codex",
+                    provider="local-codex-cli",
+                ),
+                Agent(
+                    name="QA Agent",
+                    role="qa",
+                    adapter_type="scripted_mock",
+                    provider="local-scripted-mock",
+                ),
+            ]
+        )
+        db.commit()
+
+    def override_db() -> Iterator[DbSession]:
+        with DbSession(engine) as db:
+            yield db
+
+    app.dependency_overrides[get_db] = override_db
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def _workspace_id(client: TestClient) -> str:
+    response = client.get("/workspaces/demo")
+    assert response.status_code == 200
+    return response.json()["id"]
+
+
+def _profiles_by_role(
+    client: TestClient,
+    workspace_id: str,
+) -> dict[str, dict[str, object]]:
+    response = client.get(f"/workspaces/{workspace_id}/agent-profiles")
+    assert response.status_code == 200
+    profiles: dict[str, dict[str, object]] = {}
+    for profile in response.json():
+        profiles.setdefault(profile["role"], profile)
+    return profiles
