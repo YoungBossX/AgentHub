@@ -1,5 +1,28 @@
 # AgentHub Change Log
 
+## P17-3 Conversational Reply Path
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/llm_planner.py` | Split provider output handling into ConversationOutcome parsing and task-plan persistence so non-task outcomes can stop before task creation. |
+| `apps/api/app/planning.py` | Persisted non-task ConversationOutcome replies as `orchestrator` chat messages with no TaskRun. |
+| `apps/api/tests/test_planning.py` | Added coverage for `你好` producing an orchestrator reply and no tasks. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-3 complete after targeted validation. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_llm_assistant_reply_creates_orchestrator_message_without_task tests/test_planning.py::test_no_mention_message_uses_configured_llm_planner_provider -q` | Pass: 2 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py -q` | Pass: 5 tests. |
+
+---
+
 ## P17-2b LLM-first Orchestrator Entry
 
 **Date:** 2026-05-29

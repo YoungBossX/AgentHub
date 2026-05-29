@@ -45,6 +45,13 @@ class LLMPlanningOutcome:
     plan_draft: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class LLMConversationOutcomeResult:
+    outcome: dict[str, Any]
+    planner_input: dict[str, Any]
+    provider_result: PlannerProviderResult
+
+
 def llm_planner_fallback_metadata(
     reason: str,
     *,
@@ -147,6 +154,24 @@ def create_llm_plan_tasks(
     *,
     provider: LLMPlannerProvider,
 ) -> LLMPlanningOutcome:
+    conversation = create_llm_conversation_outcome(
+        db,
+        message,
+        provider=provider,
+    )
+    return create_llm_plan_tasks_from_outcome(
+        db,
+        message,
+        conversation=conversation,
+    )
+
+
+def create_llm_conversation_outcome(
+    db: DbSession,
+    message: Message,
+    *,
+    provider: LLMPlannerProvider,
+) -> LLMConversationOutcomeResult:
     planner_input = build_llm_planner_input(db, message)
     try:
         provider_result = provider.create_plan(planner_input)
@@ -161,7 +186,27 @@ def create_llm_plan_tasks(
             or f"LLM planner provider did not succeed: {provider_result.status}"
         )
 
-    raw_output = parse_llm_plan_output(provider_result.raw_output)
+    outcome = parse_conversation_outcome_output(provider_result.raw_output)
+    return LLMConversationOutcomeResult(
+        outcome=outcome,
+        planner_input=planner_input,
+        provider_result=provider_result,
+    )
+
+
+def create_llm_plan_tasks_from_outcome(
+    db: DbSession,
+    message: Message,
+    *,
+    conversation: LLMConversationOutcomeResult,
+) -> LLMPlanningOutcome:
+    if conversation.outcome["outcomeType"] != "task_plan":
+        raise LLMPlannerError(
+            f"LLM conversation outcome did not create a task plan: {conversation.outcome['outcomeType']}."
+        )
+
+    provider_result = conversation.provider_result
+    raw_output = conversation.outcome["planDraft"]
     targets = {
         target.target_id: target
         for target in list_targets_for_workspace(
@@ -188,7 +233,7 @@ def create_llm_plan_tasks(
     tasks = _persist_llm_plan_tasks(
         db,
         message=message,
-        provider_id=provider.provider_id,
+        provider_id=provider_result.provider_id,
         provider_result=provider_result,
         raw_output=raw_output,
         task_specs=task_specs,
@@ -203,7 +248,7 @@ def create_llm_plan_tasks(
     )
     return LLMPlanningOutcome(
         tasks=tasks,
-        planner_input=planner_input,
+        planner_input=conversation.planner_input,
         raw_output=raw_output,
         plan_draft=plan_draft,
     )

@@ -720,6 +720,58 @@ def test_llm_task_plan_bypasses_legacy_signal_gates(
     assert tasks[0]["planJson"]["plannerProviderId"] == "fake-llm-planner"
 
 
+def test_llm_assistant_reply_creates_orchestrator_message_without_task(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "assistant_reply",
+                "reply": "你好，我可以帮你规划任务、调用编码 Agent、生成 diff、预览和部署证据。",
+                "riskLevel": "low",
+                "reason": "Pure greeting.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "not_required",
+            },
+        ),
+    )
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "你好"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at)
+        ).all()
+
+    assert [message.sender_type for message in messages] == ["user", "orchestrator"]
+    assert messages[-1].content_md.startswith("你好")
+    assert messages[-1].message_kind == "chat"
+
+
 def test_runtime_config_selects_planner_provider_for_no_mention_message(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

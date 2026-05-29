@@ -10,7 +10,8 @@ from sqlmodel import select
 from app.config import get_settings
 from app.llm_planner import (
     LLMPlannerError,
-    create_llm_plan_tasks,
+    create_llm_conversation_outcome,
+    create_llm_plan_tasks_from_outcome,
     llm_planner_fallback_metadata,
 )
 from app.agent_runtime_config import resolve_runtime_role_config
@@ -186,10 +187,22 @@ def plan_for_message(
             )
             if planner_provider.planner_source != "disabled":
                 try:
-                    llm_outcome = create_llm_plan_tasks(
+                    conversation = create_llm_conversation_outcome(
                         db,
                         message,
                         provider=planner_provider,
+                    )
+                    if conversation.outcome["outcomeType"] != "task_plan":
+                        _create_conversation_outcome_message(
+                            db,
+                            message,
+                            conversation.outcome,
+                        )
+                        return []
+                    llm_outcome = create_llm_plan_tasks_from_outcome(
+                        db,
+                        message,
+                        conversation=conversation,
                     )
                     llm_tasks = llm_outcome.tasks
                     if llm_tasks:
@@ -1513,6 +1526,40 @@ def _create_orchestrator_boundary_message(
         parent_message_id=message.id,
     )
     create_session_message(db, _session_for_message(db, message), summary)
+
+
+def _create_conversation_outcome_message(
+    db: DbSession,
+    message: Message,
+    outcome: dict,
+) -> None:
+    reply = outcome.get("reply")
+    if not isinstance(reply, str) or not reply.strip():
+        reply = _default_reply_for_conversation_outcome(
+            str(outcome.get("outcomeType") or "unsupported")
+        )
+    orchestrator = db.exec(select(Agent).where(Agent.role == "orchestrator")).first()
+    response = Message(
+        session_id=message.session_id,
+        sender_type="orchestrator",
+        sender_id=orchestrator.id if orchestrator is not None else None,
+        content_md=reply.strip(),
+        message_kind="chat",
+        parent_message_id=message.id,
+    )
+    create_session_message(db, _session_for_message(db, message), response)
+
+
+def _default_reply_for_conversation_outcome(outcome_type: str) -> str:
+    if outcome_type == "clarification":
+        return "I need one more detail before I can plan this safely."
+    if outcome_type == "refusal":
+        return "I cannot safely perform that request."
+    if outcome_type == "approval_required":
+        return "This request needs approval before executable work can start."
+    if outcome_type == "unsupported":
+        return "I cannot support that request yet."
+    return "I can help with AgentHub planning, coding tasks, reviews, previews, and staging deploys."
 
 
 def _coding_title_for(intent: FrontendIntent) -> str:
