@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17-5 Clarification Refusal And Approval Outcomes
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planning.py` | Added coverage for clarification, refusal, and approval-required ConversationOutcome replies creating no tasks. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-5 complete after targeted validation. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_non_task_conversation_outcomes_do_not_create_tasks -q` | Pass: 3 tests. |
+
+---
+
 ## P17-4 Task Plan Path
 
 **Date:** 2026-05-29

@@ -843,6 +843,68 @@ def test_conversation_task_plan_creates_validated_task(
     assert task["planJson"]["plannerEvidence"]["validationResult"] == "passed"
 
 
+@pytest.mark.parametrize(
+    ("outcome_type", "request_text", "reply_text"),
+    [
+        ("clarification", "帮我改一下", "你想修改哪个目标项目和功能？"),
+        ("refusal", "修改 /etc/hosts", "我不能修改受保护的系统路径。"),
+        ("approval_required", "进入平台维护模式修改 apps/api", "这需要显式平台维护审批。"),
+    ],
+)
+def test_non_task_conversation_outcomes_do_not_create_tasks(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    outcome_type: str,
+    request_text: str,
+    reply_text: str,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": outcome_type,
+                "reply": reply_text,
+                "riskLevel": "high" if outcome_type != "clarification" else "low",
+                "reason": "Non-task safety outcome.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "not_required",
+            },
+        ),
+    )
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": request_text},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at)
+        ).all()
+
+    assert messages[-1].sender_type == "orchestrator"
+    assert messages[-1].content_md == reply_text
+
+
 def test_runtime_config_selects_planner_provider_for_no_mention_message(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
