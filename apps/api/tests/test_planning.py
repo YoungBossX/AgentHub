@@ -569,6 +569,7 @@ def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
         "plannerSource": "disabled",
         "status": "disabled",
     }
+    assert task["planJson"]["plannerSource"] == "fallback"
     assert task["planJson"]["routing"] == "orchestrator_default"
     assert task["planJson"]["originalRequest"] == (
         "帮我把当前 demo app 改成一个 dashboard，有三张统计卡片和一个最近活动列表"
@@ -587,6 +588,42 @@ def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
 
     assert len(messages) == 1
     assert "started it automatically" in messages[0].content_md
+
+
+def test_disabled_llm_router_returns_friendly_chat_fallback_without_task(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=False,
+            llm_planner_provider="disabled",
+        ),
+    )
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "你好"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at)
+        ).all()
+
+    assert messages[-1].sender_type == "orchestrator"
+    assert "不会为这条普通聊天创建代码任务" in messages[-1].content_md
 
 
 def test_no_mention_message_uses_configured_llm_planner_provider(

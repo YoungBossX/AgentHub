@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17-7 Friendly Fallback
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Added friendly pure-chat fallback when LLM routing is disabled/unavailable and marked fallback frontend tasks with `plannerSource: fallback`. |
+| `apps/api/tests/test_planning.py` | Added coverage for disabled-router chat fallback and audited frontend fallback metadata. |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-7 complete after targeted validation. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_disabled_llm_router_returns_friendly_chat_fallback_without_task tests/test_planning.py::test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task -q` | Pass: 2 tests. |
+
+---
+
 ## P17-6 Follow-up Routing Context
 
 **Date:** 2026-05-29

@@ -243,6 +243,14 @@ def plan_for_message(
             existing_tasks=existing_tasks,
         )
 
+    if routed_role == "orchestrator" and llm_fallback is not None and _is_pure_chat_request(content):
+        _create_orchestrator_boundary_message(
+            db,
+            message,
+            _friendly_chat_fallback_reply(),
+        )
+        return []
+
     contract_intent = parse_app_contract_intent(content)
     bounded_intent = parse_frontend_intent(content)
     if contract_intent is not None and not existing_tasks:
@@ -1488,6 +1496,26 @@ def _is_unsupported_broad_request(content: str) -> bool:
     return any(signal in content for signal in blocked_signals)
 
 
+def _is_pure_chat_request(content: str) -> bool:
+    normalized = MENTION_PATTERN.sub("", content).strip().lower()
+    normalized = normalized.strip(" ?!。！？")
+    greetings = {"你好", "您好", "hello", "hi", "hey"}
+    capability_questions = {
+        "你能做什么",
+        "你可以做什么",
+        "what can you do",
+        "what can agenthub do",
+    }
+    return normalized in greetings or normalized in capability_questions
+
+
+def _friendly_chat_fallback_reply() -> str:
+    return (
+        "你好，我可以帮你聊天、澄清需求、规划代码任务，并在需要时调用前端、后端或评审 Agent。"
+        "当前 LLM 路由不可用，所以我不会为这条普通聊天创建代码任务。"
+    )
+
+
 def _is_explicit_platform_mode_request(content: str) -> bool:
     normalized = MENTION_PATTERN.sub("", content).lower()
     return (
@@ -1606,7 +1634,7 @@ def _plan_draft_metadata(
 
 
 def _fallback_plan_metadata(llm_fallback: Optional[dict]) -> dict:
-    return {"plannerFallback": llm_fallback} if llm_fallback else {}
+    return {"plannerFallback": llm_fallback, "plannerSource": "fallback"} if llm_fallback else {}
 
 
 def _validate_task_graph(task_specs: list[TaskSpec]) -> None:
