@@ -16,7 +16,7 @@ from app.external_workspaces import (
     ExternalWorkspaceRegistration,
     register_external_project_target,
 )
-from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.models import Agent, Artifact, Diff, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.models import utc_now
 from app.scheduler import (
     SCHEDULER_BLOCKED,
@@ -491,6 +491,128 @@ def test_dirty_worktree_conflict_blocks_external_write_task(tmp_path: Path) -> N
         assert scheduler["state"] == SCHEDULER_BLOCKED
         assert scheduler["conflictType"] == "dirty_worktree"
         assert scheduler["conflictingFiles"] == ["README.md"]
+
+
+def test_downstream_write_allows_dirty_files_from_completed_dependency_diff(
+    tmp_path: Path,
+) -> None:
+    with scheduler_db() as db:
+        workspace, session, _, _ = seed_same_target_write_tasks(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            intent_type="frontend_change",
+            safe_target="apps/demo/src",
+        )
+        external_root = tmp_path / "external-followup-app"
+        (external_root / "src").mkdir(parents=True)
+        (external_root / "src" / "App.tsx").write_text("export default function App() {}\n")
+        (external_root / "src" / "BreakoutGame.tsx").write_text("export function BreakoutGame() {}\n")
+        subprocess.run(["git", "init"], cwd=external_root, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=external_root, check=True)
+        subprocess.run(["git", "config", "user.name", "Test User"], cwd=external_root, check=True)
+        subprocess.run(["git", "add", "src/App.tsx", "src/BreakoutGame.tsx"], cwd=external_root, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=external_root, check=True)
+        (external_root / "src" / "BreakoutGame.tsx").write_text(
+            "export function BreakoutGame() { return null; }\n"
+        )
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-followup-app",
+                name="External Follow-up App",
+                root_path=str(external_root),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        frontend = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        upstream = Task(
+            session_id=session.id,
+            title="Initial Breakout implementation",
+            intent_type="frontend_change",
+            status="completed",
+            assigned_agent_id=frontend.id,
+            plan_json=json.dumps(
+                {
+                    "targetId": "external-followup-app",
+                    "safeTarget": "src",
+                    "files": ["src/BreakoutGame.tsx"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        review = Task(
+            session_id=session.id,
+            title="Review Breakout implementation",
+            intent_type="review",
+            status="completed",
+            assigned_agent_id=frontend.id,
+            depends_on_task_ids=json.dumps([upstream.id], separators=(",", ":")),
+            plan_json=json.dumps(
+                {"targetId": "external-followup-app", "readOnly": True},
+                separators=(",", ":"),
+            ),
+        )
+        downstream = Task(
+            session_id=session.id,
+            title="Fix Breakout strict build",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend.id,
+            depends_on_task_ids=json.dumps([review.id], separators=(",", ":")),
+            plan_json=json.dumps(
+                {
+                    "targetId": "external-followup-app",
+                    "safeTarget": "src",
+                    "files": ["src/App.tsx"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(upstream)
+        db.add(review)
+        db.add(downstream)
+        db.commit()
+        db.refresh(upstream)
+        db.refresh(review)
+        db.refresh(downstream)
+        upstream_run = TaskRun(
+            task_id=upstream.id,
+            agent_id=frontend.id,
+            state="completed",
+            worktree_path=str(external_root),
+            metrics_json=json.dumps({"adapterType": "claude_code"}, separators=(",", ":")),
+        )
+        db.add(upstream_run)
+        db.commit()
+        db.refresh(upstream_run)
+        diff_artifact = Artifact(
+            task_run_id=upstream_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+        )
+        db.add(diff_artifact)
+        db.commit()
+        db.refresh(diff_artifact)
+        diff = Diff(
+            artifact_id=diff_artifact.id,
+            base_ref="base",
+            head_ref="worktree:dirty",
+            patch_text="",
+            changed_files_json=json.dumps(["src/BreakoutGame.tsx"], separators=(",", ":")),
+        )
+        db.add(diff)
+        db.commit()
+
+        run = create_task_run(db, downstream.id)
+
+        stored = db.get(Task, downstream.id)
+        scheduler = json.loads(stored.plan_json).get("scheduler", {})
+        assert run.state == "queued"
+        assert stored.status == "running"
+        assert scheduler.get("state", SCHEDULER_READY) == SCHEDULER_READY
 
 
 def test_contract_drift_conflict_blocks_stale_contract_task() -> None:

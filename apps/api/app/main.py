@@ -1116,7 +1116,9 @@ def _complete_ready_pipeline_review_tasks(
         if task.status not in {"pending", "waiting_dependency"}:
             continue
         plan = plan_json_for_task(task)
-        if plan.get("planner") != "contract_first_v1":
+        if plan.get("planner") not in {"contract_first_v1", "llm_v1"}:
+            continue
+        if not _dependencies_have_review_artifacts(db, task):
             continue
         decision = evaluate_and_apply_scheduler_readiness(db, task)
         if not decision.runnable:
@@ -1127,7 +1129,7 @@ def _complete_ready_pipeline_review_tasks(
             {
                 "state": "completed",
                 "runnable": False,
-                "reason": "Contract review was satisfied by the generated review artifact.",
+                "reason": "Planned review was satisfied by the generated review artifact.",
             }
         )
         plan["scheduler"] = scheduler
@@ -1139,6 +1141,26 @@ def _complete_ready_pipeline_review_tasks(
         db.refresh(task)
         completed.append(task)
     return completed
+
+
+def _dependencies_have_review_artifacts(db: DbSession, task: Task) -> bool:
+    try:
+        dependency_ids = json.loads(task.depends_on_task_ids)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(dependency_ids, list) or not dependency_ids:
+        return False
+
+    for dependency_id in dependency_ids:
+        if not isinstance(dependency_id, str):
+            return False
+        dependency_runs = list_task_runs(db, dependency_id)
+        completed_runs = [run for run in dependency_runs if run.state == "completed"]
+        if not completed_runs:
+            return False
+        if not any(list_task_run_reviews(db, run.id) for run in completed_runs):
+            return False
+    return True
 
 
 def _maybe_auto_preview_and_mock_deploy(db: DbSession, task_run: TaskRun) -> None:

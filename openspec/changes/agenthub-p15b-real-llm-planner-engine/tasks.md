@@ -6,17 +6,17 @@
 - [x] 1.4 P15b-4 Structured Output Parsing And Validation: safely extract JSON from provider output; validate schema; normalize only safe fields; reject ambiguous, malformed, unsafe, or incomplete output; never create tasks directly from unvalidated LLM output.
 - [x] 1.5 P15b-5 PlanValidator Hardening For Real LLM Output: validate targets, roles, capabilities, supported modes, allowed paths, denied paths, dependency graph, platform maintenance mode, approval requirements, and command policy; unsafe plans must enter honest failed/fallback/clarification state and must not auto-start.
 - [x] 1.6 P15b-6 Planner Evidence And Mission Trace: record planner provider, planner source, duration, validation result, fallback reason, error summary, plan rationale, created task IDs, and safe evidence metadata; expose planner source as `real_llm`, `fake_test`, `disabled`, `deterministic`, or `fallback` without leaking secrets.
-- [ ] 1.7 P15b-7 Real LLM Planner Breakout Rehearsal And Freeze Review: run the Breakout request with a real LLM planner provider producing the task plan; verify the plan is not hardcoded and not fake; execute through existing passthrough and ClaudeCodeAdapter or CodexAdapter if auth/quota permits; verify diff, review, build/check evidence, preview, staging deploy; document exact planner/coding provider errors if blocked; update freeze review docs.
+- [x] 1.7 P15b-7 Real LLM Planner Breakout Rehearsal And Freeze Review: run the Breakout request with a real LLM planner provider producing the task plan; verify the plan is not hardcoded and not fake; execute through existing passthrough and ClaudeCodeAdapter or CodexAdapter if auth/quota permits; verify diff, review, build/check evidence, preview, staging deploy; document exact planner/coding provider errors if blocked; update freeze review docs.
 
 ## 2. Explicit Non-goals
 
-- [ ] 2.1 Confirm P15b does not replace ClaudeCodeAdapter or CodexAdapter, replace the scheduler, add provider marketplace, add user-created arbitrary command agents, add production deploy, add cloud token manager, add multi-user IM, add desktop/IDE/CLI clients, or add a hardcoded Breakout planner template.
+- [x] 2.1 Confirm P15b does not replace ClaudeCodeAdapter or CodexAdapter, replace the scheduler, add provider marketplace, add user-created arbitrary command agents, add production deploy, add cloud token manager, add multi-user IM, add desktop/IDE/CLI clients, or add a hardcoded Breakout planner template.
 
 ## 3. Validation
 
-- [ ] 3.1 Run targeted planner provider, request/response, parsing, validation, evidence, and fallback tests added for P15b.
-- [ ] 3.2 Run `pnpm check`.
-- [ ] 3.3 Run `pnpm test`.
-- [ ] 3.4 Run `pnpm demo:api:test`.
-- [ ] 3.5 Run `git diff --check`.
-- [ ] 3.6 Run `openspec validate agenthub-p15b-real-llm-planner-engine --strict`.
+- [x] 3.1 Run targeted planner provider, request/response, parsing, validation, evidence, and fallback tests added for P15b.
+- [x] 3.2 Run `pnpm check`.
+- [x] 3.3 Run `pnpm test`.
+- [x] 3.4 Run `pnpm demo:api:test`.
+- [x] 3.5 Run `git diff --check`.
+- [x] 3.6 Run `openspec validate agenthub-p15b-real-llm-planner-engine --strict`.

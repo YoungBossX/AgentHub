@@ -116,7 +116,10 @@ def _validate_command_policy(spec: TaskGraphTaskSpec, target: TargetProject) -> 
     for entry in validation_entries:
         if not _looks_like_command(entry):
             continue
-        if entry not in allowed_commands:
+        if entry not in allowed_commands and not _starts_with_allowed_command_note(
+            entry,
+            allowed_commands,
+        ):
             raise PlanValidationError(
                 f"Manager planner generated unsupported validation command for {target.target_id}: {entry}"
             )
@@ -155,6 +158,16 @@ def _mode_for_spec(spec: TaskGraphTaskSpec) -> str:
 
 def _looks_like_command(value: str) -> bool:
     return value.startswith(("pnpm ", "npm ", "pytest", "python -m pytest"))
+
+
+def _starts_with_allowed_command_note(value: str, allowed_commands: set[str]) -> bool:
+    normalized = value.lower()
+    safe_suffixes = (" succeeds", " passes", " success", " without errors")
+    return any(
+        normalized.startswith(command.lower() + suffix)
+        for command in allowed_commands
+        for suffix in safe_suffixes
+    )
 
 
 def _string_list(value: object) -> list[str]:

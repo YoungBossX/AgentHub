@@ -5,6 +5,48 @@ reference instead of repeating long context blocks.
 
 ## P15b Status
 
+### P15b-7 Real LLM Planner Breakout Rehearsal And Freeze Review
+
+P15b-7 completed on 2026-05-29.
+
+AgentHub verified the P15b acceptance path with a real LLM planner provider:
+
+- `AGENTHUB_LLM_PLANNER_PROVIDER=claude_cli` produced a real `llm_v1` plan
+  for the Breakout request;
+- planner evidence recorded provider source `real_llm` and passed validation;
+- the first coding run used `ClaudeCodeAdapter`, completed, produced a diff,
+  generated a scripted review artifact, and produced a healthy preview;
+- local staging deploy initially failed because `pnpm build` caught
+  `TS18047: 'ctx' is possibly 'null'` in
+  `apps/demo/src/components/BreakoutGame.tsx`;
+- a follow-up fix task preserved the build failure context and ran through the
+  existing TaskRun path;
+- the first follow-up retry with `ClaudeCodeAdapter` failed with a real
+  provider/runtime JSON-role error, which was recorded honestly;
+- a subsequent real `CodexAdapter` follow-up completed the fix, collected a
+  diff and review, passed `pnpm build`, produced a healthy preview, and created
+  a ready local staging deploy.
+
+P15b-7 also hardened the rehearsal path where the smoke exposed real
+coordination issues:
+
+- real planner prompt constraints now discourage prose, duplicate JSON, too
+  many tasks, unsupported artifact types, and unstable dependency aliases;
+- safe scalar normalization handles planner `version` and `guardrailNotes`
+  variants without accepting unsafe fields;
+- PlanValidator allows configured command expectations with safe result
+  suffixes such as `pnpm build succeeds`;
+- target-based dependency aliases from LLM output are normalized before task
+  graph validation;
+- direct frontend assignments include safe file paths explicitly referenced in
+  the user request;
+- planned `llm_v1` review tasks can be satisfied by generated review artifacts;
+- downstream write tasks can treat completed upstream dependency diff files as
+  safe dirty-worktree context.
+
+Detailed evidence is recorded in `docs/p15b-freeze-review.md`.
+Recommended tag: `p15b-real-llm-planner-engine-freeze`.
+
 ### P15b-6 Planner Evidence And Mission Trace
 
 P15b-6 completed on 2026-05-28.

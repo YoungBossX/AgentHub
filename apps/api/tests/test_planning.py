@@ -14,6 +14,9 @@ from app.external_workspaces import (
 from app.main import app, get_db
 from app.main import _should_auto_start_task
 from app.models import Agent, Message, Session, Task, Workspace
+from app.config import Settings
+from app.planner_providers import FakePlannerProvider
+import app.planning as planning_module
 from app.planning import (
     MentionParseError,
     parse_app_contract_intent,
@@ -583,6 +586,70 @@ def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
     assert "started it automatically" in messages[0].content_md
 
 
+def test_no_mention_message_uses_configured_llm_planner_provider(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "planId": "plan-breakout",
+                "planner": "llm_v1",
+                "plannerMode": "llm_v1",
+                "rationale": "A bounded frontend task can implement Breakout.",
+                "acceptanceCriteria": ["Game is playable"],
+                "validationExpectations": ["pnpm build"],
+                "tasks": [
+                    {
+                        "title": "Build Breakout game",
+                        "role": "frontend",
+                        "targetId": DEMO_FRONTEND_TARGET_ID,
+                        "intentType": "frontend_change",
+                        "plannedFiles": ["apps/demo/src/App.tsx"],
+                        "dependsOn": [],
+                        "expectedArtifactTypes": ["diff", "review"],
+                        "acceptanceCriteria": ["Keyboard controls work"],
+                        "validationExpectations": ["pnpm build"],
+                        "riskLevel": "medium",
+                        "requiresApproval": False,
+                    }
+                ],
+            },
+        ),
+    )
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task["status"] == "pending"
+    assert task["assignedAgentRole"] == "frontend"
+    assert task["planJson"]["planner"] == "llm_v1"
+    assert task["planJson"]["plannerProviderId"] == "fake-llm-planner"
+    assert task["planJson"]["plannerEvidence"]["plannerSource"] == "fake_test"
+    assert task["planJson"]["originalRequest"] == "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏"
+
+
 def test_auto_start_policy_allows_registered_target_allowed_paths(
     client: TestClient,
 ) -> None:
@@ -803,6 +870,30 @@ def test_direct_frontend_mention_creates_assignment_task_without_auto_start(
     assert task["planJson"]["planner"] == "direct_assignment_v1"
     assert task["planJson"]["routing"] == "direct_mention"
     assert task["planJson"]["originalRequest"] == "@frontend update the demo app hero copy"
+
+
+def test_direct_frontend_mention_includes_safe_referenced_demo_file(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={
+            "contentMd": (
+                "@frontend fix apps/demo/src/components/BreakoutGame.tsx "
+                "for the demo app TypeScript build"
+            )
+        },
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert len(tasks) == 1
+    assert "apps/demo/src/components/BreakoutGame.tsx" in tasks[0]["planJson"]["files"]
 
 
 def test_backend_mention_creates_safe_demo_backend_task(

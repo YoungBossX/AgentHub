@@ -9,7 +9,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
-from app.models import Task, TaskRun
+from app.models import Artifact, Diff, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
 from app.target_registry import (
@@ -674,8 +674,63 @@ def _dirty_worktree_conflict(db: DbSession, task: Task) -> list[str]:
     checkpoint_dirty = (
         set(checkpoint.get("dirtyFiles", [])) if isinstance(checkpoint, dict) else set()
     )
-    safe_files = planned_files.union(path for path in checkpoint_dirty if isinstance(path, str))
+    dependency_files = _dependency_changed_files(db, task)
+    safe_files = planned_files.union(
+        path for path in checkpoint_dirty if isinstance(path, str)
+    ).union(dependency_files)
     return sorted(path for path in dirty_files if path not in safe_files)
+
+
+def _dependency_changed_files(db: DbSession, task: Task) -> set[str]:
+    return _dependency_changed_files_for_task(db, task, seen_task_ids=set())
+
+
+def _dependency_changed_files_for_task(
+    db: DbSession,
+    task: Task,
+    *,
+    seen_task_ids: set[str],
+) -> set[str]:
+    changed_files: set[str] = set()
+    for dependency_id in dependency_ids_for_task(task):
+        if dependency_id in seen_task_ids:
+            continue
+        seen_task_ids.add(dependency_id)
+        dependency = db.get(Task, dependency_id)
+        if dependency is None or dependency.status not in DEPENDENCY_COMPLETE_STATUSES:
+            continue
+        changed_files.update(
+            _dependency_changed_files_for_task(
+                db,
+                dependency,
+                seen_task_ids=seen_task_ids,
+            )
+        )
+        runs = db.exec(
+            select(TaskRun)
+            .where(TaskRun.task_id == dependency_id)
+            .where(TaskRun.state == "completed")
+            .order_by(TaskRun.created_at.desc(), TaskRun.id.desc())
+        ).all()
+        for run in runs:
+            artifact = db.exec(
+                select(Artifact)
+                .where(Artifact.task_run_id == run.id)
+                .where(Artifact.artifact_type == "diff")
+                .order_by(Artifact.created_at.desc(), Artifact.id.desc())
+            ).first()
+            if artifact is None:
+                continue
+            diff = db.exec(select(Diff).where(Diff.artifact_id == artifact.id)).first()
+            if diff is None:
+                continue
+            try:
+                parsed = json.loads(diff.changed_files_json)
+            except json.JSONDecodeError:
+                continue
+            changed_files.update(path for path in parsed if isinstance(path, str))
+            break
+    return changed_files
 
 
 def _planned_files_for_task(task: Task) -> list[str]:

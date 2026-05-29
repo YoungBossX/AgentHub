@@ -8,7 +8,11 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.config import get_settings
-from app.llm_planner import llm_planner_fallback_metadata
+from app.llm_planner import (
+    LLMPlannerError,
+    create_llm_plan_tasks,
+    llm_planner_fallback_metadata,
+)
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.plan_validator import PlanValidationError, validate_task_graph
@@ -131,10 +135,28 @@ def plan_for_message(
     if routed_role == "orchestrator" and not existing_tasks:
         try:
             planner_provider = resolve_planner_provider(get_settings())
-            llm_fallback = llm_planner_fallback_metadata(
-                "provider_unavailable" if get_settings().llm_planner_enabled else "disabled",
-                provider=planner_provider,
-            )
+            if planner_provider.planner_source != "disabled":
+                try:
+                    llm_outcome = create_llm_plan_tasks(
+                        db,
+                        message,
+                        provider=planner_provider,
+                    )
+                    llm_tasks = llm_outcome.tasks
+                    if llm_tasks:
+                        return llm_tasks
+                except LLMPlannerError as exc:
+                    llm_fallback = llm_planner_fallback_metadata(
+                        "provider_failed",
+                        provider=planner_provider,
+                    )
+                    llm_fallback["errorCode"] = "LLM_PLANNER_FAILED"
+                    llm_fallback["errorSummary"] = str(exc)
+            else:
+                llm_fallback = llm_planner_fallback_metadata(
+                    "provider_unavailable" if get_settings().llm_planner_enabled else "disabled",
+                    provider=planner_provider,
+                )
         except PlannerProviderError as exc:
             llm_fallback = {
                 "attemptedPlanner": "llm_v1",
@@ -952,10 +974,10 @@ def _create_direct_assignment_tasks(
                     "targetId": frontend_target.target_id,
                     "frontendTargetId": frontend_target.target_id,
                     "safeTarget": _primary_allowed_path(frontend_target),
-                    "files": [
-                        f"{_primary_allowed_path(frontend_target)}/App.tsx",
-                        f"{_primary_allowed_path(frontend_target)}/styles.css",
-                    ],
+                    "files": _demo_frontend_task_files(
+                        frontend_target,
+                        message.content_md,
+                    ),
                     "originalRequest": message.content_md,
                     "expectedArtifactTypes": ["diff", "review"],
                     "autoStart": False,
@@ -1368,6 +1390,19 @@ def _external_task_files(target: TargetProject) -> list[str]:
         if not files:
             files.append(allowed_path)
     return files[:4]
+
+
+def _demo_frontend_task_files(target: TargetProject, content: str) -> list[str]:
+    safe_root = _primary_allowed_path(target)
+    files = [
+        f"{safe_root}/App.tsx",
+        f"{safe_root}/styles.css",
+    ]
+    for match in re.finditer(r"apps/demo/src/[A-Za-z0-9_./-]+", content):
+        path = match.group(0).rstrip(".,，。:：;；)")
+        if target.allows_path(path) and not target.denies_path(path) and path not in files:
+            files.append(path)
+    return files[:6]
 
 
 def _is_unsupported_broad_request(content: str) -> bool:

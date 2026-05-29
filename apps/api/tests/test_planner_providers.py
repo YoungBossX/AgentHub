@@ -108,7 +108,10 @@ def test_claude_cli_planner_provider_returns_real_llm_result() -> None:
     assert result.planner_source == "real_llm"
     assert runner.command[:2] == ["claude", "--print"]
     assert "--allowedTools" in runner.command
-    assert "Return only JSON" in runner.command[-1]
+    assert "Return ONLY one JSON object" in runner.command[-1]
+    assert "Each task must include title, role, targetId" in runner.command[-1]
+    assert "Create at most 4 tasks" in runner.command[-1]
+    assert "1-frontend-frontend_change" in runner.command[-1]
     assert runner.timeout == 12
 
 

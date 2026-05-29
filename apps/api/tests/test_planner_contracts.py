@@ -124,6 +124,38 @@ def test_planner_response_contract_rejects_incomplete_plan() -> None:
         )
 
 
+def test_planner_response_contract_safely_normalizes_version_and_guardrail_notes() -> None:
+    response = PlannerResponse.model_validate(
+        {
+            "planId": "plan-normalized",
+            "planner": "llm_v1",
+            "plannerMode": "llm_v1",
+            "rationale": "Normalize safe scalar fields only.",
+            "acceptanceCriteria": ["Game is playable"],
+            "validationExpectations": ["pnpm build"],
+            "version": "1.0.0",
+            "guardrailNotes": "Stay inside demo-frontend.",
+            "tasks": [
+                {
+                    "title": "Build Breakout game",
+                    "role": "frontend",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "intentType": "frontend_change",
+                    "plannedFiles": ["apps/demo/src/App.tsx"],
+                    "dependsOn": [],
+                    "expectedArtifactTypes": ["diff"],
+                    "acceptanceCriteria": ["Keyboard controls work"],
+                    "riskLevel": "medium",
+                    "requiresApproval": False,
+                }
+            ],
+        }
+    )
+
+    assert response.version == 1
+    assert response.guardrail_notes == ["Stay inside demo-frontend."]
+
+
 def test_parse_llm_plan_output_returns_contract_validated_payload() -> None:
     payload = parse_llm_plan_output(
         json.dumps(

@@ -298,7 +298,27 @@ def task_specs_from_llm_plan(payload: dict[str, Any]) -> list[TaskGraphTaskSpec]
                 expected_artifact_types=expected,
             )
         )
-    return specs
+    return _normalize_dependency_aliases(specs)
+
+
+def _normalize_dependency_aliases(
+    task_specs: list[TaskGraphTaskSpec],
+) -> list[TaskGraphTaskSpec]:
+    aliases: dict[str, str] = {}
+    for index, spec in enumerate(task_specs):
+        canonical = f"{index + 1}-{spec.role}-{spec.intent_type}"
+        target_id = _string_value(spec.plan.get("targetId"))
+        aliases[canonical] = canonical
+        aliases[spec.title] = canonical
+        if target_id:
+            aliases[f"{index + 1}-{target_id}-{spec.intent_type}"] = canonical
+
+    for spec in task_specs:
+        depends_on = _string_list(spec.plan.get("dependsOn"))
+        if not depends_on:
+            continue
+        spec.plan["dependsOn"] = [aliases.get(dependency, dependency) for dependency in depends_on]
+    return task_specs
 
 
 def _persist_llm_plan_tasks(

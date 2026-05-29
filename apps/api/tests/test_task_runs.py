@@ -16,7 +16,13 @@ from app.external_workspaces import (
     register_external_project_target,
 )
 from app.instruction_adapters import adapter_for_provider
-from app.main import agent_run_request_for, app, get_db, task_run_response
+from app.main import (
+    _complete_ready_pipeline_review_tasks,
+    agent_run_request_for,
+    app,
+    get_db,
+    task_run_response,
+)
 from app.guardrails import ApprovalRequestPayload, request_task_run_approval
 from app.reviews import create_scripted_review_for_task_run
 from app.models import (
@@ -1446,6 +1452,89 @@ def test_passthrough_instruction_preserves_original_request_without_demo_rewrite
     assert "Keyboard controls move the paddle" in request.instruction
     assert "pnpm build" in request.instruction
     assert 'data-agenthub-target="login-page-slot"' not in request.instruction
+
+
+def test_llm_review_task_is_satisfied_by_generated_review_artifact(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        qa_agent = db.exec(select(Agent).where(Agent.role == "qa")).one()
+        frontend_task = db.exec(select(Task).where(Task.title == "Build login page")).one()
+        frontend_task.status = "completed"
+        frontend_task.plan_json = json.dumps(
+            {
+                "planner": "llm_v1",
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+            },
+            separators=(",", ":"),
+        )
+        frontend_run = TaskRun(
+            task_id=frontend_task.id,
+            agent_id=frontend_agent.id,
+            state="completed",
+            worktree_path=".worktrees/taskrun-session",
+            metrics_json=json.dumps({"adapterType": "claude_code"}, separators=(",", ":")),
+        )
+        db.add(frontend_task)
+        db.add(frontend_run)
+        db.commit()
+        db.refresh(frontend_run)
+
+        diff_artifact = Artifact(
+            task_run_id=frontend_run.id,
+            artifact_type="diff",
+            title="Git diff",
+            status="ready",
+        )
+        review_artifact = Artifact(
+            task_run_id=frontend_run.id,
+            artifact_type="review",
+            title="Review Agent report",
+            status="passed",
+        )
+        db.add(diff_artifact)
+        db.add(review_artifact)
+        db.commit()
+        db.refresh(diff_artifact)
+        db.refresh(review_artifact)
+        review = Review(
+            artifact_id=review_artifact.id,
+            reviewed_diff_artifact_id=diff_artifact.id,
+            adapter_type="scripted_mock",
+            status="passed",
+            risk_level="low",
+            summary="Generated review passed.",
+        )
+        db.add(review)
+
+        review_task = Task(
+            session_id=session_id,
+            title="QA review Breakout game implementation",
+            intent_type="review",
+            status="pending",
+            assigned_agent_id=qa_agent.id,
+            depends_on_task_ids=json.dumps([frontend_task.id], separators=(",", ":")),
+            plan_json=json.dumps(
+                {
+                    "planner": "llm_v1",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(review_task)
+        db.commit()
+        db.refresh(review_task)
+
+        completed = _complete_ready_pipeline_review_tasks(db, frontend_task.id)
+
+        assert [task.id for task in completed] == [review_task.id]
+        db.refresh(review_task)
+        assert review_task.status == "completed"
+        assert json.loads(review_task.plan_json)["scheduler"]["state"] == "completed"
+        assert "generated review artifact" in json.loads(review_task.plan_json)["scheduler"]["reason"]
 
 
 def test_external_target_context_reaches_instruction_builder(

@@ -1,5 +1,56 @@
 # AgentHub Change Log
 
+## P15b-7 Real LLM Planner Breakout Rehearsal And Freeze Review
+
+**Date:** 2026-05-29
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planning.py` | Wired no-mention orchestrator planning to the real LLM planner provider when enabled; preserved deterministic fallback on planner failure; included safe explicitly referenced demo frontend files in direct assignment plans. |
+| `apps/api/app/planner_providers.py` | Tightened the Claude CLI planner prompt to require one PlannerResponse JSON object, bounded tasks, valid roles, valid artifact types, and stable dependency aliases. |
+| `apps/api/app/planner_contracts.py` | Safely normalized real-provider `version` and `guardrailNotes` variants that appeared during smoke. |
+| `apps/api/app/plan_validator.py` | Allowed configured validation commands with safe result suffixes such as `pnpm build succeeds` while still rejecting unsupported commands. |
+| `apps/api/app/llm_planner.py` | Normalized safe target-based dependency aliases before task graph validation. |
+| `apps/api/app/main.py` | Allowed planned `llm_v1` review tasks to be satisfied by generated review artifacts. |
+| `apps/api/app/scheduler.py` | Treated completed upstream dependency diff files as safe dirty-worktree context for downstream follow-up tasks. |
+| `apps/api/tests/test_llm_planner.py` | Added dependency-alias normalization and safe command-note validation coverage. |
+| `apps/api/tests/test_planner_contracts.py` | Added safe scalar normalization coverage. |
+| `apps/api/tests/test_planner_providers.py` | Updated Claude CLI planner prompt assertions. |
+| `apps/api/tests/test_planning.py` | Added real planner routing test coverage and safe referenced demo file coverage. |
+| `apps/api/tests/test_scheduler.py` | Added downstream dirty-worktree inheritance coverage for completed dependency diffs. |
+| `apps/api/tests/test_task_runs.py` | Added coverage for generated review artifacts satisfying planned `llm_v1` review tasks. |
+| `docs/p15b-freeze-review.md` | Added P15b freeze decision, first failed run evidence, follow-up fix evidence, build/preview/staging evidence, caveats, and recommended tag. |
+| `docs/project-state.md` | Recorded P15b-7 behavior, evidence, and remaining caveats. |
+| `docs/change-log.md` | Recorded this freeze review. |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-7 and validation complete after verification. |
+
+### What Changed
+
+P15b now proves the real LLM planner path end to end: the Breakout request was
+planned by the Claude CLI planner provider with planner source `real_llm`, then
+executed through real coding adapters. The initial Claude Code implementation
+produced diff/review/preview evidence but failed local staging deploy because
+`pnpm build` caught a TypeScript strictness error. A follow-up fix used the same
+AgentHub task/run path; Claude Code recorded a real provider runtime error, then
+Codex completed the fix, build passed, preview was healthy, and local staging
+deploy was ready.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| P15b-7 real planner / Breakout smoke | Pass after follow-up: staging deploy `f26b64e1-0174-46be-8040-e978b7eacd22` ready at `http://127.0.0.1:65495`. |
+| P15b-7 targeted planner / scheduler / task-run tests | Pass: 31 tests. |
+| `pnpm check` | Pass. |
+| `pnpm test` | Pass: web 41 tests, API 289 tests, demo-api 5 tests. |
+| `pnpm demo:api:test` | Pass: 5 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p15b-real-llm-planner-engine --strict` | Pass. |
+
+---
+
 ## P15b-6 Planner Evidence And Mission Trace
 
 **Date:** 2026-05-28

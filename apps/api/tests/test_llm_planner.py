@@ -144,6 +144,52 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
     assert traced_task["plannerEvidence"]["plannerSource"] == "fake_test"
 
 
+def test_llm_planner_normalizes_safe_dependency_aliases(db: DbSession) -> None:
+    message = _message(db, "Build a playable canvas game")
+    provider = FakePlannerProvider(
+        payload={
+            "planId": "plan-dependency-alias",
+            "planner": "llm_v1",
+            "plannerMode": "llm_v1",
+            "intent": "frontend_game",
+            "rationale": "The planner used a target-based dependency alias.",
+            "acceptanceCriteria": ["Game is playable"],
+            "validationExpectations": ["pnpm build"],
+            "tasks": [
+                {
+                    "title": "Implement game",
+                    "intentType": "frontend_change",
+                    "role": "frontend",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "plannedFiles": ["apps/demo/src/App.tsx"],
+                    "expectedArtifactTypes": ["diff"],
+                    "acceptanceCriteria": ["Keyboard controls work"],
+                    "validationExpectations": ["pnpm build"],
+                    "riskLevel": "medium",
+                    "requiresApproval": False,
+                },
+                {
+                    "title": "Review game",
+                    "intentType": "review",
+                    "role": "qa",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "plannedFiles": [],
+                    "expectedArtifactTypes": ["review"],
+                    "dependsOn": ["1-demo-frontend-frontend_change"],
+                    "acceptanceCriteria": ["Review gameplay"],
+                    "validationExpectations": [],
+                    "riskLevel": "low",
+                    "requiresApproval": False,
+                },
+            ],
+        },
+    )
+
+    outcome = create_llm_plan_tasks(db, message, provider=provider)
+
+    assert json.loads(outcome.tasks[1].depends_on_task_ids) == [outcome.tasks[0].id]
+
+
 def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None:
     with pytest.raises(LLMPlannerError, match="invalid JSON"):
         parse_llm_plan_output("not json")
@@ -214,6 +260,23 @@ def test_llm_planner_rejects_role_capability_target_and_command_policy_violation
     )
     with pytest.raises(LLMPlannerError, match="unsupported validation command"):
         create_llm_plan_tasks(db, message, provider=unsupported_command)
+
+    allowed_command_note = _provider_for_single_task(
+        {
+            "title": "Run configured build",
+            "intentType": "frontend_change",
+            "role": "frontend",
+            "targetId": DEMO_FRONTEND_TARGET_ID,
+            "plannedFiles": ["apps/demo/src/App.tsx"],
+            "expectedArtifactTypes": ["diff"],
+            "acceptanceCriteria": ["Build passes"],
+            "validationExpectations": ["pnpm build succeeds"],
+            "riskLevel": "low",
+            "requiresApproval": False,
+        }
+    )
+    outcome = create_llm_plan_tasks(db, message, provider=allowed_command_note)
+    assert len(outcome.tasks) == 1
 
 
 def _message(db: DbSession, content: str) -> Message:

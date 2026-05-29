@@ -4,7 +4,7 @@ import copy
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 SECRET_VALUE_PATTERN = re.compile(
@@ -68,6 +68,22 @@ class PlannerResponse(BaseModel):
     guardrail_notes: list[str] = Field(default_factory=list, alias="guardrailNotes")
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("version", mode="before")
+    @classmethod
+    def normalize_version(cls, value: Any) -> int:
+        if isinstance(value, str):
+            head = value.split(".", 1)[0]
+            if head.isdigit():
+                return int(head)
+        return value
+
+    @field_validator("guardrail_notes", mode="before")
+    @classmethod
+    def normalize_guardrail_notes(cls, value: Any) -> list[str]:
+        if isinstance(value, str) and value.strip():
+            return [value.strip()]
+        return value
 
     def to_payload(self) -> dict[str, Any]:
         return self.model_dump(by_alias=True)
