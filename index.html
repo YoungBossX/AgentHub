@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentHub - Multi-Agent Coding Platform</title>
+    <title>AgentHub - Multi-Agent Coding Platform | IM 驱动的 AI 协作开发</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -966,9 +966,9 @@
                 AgentHub
             </div>
             <ul class="nav-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#tech">Tech Stack</a></li>
-                <li><a href="#workflow">Workflow</a></li>
+                <li><a href="#features">功能特性</a></li>
+                <li><a href="#tech">技术栈</a></li>
+                <li><a href="#workflow">工作流程</a></li>
             </ul>
             <a href="https://github.com/YoungBossX/AgentHub" class="nav-github" target="_blank" rel="noopener noreferrer">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
@@ -981,13 +981,13 @@
     <section class="hero">
         <div class="hero-content">
             <div class="hero-text">
-                <div class="hero-badge">LOCAL DEMO READY</div>
+                <div class="hero-badge">LOCAL DEMO MVP</div>
                 <h1 class="hero-title">
                     Multi-Agent<br>
                     <span class="highlight">Coding Platform</span>
                 </h1>
                 <p class="hero-description">
-                    IM-style command center for coding. Chat with multiple AI agents like you're on WeChat or Feishu. Real git diffs, real previews, real deployments.
+                    像使用微信、飞书一样，通过 IM 聊天与多个 AI Agent 协作编程。支持 @orchestrator、@frontend、@backend、@qa 多角色协作，自动生成真实 Git Diff 和实时预览。
                 </p>
                 <div class="hero-actions">
                     <a href="https://github.com/YoungBossX/AgentHub" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
@@ -1015,24 +1015,24 @@
                         </div>
                         <div class="terminal-line">
                             <span class="out">[orchestrator]</span>
-                            <span class="success"> Analyzing request...</span>
+                            <span class="success"> Parsing @mentions...</span>
                         </div>
                         <div class="terminal-line">
                             <span class="out">[orchestrator]</span>
                             <span class="comment"> Creating 3-step plan:</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="out">  → 1. @frontend Generate component</span>
+                            <span class="out">  → 1. @frontend Generate login component</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="out">  → 2. @qa Review changes</span>
+                            <span class="out">  → 2. @qa Review & validate</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="out">  → 3. Preview & deploy</span>
+                            <span class="out">  → 3. Preview & deploy card</span>
                         </div>
                         <div class="terminal-line">
                             <span class="out">[frontend]</span>
-                            <span class="warning"> Modifying App.tsx...</span>
+                            <span class="warning"> Modifying apps/demo/src/App.tsx...</span>
                         </div>
                         <div class="terminal-line">
                             <span class="out">[frontend]</span>
@@ -1048,20 +1048,20 @@
     <div class="stats-bar">
         <div class="stats-content">
             <div class="stat-item">
-                <div class="stat-value">4<span class="accent">+</span></div>
-                <div class="stat-label">Agent Roles</div>
+                <div class="stat-value">4</div>
+                <div class="stat-label">Agent Roles (orchestrator, frontend, backend, qa)</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value">3</div>
-                <div class="stat-label">Adapter Types</div>
+                <div class="stat-label">Adapters (Codex, Claude Code, ScriptedMock)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">15<span class="accent">+</span></div>
+                <div class="stat-label">API Endpoints</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value">100<span class="accent">%</span></div>
-                <div class="stat-label">Real Git Diffs</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">0</div>
-                <div class="stat-label">External Dependencies</div>
+                <div class="stat-label">Real Git Diffs & Previews</div>
             </div>
         </div>
     </div>
@@ -1070,56 +1070,56 @@
     <section class="features" id="features">
         <div class="section-container">
             <div class="section-header">
-                <div class="section-tag">// Features</div>
-                <h2 class="section-title">Everything you need for AI-powered coding</h2>
+                <div class="section-tag">// 功能特性</div>
+                <h2 class="section-title">IM 驱动的多 Agent 协作开发</h2>
             </div>
 
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon cyan">💬</div>
-                    <h3 class="feature-title">IM Chat Interface</h3>
+                    <h3 class="feature-title">IM 聊天交互</h3>
                     <p class="feature-desc">
-                        Left sidebar with sessions. Single chat for 1-on-1, group chat for multi-agent collaboration with @mentions.
+                        左侧 Session 列表 + 中间聊天流。支持 @orchestrator、@frontend、@backend、@qa 多角色协作，像使用微信一样自然。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon purple">🎯</div>
-                    <h3 class="feature-title">Orchestrator Agent</h3>
+                    <h3 class="feature-title">协调器自动规划</h3>
                     <p class="feature-desc">
-                        Automatically understands intent, breaks down complex tasks, and delegates to specialized sub-agents.
+                        Orchestrator 自动解析用户意图，拆解为 2-4 步任务计划，分配给前端、后端、QA 等专业 Agent 执行。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon cyan">🔗</div>
-                    <h3 class="feature-title">Multi-Adapter Support</h3>
+                    <h3 class="feature-title">多适配器切换</h3>
                     <p class="feature-desc">
-                        Unified adapter layer for Claude Code, Codex, and custom agents. Switch seamlessly between providers.
+                        统一适配器层支持 Codex CLI、Claude Code CLI 和 ScriptedMock。真实 Agent 不可用时自动降级到 Mock 保证 Demo 可用。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon purple">📊</div>
-                    <h3 class="feature-title">Real Git Diffs</h3>
+                    <h3 class="feature-title">真实 Git Diff</h3>
                     <p class="feature-desc">
-                        Session-isolated worktrees. Every change tracked, diffed, and verifiable with Monaco editor integration.
+                        每个 Session 独立 Git Worktree 隔离。所有代码变更实时生成 Diff，支持 Monaco Editor 逐行对比查看。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon amber">👁️</div>
-                    <h3 class="feature-title">Live Preview</h3>
+                    <h3 class="feature-title">实时预览</h3>
                     <p class="feature-desc">
-                        Inline preview cards in agent responses. Click to expand full-screen Vite React preview with hot reload.
+                        Agent 执行完成后自动生成 Vite React 预览卡片，右侧 iframe 面板实时展示修改效果，支持刷新和全屏查看。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon cyan">🚀</div>
-                    <h3 class="feature-title">One-Click Deploy</h3>
+                    <h3 class="feature-title">部署卡片</h3>
                     <p class="feature-desc">
-                        Deploy directly from chat. Generate preview URLs, static sites, or download source packages.
+                        预览健康后一键生成部署卡片，展示状态、URL、端口等信息。当前为 Mock 部署，未来支持真实部署。
                     </p>
                 </div>
             </div>
@@ -1130,32 +1130,32 @@
     <section class="tech" id="tech">
         <div class="section-container">
             <div class="section-header">
-                <div class="section-tag">// Tech Stack</div>
-                <h2 class="section-title">Built with proven, production-ready tools</h2>
+                <div class="section-tag">// 技术栈</div>
+                <h2 class="section-title">成熟的技术栈，开箱即用</h2>
             </div>
 
             <div class="tech-grid">
                 <div class="tech-card">
                     <div class="tech-card-header">
                         <div class="tech-card-icon">⚡</div>
-                        <h3 class="tech-card-title">Core Components</h3>
+                        <h3 class="tech-card-title">核心组件</h3>
                     </div>
                     <ul class="tech-list">
                         <li class="tech-item">
                             <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Frontend</strong> — Next.js + TypeScript + Tailwind</div>
+                            <div class="tech-item-text"><strong>Frontend</strong> — Next.js 16 + React 19 + TypeScript 5.9</div>
                         </li>
                         <li class="tech-item">
                             <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Backend</strong> — FastAPI + SQLModel + SQLite</div>
+                            <div class="tech-item-text"><strong>Backend</strong> — FastAPI 0.121 + SQLModel + SQLite</div>
                         </li>
                         <li class="tech-item">
                             <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Realtime</strong> — SSE + TaskRunEvent</div>
+                            <div class="tech-item-text"><strong>Styling</strong> — Tailwind CSS 4.1 + shadcn/ui 风格组件</div>
                         </li>
                         <li class="tech-item">
                             <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Isolation</strong> — Git Worktree per Session</div>
+                            <div class="tech-item-text"><strong>Diff Viewer</strong> — Monaco Editor 0.55</div>
                         </li>
                     </ul>
                 </div>
@@ -1163,24 +1163,24 @@
                 <div class="tech-card">
                     <div class="tech-card-header">
                         <div class="tech-card-icon">🛡️</div>
-                        <h3 class="tech-card-title">Verified Capabilities</h3>
+                        <h3 class="tech-card-title">架构特性</h3>
                     </div>
                     <ul class="tech-list">
                         <li class="tech-item">
                             <div class="tech-item-dot"></div>
-                            <div class="tech-item-text">Local single-user demo fully tested</div>
+                            <div class="tech-item-text"><strong>Realtime</strong> — SSE + TaskRunEvent 持久化</div>
                         </li>
                         <li class="tech-item">
                             <div class="tech-item-dot"></div>
-                            <div class="tech-item-text">ScriptedMock fallback for reliability</div>
+                            <div class="tech-item-text"><strong>Isolation</strong> — 每个 Session 独立 Git Worktree</div>
                         </li>
                         <li class="tech-item">
                             <div class="tech-item-dot"></div>
-                            <div class="tech-item-text">P0 → P1 → P14 roadmap defined</div>
+                            <div class="tech-item-text"><strong>Fallback</strong> — ScriptedMock 降级保证 Demo 可用</div>
                         </li>
                         <li class="tech-item">
                             <div class="tech-item-dot"></div>
-                            <div class="tech-item-text">Zero external service dependencies</div>
+                            <div class="tech-item-text"><strong>Guardrails</strong> — 命令白名单 + 路径保护</div>
                         </li>
                     </ul>
                 </div>
@@ -1192,30 +1192,30 @@
     <section class="workflow" id="workflow">
         <div class="section-container">
             <div class="section-header">
-                <div class="section-tag">// How It Works</div>
-                <h2 class="section-title">From request to deployment in 4 steps</h2>
+                <div class="section-tag">// 工作流程</div>
+                <h2 class="section-title">从需求到部署的完整闭环</h2>
             </div>
 
             <div class="workflow-steps">
                 <div class="workflow-step">
                     <div class="workflow-number">01</div>
-                    <h4 class="workflow-title">Chat</h4>
-                    <p class="workflow-desc">Send a message with @orchestrator</p>
+                    <h4 class="workflow-title">需求输入</h4>
+                    <p class="workflow-desc">在聊天中 @orchestrator 描述需求</p>
                 </div>
                 <div class="workflow-step">
                     <div class="workflow-number">02</div>
-                    <h4 class="workflow-title">Plan</h4>
-                    <p class="workflow-desc">AI breaks down into tasks</p>
+                    <h4 class="workflow-title">自动规划</h4>
+                    <p class="workflow-desc">协调器拆解为可执行任务</p>
                 </div>
                 <div class="workflow-step">
                     <div class="workflow-number">03</div>
-                    <h4 class="workflow-title">Execute</h4>
-                    <p class="workflow-desc">Agents write real code</p>
+                    <h4 class="workflow-title">Agent 执行</h4>
+                    <p class="workflow-desc">前端/后端 Agent 写真实代码</p>
                 </div>
                 <div class="workflow-step">
                     <div class="workflow-number">04</div>
-                    <h4 class="workflow-title">Deploy</h4>
-                    <p class="workflow-desc">Preview and ship live</p>
+                    <h4 class="workflow-title">预览部署</h4>
+                    <p class="workflow-desc">实时 Diff + 预览 + 部署卡片</p>
                 </div>
             </div>
         </div>
@@ -1223,11 +1223,11 @@
 
     <!-- CTA Section -->
     <section class="cta">
-        <h2 class="cta-title">Ready to try AgentHub?</h2>
-        <p class="cta-desc">Clone the repo, run the setup, and start coding with AI agents in minutes.</p>
+        <h2 class="cta-title">开始使用 AgentHub</h2>
+        <p class="cta-desc">克隆仓库，运行安装脚本，几分钟内即可启动本地多 Agent 编码环境。</p>
         <div class="cta-actions">
             <a href="https://github.com/YoungBossX/AgentHub" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
-                Get Started
+                View on GitHub
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
         </div>
@@ -1238,12 +1238,12 @@
         <div class="footer-content">
             <div class="footer-brand">AgentHub</div>
             <ul class="footer-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#tech">Tech Stack</a></li>
-                <li><a href="#workflow">Workflow</a></li>
+                <li><a href="#features">功能特性</a></li>
+                <li><a href="#tech">技术栈</a></li>
+                <li><a href="#workflow">工作流程</a></li>
                 <li><a href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noopener noreferrer">GitHub</a></li>
             </ul>
-            <p class="footer-copy">© 2026 AgentHub. MIT License.</p>
+            <p class="footer-copy">© 2026 AgentHub · MIT License · Local Demo MVP</p>
         </div>
     </footer>
 </body>
