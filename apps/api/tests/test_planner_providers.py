@@ -12,6 +12,8 @@ from app.planner_providers import (
     DisabledPlannerProvider,
     FakePlannerProvider,
     PlannerProviderError,
+    get_planner_provider_protocol,
+    list_planner_provider_protocols,
     resolve_planner_provider,
 )
 
@@ -36,6 +38,26 @@ def test_disabled_planner_provider_records_disabled_source() -> None:
         "errorSummary": "Real LLM planner provider is disabled.",
         "fallbackReason": "disabled",
     }
+
+
+def test_planner_provider_protocol_registry_lists_supported_protocols() -> None:
+    protocols = {item.protocol: item for item in list_planner_provider_protocols()}
+
+    assert set(protocols) == {
+        "openai_responses",
+        "openai_compatible_chat",
+        "anthropic_messages",
+        "claude_cli",
+        "fake_test",
+        "disabled",
+    }
+    assert protocols["openai_responses"].real_provider is True
+    assert protocols["openai_compatible_chat"].real_provider is True
+    assert protocols["anthropic_messages"].real_provider is True
+    assert protocols["fake_test"].real_provider is False
+    assert protocols["disabled"].real_provider is False
+    assert get_planner_provider_protocol("CLAUDE_CLI").protocol == "claude_cli"
+    assert get_planner_provider_protocol("mystery") is None
 
 
 def test_fake_planner_provider_returns_test_only_result() -> None:

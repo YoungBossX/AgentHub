@@ -12,8 +12,79 @@ from app.config import Settings, get_settings
 PLANNER_PROVIDER_DISABLED = "disabled"
 PLANNER_PROVIDER_FAKE_TEST = "fake_test"
 PLANNER_PROVIDER_CLAUDE_CLI = "claude_cli"
+PLANNER_PROTOCOL_OPENAI_RESPONSES = "openai_responses"
+PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT = "openai_compatible_chat"
+PLANNER_PROTOCOL_ANTHROPIC_MESSAGES = "anthropic_messages"
 DEFAULT_CLAUDE_PLANNER_BINARY = "claude"
 STDERR_LIMIT = 1200
+
+
+@dataclass(frozen=True)
+class PlannerProviderProtocolMetadata:
+    protocol: str
+    display_name: str
+    description: str
+    real_provider: bool
+
+    def to_metadata(self) -> dict[str, Any]:
+        return {
+            "protocol": self.protocol,
+            "displayName": self.display_name,
+            "description": self.description,
+            "realProvider": self.real_provider,
+        }
+
+
+BUILT_IN_PLANNER_PROVIDER_PROTOCOLS: tuple[PlannerProviderProtocolMetadata, ...] = (
+    PlannerProviderProtocolMetadata(
+        protocol=PLANNER_PROTOCOL_OPENAI_RESPONSES,
+        display_name="OpenAI Responses",
+        description="Official OpenAI / ChatGPT Responses API planner protocol.",
+        real_provider=True,
+    ),
+    PlannerProviderProtocolMetadata(
+        protocol=PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT,
+        display_name="OpenAI-compatible Chat",
+        description="DeepSeek, MiMo, OpenRouter, vLLM, and custom compatible chat endpoints.",
+        real_provider=True,
+    ),
+    PlannerProviderProtocolMetadata(
+        protocol=PLANNER_PROTOCOL_ANTHROPIC_MESSAGES,
+        display_name="Anthropic Messages",
+        description="Claude / Anthropic Messages API planner protocol.",
+        real_provider=True,
+    ),
+    PlannerProviderProtocolMetadata(
+        protocol=PLANNER_PROVIDER_CLAUDE_CLI,
+        display_name="Claude CLI",
+        description="Existing local Claude CLI planner provider.",
+        real_provider=True,
+    ),
+    PlannerProviderProtocolMetadata(
+        protocol=PLANNER_PROVIDER_FAKE_TEST,
+        display_name="Fake Test",
+        description="Deterministic test-only planner provider.",
+        real_provider=False,
+    ),
+    PlannerProviderProtocolMetadata(
+        protocol=PLANNER_PROVIDER_DISABLED,
+        display_name="Disabled",
+        description="Explicit disabled planner provider.",
+        real_provider=False,
+    ),
+)
+
+
+def list_planner_provider_protocols() -> list[PlannerProviderProtocolMetadata]:
+    return list(BUILT_IN_PLANNER_PROVIDER_PROTOCOLS)
+
+
+def get_planner_provider_protocol(protocol: str) -> PlannerProviderProtocolMetadata | None:
+    normalized = protocol.strip().lower()
+    for item in BUILT_IN_PLANNER_PROVIDER_PROTOCOLS:
+        if item.protocol == normalized:
+            return item
+    return None
 
 
 class PlannerProviderError(ValueError):

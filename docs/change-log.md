@@ -1,5 +1,28 @@
 # AgentHub Change Log
 
+## P17b-1.1 Planner Provider Protocol Metadata
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added protocol-level PlannerProvider metadata for OpenAI Responses, OpenAI-compatible chat, Anthropic Messages, Claude CLI, fake test, and disabled planner protocols. |
+| `apps/api/tests/test_planner_providers.py` | Added registry coverage for supported planner protocols. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/*` | Added the P17b OpenSpec artifacts and marked P17b-1.1 complete. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_protocol_registry_lists_supported_protocols -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17-8 Rehearsal And Freeze Review
 
 **Date:** 2026-05-29
