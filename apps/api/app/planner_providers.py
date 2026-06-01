@@ -701,6 +701,99 @@ class OpenAIResponsesPlannerProvider:
         )
 
 
+class OpenAICompatibleChatPlannerProvider:
+    provider_type = PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT
+    planner_source = "real_llm"
+
+    def __init__(
+        self,
+        *,
+        provider_id: str = "openai-compatible-chat-planner",
+        http_client: PlannerHttpClient | None = None,
+        api_key_env: str,
+        model: str,
+        base_url: str,
+        timeout_sec: int = 60,
+        environ: Mapping[str, str] | None = None,
+    ) -> None:
+        self.provider_id = provider_id
+        self._http_client = http_client or UrllibPlannerHttpClient()
+        self._api_key_env = api_key_env
+        self._model = model
+        self._base_url = base_url.rstrip("/")
+        self._timeout_sec = timeout_sec
+        self._environ = environ
+
+    def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
+        started = time.monotonic()
+        key_resolution = resolve_planner_api_key(
+            self._api_key_env,
+            provider_id=self.provider_id,
+            environ=self._environ,
+        )
+        if key_resolution.api_key is None:
+            return self._api_error_result(
+                key_resolution.error_code or "PLANNER_API_KEY_MISSING",
+                key_resolution.error_summary or "Planner API key is missing.",
+                started,
+            )
+
+        try:
+            response = self._http_client.post_json(
+                f"{self._base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {key_resolution.api_key}",
+                    "Content-Type": "application/json",
+                },
+                payload=_openai_compatible_chat_payload(self._model, planner_input),
+                timeout=self._timeout_sec,
+            )
+            raw_output = _extract_openai_compatible_chat_text(response)
+        except TimeoutError:
+            return self._api_error_result(
+                "PLANNER_TIMEOUT",
+                f"OpenAI-compatible planner timed out after {self._timeout_sec} seconds.",
+                started,
+            )
+        except Exception as exc:
+            return self._api_error_result(
+                _planner_error_code_for_text(str(exc)),
+                _excerpt(str(exc) or "OpenAI-compatible planner failed."),
+                started,
+            )
+
+        if not raw_output.strip():
+            return self._api_error_result(
+                "PLANNER_EMPTY_OUTPUT",
+                "OpenAI-compatible planner returned no output.",
+                started,
+            )
+        return PlannerProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            planner_source=self.planner_source,
+            status="succeeded",
+            raw_output=raw_output.strip(),
+            duration_ms=_duration_ms(started),
+        )
+
+    def _api_error_result(
+        self,
+        code: str,
+        summary: str,
+        started: float,
+    ) -> PlannerProviderResult:
+        return PlannerProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            planner_source=self.planner_source,
+            status="failed",
+            duration_ms=_duration_ms(started),
+            error_code=code,
+            error_summary=summary,
+        )
+
+
 def resolve_planner_provider(
     settings: Settings | None = None,
     *,
@@ -742,6 +835,19 @@ def resolve_planner_provider(
                 preset.default_base_url
                 if preset is not None and preset.default_base_url is not None
                 else "https://api.openai.com/v1"
+            ),
+            timeout_sec=resolved_settings.llm_planner_timeout_sec,
+        )
+    if selected_provider_id in {"deepseek_api", "mimo_api"}:
+        preset = get_planner_provider_preset(selected_provider_id)
+        return OpenAICompatibleChatPlannerProvider(
+            provider_id=f"{selected_provider_id.replace('_', '-')}-planner",
+            api_key_env=preset.api_key_env if preset is not None else "CUSTOM_OPENAI_COMPATIBLE_API_KEY",
+            model=preset.default_model if preset is not None else "",
+            base_url=(
+                preset.default_base_url
+                if preset is not None and preset.default_base_url is not None
+                else ""
             ),
             timeout_sec=resolved_settings.llm_planner_timeout_sec,
         )
@@ -828,6 +934,30 @@ def _planner_system_instruction() -> str:
     )
 
 
+def _openai_compatible_chat_payload(
+    model: str,
+    planner_input: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": _planner_system_instruction(),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    planner_input,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ),
+            },
+        ],
+        "response_format": {"type": "json_object"},
+    }
+
+
 def _conversation_outcome_schema() -> dict[str, Any]:
     return {
         "type": "object",
@@ -878,3 +1008,17 @@ def _extract_openai_responses_text(response: Mapping[str, Any]) -> str:
                     chunks.append(text)
         return "".join(chunks)
     return ""
+
+
+def _extract_openai_compatible_chat_text(response: Mapping[str, Any]) -> str:
+    choices = response.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return ""
+    first = choices[0]
+    if not isinstance(first, Mapping):
+        return ""
+    message = first.get("message")
+    if not isinstance(message, Mapping):
+        return ""
+    content = message.get("content")
+    return content if isinstance(content, str) else ""

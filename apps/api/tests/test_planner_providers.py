@@ -11,6 +11,7 @@ from app.planner_providers import (
     ClaudeCliPlannerProvider,
     DisabledPlannerProvider,
     FakePlannerProvider,
+    OpenAICompatibleChatPlannerProvider,
     OpenAIResponsesPlannerProvider,
     PlannerProviderError,
     get_planner_provider_protocol,
@@ -394,6 +395,65 @@ def test_openai_responses_planner_provider_missing_key_fails_without_call() -> N
     provider = OpenAIResponsesPlannerProvider(
         http_client=client,
         api_key_env="OPENAI_API_KEY",
+        environ={},
+    )
+
+    result = provider.create_plan({"originalUserRequest": "你好"})
+
+    assert result.status == "failed"
+    assert result.error_code == "PLANNER_API_KEY_MISSING"
+    assert client.url is None
+
+
+def test_openai_compatible_chat_planner_provider_uses_fake_client() -> None:
+    client = FakePlannerHttpClient(
+        {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "outcomeType": "task_plan",
+                                "reason": "A bounded frontend task is needed.",
+                            }
+                        )
+                    }
+                }
+            ]
+        }
+    )
+    provider = OpenAICompatibleChatPlannerProvider(
+        provider_id="deepseek-api-planner",
+        http_client=client,
+        api_key_env="DEEPSEEK_API_KEY",
+        model="deepseek-chat",
+        base_url="https://api.deepseek.test",
+        timeout_sec=8,
+        environ={"DEEPSEEK_API_KEY": "test-secret-value"},
+    )
+
+    result = provider.create_plan({"originalUserRequest": "帮我做打砖块"})
+
+    assert result.status == "succeeded"
+    assert result.provider_id == "deepseek-api-planner"
+    assert result.provider_type == "openai_compatible_chat"
+    assert json.loads(result.raw_output)["outcomeType"] == "task_plan"
+    assert client.url == "https://api.deepseek.test/chat/completions"
+    assert client.timeout == 8
+    assert client.headers["Authorization"] == "Bearer test-secret-value"
+    assert client.payload["model"] == "deepseek-chat"
+    assert client.payload["response_format"] == {"type": "json_object"}
+    assert "test-secret-value" not in json.dumps(result.to_metadata())
+
+
+def test_openai_compatible_chat_planner_provider_missing_key_fails_without_call() -> None:
+    client = FakePlannerHttpClient({"choices": []})
+    provider = OpenAICompatibleChatPlannerProvider(
+        provider_id="mimo-api-planner",
+        http_client=client,
+        api_key_env="MIMO_API_KEY",
+        model="mimo-v2.5-pro",
+        base_url="https://api.xiaomimimo.test/v1",
         environ={},
     )
 
