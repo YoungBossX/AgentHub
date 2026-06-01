@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-2.4 Custom Planner Base URL Validation
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added Planner provider base URL validation for custom OpenAI-compatible presets and unsupported overrides. |
+| `apps/api/tests/test_planner_providers.py` | Added coverage for accepted custom URLs, rejected unsafe URLs, and unsupported base URL overrides. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-2.4 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_validate_planner_provider_base_url_supports_custom_compatible_url tests/test_planner_providers.py::test_validate_planner_provider_base_url_rejects_unsafe_custom_url tests/test_planner_providers.py::test_validate_planner_provider_base_url_rejects_unsupported_override -q` | Pass: 9 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-2.3 Planner Preset Defaults
 
 **Date:** 2026-06-01

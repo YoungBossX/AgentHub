@@ -6,6 +6,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 from typing import Any, Protocol
+from urllib.parse import urlparse, urlunparse
 
 from app.config import Settings, get_settings
 
@@ -190,6 +191,69 @@ def get_planner_provider_preset(preset_id: str) -> PlannerProviderPresetMetadata
         if item.preset_id == normalized:
             return item
     return None
+
+
+def validate_planner_provider_base_url(
+    *,
+    preset_id: str,
+    base_url: str | None,
+) -> str | None:
+    preset = get_planner_provider_preset(preset_id)
+    if preset is None:
+        raise PlannerProviderError(
+            code="UNKNOWN_PLANNER_PROVIDER_PRESET",
+            summary=f"Unknown planner provider preset: {preset_id}",
+            provider_id=preset_id,
+        )
+
+    protocol_metadata = get_planner_provider_protocol(preset.protocol)
+    raw_url = base_url.strip() if isinstance(base_url, str) else ""
+    if not raw_url:
+        if preset.preset_id == "custom_openai_compatible":
+            raise PlannerProviderError(
+                code="INVALID_PLANNER_BASE_URL",
+                summary="Custom OpenAI-compatible planner preset requires a base URL.",
+                provider_id=preset.preset_id,
+            )
+        return preset.default_base_url
+
+    if (
+        protocol_metadata is not None
+        and not protocol_metadata.supports_base_url
+        and raw_url.rstrip("/") != (preset.default_base_url or "").rstrip("/")
+    ):
+        raise PlannerProviderError(
+            code="UNSUPPORTED_PLANNER_BASE_URL_OVERRIDE",
+            summary=f"Planner preset {preset.preset_id} does not support custom base URL overrides.",
+            provider_id=preset.preset_id,
+        )
+
+    parsed = urlparse(raw_url)
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.netloc
+        or parsed.username
+        or parsed.password
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise PlannerProviderError(
+            code="INVALID_PLANNER_BASE_URL",
+            summary="Planner base URL must be an http(s) URL with a host and no credentials, query, or fragment.",
+            provider_id=preset.preset_id,
+        )
+
+    return urlunparse(
+        (
+            parsed.scheme.lower(),
+            parsed.netloc.lower(),
+            parsed.path.rstrip("/"),
+            "",
+            "",
+            "",
+        )
+    )
 
 
 class PlannerProviderError(ValueError):

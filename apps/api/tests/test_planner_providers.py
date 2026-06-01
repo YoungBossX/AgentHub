@@ -17,6 +17,7 @@ from app.planner_providers import (
     list_planner_provider_protocols,
     list_planner_provider_presets,
     resolve_planner_provider,
+    validate_planner_provider_base_url,
 )
 
 
@@ -119,6 +120,61 @@ def test_planner_provider_presets_include_safe_defaults_and_capabilities() -> No
     serialized = json.dumps(presets).lower()
     assert "sk-" not in serialized
     assert "authorization" not in serialized
+
+
+def test_validate_planner_provider_base_url_supports_custom_compatible_url() -> None:
+    assert (
+        validate_planner_provider_base_url(
+            preset_id="custom_openai_compatible",
+            base_url="https://planner.example.test/v1/",
+        )
+        == "https://planner.example.test/v1"
+    )
+    assert (
+        validate_planner_provider_base_url(
+            preset_id="mimo_api",
+            base_url="https://api.xiaomimimo.com/v1",
+        )
+        == "https://api.xiaomimimo.com/v1"
+    )
+    assert (
+        validate_planner_provider_base_url(preset_id="deepseek_api", base_url=None)
+        == "https://api.deepseek.com"
+    )
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        None,
+        "",
+        "ftp://planner.example.test/v1",
+        "https://user:pass@planner.example.test/v1",
+        "https://planner.example.test/v1?token=secret",
+        "https://planner.example.test/v1#fragment",
+        "not-a-url",
+    ],
+)
+def test_validate_planner_provider_base_url_rejects_unsafe_custom_url(
+    base_url: str | None,
+) -> None:
+    with pytest.raises(PlannerProviderError) as exc_info:
+        validate_planner_provider_base_url(
+            preset_id="custom_openai_compatible",
+            base_url=base_url,
+        )
+
+    assert exc_info.value.code == "INVALID_PLANNER_BASE_URL"
+
+
+def test_validate_planner_provider_base_url_rejects_unsupported_override() -> None:
+    with pytest.raises(PlannerProviderError) as exc_info:
+        validate_planner_provider_base_url(
+            preset_id="openai_api",
+            base_url="https://proxy.example.test/v1",
+        )
+
+    assert exc_info.value.code == "UNSUPPORTED_PLANNER_BASE_URL_OVERRIDE"
 
 
 def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
