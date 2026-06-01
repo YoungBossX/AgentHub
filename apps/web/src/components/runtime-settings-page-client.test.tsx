@@ -262,4 +262,26 @@ describe("RuntimeSettingsPageClient", () => {
       expect(screen.getByText("运行设置已保存。")).toBeTruthy()
     })
   })
+
+  it("presents provider status with user-facing labels instead of raw internal values", async () => {
+    render(
+      <RuntimeSettingsPageClient
+        backendUrl="http://127.0.0.1:8000"
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Planner LLM")).toBeTruthy()
+    })
+
+    expect(screen.getAllByText(/未检测/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/缺少密钥环境变量/).length).toBeGreaterThan(0)
+    expect(
+      screen.getByText(/API Key 只从后端进程环境变量读取/),
+    ).toBeTruthy()
+    expect(screen.getByText(/缺少环境变量 DEEPSEEK_API_KEY/)).toBeTruthy()
+    expect(screen.queryByText("missing_key")).toBeNull()
+    expect(screen.queryByText("Claude CLI Planner · unchecked")).toBeNull()
+  })
 })

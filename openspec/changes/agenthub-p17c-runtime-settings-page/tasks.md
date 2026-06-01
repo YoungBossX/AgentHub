@@ -21,7 +21,7 @@
 
 - [x] 4.1 Add a UI status-label mapping for internal values such as `unchecked`, `configured`, `missing_key`, `not_required`, `unavailable`, and required-field validation errors.
 - [x] 4.2 Ensure missing API key states explain that keys must be configured through environment variables and never through raw key entry.
-- [ ] 4.3 Update tests so raw internal status strings are not the primary labels shown to users.
+- [x] 4.3 Update tests so raw internal status strings are not the primary labels shown to users.
 
 ## 5. Documentation And Freeze Review
 
