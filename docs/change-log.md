@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17b-3.4 Planner API Missing-key And Secret-leak Tests
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planner_providers.py` | Added missing-key and configured-key secret-free metadata coverage for OpenAI, DeepSeek, MiMo, Anthropic, and custom compatible planner presets. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-3.4 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_api_planner_presets_report_missing_keys_without_secret_leaks tests/test_planner_providers.py::test_api_planner_preset_configured_key_metadata_is_secret_free -q` | Pass: 10 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-3.3 Runtime Config Secret-safe Responses
 
 **Date:** 2026-06-01

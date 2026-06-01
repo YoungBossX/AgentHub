@@ -220,6 +220,65 @@ def test_resolve_planner_api_key_rejects_invalid_env_names(api_key_env: str) -> 
     assert exc_info.value.code == "INVALID_PLANNER_API_KEY_ENV"
 
 
+@pytest.mark.parametrize(
+    ("preset_id", "api_key_env"),
+    [
+        ("openai_api", "OPENAI_API_KEY"),
+        ("deepseek_api", "DEEPSEEK_API_KEY"),
+        ("mimo_api", "MIMO_API_KEY"),
+        ("anthropic_api", "ANTHROPIC_API_KEY"),
+        ("custom_openai_compatible", "CUSTOM_OPENAI_COMPATIBLE_API_KEY"),
+    ],
+)
+def test_api_planner_presets_report_missing_keys_without_secret_leaks(
+    preset_id: str,
+    api_key_env: str,
+) -> None:
+    preset = get_planner_provider_preset(preset_id)
+    resolution = resolve_planner_api_key(
+        preset.api_key_env,
+        provider_id=preset.preset_id,
+        environ={},
+    )
+
+    assert preset.api_key_env == api_key_env
+    assert resolution.availability == "missing_key"
+    assert resolution.api_key is None
+    metadata = resolution.to_metadata()
+    assert metadata["apiKeyEnv"] == api_key_env
+    assert metadata["errorCode"] == "PLANNER_API_KEY_MISSING"
+    serialized = json.dumps(metadata).lower()
+    assert "authorization" not in serialized
+    assert "bearer " not in serialized
+    assert "sk-" not in serialized
+
+
+@pytest.mark.parametrize(
+    "preset_id",
+    [
+        "openai_api",
+        "deepseek_api",
+        "mimo_api",
+        "anthropic_api",
+        "custom_openai_compatible",
+    ],
+)
+def test_api_planner_preset_configured_key_metadata_is_secret_free(
+    preset_id: str,
+) -> None:
+    preset = get_planner_provider_preset(preset_id)
+    resolution = resolve_planner_api_key(
+        preset.api_key_env,
+        provider_id=preset.preset_id,
+        environ={preset.api_key_env: "test-secret-value"},
+    )
+
+    assert resolution.availability == "configured"
+    assert resolution.api_key == "test-secret-value"
+    serialized = json.dumps(resolution.to_metadata())
+    assert "test-secret-value" not in serialized
+
+
 def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
     openai = get_planner_provider_protocol("openai_responses").to_metadata()
     compatible = get_planner_provider_protocol("openai_compatible_chat").to_metadata()

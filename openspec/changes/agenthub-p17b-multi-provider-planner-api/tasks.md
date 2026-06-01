@@ -17,7 +17,7 @@
 - [x] 3.1 Add an environment-only API key resolver for Planner API providers.
 - [x] 3.2 Allow runtime config to store `apiKeyEnv` but reject or ignore raw API key values.
 - [x] 3.3 Ensure frontend/API/runtime config responses never return raw API keys or authorization headers.
-- [ ] 3.4 Add missing-key and no-secret-leak tests for OpenAI, DeepSeek, MiMo, Anthropic, and custom env names.
+- [x] 3.4 Add missing-key and no-secret-leak tests for OpenAI, DeepSeek, MiMo, Anthropic, and custom env names.
 
 ## 4. Planner API Provider Implementations
 
