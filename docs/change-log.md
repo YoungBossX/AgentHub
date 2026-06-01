@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17b-7.4 Explicit Planner Fallback Evidence
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planner_providers.py` | Added coverage proving failed real API planner providers remain failed in fallback metadata and are not reported as success. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-7.4 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_llm_planner_fallback_metadata_records_failed_real_provider -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-7.3 Planner API Error Normalization
 
 **Date:** 2026-06-01

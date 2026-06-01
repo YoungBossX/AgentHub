@@ -753,6 +753,31 @@ def test_llm_planner_fallback_metadata_records_selected_provider() -> None:
     }
 
 
+def test_llm_planner_fallback_metadata_records_failed_real_provider() -> None:
+    provider_result = OpenAIResponsesPlannerProvider(
+        http_client=FakePlannerHttpClient({"output_text": "{}"}),
+        api_key_env="OPENAI_API_KEY",
+        environ={},
+    ).create_plan({"originalUserRequest": "你好"})
+
+    metadata = llm_planner_fallback_metadata(
+        "provider_unavailable",
+        provider_result=provider_result,
+    )
+
+    assert provider_result.status == "failed"
+    assert provider_result.planner_source == "real_llm"
+    assert metadata == {
+        "attemptedPlanner": "llm_v1",
+        "reason": "provider_unavailable",
+        "providerId": "openai-api-planner",
+        "providerType": "openai_responses",
+        "plannerSource": "real_llm",
+        "status": "failed",
+    }
+    assert "succeeded" not in json.dumps(metadata)
+
+
 class FakePlannerCommandRunner:
     def __init__(
         self,
