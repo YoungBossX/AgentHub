@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-4.3 Anthropic Messages Planner Provider
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added a fake-client-testable Anthropic Messages PlannerProvider using tool/schema output for ConversationOutcome. |
+| `apps/api/tests/test_planner_providers.py` | Added success and missing-key coverage for the Anthropic provider without real API calls. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-4.3 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_anthropic_messages_planner_provider_uses_fake_client tests/test_planner_providers.py::test_anthropic_messages_planner_provider_missing_key_fails_without_call -q` | Pass: 2 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-4.2 OpenAI-compatible Chat Planner Provider
 
 **Date:** 2026-06-01

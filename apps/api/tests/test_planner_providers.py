@@ -11,6 +11,7 @@ from app.planner_providers import (
     ClaudeCliPlannerProvider,
     DisabledPlannerProvider,
     FakePlannerProvider,
+    AnthropicMessagesPlannerProvider,
     OpenAICompatibleChatPlannerProvider,
     OpenAIResponsesPlannerProvider,
     PlannerProviderError,
@@ -454,6 +455,57 @@ def test_openai_compatible_chat_planner_provider_missing_key_fails_without_call(
         api_key_env="MIMO_API_KEY",
         model="mimo-v2.5-pro",
         base_url="https://api.xiaomimimo.test/v1",
+        environ={},
+    )
+
+    result = provider.create_plan({"originalUserRequest": "你好"})
+
+    assert result.status == "failed"
+    assert result.error_code == "PLANNER_API_KEY_MISSING"
+    assert client.url is None
+
+
+def test_anthropic_messages_planner_provider_uses_fake_client() -> None:
+    client = FakePlannerHttpClient(
+        {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "input": {
+                        "outcomeType": "clarification",
+                        "reply": "你想写什么类型的故事？",
+                    },
+                }
+            ]
+        }
+    )
+    provider = AnthropicMessagesPlannerProvider(
+        http_client=client,
+        api_key_env="ANTHROPIC_API_KEY",
+        model="claude-test",
+        base_url="https://api.anthropic.test",
+        timeout_sec=9,
+        environ={"ANTHROPIC_API_KEY": "test-secret-value"},
+    )
+
+    result = provider.create_plan({"originalUserRequest": "写一个故事"})
+
+    assert result.status == "succeeded"
+    assert result.provider_type == "anthropic_messages"
+    assert json.loads(result.raw_output)["outcomeType"] == "clarification"
+    assert client.url == "https://api.anthropic.test/v1/messages"
+    assert client.timeout == 9
+    assert client.headers["x-api-key"] == "test-secret-value"
+    assert client.payload["model"] == "claude-test"
+    assert client.payload["tool_choice"]["name"] == "emit_conversation_outcome"
+    assert "test-secret-value" not in json.dumps(result.to_metadata())
+
+
+def test_anthropic_messages_planner_provider_missing_key_fails_without_call() -> None:
+    client = FakePlannerHttpClient({"content": []})
+    provider = AnthropicMessagesPlannerProvider(
+        http_client=client,
+        api_key_env="ANTHROPIC_API_KEY",
         environ={},
     )
 

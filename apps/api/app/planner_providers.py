@@ -794,6 +794,99 @@ class OpenAICompatibleChatPlannerProvider:
         )
 
 
+class AnthropicMessagesPlannerProvider:
+    provider_id = "anthropic-api-planner"
+    provider_type = PLANNER_PROTOCOL_ANTHROPIC_MESSAGES
+    planner_source = "real_llm"
+
+    def __init__(
+        self,
+        *,
+        http_client: PlannerHttpClient | None = None,
+        api_key_env: str = "ANTHROPIC_API_KEY",
+        model: str = "claude-sonnet-4-5",
+        base_url: str = "https://api.anthropic.com",
+        timeout_sec: int = 60,
+        environ: Mapping[str, str] | None = None,
+    ) -> None:
+        self._http_client = http_client or UrllibPlannerHttpClient()
+        self._api_key_env = api_key_env
+        self._model = model
+        self._base_url = base_url.rstrip("/")
+        self._timeout_sec = timeout_sec
+        self._environ = environ
+
+    def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
+        started = time.monotonic()
+        key_resolution = resolve_planner_api_key(
+            self._api_key_env,
+            provider_id=self.provider_id,
+            environ=self._environ,
+        )
+        if key_resolution.api_key is None:
+            return self._api_error_result(
+                key_resolution.error_code or "PLANNER_API_KEY_MISSING",
+                key_resolution.error_summary or "Planner API key is missing.",
+                started,
+            )
+
+        try:
+            response = self._http_client.post_json(
+                f"{self._base_url}/v1/messages",
+                headers={
+                    "x-api-key": key_resolution.api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                payload=_anthropic_messages_payload(self._model, planner_input),
+                timeout=self._timeout_sec,
+            )
+            raw_output = _extract_anthropic_messages_text(response)
+        except TimeoutError:
+            return self._api_error_result(
+                "PLANNER_TIMEOUT",
+                f"Anthropic Messages planner timed out after {self._timeout_sec} seconds.",
+                started,
+            )
+        except Exception as exc:
+            return self._api_error_result(
+                _planner_error_code_for_text(str(exc)),
+                _excerpt(str(exc) or "Anthropic Messages planner failed."),
+                started,
+            )
+
+        if not raw_output.strip():
+            return self._api_error_result(
+                "PLANNER_EMPTY_OUTPUT",
+                "Anthropic Messages planner returned no output.",
+                started,
+            )
+        return PlannerProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            planner_source=self.planner_source,
+            status="succeeded",
+            raw_output=raw_output.strip(),
+            duration_ms=_duration_ms(started),
+        )
+
+    def _api_error_result(
+        self,
+        code: str,
+        summary: str,
+        started: float,
+    ) -> PlannerProviderResult:
+        return PlannerProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            planner_source=self.planner_source,
+            status="failed",
+            duration_ms=_duration_ms(started),
+            error_code=code,
+            error_summary=summary,
+        )
+
+
 def resolve_planner_provider(
     settings: Settings | None = None,
     *,
@@ -848,6 +941,18 @@ def resolve_planner_provider(
                 preset.default_base_url
                 if preset is not None and preset.default_base_url is not None
                 else ""
+            ),
+            timeout_sec=resolved_settings.llm_planner_timeout_sec,
+        )
+    if selected_provider_id in {"anthropic_api", "anthropic-api-planner"}:
+        preset = get_planner_provider_preset("anthropic_api")
+        return AnthropicMessagesPlannerProvider(
+            api_key_env=preset.api_key_env if preset is not None else "ANTHROPIC_API_KEY",
+            model=preset.default_model if preset is not None else "claude-sonnet-4-5",
+            base_url=(
+                preset.default_base_url
+                if preset is not None and preset.default_base_url is not None
+                else "https://api.anthropic.com"
             ),
             timeout_sec=resolved_settings.llm_planner_timeout_sec,
         )
@@ -958,6 +1063,32 @@ def _openai_compatible_chat_payload(
     }
 
 
+def _anthropic_messages_payload(model: str, planner_input: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "model": model,
+        "max_tokens": 4096,
+        "system": _planner_system_instruction(),
+        "messages": [
+            {
+                "role": "user",
+                "content": json.dumps(
+                    planner_input,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ),
+            }
+        ],
+        "tools": [
+            {
+                "name": "emit_conversation_outcome",
+                "description": "Emit one AgentHub ConversationOutcome JSON object.",
+                "input_schema": _conversation_outcome_schema(),
+            }
+        ],
+        "tool_choice": {"type": "tool", "name": "emit_conversation_outcome"},
+    }
+
+
 def _conversation_outcome_schema() -> dict[str, Any]:
     return {
         "type": "object",
@@ -1022,3 +1153,21 @@ def _extract_openai_compatible_chat_text(response: Mapping[str, Any]) -> str:
         return ""
     content = message.get("content")
     return content if isinstance(content, str) else ""
+
+
+def _extract_anthropic_messages_text(response: Mapping[str, Any]) -> str:
+    content = response.get("content")
+    if not isinstance(content, list):
+        return ""
+    chunks: list[str] = []
+    for part in content:
+        if not isinstance(part, Mapping):
+            continue
+        if part.get("type") == "tool_use":
+            tool_input = part.get("input")
+            if isinstance(tool_input, Mapping):
+                return json.dumps(tool_input)
+        text = part.get("text")
+        if isinstance(text, str):
+            chunks.append(text)
+    return "".join(chunks)
