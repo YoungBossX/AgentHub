@@ -47,6 +47,11 @@ def test_default_runtime_config_preserves_existing_behavior(db: DbSession) -> No
         "mode": "read_only",
         "enabled": False,
         "fallbackPolicy": "environment_default",
+        "providerPresetId": None,
+        "protocol": None,
+        "model": None,
+        "baseUrl": None,
+        "timeoutSeconds": None,
         "apiKeyEnv": None,
     }
     assert payload["roles"]["frontend"]["enabled"] is False
@@ -68,6 +73,11 @@ def test_runtime_config_round_trips_workspace_role_defaults(db: DbSession) -> No
                 mode="read_only",
                 enabled=True,
                 fallback_policy="deterministic",
+                provider_preset_id="deepseek_api",
+                protocol="openai_compatible_chat",
+                model="deepseek-chat",
+                base_url="https://api.deepseek.com",
+                timeout_seconds=45,
                 api_key_env="DEEPSEEK_API_KEY",
             ),
             "frontend": RuntimeRoleConfig(
@@ -88,6 +98,11 @@ def test_runtime_config_round_trips_workspace_role_defaults(db: DbSession) -> No
     assert config.config_source == "workspace"
     assert payload["roles"]["planner"]["providerId"] == "claude-cli-planner"
     assert payload["roles"]["planner"]["fallbackPolicy"] == "deterministic"
+    assert payload["roles"]["planner"]["providerPresetId"] == "deepseek_api"
+    assert payload["roles"]["planner"]["protocol"] == "openai_compatible_chat"
+    assert payload["roles"]["planner"]["model"] == "deepseek-chat"
+    assert payload["roles"]["planner"]["baseUrl"] == "https://api.deepseek.com"
+    assert payload["roles"]["planner"]["timeoutSeconds"] == 45
     assert payload["roles"]["planner"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
     assert payload["roles"]["frontend"]["agentProfileId"] == "frontend-profile"
     assert payload["roles"]["backend"]["enabled"] is False
@@ -141,6 +156,7 @@ def test_default_runtime_config_payload_is_serializable() -> None:
     assert payload["configSource"] == "default"
     assert payload["roles"]["review"]["fallbackPolicy"] == "environment_default"
     assert payload["roles"]["planner"]["apiKeyEnv"] is None
+    assert payload["roles"]["planner"]["providerPresetId"] is None
 
 
 def test_runtime_config_api_returns_default_and_safe_options() -> None:
@@ -208,6 +224,11 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
                         "mode": "read_only",
                         "enabled": True,
                         "fallbackPolicy": "deterministic",
+                        "providerPresetId": "deepseek_api",
+                        "protocol": "openai_compatible_chat",
+                        "model": "deepseek-chat",
+                        "baseUrl": "https://api.deepseek.com",
+                        "timeoutSeconds": 45,
                         "apiKeyEnv": "DEEPSEEK_API_KEY",
                     },
                     "frontend": {
@@ -241,6 +262,11 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
         assert payload["configSource"] == "workspace"
         assert payload["validation"]["valid"] is True
         assert payload["roles"]["planner"]["providerId"] == "claude-cli-planner"
+        assert payload["roles"]["planner"]["providerPresetId"] == "deepseek_api"
+        assert payload["roles"]["planner"]["protocol"] == "openai_compatible_chat"
+        assert payload["roles"]["planner"]["model"] == "deepseek-chat"
+        assert payload["roles"]["planner"]["baseUrl"] == "https://api.deepseek.com"
+        assert payload["roles"]["planner"]["timeoutSeconds"] == 45
         assert payload["roles"]["planner"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
         assert payload["roles"]["frontend"]["providerId"] == "local-claude-code-cli"
         assert payload["roles"]["backend"]["providerId"] == "local-codex-cli"

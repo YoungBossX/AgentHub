@@ -518,6 +518,11 @@ def runtime_role_config_response(role_config: RuntimeRoleConfig) -> RuntimeRoleC
         mode=role_config.mode,
         enabled=role_config.enabled,
         fallbackPolicy=role_config.fallback_policy,
+        providerPresetId=role_config.provider_preset_id,
+        protocol=role_config.protocol,
+        model=role_config.model,
+        baseUrl=role_config.base_url,
+        timeoutSeconds=role_config.timeout_seconds,
         apiKeyEnv=role_config.api_key_env,
     )
 
@@ -544,6 +549,11 @@ def runtime_role_config_from_request(
         mode=request.mode,
         enabled=request.enabled,
         fallback_policy=request.fallback_policy,
+        provider_preset_id=request.provider_preset_id,
+        protocol=request.protocol,
+        model=request.model,
+        base_url=request.base_url,
+        timeout_seconds=request.timeout_seconds,
         api_key_env=request.api_key_env,
     )
 

@@ -1,5 +1,29 @@
 # AgentHub Change Log
 
+## P17b-6.1 Planner Runtime Config Metadata Fields
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_runtime_config.py` | Extended runtime role config with Planner provider preset, protocol, model, base URL, timeout, and apiKeyEnv metadata. |
+| `apps/api/app/schemas.py` | Added request/response schema fields for Planner runtime provider metadata without raw secrets. |
+| `apps/api/app/main.py` | Mapped the new runtime config fields through API request/response conversion. |
+| `apps/api/tests/test_agent_runtime_config.py` | Updated default, persistence, and API round-trip coverage for the new fields. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-6.1 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py::test_default_runtime_config_preserves_existing_behavior tests/test_agent_runtime_config.py::test_runtime_config_round_trips_workspace_role_defaults tests/test_agent_runtime_config.py::test_runtime_config_api_persists_valid_workspace_config -q` | Pass: 3 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-5.5 Invalid Planner Output Rejection
 
 **Date:** 2026-06-01

@@ -27,6 +27,11 @@ class RuntimeRoleConfig:
     mode: Optional[str]
     enabled: bool
     fallback_policy: Optional[str] = DEFAULT_FALLBACK_POLICY
+    provider_preset_id: Optional[str] = None
+    protocol: Optional[str] = None
+    model: Optional[str] = None
+    base_url: Optional[str] = None
+    timeout_seconds: Optional[int] = None
     api_key_env: Optional[str] = None
 
     def to_payload(self) -> dict[str, object]:
@@ -38,6 +43,11 @@ class RuntimeRoleConfig:
             "mode": self.mode,
             "enabled": self.enabled,
             "fallbackPolicy": self.fallback_policy,
+            "providerPresetId": self.provider_preset_id,
+            "protocol": self.protocol,
+            "model": self.model,
+            "baseUrl": self.base_url,
+            "timeoutSeconds": self.timeout_seconds,
             "apiKeyEnv": self.api_key_env,
         }
 
@@ -97,6 +107,11 @@ def default_runtime_config(workspace_id: Optional[str]) -> RuntimeConfigSnapshot
                 mode=_default_mode_for_role(role),
             enabled=False,
             fallback_policy=DEFAULT_FALLBACK_POLICY,
+            provider_preset_id=None,
+            protocol=None,
+            model=None,
+            base_url=None,
+            timeout_seconds=None,
             api_key_env=None,
             )
             for role in RUNTIME_CONFIG_ROLES
@@ -303,6 +318,11 @@ def _roles_from_json(value: str) -> dict[str, RuntimeRoleConfig]:
             enabled=bool(payload.get("enabled", False)),
             fallback_policy=_optional_string(payload.get("fallbackPolicy"))
             or DEFAULT_FALLBACK_POLICY,
+            provider_preset_id=_optional_string(payload.get("providerPresetId")),
+            protocol=_optional_string(payload.get("protocol")),
+            model=_optional_string(payload.get("model")),
+            base_url=_optional_string(payload.get("baseUrl")),
+            timeout_seconds=_optional_int(payload.get("timeoutSeconds")),
             api_key_env=_optional_string(payload.get("apiKeyEnv")),
         )
     return roles
@@ -333,6 +353,16 @@ def _default_mode_for_role(role: str) -> str:
 
 def _optional_string(value: object) -> Optional[str]:
     return value if isinstance(value, str) and value.strip() else None
+
+
+def _optional_int(value: object) -> Optional[int]:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
 
 
 def _profile_supports_runtime_role(profile: AgentProfile, role: str) -> bool:

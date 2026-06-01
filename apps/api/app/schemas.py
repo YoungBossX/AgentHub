@@ -195,6 +195,11 @@ class RuntimeRoleConfigRequest(BaseModel):
     mode: Optional[str] = None
     enabled: bool = False
     fallback_policy: Optional[str] = Field(default=None, alias="fallbackPolicy")
+    provider_preset_id: Optional[str] = Field(default=None, alias="providerPresetId")
+    protocol: Optional[str] = None
+    model: Optional[str] = None
+    base_url: Optional[str] = Field(default=None, alias="baseUrl")
+    timeout_seconds: Optional[int] = Field(default=None, alias="timeoutSeconds")
     api_key_env: Optional[str] = Field(default=None, alias="apiKeyEnv")
     api_key: Optional[str] = Field(default=None, alias="apiKey", exclude=True)
     authorization: Optional[str] = Field(default=None, exclude=True)
@@ -221,6 +226,11 @@ class RuntimeRoleConfigResponse(ApiModel):
     mode: Optional[str]
     enabled: bool
     fallback_policy: Optional[str] = Field(alias="fallbackPolicy")
+    provider_preset_id: Optional[str] = Field(alias="providerPresetId")
+    protocol: Optional[str]
+    model: Optional[str]
+    base_url: Optional[str] = Field(alias="baseUrl")
+    timeout_seconds: Optional[int] = Field(alias="timeoutSeconds")
     api_key_env: Optional[str] = Field(alias="apiKeyEnv")
 
 
