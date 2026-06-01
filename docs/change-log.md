@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17b-9.6 P6-P17 Baseline Regression
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-9.6 complete after running the project regression test suite. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm test` | Pass: web 45 tests, API 376 tests, demo-api 5 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-9.5 Unsafe Request Rehearsal
 
 **Date:** 2026-06-01
