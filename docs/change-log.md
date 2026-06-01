@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-1.3 Preserve Existing Planner Providers
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planner_providers.py` | Added regression coverage proving `claude_cli`, `fake_test`, and `disabled` provider resolution remains compatible. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-1.3 complete. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_existing_planner_provider_resolution_stays_compatible -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-1.2 Planner Provider Capability Flags
 
 **Date:** 2026-06-01

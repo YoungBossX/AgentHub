@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add protocol-level PlannerProvider metadata for `openai_responses`, `openai_compatible_chat`, `anthropic_messages`, `claude_cli`, `fake_test`, and `disabled`.
 - [x] 1.2 Define provider capability flags: protocol, `supportsJsonSchema`, `supportsJsonObject`, `supportsToolCalls`, `supportsSystemPrompt`, `supportsBaseUrl`, `defaultTimeoutSeconds`, and `defaultModel`.
-- [ ] 1.3 Preserve existing `claude_cli`, `fake_test`, and `disabled` planner behavior.
+- [x] 1.3 Preserve existing `claude_cli`, `fake_test`, and `disabled` planner behavior.
 - [ ] 1.4 Add registry tests proving protocols and capability flags resolve without exposing secrets.
 
 ## 2. Provider Presets

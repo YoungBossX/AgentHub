@@ -128,6 +128,23 @@ def test_resolve_planner_provider_supports_runtime_config_provider_id() -> None:
     assert provider.provider_id == "claude-cli-planner"
 
 
+def test_existing_planner_provider_resolution_stays_compatible() -> None:
+    disabled = resolve_planner_provider(Settings(llm_planner_provider="disabled"))
+    fake = resolve_planner_provider(
+        Settings(llm_planner_provider="fake_test"),
+        fake_payload={"outcomeType": "assistant_reply", "reply": "ok"},
+    )
+    claude = resolve_planner_provider(Settings(llm_planner_provider="claude_cli"))
+
+    assert isinstance(disabled, DisabledPlannerProvider)
+    assert disabled.create_plan({}).status == "disabled"
+    assert isinstance(fake, FakePlannerProvider)
+    assert json.loads(fake.create_plan({}).raw_output)["outcomeType"] == "assistant_reply"
+    assert isinstance(claude, ClaudeCliPlannerProvider)
+    assert claude.provider_id == "claude-cli-planner"
+    assert claude.provider_type == "claude_cli"
+
+
 def test_resolve_planner_provider_rejects_unknown_provider() -> None:
     with pytest.raises(PlannerProviderError) as exc_info:
         resolve_planner_provider(Settings(llm_planner_provider="mystery_ai"))
