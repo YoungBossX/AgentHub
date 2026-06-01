@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17b-9.2 Missing-key And Fake-client Rehearsal
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-9.2 complete after validating missing-key behavior and fake-client coverage without claiming real provider success. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_api_planner_presets_report_missing_keys_without_secret_leaks tests/test_planner_providers.py::test_openai_responses_planner_provider_uses_fake_client tests/test_planner_providers.py::test_openai_compatible_chat_planner_provider_uses_fake_client tests/test_planner_providers.py::test_anthropic_messages_planner_provider_uses_fake_client -q` | Pass: 8 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-9.1 Real API Smoke Availability Check
 
 **Date:** 2026-06-01
