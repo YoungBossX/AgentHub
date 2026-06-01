@@ -16,6 +16,49 @@ const CONFIGURABLE_ROLES = [
   { label: "Backend Agent", role: "backend", mode: "backend" },
 ] as const
 
+const PLANNER_PROVIDER_PRESETS = [
+  {
+    baseUrl: "https://api.openai.com/v1",
+    id: "openai_api",
+    label: "OpenAI API",
+    model: "gpt-4.1-mini",
+    protocol: "openai_responses",
+    apiKeyEnv: "OPENAI_API_KEY",
+  },
+  {
+    baseUrl: "https://api.deepseek.com",
+    id: "deepseek_api",
+    label: "DeepSeek API",
+    model: "deepseek-chat",
+    protocol: "openai_compatible_chat",
+    apiKeyEnv: "DEEPSEEK_API_KEY",
+  },
+  {
+    baseUrl: "https://api.xiaomimimo.com/v1",
+    id: "mimo_api",
+    label: "MiMo API",
+    model: "mimo-v2.5-pro",
+    protocol: "openai_compatible_chat",
+    apiKeyEnv: "MIMO_API_KEY",
+  },
+  {
+    baseUrl: "https://api.anthropic.com",
+    id: "anthropic_api",
+    label: "Anthropic API",
+    model: "claude-sonnet-4-5",
+    protocol: "anthropic_messages",
+    apiKeyEnv: "ANTHROPIC_API_KEY",
+  },
+  {
+    baseUrl: "",
+    id: "custom_openai_compatible",
+    label: "Custom OpenAI-compatible",
+    model: "",
+    protocol: "openai_compatible_chat",
+    apiKeyEnv: "CUSTOM_OPENAI_COMPATIBLE_API_KEY",
+  },
+] as const
+
 type AgentRuntimeSettingsProps = {
   busy: boolean
   config: AgentRuntimeConfig | null
@@ -138,10 +181,16 @@ function RuntimeRoleSelector({
     onChange({
       agentProfileId: draftRole.agentProfileId ?? null,
       adapterType: draftRole.adapterType ?? null,
+      apiKeyEnv: draftRole.apiKeyEnv ?? null,
+      baseUrl: draftRole.baseUrl ?? null,
       enabled: draftRole.enabled,
       fallbackPolicy: draftRole.fallbackPolicy ?? "environment_default",
       mode: draftRole.mode ?? mode,
+      model: draftRole.model ?? null,
+      protocol: draftRole.protocol ?? null,
       providerId: draftRole.providerId ?? null,
+      providerPresetId: draftRole.providerPresetId ?? null,
+      timeoutSeconds: draftRole.timeoutSeconds ?? null,
       ...next,
     })
   }
@@ -211,9 +260,16 @@ function RuntimeRoleSelector({
         </select>
       </label>
 
+      {role === "planner" ? (
+        <PlannerProviderControls draftRole={draftRole} onChange={patchRole} />
+      ) : null}
+
       <div className="mt-2 flex flex-wrap gap-1">
         <RuntimePill label={draftRole.adapterType ?? "adapter unset"} tone="provider" />
         <RuntimePill label={mode} tone="mode" />
+        {role === "planner" && draftRole.providerPresetId ? (
+          <RuntimePill label={draftRole.providerPresetId} tone="provider" />
+        ) : null}
         {selectedProvider ? (
           <RuntimePill
             label={selectedProvider.available ? "available" : "unavailable"}
@@ -232,6 +288,88 @@ function RuntimeRoleSelector({
         </div>
       ) : null}
     </div>
+  )
+}
+
+function PlannerProviderControls({
+  draftRole,
+  onChange,
+}: {
+  draftRole: RuntimeRoleConfigInput
+  onChange: (nextRole: Partial<RuntimeRoleConfigInput>) => void
+}) {
+  return (
+    <div className="mt-2 grid gap-2">
+      <label className="block text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+        Planner API
+        <select
+          className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
+          onChange={(event) => {
+            const preset = PLANNER_PROVIDER_PRESETS.find(
+              (item) => item.id === event.target.value,
+            )
+            onChange({
+              adapterType: preset?.protocol ?? null,
+              apiKeyEnv: preset?.apiKeyEnv ?? null,
+              baseUrl: preset?.baseUrl ?? null,
+              enabled: Boolean(preset),
+              mode: "read_only",
+              model: preset?.model ?? null,
+              protocol: preset?.protocol ?? null,
+              providerPresetId: preset?.id ?? null,
+            })
+          }}
+          value={draftRole.providerPresetId ?? ""}
+        >
+          <option value="">Select planner API preset</option>
+          {PLANNER_PROVIDER_PRESETS.map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <RuntimeTextInput
+          label="Model"
+          onChange={(value) => onChange({ model: value || null })}
+          value={draftRole.model ?? ""}
+        />
+        <RuntimeTextInput
+          label="apiKeyEnv"
+          onChange={(value) => onChange({ apiKeyEnv: value || null })}
+          value={draftRole.apiKeyEnv ?? ""}
+        />
+      </div>
+
+      <RuntimeTextInput
+        label="Base URL"
+        onChange={(value) => onChange({ baseUrl: value || null })}
+        value={draftRole.baseUrl ?? ""}
+      />
+    </div>
+  )
+}
+
+function RuntimeTextInput({
+  label,
+  onChange,
+  value,
+}: {
+  label: string
+  onChange: (value: string) => void
+  value: string
+}) {
+  return (
+    <label className="block text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+      {label}
+      <input
+        className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      />
+    </label>
   )
 }
 

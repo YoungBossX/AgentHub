@@ -1,5 +1,28 @@
 # AgentHub Change Log
 
+## P17b-6.3 Planner Runtime Settings UI
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/lib/api.ts` | Added Planner runtime metadata fields to the runtime config API types. |
+| `apps/web/src/components/agent-runtime-settings.tsx` | Added Planner API preset, model, base URL, and apiKeyEnv controls to Agent Runtime Settings. |
+| `apps/web/src/components/workspace-shell.test.tsx` | Added UI coverage for rendering and saving Planner API preset settings. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-6.3 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 9 files, 45 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-6.2 Planner Runtime Config Validation
 
 **Date:** 2026-06-01

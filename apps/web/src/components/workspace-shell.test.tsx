@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { WorkspaceShell } from "./workspace-shell"
@@ -353,10 +353,46 @@ describe("WorkspaceShell", () => {
       expect(screen.getByText("Backend Agent")).toBeTruthy()
       expect(screen.getByText("Source: default")).toBeTruthy()
       expect(screen.getByText("Claude CLI Planner · unchecked")).toBeTruthy()
+      expect(screen.getByText("DeepSeek API")).toBeTruthy()
+      expect(screen.getByText("MiMo API")).toBeTruthy()
       expect(screen.getAllByText("Claude Code CLI · unchecked").length).toBeGreaterThan(0)
       expect(screen.getAllByText("Codex CLI · unchecked").length).toBeGreaterThan(0)
       expect(screen.getByText("Save runtime config")).toBeTruthy()
     })
+  })
+
+  it("saves planner API preset runtime settings", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Planner API")).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText("Planner API"), {
+      target: { value: "deepseek_api" },
+    })
+    fireEvent.click(screen.getByText("Save runtime config"))
+
+    await waitFor(() => {
+      expect(apiMocks.updateAgentRuntimeConfig).toHaveBeenCalled()
+    })
+
+    const [, , roles] = apiMocks.updateAgentRuntimeConfig.mock.calls[0]
+    expect(roles.planner.providerPresetId).toBe("deepseek_api")
+    expect(roles.planner.protocol).toBe("openai_compatible_chat")
+    expect(roles.planner.model).toBe("deepseek-chat")
+    expect(roles.planner.baseUrl).toBe("https://api.deepseek.com")
+    expect(roles.planner.apiKeyEnv).toBe("DEEPSEEK_API_KEY")
   })
 
   it("renders the workspace context ledger for the selected session", async () => {
@@ -400,5 +436,61 @@ describe("WorkspaceShell", () => {
       expect(screen.getByText("scripted_mock")).toBeTruthy()
       expect(screen.getByText("apps/demo/src/App.tsx")).toBeTruthy()
     })
+  })
+
+  it("refreshes messages after send so backend-created replies appear immediately", async () => {
+    const createdMessage = {
+      contentMd: "你好",
+      createdAt: "2026-05-29T08:13:55Z",
+      id: "message-user",
+      messageKind: "chat",
+      parentMessageId: null,
+      senderId: null,
+      senderType: "user",
+      sessionId: "session-1",
+      streamState: "complete",
+    }
+    const orchestratorReply = {
+      contentMd:
+        "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
+      createdAt: "2026-05-29T08:13:56Z",
+      id: "message-orchestrator",
+      messageKind: "chat",
+      parentMessageId: "message-user",
+      senderId: "agent-orchestrator",
+      senderType: "orchestrator",
+      sessionId: "session-1",
+      streamState: "complete",
+    }
+    apiMocks.listSessionMessages
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([createdMessage, orchestratorReply])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    apiMocks.createSessionMessage.mockResolvedValue(createdMessage)
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    const input = screen.getByPlaceholderText("@orchestrator 为演示应用构建登录页")
+    fireEvent.change(input, { target: { value: "你好" } })
+    fireEvent.submit(input.closest("form")!)
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
+        ),
+      ).toBeTruthy()
+    })
+    expect(apiMocks.listSessionMessages).toHaveBeenLastCalledWith(
+      "http://127.0.0.1:8000",
+      "session-1",
+    )
   })
 })

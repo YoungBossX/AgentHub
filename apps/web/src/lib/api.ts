@@ -65,6 +65,12 @@ export type RuntimeRoleConfig = {
   mode: string | null
   enabled: boolean
   fallbackPolicy: string | null
+  providerPresetId: string | null
+  protocol: string | null
+  model: string | null
+  baseUrl: string | null
+  timeoutSeconds: number | null
+  apiKeyEnv: string | null
 }
 
 export type RuntimeConfigValidation = {
@@ -89,6 +95,12 @@ export type RuntimeRoleConfigInput = {
   mode?: string | null
   enabled: boolean
   fallbackPolicy?: string | null
+  providerPresetId?: string | null
+  protocol?: string | null
+  model?: string | null
+  baseUrl?: string | null
+  timeoutSeconds?: number | null
+  apiKeyEnv?: string | null
 }
 
 export type WorkspaceSession = {
