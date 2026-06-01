@@ -52,7 +52,7 @@
 
 ## 8. Test Matrix
 
-- [ ] 8.1 Add fake-client OpenAI Responses provider success tests.
+- [x] 8.1 Add fake-client OpenAI Responses provider success tests.
 - [ ] 8.2 Add fake-client OpenAI-compatible provider success tests.
 - [ ] 8.3 Add fake-client Anthropic provider success tests.
 - [ ] 8.4 Add tests for assistant reply creating no TaskRun.
