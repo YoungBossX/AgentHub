@@ -273,6 +273,40 @@ def test_runtime_config_api_ignores_raw_api_key_field() -> None:
         assert "raw-secret-value" not in response.text
 
 
+def test_runtime_config_responses_do_not_expose_raw_secret_fields() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.put(
+            f"/workspaces/{workspace_id}/runtime-config",
+            json={
+                "roles": {
+                    "planner": {
+                        "agentProfileId": profiles["orchestrator"]["id"],
+                        "providerId": "claude-cli-planner",
+                        "adapterType": "claude_cli",
+                        "mode": "read_only",
+                        "enabled": True,
+                        "apiKeyEnv": "DEEPSEEK_API_KEY",
+                        "apiKey": "raw-secret-value",
+                        "authorization": "Bearer raw-secret-value",
+                        "authorizationHeader": "Bearer raw-secret-value",
+                    }
+                }
+            },
+        )
+        fetched = client.get(f"/workspaces/{workspace_id}/runtime-config")
+
+        assert response.status_code == 200
+        assert fetched.status_code == 200
+        combined = response.text + fetched.text
+        assert "raw-secret-value" not in combined
+        assert "Bearer" not in combined
+        assert response.json()["roles"]["planner"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
+        assert fetched.json()["roles"]["planner"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
+
+
 def test_runtime_config_api_rejects_invalid_profile_provider_role_combo() -> None:
     with _client() as client:
         workspace_id = _workspace_id(client)

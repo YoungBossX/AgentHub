@@ -197,6 +197,12 @@ class RuntimeRoleConfigRequest(BaseModel):
     fallback_policy: Optional[str] = Field(default=None, alias="fallbackPolicy")
     api_key_env: Optional[str] = Field(default=None, alias="apiKeyEnv")
     api_key: Optional[str] = Field(default=None, alias="apiKey", exclude=True)
+    authorization: Optional[str] = Field(default=None, exclude=True)
+    authorization_header: Optional[str] = Field(
+        default=None,
+        alias="authorizationHeader",
+        exclude=True,
+    )
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 

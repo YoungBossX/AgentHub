@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-3.3 Runtime Config Secret-safe Responses
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/schemas.py` | Ignored accidental raw Planner API secret fields such as `apiKey` and authorization headers in runtime role requests. |
+| `apps/api/tests/test_agent_runtime_config.py` | Added API coverage proving raw secret inputs do not appear in validate, save, or fetch responses. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-3.3 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py::test_runtime_config_api_ignores_raw_api_key_field tests/test_agent_runtime_config.py::test_runtime_config_responses_do_not_expose_raw_secret_fields -q` | Pass: 2 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-3.2 Runtime Config API Key Reference Handling
 
 **Date:** 2026-06-01
