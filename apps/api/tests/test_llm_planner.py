@@ -339,6 +339,31 @@ def test_api_planner_provider_unsafe_plan_is_rejected_before_persistence(
     assert db.exec(select(Task)).all() == []
 
 
+@pytest.mark.parametrize(
+    ("response_text", "error_match"),
+    [
+        ("not-json", "invalid JSON"),
+        (json.dumps({"outcomeType": "task_plan"}), "ConversationOutcome schema"),
+    ],
+)
+def test_api_planner_invalid_output_creates_no_task(
+    db: DbSession,
+    response_text: str,
+    error_match: str,
+) -> None:
+    message = _message(db, "帮我做打砖块")
+    provider = OpenAIResponsesPlannerProvider(
+        http_client=FakePlannerHttpClient({"output_text": response_text}),
+        api_key_env="OPENAI_API_KEY",
+        environ={"OPENAI_API_KEY": "test-secret-value"},
+    )
+
+    with pytest.raises(LLMPlannerError, match=error_match):
+        create_llm_plan_tasks(db, message, provider=provider)
+
+    assert db.exec(select(Task)).all() == []
+
+
 def test_llm_planner_rejects_role_capability_target_and_command_policy_violations(
     db: DbSession,
 ) -> None:

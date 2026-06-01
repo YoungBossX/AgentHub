@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17b-5.5 Invalid Planner Output Rejection
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_llm_planner.py` | Added API planner invalid JSON and schema-failure tests proving unvalidated output creates no Task. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-5.5 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_api_planner_invalid_output_creates_no_task -q` | Pass: 2 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-5.4 Capability-driven Planner Structured Output Strategy
 
 **Date:** 2026-06-01
