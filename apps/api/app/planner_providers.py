@@ -115,12 +115,24 @@ class PlannerProviderPresetMetadata:
     preset_id: str
     display_name: str
     protocol: str
+    default_base_url: str | None
+    default_model: str
+    api_key_env: str
 
     def to_metadata(self) -> dict[str, Any]:
+        protocol_metadata = get_planner_provider_protocol(self.protocol)
         return {
             "presetId": self.preset_id,
             "displayName": self.display_name,
             "protocol": self.protocol,
+            "defaultBaseUrl": self.default_base_url,
+            "defaultModel": self.default_model,
+            "apiKeyEnv": self.api_key_env,
+            "capabilities": (
+                protocol_metadata.to_metadata()
+                if protocol_metadata is not None
+                else {}
+            ),
         }
 
 
@@ -129,26 +141,41 @@ BUILT_IN_PLANNER_PROVIDER_PRESETS: tuple[PlannerProviderPresetMetadata, ...] = (
         preset_id="openai_api",
         display_name="OpenAI API",
         protocol=PLANNER_PROTOCOL_OPENAI_RESPONSES,
+        default_base_url="https://api.openai.com/v1",
+        default_model="gpt-4.1-mini",
+        api_key_env="OPENAI_API_KEY",
     ),
     PlannerProviderPresetMetadata(
         preset_id="deepseek_api",
         display_name="DeepSeek API",
         protocol=PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT,
+        default_base_url="https://api.deepseek.com",
+        default_model="deepseek-chat",
+        api_key_env="DEEPSEEK_API_KEY",
     ),
     PlannerProviderPresetMetadata(
         preset_id="mimo_api",
         display_name="MiMo API",
         protocol=PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT,
+        default_base_url="https://api.xiaomimimo.com/v1",
+        default_model="mimo-v2.5-pro",
+        api_key_env="MIMO_API_KEY",
     ),
     PlannerProviderPresetMetadata(
         preset_id="anthropic_api",
         display_name="Anthropic API",
         protocol=PLANNER_PROTOCOL_ANTHROPIC_MESSAGES,
+        default_base_url="https://api.anthropic.com",
+        default_model="claude-sonnet-4-5",
+        api_key_env="ANTHROPIC_API_KEY",
     ),
     PlannerProviderPresetMetadata(
         preset_id="custom_openai_compatible",
         display_name="Custom OpenAI-compatible API",
         protocol=PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT,
+        default_base_url=None,
+        default_model="",
+        api_key_env="CUSTOM_OPENAI_COMPATIBLE_API_KEY",
     ),
 )
 

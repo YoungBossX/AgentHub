@@ -90,6 +90,37 @@ def test_planner_provider_presets_map_to_protocols() -> None:
     assert presets["custom_openai_compatible"]["protocol"] == "openai_compatible_chat"
 
 
+def test_planner_provider_presets_include_safe_defaults_and_capabilities() -> None:
+    presets = {item.preset_id: item.to_metadata() for item in list_planner_provider_presets()}
+
+    assert presets["openai_api"]["defaultBaseUrl"] == "https://api.openai.com/v1"
+    assert presets["openai_api"]["defaultModel"] == "gpt-4.1-mini"
+    assert presets["openai_api"]["apiKeyEnv"] == "OPENAI_API_KEY"
+    assert presets["openai_api"]["capabilities"]["supportsJsonSchema"] is True
+
+    assert presets["deepseek_api"]["defaultBaseUrl"] == "https://api.deepseek.com"
+    assert presets["deepseek_api"]["defaultModel"] == "deepseek-chat"
+    assert presets["deepseek_api"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
+    assert presets["deepseek_api"]["capabilities"]["supportsBaseUrl"] is True
+
+    assert presets["mimo_api"]["defaultBaseUrl"] == "https://api.xiaomimimo.com/v1"
+    assert presets["mimo_api"]["defaultModel"] == "mimo-v2.5-pro"
+    assert presets["mimo_api"]["apiKeyEnv"] == "MIMO_API_KEY"
+
+    assert presets["anthropic_api"]["defaultBaseUrl"] == "https://api.anthropic.com"
+    assert presets["anthropic_api"]["defaultModel"] == "claude-sonnet-4-5"
+    assert presets["anthropic_api"]["apiKeyEnv"] == "ANTHROPIC_API_KEY"
+    assert presets["anthropic_api"]["capabilities"]["supportsToolCalls"] is True
+
+    assert presets["custom_openai_compatible"]["defaultBaseUrl"] is None
+    assert presets["custom_openai_compatible"]["defaultModel"] == ""
+    assert presets["custom_openai_compatible"]["apiKeyEnv"] == "CUSTOM_OPENAI_COMPATIBLE_API_KEY"
+
+    serialized = json.dumps(presets).lower()
+    assert "sk-" not in serialized
+    assert "authorization" not in serialized
+
+
 def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
     openai = get_planner_provider_protocol("openai_responses").to_metadata()
     compatible = get_planner_provider_protocol("openai_compatible_chat").to_metadata()
