@@ -664,6 +664,9 @@ class OpenAIResponsesPlannerProvider:
 
     def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
         started = time.monotonic()
+        base_url_error = _api_provider_base_url_error(self._base_url, self.provider_id)
+        if base_url_error is not None:
+            return self._api_error_result(base_url_error.code, base_url_error.summary, started)
         key_resolution = resolve_planner_api_key(
             self._api_key_env,
             provider_id=self.provider_id,
@@ -767,6 +770,9 @@ class OpenAICompatibleChatPlannerProvider:
 
     def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
         started = time.monotonic()
+        base_url_error = _api_provider_base_url_error(self._base_url, self.provider_id)
+        if base_url_error is not None:
+            return self._api_error_result(base_url_error.code, base_url_error.summary, started)
         key_resolution = resolve_planner_api_key(
             self._api_key_env,
             provider_id=self.provider_id,
@@ -869,6 +875,9 @@ class AnthropicMessagesPlannerProvider:
 
     def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
         started = time.monotonic()
+        base_url_error = _api_provider_base_url_error(self._base_url, self.provider_id)
+        if base_url_error is not None:
+            return self._api_error_result(base_url_error.code, base_url_error.summary, started)
         key_resolution = resolve_planner_api_key(
             self._api_key_env,
             provider_id=self.provider_id,
@@ -1027,6 +1036,20 @@ def resolve_planner_provider(
 
 def _duration_ms(started: float) -> int:
     return max(0, int((time.monotonic() - started) * 1000))
+
+
+def _api_provider_base_url_error(
+    base_url: str,
+    provider_id: str,
+) -> PlannerProviderError | None:
+    parsed = urlparse(base_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return PlannerProviderError(
+            code="INVALID_PLANNER_BASE_URL",
+            summary="Planner API provider base URL must be an http(s) URL with a host.",
+            provider_id=provider_id,
+        )
+    return None
 
 
 def _excerpt(value: str) -> str:

@@ -47,7 +47,7 @@
 
 - [x] 7.1 Record planner provider preset, protocol, model, duration, planner source, status, validation result, fallback reason, and normalized error metadata.
 - [x] 7.2 Expose provider evidence in planner evidence and mission trace without secrets.
-- [ ] 7.3 Normalize missing key, invalid base URL, timeout, auth failure, quota/rate limit, invalid JSON, schema validation failure, and PlanValidator rejection errors.
+- [x] 7.3 Normalize missing key, invalid base URL, timeout, auth failure, quota/rate limit, invalid JSON, schema validation failure, and PlanValidator rejection errors.
 - [ ] 7.4 Add tests proving fallback is explicit and real provider success is not faked.
 
 ## 8. Test Matrix

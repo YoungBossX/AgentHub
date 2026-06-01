@@ -441,6 +441,47 @@ def test_openai_responses_planner_provider_missing_key_fails_without_call() -> N
     assert client.url is None
 
 
+@pytest.mark.parametrize(
+    ("exception", "error_code"),
+    [
+        (TimeoutError(), "PLANNER_TIMEOUT"),
+        (RuntimeError("401 unauthorized"), "PLANNER_AUTH_REQUIRED"),
+        (RuntimeError("rate limit exceeded"), "PLANNER_QUOTA_LIMIT"),
+    ],
+)
+def test_openai_responses_planner_provider_normalizes_api_errors(
+    exception: BaseException,
+    error_code: str,
+) -> None:
+    provider = OpenAIResponsesPlannerProvider(
+        http_client=FakePlannerHttpClient(exception),
+        api_key_env="OPENAI_API_KEY",
+        environ={"OPENAI_API_KEY": "test-secret-value"},
+    )
+
+    result = provider.create_plan({"originalUserRequest": "你好"})
+
+    assert result.status == "failed"
+    assert result.error_code == error_code
+    assert "test-secret-value" not in json.dumps(result.to_metadata())
+
+
+def test_openai_responses_planner_provider_normalizes_invalid_base_url() -> None:
+    client = FakePlannerHttpClient({"output_text": "{}"})
+    provider = OpenAIResponsesPlannerProvider(
+        http_client=client,
+        api_key_env="OPENAI_API_KEY",
+        base_url="not-a-url",
+        environ={"OPENAI_API_KEY": "test-secret-value"},
+    )
+
+    result = provider.create_plan({"originalUserRequest": "你好"})
+
+    assert result.status == "failed"
+    assert result.error_code == "INVALID_PLANNER_BASE_URL"
+    assert client.url is None
+
+
 def test_openai_compatible_chat_planner_provider_uses_fake_client() -> None:
     client = FakePlannerHttpClient(
         {

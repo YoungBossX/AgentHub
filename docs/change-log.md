@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-7.3 Planner API Error Normalization
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added API provider base URL preflight validation and normalized API error handling. |
+| `apps/api/tests/test_planner_providers.py` | Added normalized error coverage for invalid base URL, timeout, auth, quota, and missing-key provider failures. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-7.3 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_openai_responses_planner_provider_normalizes_api_errors tests/test_planner_providers.py::test_openai_responses_planner_provider_normalizes_invalid_base_url tests/test_planner_providers.py::test_openai_responses_planner_provider_missing_key_fails_without_call tests/test_llm_planner.py::test_api_planner_invalid_output_creates_no_task tests/test_llm_planner.py::test_api_planner_provider_unsafe_plan_is_rejected_before_persistence -q` | Pass: 8 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-7.2 Planner Evidence In Mission Trace
 
 **Date:** 2026-06-01
