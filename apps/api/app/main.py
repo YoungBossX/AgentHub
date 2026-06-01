@@ -518,6 +518,7 @@ def runtime_role_config_response(role_config: RuntimeRoleConfig) -> RuntimeRoleC
         mode=role_config.mode,
         enabled=role_config.enabled,
         fallbackPolicy=role_config.fallback_policy,
+        apiKeyEnv=role_config.api_key_env,
     )
 
 
@@ -543,6 +544,7 @@ def runtime_role_config_from_request(
         mode=request.mode,
         enabled=request.enabled,
         fallback_policy=request.fallback_policy,
+        api_key_env=request.api_key_env,
     )
 
 

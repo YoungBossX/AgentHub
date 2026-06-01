@@ -47,6 +47,7 @@ def test_default_runtime_config_preserves_existing_behavior(db: DbSession) -> No
         "mode": "read_only",
         "enabled": False,
         "fallbackPolicy": "environment_default",
+        "apiKeyEnv": None,
     }
     assert payload["roles"]["frontend"]["enabled"] is False
     assert payload["roles"]["backend"]["mode"] == "backend"
@@ -67,6 +68,7 @@ def test_runtime_config_round_trips_workspace_role_defaults(db: DbSession) -> No
                 mode="read_only",
                 enabled=True,
                 fallback_policy="deterministic",
+                api_key_env="DEEPSEEK_API_KEY",
             ),
             "frontend": RuntimeRoleConfig(
                 role="frontend",
@@ -86,6 +88,7 @@ def test_runtime_config_round_trips_workspace_role_defaults(db: DbSession) -> No
     assert config.config_source == "workspace"
     assert payload["roles"]["planner"]["providerId"] == "claude-cli-planner"
     assert payload["roles"]["planner"]["fallbackPolicy"] == "deterministic"
+    assert payload["roles"]["planner"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
     assert payload["roles"]["frontend"]["agentProfileId"] == "frontend-profile"
     assert payload["roles"]["backend"]["enabled"] is False
     assert payload["roles"]["review"]["mode"] == "read_only"
@@ -111,11 +114,33 @@ def test_runtime_config_rejects_unknown_role(db: DbSession) -> None:
         )
 
 
+def test_runtime_config_rejects_raw_or_invalid_api_key_env(db: DbSession) -> None:
+    workspace = _workspace(db)
+
+    with pytest.raises(AgentRuntimeConfigError, match="apiKeyEnv"):
+        upsert_runtime_config(
+            db,
+            workspace.id,
+            {
+                "planner": RuntimeRoleConfig(
+                    role="planner",
+                    agent_profile_id="orchestrator-profile",
+                    provider_id="deepseek_api",
+                    adapter_type="openai_compatible_chat",
+                    mode="read_only",
+                    enabled=True,
+                    api_key_env="raw-secret-value",
+                )
+            },
+        )
+
+
 def test_default_runtime_config_payload_is_serializable() -> None:
     payload = default_runtime_config("workspace-1").to_payload()
 
     assert payload["configSource"] == "default"
     assert payload["roles"]["review"]["fallbackPolicy"] == "environment_default"
+    assert payload["roles"]["planner"]["apiKeyEnv"] is None
 
 
 def test_runtime_config_api_returns_default_and_safe_options() -> None:
@@ -183,6 +208,7 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
                         "mode": "read_only",
                         "enabled": True,
                         "fallbackPolicy": "deterministic",
+                        "apiKeyEnv": "DEEPSEEK_API_KEY",
                     },
                     "frontend": {
                         "agentProfileId": profiles["frontend"]["id"],
@@ -215,8 +241,36 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
         assert payload["configSource"] == "workspace"
         assert payload["validation"]["valid"] is True
         assert payload["roles"]["planner"]["providerId"] == "claude-cli-planner"
+        assert payload["roles"]["planner"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
         assert payload["roles"]["frontend"]["providerId"] == "local-claude-code-cli"
         assert payload["roles"]["backend"]["providerId"] == "local-codex-cli"
+
+
+def test_runtime_config_api_ignores_raw_api_key_field() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/validate",
+            json={
+                "roles": {
+                    "planner": {
+                        "agentProfileId": profiles["orchestrator"]["id"],
+                        "providerId": "claude-cli-planner",
+                        "adapterType": "claude_cli",
+                        "mode": "read_only",
+                        "enabled": True,
+                        "apiKey": "raw-secret-value",
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["valid"] is True
+        assert "raw-secret-value" not in response.text
 
 
 def test_runtime_config_api_rejects_invalid_profile_provider_role_combo() -> None:

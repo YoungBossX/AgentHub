@@ -7,6 +7,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.models import AgentRuntimeConfig, utc_now
+from app.planner_providers import API_KEY_ENV_PATTERN
 from app.provider_configs import ProviderConfig
 
 RUNTIME_CONFIG_ROLES = ("planner", "frontend", "backend", "review")
@@ -26,6 +27,7 @@ class RuntimeRoleConfig:
     mode: Optional[str]
     enabled: bool
     fallback_policy: Optional[str] = DEFAULT_FALLBACK_POLICY
+    api_key_env: Optional[str] = None
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -36,6 +38,7 @@ class RuntimeRoleConfig:
             "mode": self.mode,
             "enabled": self.enabled,
             "fallbackPolicy": self.fallback_policy,
+            "apiKeyEnv": self.api_key_env,
         }
 
 
@@ -92,8 +95,9 @@ def default_runtime_config(workspace_id: Optional[str]) -> RuntimeConfigSnapshot
                 provider_id=None,
                 adapter_type=None,
                 mode=_default_mode_for_role(role),
-                enabled=False,
-                fallback_policy=DEFAULT_FALLBACK_POLICY,
+            enabled=False,
+            fallback_policy=DEFAULT_FALLBACK_POLICY,
+            api_key_env=None,
             )
             for role in RUNTIME_CONFIG_ROLES
         },
@@ -299,6 +303,7 @@ def _roles_from_json(value: str) -> dict[str, RuntimeRoleConfig]:
             enabled=bool(payload.get("enabled", False)),
             fallback_policy=_optional_string(payload.get("fallbackPolicy"))
             or DEFAULT_FALLBACK_POLICY,
+            api_key_env=_optional_string(payload.get("apiKeyEnv")),
         )
     return roles
 
@@ -313,6 +318,10 @@ def _normalize_roles(
         if role_config.role != role:
             raise AgentRuntimeConfigError(
                 f"Runtime config role key `{role}` does not match payload role `{role_config.role}`."
+            )
+        if role_config.api_key_env and not API_KEY_ENV_PATTERN.fullmatch(role_config.api_key_env):
+            raise AgentRuntimeConfigError(
+                f"Runtime config role `{role}` apiKeyEnv must be an uppercase environment variable name."
             )
         normalized[role] = role_config
     return normalized

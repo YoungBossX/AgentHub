@@ -1,5 +1,29 @@
 # AgentHub Change Log
 
+## P17b-3.2 Runtime Config API Key Reference Handling
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_runtime_config.py` | Added `apiKeyEnv` to runtime role config and rejected invalid env-name references. |
+| `apps/api/app/schemas.py` | Allowed `apiKeyEnv` in runtime config requests/responses while accepting and ignoring raw `apiKey` values. |
+| `apps/api/app/main.py` | Mapped runtime config `apiKeyEnv` through API response and request conversion. |
+| `apps/api/tests/test_agent_runtime_config.py` | Added runtime config tests for `apiKeyEnv` persistence and ignored raw API key fields. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-3.2 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py::test_runtime_config_round_trips_workspace_role_defaults tests/test_agent_runtime_config.py::test_runtime_config_rejects_raw_or_invalid_api_key_env tests/test_agent_runtime_config.py::test_runtime_config_api_persists_valid_workspace_config tests/test_agent_runtime_config.py::test_runtime_config_api_ignores_raw_api_key_field -q` | Pass: 4 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-3.1 Environment-only Planner API Key Resolver
 
 **Date:** 2026-06-01

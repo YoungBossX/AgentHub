@@ -171,7 +171,11 @@ class AgentProfileDraftCreateRequest(BaseModel):
         alias="unrestrictedFilesystemAccess",
     )
 
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    model_config = ConfigDict(
+        extra="forbid",
+        hide_input_in_errors=True,
+        populate_by_name=True,
+    )
 
 
 class ProviderConfigResponse(ApiModel):
@@ -191,6 +195,8 @@ class RuntimeRoleConfigRequest(BaseModel):
     mode: Optional[str] = None
     enabled: bool = False
     fallback_policy: Optional[str] = Field(default=None, alias="fallbackPolicy")
+    api_key_env: Optional[str] = Field(default=None, alias="apiKeyEnv")
+    api_key: Optional[str] = Field(default=None, alias="apiKey", exclude=True)
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -209,6 +215,7 @@ class RuntimeRoleConfigResponse(ApiModel):
     mode: Optional[str]
     enabled: bool
     fallback_policy: Optional[str] = Field(alias="fallbackPolicy")
+    api_key_env: Optional[str] = Field(alias="apiKeyEnv")
 
 
 class RuntimeConfigValidationResponse(ApiModel):
