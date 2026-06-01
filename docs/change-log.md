@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-5.4 Capability-driven Planner Structured Output Strategy
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added capability-driven structured output strategy selection and used it for OpenAI-compatible JSON object mode. |
+| `apps/api/tests/test_planner_providers.py` | Added strategy coverage for JSON schema, tool schema, JSON object, and strict JSON prompt fallback. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-5.4 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_structured_output_strategy_follows_protocol_capabilities tests/test_planner_providers.py::test_openai_compatible_chat_planner_provider_uses_fake_client -q` | Pass: 2 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-5.3 Anthropic Planner Tool Schema Mode
 
 **Date:** 2026-06-01

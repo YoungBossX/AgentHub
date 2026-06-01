@@ -19,6 +19,7 @@ from app.planner_providers import (
     get_planner_provider_preset,
     list_planner_provider_protocols,
     list_planner_provider_presets,
+    planner_structured_output_strategy,
     resolve_planner_api_key,
     resolve_planner_provider,
     validate_planner_provider_base_url,
@@ -297,6 +298,22 @@ def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
     assert anthropic["supportsSystemPrompt"] is True
     assert isinstance(openai["defaultTimeoutSeconds"], int)
     assert "apiKey" not in openai
+
+
+def test_structured_output_strategy_follows_protocol_capabilities() -> None:
+    assert planner_structured_output_strategy("openai_responses")["strategy"] == "json_schema"
+    assert (
+        planner_structured_output_strategy("anthropic_messages")["strategy"]
+        == "tool_schema"
+    )
+    compatible = planner_structured_output_strategy("openai_compatible_chat")
+    assert compatible == {
+        "strategy": "json_object",
+        "responseFormat": {"type": "json_object"},
+    }
+    assert planner_structured_output_strategy("unknown") == {
+        "strategy": "strict_json_prompt"
+    }
 
 
 def test_planner_provider_protocol_metadata_is_secret_free() -> None:

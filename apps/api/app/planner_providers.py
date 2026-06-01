@@ -118,6 +118,19 @@ def get_planner_provider_protocol(protocol: str) -> PlannerProviderProtocolMetad
     return None
 
 
+def planner_structured_output_strategy(protocol: str) -> dict[str, Any]:
+    metadata = get_planner_provider_protocol(protocol)
+    if metadata is None:
+        return {"strategy": "strict_json_prompt"}
+    if metadata.supports_json_schema:
+        return {"strategy": "json_schema", "schema": conversation_outcome_json_schema()}
+    if metadata.supports_tool_calls:
+        return {"strategy": "tool_schema", "schema": conversation_outcome_json_schema()}
+    if metadata.supports_json_object:
+        return {"strategy": "json_object", "responseFormat": {"type": "json_object"}}
+    return {"strategy": "strict_json_prompt"}
+
+
 @dataclass(frozen=True)
 class PlannerProviderPresetMetadata:
     preset_id: str
@@ -1036,7 +1049,7 @@ def _openai_compatible_chat_payload(
     model: str,
     planner_input: Mapping[str, Any],
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "model": model,
         "messages": [
             {
@@ -1052,8 +1065,11 @@ def _openai_compatible_chat_payload(
                 ),
             },
         ],
-        "response_format": {"type": "json_object"},
     }
+    strategy = planner_structured_output_strategy(PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT)
+    if strategy["strategy"] == "json_object":
+        payload["response_format"] = strategy["responseFormat"]
+    return payload
 
 
 def _anthropic_messages_payload(model: str, planner_input: Mapping[str, Any]) -> dict[str, Any]:
