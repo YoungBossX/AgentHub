@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17b-8.5 Unsafe Task Plan Rejection Test Matrix
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-8.5 complete after verifying unsafe API planner task_plan rejection before persistence. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_api_planner_provider_unsafe_plan_is_rejected_before_persistence -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-8.4 Assistant Reply Non-execution Test Matrix
 
 **Date:** 2026-06-01
