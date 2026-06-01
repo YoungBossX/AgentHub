@@ -401,6 +401,10 @@ describe("WorkspaceShell", () => {
     expect(roles.planner.model).toBe("mimo-v2.5-pro")
     expect(roles.planner.baseUrl).toBe("https://api.xiaomimimo.com/v1")
     expect(roles.planner.apiKeyEnv).toBe("MIMO_API_KEY")
+    expect(roles.frontend.providerPresetId).toBeUndefined()
+    expect(roles.frontend.apiKeyEnv).toBeUndefined()
+    expect(roles.backend.providerPresetId).toBeUndefined()
+    expect(roles.backend.apiKeyEnv).toBeUndefined()
   })
 
   it("renders the workspace context ledger for the selected session", async () => {

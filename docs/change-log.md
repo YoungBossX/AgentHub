@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17b-6.5 Planner And Coding Runtime Settings Separation
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/components/workspace-shell.test.tsx` | Added coverage proving Planner API preset fields do not bleed into Frontend/Backend runtime settings. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-6.5 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 9 files, 45 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-6.4 Planner Provider Availability Display
 
 **Date:** 2026-06-01
