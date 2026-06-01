@@ -77,6 +77,24 @@ def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
     assert "apiKey" not in openai
 
 
+def test_planner_provider_protocol_metadata_is_secret_free() -> None:
+    forbidden_keys = {
+        "apiKey",
+        "api_key",
+        "secret",
+        "token",
+        "authorization",
+        "credential",
+    }
+
+    for protocol in list_planner_provider_protocols():
+        metadata = protocol.to_metadata()
+        assert forbidden_keys.isdisjoint(metadata.keys())
+        serialized = json.dumps(metadata).lower()
+        assert "bearer " not in serialized
+        assert "sk-" not in serialized
+
+
 def test_fake_planner_provider_returns_test_only_result() -> None:
     provider = FakePlannerProvider(
         payload={

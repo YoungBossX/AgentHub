@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-1.4 Planner Protocol Registry Tests
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planner_providers.py` | Added full registry no-secret metadata coverage for planner provider protocols. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-1.4 complete. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py -q` | Pass: 17 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-1.3 Preserve Existing Planner Providers
 
 **Date:** 2026-06-01
