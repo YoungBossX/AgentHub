@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17b-9.3 Chinese Chat Rehearsal
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-9.3 complete after verifying `你好` produces an Orchestrator assistant reply with no TaskRun. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_api_planner_assistant_reply_creates_orchestrator_message_without_task -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-9.2 Missing-key And Fake-client Rehearsal
 
 **Date:** 2026-06-01

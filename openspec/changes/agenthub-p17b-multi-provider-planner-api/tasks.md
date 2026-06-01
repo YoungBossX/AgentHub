@@ -63,7 +63,7 @@
 
 - [x] 9.1 If real API keys are available, run one bounded real provider smoke and record provider/model/outcome/validation evidence.
 - [x] 9.2 If no real API keys are available, validate missing-key behavior and fake-client coverage without claiming real provider success.
-- [ ] 9.3 Verify `你好` -> `assistant_reply` with no TaskRun.
+- [x] 9.3 Verify `你好` -> `assistant_reply` with no TaskRun.
 - [ ] 9.4 Verify `帮我做打砖块` -> `task_plan` or honest provider failure, then PlanValidator when a plan is produced.
 - [ ] 9.5 Verify unsafe path request -> refusal or approval-required.
 - [ ] 9.6 Verify P6-P17 baselines remain intact.
