@@ -7,7 +7,7 @@ reference instead of repeating long context blocks.
 
 ### P17c Runtime Settings Page
 
-P17c implementation is in progress on 2026-06-01.
+P17c completed on 2026-06-01.
 
 AgentHub is moving detailed Agent Runtime Settings out of the primary chat
 workspace and into a dedicated `/settings/runtime` page. The chat page now

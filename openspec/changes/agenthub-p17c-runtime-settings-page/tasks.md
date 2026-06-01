@@ -28,4 +28,4 @@
 - [x] 5.1 Update `docs/project-state.md` and `docs/change-log.md` with the P17c UI information-architecture change.
 - [x] 5.2 Validate `pnpm check`, `pnpm test`, `git diff --check`, and `openspec validate agenthub-p17c-runtime-settings-page --strict`.
 - [x] 5.3 Perform a focused UI rehearsal: chat page remains simple, settings entry opens the runtime settings page, Save/Cancel works, and status labels are user-friendly.
-- [ ] 5.4 Mark P17c complete only after validation and rehearsal pass.
+- [x] 5.4 Mark P17c complete only after validation and rehearsal pass.

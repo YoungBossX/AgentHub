@@ -14,7 +14,7 @@
 | `apps/web/src/components/agent-runtime-settings.tsx` | Organized Planner/Frontend/Backend/Review settings and translated provider status labels. |
 | `apps/web/src/components/workspace-shell.test.tsx` / `apps/web/src/components/runtime-settings-page-client.test.tsx` | Added coverage for chat simplification, save/cancel, draft isolation, and user-facing status labels. |
 | `docs/project-state.md` | Recorded the P17c runtime settings page baseline. |
-| `openspec/changes/agenthub-p17c-runtime-settings-page/tasks.md` | Marked implementation tasks through P17c-5.1 complete. |
+| `openspec/changes/agenthub-p17c-runtime-settings-page/tasks.md` | Marked all P17c implementation, validation, rehearsal, and completion tasks done. |
 
 ### Validation
 
