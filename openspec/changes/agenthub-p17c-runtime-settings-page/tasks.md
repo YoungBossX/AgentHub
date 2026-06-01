@@ -1,7 +1,7 @@
 ## 1. Chat Workspace Simplification
 
 - [x] 1.1 Remove the full Agent Runtime Settings panel from the chat/session sidebar while preserving session navigation, agent contacts, chat, tasks, artifacts, and mission trace behavior.
-- [ ] 1.2 Add a compact runtime settings entry point from the chat workspace, using an icon/button/link that does not compete with the session list.
+- [x] 1.2 Add a compact runtime settings entry point from the chat workspace, using an icon/button/link that does not compete with the session list.
 - [ ] 1.3 Update chat workspace tests to verify the detailed runtime settings form is not rendered inline and that the settings entry point is available.
 
 ## 2. Dedicated Runtime Settings Page

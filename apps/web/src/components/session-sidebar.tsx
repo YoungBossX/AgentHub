@@ -1,6 +1,7 @@
 "use client"
 
-import { GitBranch, Plus } from "lucide-react"
+import Link from "next/link"
+import { GitBranch, Plus, Settings } from "lucide-react"
 
 import { AgentContactList } from "@/components/agent-contact-list"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,13 @@ export function SessionSidebar({
                 {workspace.rootPath}
               </p>
             </div>
+            <Link
+              aria-label="打开运行设置"
+              className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-white text-slate-600 transition hover:border-[var(--primary-border)] hover:text-[var(--primary)]"
+              href="/settings/runtime"
+            >
+              <Settings aria-hidden="true" size={16} />
+            </Link>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
