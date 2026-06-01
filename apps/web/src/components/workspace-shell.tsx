@@ -18,7 +18,6 @@ import {
 } from "react"
 
 import { ArtifactPanel } from "@/components/artifact-panel"
-import { AgentRuntimeSettings } from "@/components/agent-runtime-settings"
 import { ChatThread } from "@/components/chat-thread"
 import { MessageComposer } from "@/components/message-composer"
 import { MissionPanel } from "@/components/mission-panel"
@@ -34,7 +33,6 @@ import {
   createWorkspaceSession,
   denyTaskRun,
   forceCodexFailure,
-  getAgentRuntimeConfig,
   getSessionLedger,
   interruptTaskRun,
   listTaskRunPreviews,
@@ -45,16 +43,13 @@ import {
   sessionEventsUrl,
   startTaskRunPreview,
   stopPreview,
-  updateAgentRuntimeConfig,
   type AgentContact,
-  type AgentRuntimeConfig,
   type ChatMessage,
   type PreviewArtifact,
   type SessionExecutionLedger,
   type SessionTask,
   type Workspace,
   type WorkspaceSession,
-  type RuntimeRoleConfigInput,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -93,11 +88,6 @@ export function WorkspaceShell({
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
     initialAgents[0]?.id ?? null,
   )
-  const [runtimeConfig, setRuntimeConfig] = useState<AgentRuntimeConfig | null>(null)
-  const [runtimeDraftRoles, setRuntimeDraftRoles] = useState<
-    Record<string, RuntimeRoleConfigInput>
-  >({})
-  const [runtimeConfigMessage, setRuntimeConfigMessage] = useState<string | null>(null)
 
   const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
   const selectedSession = useMemo(
@@ -250,31 +240,6 @@ export function WorkspaceShell({
     }
   }, [backendUrl, lastEventSequence, refreshLedger, reportSyncError, selectedSessionId])
 
-  useEffect(() => {
-    if (!workspace) {
-      return
-    }
-
-    let cancelled = false
-    getAgentRuntimeConfig(backendUrl, workspace.id)
-      .then((nextConfig) => {
-        if (!cancelled) {
-          setRuntimeConfig(nextConfig)
-          setRuntimeDraftRoles(nextConfig?.roles ?? {})
-          setRuntimeConfigMessage(null)
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          reportSyncError("无法加载 Agent Runtime Config", error)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [backendUrl, reportSyncError, workspace])
-
   function selectSession(sessionId: string) {
     setSyncError(null)
     setArtifactItems([])
@@ -299,31 +264,6 @@ export function WorkspaceShell({
       router.replace(`${pathname}?${params.toString()}`)
       setSyncError(null)
     }, "无法创建会话")
-  }
-
-  function handleRuntimeRoleChange(role: string, nextRole: RuntimeRoleConfigInput) {
-    setRuntimeConfigMessage(null)
-    setRuntimeDraftRoles((current) => ({
-      ...current,
-      [role]: nextRole,
-    }))
-  }
-
-  function handleSaveRuntimeConfig() {
-    if (!workspace || !runtimeConfig) {
-      return
-    }
-
-    runClientAction(async () => {
-      const updated = await updateAgentRuntimeConfig(
-        backendUrl,
-        workspace.id,
-        runtimeDraftRoles,
-      )
-      setRuntimeConfig(updated)
-      setRuntimeDraftRoles(updated.roles)
-      setRuntimeConfigMessage("Runtime config saved")
-    }, "无法保存 Agent Runtime Config")
   }
 
   async function refreshSelectedTasks() {
@@ -573,16 +513,6 @@ export function WorkspaceShell({
         onModeChange={setAgentMode}
         onSelectAgent={setSelectedAgentId}
         onSelectSession={selectSession}
-        runtimeSettingsSlot={
-          <AgentRuntimeSettings
-            busy={isPending}
-            config={runtimeConfig}
-            draftRoles={runtimeDraftRoles}
-            onRoleChange={handleRuntimeRoleChange}
-            onSave={handleSaveRuntimeConfig}
-            statusMessage={runtimeConfigMessage}
-          />
-        }
         selectedAgentId={selectedAgentId}
         selectedSessionId={selectedSessionId}
         sessions={sessions}

@@ -1,6 +1,5 @@
 "use client"
 
-import type { ReactNode } from "react"
 import { GitBranch, Plus } from "lucide-react"
 
 import { AgentContactList } from "@/components/agent-contact-list"
@@ -17,7 +16,6 @@ type SessionSidebarProps = {
   onModeChange: (mode: "direct" | "group") => void
   onSelectAgent: (agentId: string) => void
   onSelectSession: (sessionId: string) => void
-  runtimeSettingsSlot?: ReactNode
   selectedAgentId: string | null
   selectedSessionId: string | null
   sessions: WorkspaceSession[]
@@ -33,7 +31,6 @@ export function SessionSidebar({
   onModeChange,
   onSelectAgent,
   onSelectSession,
-  runtimeSettingsSlot,
   selectedAgentId,
   selectedSessionId,
   sessions,
@@ -84,7 +81,6 @@ export function SessionSidebar({
           onSelectAgent={onSelectAgent}
           selectedAgentId={selectedAgentId}
         />
-        {runtimeSettingsSlot}
       </div>
 
       <nav
