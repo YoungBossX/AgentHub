@@ -11,6 +11,10 @@ from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 from app.config import Settings, get_settings
+from app.planner_contracts import (
+    conversation_outcome_json_schema,
+    planner_conversation_system_prompt,
+)
 
 PLANNER_PROVIDER_DISABLED = "disabled"
 PLANNER_PROVIDER_FAKE_TEST = "fake_test"
@@ -999,7 +1003,7 @@ def _openai_responses_payload(model: str, planner_input: Mapping[str, Any]) -> d
                 "content": [
                     {
                         "type": "input_text",
-                        "text": _planner_system_instruction(),
+                        "text": planner_conversation_system_prompt(),
                     }
                 ],
             },
@@ -1022,21 +1026,10 @@ def _openai_responses_payload(model: str, planner_input: Mapping[str, Any]) -> d
                 "type": "json_schema",
                 "name": "conversation_outcome",
                 "strict": True,
-                "schema": _conversation_outcome_schema(),
+                "schema": conversation_outcome_json_schema(),
             }
         },
     }
-
-
-def _planner_system_instruction() -> str:
-    return (
-        "You are AgentHub's Conversation Router and Planner LLM. Return one "
-        "ConversationOutcome JSON object only. You may answer normal chat, ask "
-        "clarifying questions, refuse unsafe requests, require approval, or "
-        "return a task_plan with a PlanDraft. Do not execute code. Do not call "
-        "coding agents directly. Every executable plan will be validated by "
-        "AgentHub before scheduling."
-    )
 
 
 def _openai_compatible_chat_payload(
@@ -1048,7 +1041,7 @@ def _openai_compatible_chat_payload(
         "messages": [
             {
                 "role": "system",
-                "content": _planner_system_instruction(),
+                "content": planner_conversation_system_prompt(),
             },
             {
                 "role": "user",
@@ -1067,7 +1060,7 @@ def _anthropic_messages_payload(model: str, planner_input: Mapping[str, Any]) ->
     return {
         "model": model,
         "max_tokens": 4096,
-        "system": _planner_system_instruction(),
+        "system": planner_conversation_system_prompt(),
         "messages": [
             {
                 "role": "user",
@@ -1082,39 +1075,10 @@ def _anthropic_messages_payload(model: str, planner_input: Mapping[str, Any]) ->
             {
                 "name": "emit_conversation_outcome",
                 "description": "Emit one AgentHub ConversationOutcome JSON object.",
-                "input_schema": _conversation_outcome_schema(),
+                "input_schema": conversation_outcome_json_schema(),
             }
         ],
         "tool_choice": {"type": "tool", "name": "emit_conversation_outcome"},
-    }
-
-
-def _conversation_outcome_schema() -> dict[str, Any]:
-    return {
-        "type": "object",
-        "additionalProperties": True,
-        "properties": {
-            "outcomeType": {
-                "type": "string",
-                "enum": [
-                    "assistant_reply",
-                    "task_plan",
-                    "clarification",
-                    "refusal",
-                    "approval_required",
-                    "unsupported",
-                ],
-            },
-            "reply": {"type": ["string", "null"]},
-            "reason": {"type": ["string", "null"]},
-            "riskLevel": {"type": ["string", "null"]},
-            "planDraft": {"type": ["object", "null"], "additionalProperties": True},
-            "plannerProvider": {"type": ["object", "null"], "additionalProperties": True},
-            "validationResult": {"type": ["string", "null"]},
-            "fallbackMetadata": {"type": ["object", "null"], "additionalProperties": True},
-            "errorMetadata": {"type": ["object", "null"], "additionalProperties": True},
-        },
-        "required": ["outcomeType"],
     }
 
 

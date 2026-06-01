@@ -1,5 +1,28 @@
 # AgentHub Change Log
 
+## P17b-5.1 Shared ConversationOutcome Structured-output Helpers
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_contracts.py` | Added shared ConversationOutcome JSON schema and planner system prompt helpers. |
+| `apps/api/app/planner_providers.py` | Reused the shared structured-output helpers in OpenAI Responses, OpenAI-compatible, and Anthropic provider payloads. |
+| `apps/api/tests/test_planner_contracts.py` | Added coverage for the shared schema and prompt helper. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-5.1 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py::test_conversation_outcome_structured_output_helpers_are_shared tests/test_planner_providers.py::test_openai_responses_planner_provider_uses_fake_client tests/test_planner_providers.py::test_anthropic_messages_planner_provider_uses_fake_client -q` | Pass: 3 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-4.5 API Planner Non-task Outcome Handling
 
 **Date:** 2026-06-01

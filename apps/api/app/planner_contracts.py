@@ -134,6 +134,47 @@ class ConversationOutcome(BaseModel):
         return self.model_dump(by_alias=True)
 
 
+def planner_conversation_system_prompt() -> str:
+    return (
+        "You are AgentHub's Conversation Router and Planner LLM. Return one "
+        "ConversationOutcome JSON object only. You may answer normal chat, ask "
+        "clarifying questions, refuse unsafe requests, require approval, or "
+        "return a task_plan with a PlanDraft. Do not execute code. Do not call "
+        "coding agents directly. Every executable plan will be validated by "
+        "AgentHub before scheduling."
+    )
+
+
+def conversation_outcome_json_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": True,
+        "properties": {
+            "outcomeType": {
+                "type": "string",
+                "enum": [
+                    "assistant_reply",
+                    "task_plan",
+                    "clarification",
+                    "refusal",
+                    "approval_required",
+                    "unsupported",
+                ],
+            },
+            "reply": {"type": ["string", "null"]},
+            "reason": {"type": ["string", "null"]},
+            "riskLevel": {"type": ["string", "null"]},
+            "planDraft": {"type": ["object", "null"], "additionalProperties": True},
+            "plannerProvider": {"type": ["object", "null"], "additionalProperties": True},
+            "codingAgentProvider": {"type": ["object", "null"], "additionalProperties": True},
+            "validationResult": {"type": ["string", "null"]},
+            "fallbackMetadata": {"type": ["object", "null"], "additionalProperties": True},
+            "errorMetadata": {"type": ["object", "null"], "additionalProperties": True},
+        },
+        "required": ["outcomeType"],
+    }
+
+
 def _redact_provider_visible_value(value: Any) -> Any:
     if isinstance(value, dict):
         redacted: dict[str, Any] = {}

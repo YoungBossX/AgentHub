@@ -14,7 +14,13 @@ from app.llm_planner import (
     parse_llm_plan_output,
 )
 from app.models import Agent, Message, Session, Workspace
-from app.planner_contracts import ConversationOutcome, PlannerRequest, PlannerResponse
+from app.planner_contracts import (
+    ConversationOutcome,
+    PlannerRequest,
+    PlannerResponse,
+    conversation_outcome_json_schema,
+    planner_conversation_system_prompt,
+)
 from app.target_registry import DEMO_FRONTEND_TARGET_ID
 
 
@@ -379,6 +385,25 @@ def test_parse_llm_plan_output_rejects_missing_required_fields() -> None:
                 }
             )
         )
+
+
+def test_conversation_outcome_structured_output_helpers_are_shared() -> None:
+    schema = conversation_outcome_json_schema()
+    prompt = planner_conversation_system_prompt()
+
+    assert schema["properties"]["outcomeType"]["enum"] == [
+        "assistant_reply",
+        "task_plan",
+        "clarification",
+        "refusal",
+        "approval_required",
+        "unsupported",
+    ]
+    assert schema["required"] == ["outcomeType"]
+    assert schema["properties"]["planDraft"]["type"] == ["object", "null"]
+    assert "ConversationOutcome" in prompt
+    assert "Do not execute code" in prompt
+    assert "coding agents" in prompt
 
 
 def test_parse_llm_plan_output_does_not_normalize_unknown_target() -> None:
