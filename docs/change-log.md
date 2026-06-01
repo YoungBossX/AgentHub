@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17b-8.3 Anthropic Fake-client Test Matrix
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-8.3 complete after verifying Anthropic fake-client success coverage. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_anthropic_messages_planner_provider_uses_fake_client -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-8.2 OpenAI-compatible Fake-client Test Matrix
 
 **Date:** 2026-06-01
