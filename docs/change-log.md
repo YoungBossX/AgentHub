@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17b-4.5 API Planner Non-task Outcome Handling
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planning.py` | Added API planner coverage proving `assistant_reply` creates an Orchestrator chat message and no Task/TaskRun. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-4.5 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_api_planner_assistant_reply_creates_orchestrator_message_without_task -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-4.4 API Planner Validation Path
 
 **Date:** 2026-06-01

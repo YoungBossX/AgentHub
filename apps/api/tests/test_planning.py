@@ -17,7 +17,7 @@ from app.main import _should_auto_start_task
 from app.models import Agent, Message, Session, Task, Workspace
 from app.agent_runtime_config import RuntimeRoleConfig, upsert_runtime_config
 from app.config import Settings
-from app.planner_providers import FakePlannerProvider
+from app.planner_providers import FakePlannerProvider, OpenAIResponsesPlannerProvider
 import app.planning as planning_module
 from app.planning import (
     MentionParseError,
@@ -806,6 +806,65 @@ def test_llm_assistant_reply_creates_orchestrator_message_without_task(
     assert [message.sender_type for message in messages] == ["user", "orchestrator"]
     assert messages[-1].content_md.startswith("你好")
     assert messages[-1].message_kind == "chat"
+
+
+def test_api_planner_assistant_reply_creates_orchestrator_message_without_task(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="openai_api",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: OpenAIResponsesPlannerProvider(
+            http_client=FakePlannerHttpClient(
+                {
+                    "output_text": json.dumps(
+                        {
+                            "outcomeType": "assistant_reply",
+                            "reply": "你好，我可以聊天，也可以在需要时规划代码任务。",
+                            "riskLevel": "low",
+                            "reason": "Pure greeting.",
+                            "plannerProvider": {"providerId": "openai-api-planner"},
+                            "validationResult": "not_required",
+                        }
+                    )
+                }
+            ),
+            api_key_env="OPENAI_API_KEY",
+            environ={"OPENAI_API_KEY": "test-secret-value"},
+        ),
+    )
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "你好"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at)
+        ).all()
+        assert db.exec(select(Task)).all() == []
+
+    assert [message.sender_type for message in messages] == ["user", "orchestrator"]
+    assert messages[-1].content_md.startswith("你好")
 
 
 def test_conversation_task_plan_creates_validated_task(
@@ -1642,3 +1701,18 @@ def test_no_mention_bounded_request_without_existing_plan_uses_orchestrator_defa
     ]
     assert tasks[1]["planJson"]["autoStart"] is True
     assert tasks[1]["taskRuns"]
+
+
+class FakePlannerHttpClient:
+    def __init__(self, response: dict[str, object]) -> None:
+        self.response = response
+
+    def post_json(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        payload: dict[str, object],
+        timeout: int,
+    ) -> dict[str, object]:
+        return self.response
