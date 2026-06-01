@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17b-9.1 Real API Smoke Availability Check
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-9.1 complete after checking that real planner API keys were not available as environment variables; no real provider success was claimed. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `test -n "$DEEPSEEK_API_KEY"` / `test -n "$MIMO_API_KEY"` equivalent check | Both missing in the current process environment; raw keys from chat were not written to files or commands. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-8.6 Targeted Planner Test Matrix
 
 **Date:** 2026-06-01
