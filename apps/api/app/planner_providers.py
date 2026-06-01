@@ -25,6 +25,13 @@ class PlannerProviderProtocolMetadata:
     display_name: str
     description: str
     real_provider: bool
+    supports_json_schema: bool = False
+    supports_json_object: bool = False
+    supports_tool_calls: bool = False
+    supports_system_prompt: bool = False
+    supports_base_url: bool = False
+    default_timeout_seconds: int = 60
+    default_model: str | None = None
 
     def to_metadata(self) -> dict[str, Any]:
         return {
@@ -32,6 +39,13 @@ class PlannerProviderProtocolMetadata:
             "displayName": self.display_name,
             "description": self.description,
             "realProvider": self.real_provider,
+            "supportsJsonSchema": self.supports_json_schema,
+            "supportsJsonObject": self.supports_json_object,
+            "supportsToolCalls": self.supports_tool_calls,
+            "supportsSystemPrompt": self.supports_system_prompt,
+            "supportsBaseUrl": self.supports_base_url,
+            "defaultTimeoutSeconds": self.default_timeout_seconds,
+            "defaultModel": self.default_model,
         }
 
 
@@ -41,24 +55,33 @@ BUILT_IN_PLANNER_PROVIDER_PROTOCOLS: tuple[PlannerProviderProtocolMetadata, ...]
         display_name="OpenAI Responses",
         description="Official OpenAI / ChatGPT Responses API planner protocol.",
         real_provider=True,
+        supports_json_schema=True,
+        supports_json_object=True,
+        supports_system_prompt=True,
     ),
     PlannerProviderProtocolMetadata(
         protocol=PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT,
         display_name="OpenAI-compatible Chat",
         description="DeepSeek, MiMo, OpenRouter, vLLM, and custom compatible chat endpoints.",
         real_provider=True,
+        supports_json_object=True,
+        supports_system_prompt=True,
+        supports_base_url=True,
     ),
     PlannerProviderProtocolMetadata(
         protocol=PLANNER_PROTOCOL_ANTHROPIC_MESSAGES,
         display_name="Anthropic Messages",
         description="Claude / Anthropic Messages API planner protocol.",
         real_provider=True,
+        supports_tool_calls=True,
+        supports_system_prompt=True,
     ),
     PlannerProviderProtocolMetadata(
         protocol=PLANNER_PROVIDER_CLAUDE_CLI,
         display_name="Claude CLI",
         description="Existing local Claude CLI planner provider.",
         real_provider=True,
+        supports_system_prompt=True,
     ),
     PlannerProviderProtocolMetadata(
         protocol=PLANNER_PROVIDER_FAKE_TEST,

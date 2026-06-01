@@ -1,5 +1,28 @@
 # AgentHub Change Log
 
+## P17b-1.2 Planner Provider Capability Flags
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added capability flags to PlannerProvider protocol metadata. |
+| `apps/api/tests/test_planner_providers.py` | Added coverage for capability metadata and no-secret fields. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-1.2 complete. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_protocol_metadata_exposes_capability_flags -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-1.1 Planner Provider Protocol Metadata
 
 **Date:** 2026-06-01

@@ -60,6 +60,23 @@ def test_planner_provider_protocol_registry_lists_supported_protocols() -> None:
     assert get_planner_provider_protocol("mystery") is None
 
 
+def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
+    openai = get_planner_provider_protocol("openai_responses").to_metadata()
+    compatible = get_planner_provider_protocol("openai_compatible_chat").to_metadata()
+    anthropic = get_planner_provider_protocol("anthropic_messages").to_metadata()
+
+    assert openai["supportsJsonSchema"] is True
+    assert openai["supportsJsonObject"] is True
+    assert openai["supportsSystemPrompt"] is True
+    assert openai["supportsBaseUrl"] is False
+    assert compatible["supportsJsonObject"] is True
+    assert compatible["supportsBaseUrl"] is True
+    assert anthropic["supportsToolCalls"] is True
+    assert anthropic["supportsSystemPrompt"] is True
+    assert isinstance(openai["defaultTimeoutSeconds"], int)
+    assert "apiKey" not in openai
+
+
 def test_fake_planner_provider_returns_test_only_result() -> None:
     provider = FakePlannerProvider(
         payload={
