@@ -23,8 +23,16 @@ export function RuntimeSettingsPageClient({
   const [config, setConfig] = useState<AgentRuntimeConfig | null>(null)
   const [draftRoles, setDraftRoles] = useState<Record<string, RuntimeRoleConfigInput>>({})
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const hasUnsavedChanges = config
+    ? JSON.stringify(draftRoles) !== JSON.stringify(config.roles)
+    : false
   const effectiveStatusMessage =
-    statusMessage ?? (workspace ? null : "未找到可配置的工作区。")
+    statusMessage ??
+    (workspace
+      ? hasUnsavedChanges
+        ? "有未保存更改，点击保存后才会生效。"
+        : null
+      : "未找到可配置的工作区。")
 
   useEffect(() => {
     if (!workspace) {
