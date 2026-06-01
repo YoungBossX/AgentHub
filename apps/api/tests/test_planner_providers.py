@@ -80,6 +80,16 @@ def test_planner_provider_preset_registry_lists_builtin_presets() -> None:
     assert get_planner_provider_preset("unknown") is None
 
 
+def test_planner_provider_presets_map_to_protocols() -> None:
+    presets = {item.preset_id: item.to_metadata() for item in list_planner_provider_presets()}
+
+    assert presets["openai_api"]["protocol"] == "openai_responses"
+    assert presets["deepseek_api"]["protocol"] == "openai_compatible_chat"
+    assert presets["mimo_api"]["protocol"] == "openai_compatible_chat"
+    assert presets["anthropic_api"]["protocol"] == "anthropic_messages"
+    assert presets["custom_openai_compatible"]["protocol"] == "openai_compatible_chat"
+
+
 def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
     openai = get_planner_provider_protocol("openai_responses").to_metadata()
     compatible = get_planner_provider_protocol("openai_compatible_chat").to_metadata()

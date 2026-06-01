@@ -8,7 +8,7 @@
 ## 2. Provider Presets
 
 - [x] 2.1 Add built-in presets: `openai_api`, `deepseek_api`, `mimo_api`, `anthropic_api`, and `custom_openai_compatible`.
-- [ ] 2.2 Map presets to protocols: OpenAI to `openai_responses`, DeepSeek/MiMo/custom compatible to `openai_compatible_chat`, and Anthropic to `anthropic_messages`.
+- [x] 2.2 Map presets to protocols: OpenAI to `openai_responses`, DeepSeek/MiMo/custom compatible to `openai_compatible_chat`, and Anthropic to `anthropic_messages`.
 - [ ] 2.3 Add preset defaults for display name, protocol, base URL, model, `apiKeyEnv`, and capabilities.
 - [ ] 2.4 Support custom base URL validation for `custom_openai_compatible`.
 

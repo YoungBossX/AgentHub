@@ -114,11 +114,13 @@ def get_planner_provider_protocol(protocol: str) -> PlannerProviderProtocolMetad
 class PlannerProviderPresetMetadata:
     preset_id: str
     display_name: str
+    protocol: str
 
     def to_metadata(self) -> dict[str, Any]:
         return {
             "presetId": self.preset_id,
             "displayName": self.display_name,
+            "protocol": self.protocol,
         }
 
 
@@ -126,22 +128,27 @@ BUILT_IN_PLANNER_PROVIDER_PRESETS: tuple[PlannerProviderPresetMetadata, ...] = (
     PlannerProviderPresetMetadata(
         preset_id="openai_api",
         display_name="OpenAI API",
+        protocol=PLANNER_PROTOCOL_OPENAI_RESPONSES,
     ),
     PlannerProviderPresetMetadata(
         preset_id="deepseek_api",
         display_name="DeepSeek API",
+        protocol=PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT,
     ),
     PlannerProviderPresetMetadata(
         preset_id="mimo_api",
         display_name="MiMo API",
+        protocol=PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT,
     ),
     PlannerProviderPresetMetadata(
         preset_id="anthropic_api",
         display_name="Anthropic API",
+        protocol=PLANNER_PROTOCOL_ANTHROPIC_MESSAGES,
     ),
     PlannerProviderPresetMetadata(
         preset_id="custom_openai_compatible",
         display_name="Custom OpenAI-compatible API",
+        protocol=PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT,
     ),
 )
 

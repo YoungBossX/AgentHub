@@ -1,5 +1,28 @@
 # AgentHub Change Log
 
+## P17b-2.2 Planner Preset Protocol Mapping
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Mapped Planner provider presets to protocol identifiers. |
+| `apps/api/tests/test_planner_providers.py` | Added coverage for preset-to-protocol mapping. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-2.2 complete. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_presets_map_to_protocols -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-2.1 Planner Provider Presets
 
 **Date:** 2026-06-01
