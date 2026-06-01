@@ -1,5 +1,33 @@
 # AgentHub Change Log
 
+## P17c Runtime Settings Page
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/web/src/components/session-sidebar.tsx` | Removed the inline runtime settings panel and added a compact settings entry point. |
+| `apps/web/src/app/settings/runtime/page.tsx` | Added the dedicated runtime settings route. |
+| `apps/web/src/components/runtime-settings-page-client.tsx` | Loaded runtime config on the settings page and implemented draft, save, and cancel behavior. |
+| `apps/web/src/components/agent-runtime-settings.tsx` | Organized Planner/Frontend/Backend/Review settings and translated provider status labels. |
+| `apps/web/src/components/workspace-shell.test.tsx` / `apps/web/src/components/runtime-settings-page-client.test.tsx` | Added coverage for chat simplification, save/cancel, draft isolation, and user-facing status labels. |
+| `docs/project-state.md` | Recorded the P17c runtime settings page baseline. |
+| `openspec/changes/agenthub-p17c-runtime-settings-page/tasks.md` | Marked implementation tasks through P17c-5.1 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 9 files, 44 tests. |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client` | Pass: 10 files, 48 tests. |
+| `pnpm --filter @agenthub/web check` | Pass. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17c-runtime-settings-page --strict` | Pass. |
+
+---
+
 ## P17b-10.1 Non-goals Confirmation
 
 **Date:** 2026-06-01

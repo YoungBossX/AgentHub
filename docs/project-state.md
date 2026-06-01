@@ -5,6 +5,23 @@ reference instead of repeating long context blocks.
 
 ## P17 Status
 
+### P17c Runtime Settings Page
+
+P17c implementation is in progress on 2026-06-01.
+
+AgentHub is moving detailed Agent Runtime Settings out of the primary chat
+workspace and into a dedicated `/settings/runtime` page. The chat page now
+keeps only a compact settings entry point so the session list, agent contacts,
+chat thread, tasks, artifacts, and mission trace remain the dominant workspace
+experience.
+
+The runtime settings page reuses the existing P16/P17b runtime config APIs and
+keeps Planner, Frontend, Backend, and Review runtime configuration separate.
+Edits are held as draft state until Save, Cancel restores the persisted config,
+and provider/runtime statuses such as `unchecked`, `missing_key`, and
+`not_required` are presented with user-facing Chinese labels and env-only API
+key guidance.
+
 ### P17b Multi-provider Planner API
 
 P17b implementation and rehearsal completed on 2026-06-01.
