@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17b-9.5 Unsafe Request Rehearsal
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-9.5 complete after verifying unsafe and approval-required outcomes do not create tasks. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_non_task_conversation_outcomes_do_not_create_tasks -q` | Pass: 3 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-9.4 Breakout Task-plan Rehearsal
 
 **Date:** 2026-06-01
