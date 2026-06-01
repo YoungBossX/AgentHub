@@ -388,6 +388,19 @@ def test_openai_responses_planner_provider_uses_fake_client() -> None:
     assert client.headers["Authorization"] == "Bearer test-secret-value"
     assert client.payload["model"] == "gpt-test"
     assert client.payload["text"]["format"]["type"] == "json_schema"
+    assert client.payload["text"]["format"]["name"] == "conversation_outcome"
+    assert client.payload["text"]["format"]["strict"] is True
+    assert (
+        client.payload["text"]["format"]["schema"]["properties"]["outcomeType"]["enum"]
+        == [
+            "assistant_reply",
+            "task_plan",
+            "clarification",
+            "refusal",
+            "approval_required",
+            "unsupported",
+        ]
+    )
     assert "test-secret-value" not in json.dumps(result.to_metadata())
 
 

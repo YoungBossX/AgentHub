@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17b-5.2 OpenAI Responses JSON Schema Mode
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planner_providers.py` | Strengthened OpenAI Responses provider coverage to assert strict ConversationOutcome JSON schema mode. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-5.2 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_openai_responses_planner_provider_uses_fake_client -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-5.1 Shared ConversationOutcome Structured-output Helpers
 
 **Date:** 2026-06-01
