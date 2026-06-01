@@ -14,7 +14,7 @@
 
 - [x] 3.1 Keep settings edits in draft state until Save is clicked.
 - [x] 3.2 Implement Save through the existing runtime config update path and show success/failure feedback.
-- [ ] 3.3 Implement Cancel so unsaved draft changes are discarded and persisted config is restored or the user returns to chat.
+- [x] 3.3 Implement Cancel so unsaved draft changes are discarded and persisted config is restored or the user returns to chat.
 - [ ] 3.4 Add tests for Save, Cancel, and "draft changes do not affect active config before Save."
 
 ## 4. User-facing Status Labels

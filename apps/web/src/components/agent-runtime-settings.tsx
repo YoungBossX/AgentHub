@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, Save, ShieldCheck } from "lucide-react"
+import { Bot, RotateCcw, Save, ShieldCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type {
@@ -85,6 +85,7 @@ type AgentRuntimeSettingsProps = {
   config: AgentRuntimeConfig | null
   draftRoles: Record<string, RuntimeRoleConfigInput>
   onRoleChange: (role: string, nextRole: RuntimeRoleConfigInput) => void
+  onCancel: () => void
   onSave: () => void
   statusMessage: string | null
 }
@@ -94,6 +95,7 @@ export function AgentRuntimeSettings({
   config,
   draftRoles,
   onRoleChange,
+  onCancel,
   onSave,
   statusMessage,
 }: AgentRuntimeSettingsProps) {
@@ -158,15 +160,22 @@ export function AgentRuntimeSettings({
         </div>
       ) : null}
 
-      <Button
-        className="mt-3 w-full"
-        disabled={busy}
-        onClick={onSave}
-        type="button"
-      >
-        <Save aria-hidden="true" size={15} />
-        Save runtime config
-      </Button>
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <Button
+          className="bg-white text-slate-700 hover:bg-slate-50"
+          disabled={busy}
+          onClick={onCancel}
+          type="button"
+          variant="secondary"
+        >
+          <RotateCcw aria-hidden="true" size={15} />
+          取消
+        </Button>
+        <Button disabled={busy} onClick={onSave} type="button">
+          <Save aria-hidden="true" size={15} />
+          保存
+        </Button>
+      </div>
     </section>
   )
 }

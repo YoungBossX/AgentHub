@@ -92,11 +92,22 @@ export function RuntimeSettingsPageClient({
     }
   }
 
+  function handleCancel() {
+    if (!config) {
+      setStatusMessage("没有可恢复的已保存配置。")
+      return
+    }
+
+    setDraftRoles(config.roles)
+    setStatusMessage("已取消未保存更改。")
+  }
+
   return (
     <AgentRuntimeSettings
       busy={isSaving}
       config={config}
       draftRoles={draftRoles}
+      onCancel={handleCancel}
       onRoleChange={handleRoleChange}
       onSave={handleSave}
       statusMessage={effectiveStatusMessage}
