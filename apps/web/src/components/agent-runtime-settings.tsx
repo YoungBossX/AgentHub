@@ -146,12 +146,12 @@ export function AgentRuntimeSettings({
 
       {config.validation.errors.length > 0 ? (
         <div className="mt-3 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800">
-          {config.validation.errors[0]}
+          {formatValidationMessage(config.validation.errors[0])}
         </div>
       ) : null}
       {config.validation.warnings.length > 0 ? (
         <div className="mt-3 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-          {config.validation.warnings[0]}
+          {formatValidationMessage(config.validation.warnings[0])}
         </div>
       ) : null}
       {statusMessage ? (
@@ -267,7 +267,7 @@ function RuntimeRoleSelector({
           <option value="">Select profile</option>
           {profileOptions.map((profile) => (
             <option disabled={profile.status !== "available"} key={profile.id} value={profile.id}>
-              {profile.displayName} · {profile.status}
+              {profile.displayName} · {formatAvailabilityLabel(profile.status)}
             </option>
           ))}
         </select>
@@ -293,7 +293,7 @@ function RuntimeRoleSelector({
           <option value="">Select provider</option>
           {providerOptions.map((provider) => (
             <option disabled={!provider.available} key={provider.providerId} value={provider.providerId}>
-              {provider.displayName} · {provider.authStatus}
+              {provider.displayName} · {formatAuthStatusLabel(provider.authStatus)}
             </option>
           ))}
         </select>
@@ -311,13 +311,13 @@ function RuntimeRoleSelector({
         ) : null}
         {role === "planner" && draftRole.availability ? (
           <RuntimePill
-            label={draftRole.availability}
+            label={formatAvailabilityLabel(draftRole.availability)}
             tone={draftRole.availability === "configured" ? "ok" : "danger"}
           />
         ) : null}
         {selectedProvider ? (
           <RuntimePill
-            label={selectedProvider.available ? "available" : "unavailable"}
+            label={selectedProvider.available ? "可用" : "不可用"}
             tone={selectedProvider.available ? "ok" : "danger"}
           />
         ) : null}
@@ -455,4 +455,48 @@ function profileSupportsRole(profile: AgentProfile, role: string) {
         ? ["review", "qa"]
         : [role]
   return roleAliases.some((candidate) => profile.supportedRoles.includes(candidate))
+}
+
+function formatAuthStatusLabel(status: string) {
+  switch (status) {
+    case "unchecked":
+      return "未检测"
+    case "configured":
+      return "已配置"
+    case "missing_key":
+      return "缺少密钥环境变量"
+    case "not_required":
+      return "无需认证"
+    case "unavailable":
+      return "不可用"
+    default:
+      return status
+  }
+}
+
+function formatAvailabilityLabel(status: string) {
+  switch (status) {
+    case "available":
+      return "可用"
+    case "configured":
+      return "已配置"
+    case "missing_key":
+      return "缺少密钥环境变量"
+    case "not_required":
+      return "无需认证"
+    case "unchecked":
+      return "未检测"
+    case "unavailable":
+      return "不可用"
+    default:
+      return status
+  }
+}
+
+function formatValidationMessage(message: string) {
+  if (message.toLowerCase().includes("required")) {
+    return `必填配置缺失：${message}`
+  }
+
+  return message
 }
