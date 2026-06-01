@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-7.2 Planner Evidence In Mission Trace
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/llm_planner.py` | Passed provider preset, protocol, model, and base URL into planner evidence attached to tasks. |
+| `apps/api/tests/test_llm_planner.py` | Added mission trace assertions for API planner evidence without secret leakage. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-7.2 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_api_planner_provider_output_flows_through_plan_validator -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-7.1 Planner Provider Evidence Metadata
 
 **Date:** 2026-06-01

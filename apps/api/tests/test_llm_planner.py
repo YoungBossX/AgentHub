@@ -296,6 +296,12 @@ def test_api_planner_provider_output_flows_through_plan_validator(db: DbSession)
     assert plan["plannerProvider"]["providerType"] == "openai_responses"
     assert plan["plannerEvidence"]["validationResult"] == "passed"
     assert "test-secret-value" not in json.dumps(plan)
+    trace = build_session_mission_trace(db, message.session_id)
+    traced_task = next(task for task in trace.tasks if task["id"] == outcome.tasks[0].id)
+    assert traced_task["plannerEvidence"]["providerType"] == "openai_responses"
+    assert traced_task["plannerEvidence"]["protocol"] == "openai_responses"
+    assert traced_task["plannerEvidence"]["model"] == "gpt-4.1-mini"
+    assert "test-secret-value" not in json.dumps(trace.model_dump(by_alias=True))
 
 
 def test_api_planner_provider_unsafe_plan_is_rejected_before_persistence(

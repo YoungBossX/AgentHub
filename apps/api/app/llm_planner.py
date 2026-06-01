@@ -516,6 +516,14 @@ def _attach_planner_evidence(
     }
     if provider_result.fallback_reason:
         evidence["fallbackReason"] = provider_result.fallback_reason
+    if provider_result.provider_preset_id:
+        evidence["providerPresetId"] = provider_result.provider_preset_id
+    if provider_result.protocol:
+        evidence["protocol"] = provider_result.protocol
+    if provider_result.model:
+        evidence["model"] = provider_result.model
+    if provider_result.base_url:
+        evidence["baseUrl"] = provider_result.base_url
     if provider_result.error_code:
         evidence["errorCode"] = provider_result.error_code
     if provider_result.error_summary:
