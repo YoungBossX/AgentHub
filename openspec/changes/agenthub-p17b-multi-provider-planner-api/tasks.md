@@ -38,7 +38,7 @@
 ## 6. Runtime Config And Settings UI
 
 - [x] 6.1 Extend Planner runtime config model/schema to include preset/protocol/model/baseUrl/timeout/apiKeyEnv metadata without raw secrets.
-- [ ] 6.2 Extend runtime config API validation for provider preset, model, base URL, apiKeyEnv, and availability state.
+- [x] 6.2 Extend runtime config API validation for provider preset, model, base URL, apiKeyEnv, and availability state.
 - [ ] 6.3 Extend Agent Runtime Settings UI Planner section for preset/model/base URL/apiKeyEnv selection.
 - [ ] 6.4 Display Planner provider availability as `configured`, `missing_key`, or `unavailable`.
 - [ ] 6.5 Keep Frontend, Backend, QA, and Review coding agent runtime settings separate.

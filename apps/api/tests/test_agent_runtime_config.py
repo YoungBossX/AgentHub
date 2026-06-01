@@ -272,6 +272,88 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
         assert payload["roles"]["backend"]["providerId"] == "local-codex-cli"
 
 
+def test_runtime_config_api_validates_planner_provider_preset() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/validate",
+            json={
+                "roles": {
+                    "planner": {
+                        "providerPresetId": "deepseek_api",
+                        "protocol": "openai_compatible_chat",
+                        "model": "deepseek-chat",
+                        "baseUrl": "https://api.deepseek.com",
+                        "apiKeyEnv": "DEEPSEEK_API_KEY",
+                        "mode": "read_only",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["valid"] is True
+        assert payload["errors"] == []
+        assert any("missing_key" in warning for warning in payload["warnings"])
+
+
+def test_runtime_config_api_rejects_invalid_planner_provider_preset() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/validate",
+            json={
+                "roles": {
+                    "planner": {
+                        "providerPresetId": "mystery_api",
+                        "protocol": "openai_compatible_chat",
+                        "model": "model",
+                        "baseUrl": "https://api.example.test/v1",
+                        "apiKeyEnv": "CUSTOM_API_KEY",
+                        "mode": "read_only",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["valid"] is False
+        assert any("unknown planner provider preset" in error for error in payload["errors"])
+
+
+def test_runtime_config_api_rejects_invalid_planner_base_url() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/validate",
+            json={
+                "roles": {
+                    "planner": {
+                        "providerPresetId": "custom_openai_compatible",
+                        "protocol": "openai_compatible_chat",
+                        "model": "custom-model",
+                        "baseUrl": "https://user:pass@example.test/v1",
+                        "apiKeyEnv": "CUSTOM_API_KEY",
+                        "mode": "read_only",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["valid"] is False
+        assert any("baseUrl is invalid" in error for error in payload["errors"])
+
+
 def test_runtime_config_api_ignores_raw_api_key_field() -> None:
     with _client() as client:
         workspace_id = _workspace_id(client)

@@ -7,7 +7,13 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.models import AgentRuntimeConfig, utc_now
-from app.planner_providers import API_KEY_ENV_PATTERN
+from app.planner_providers import (
+    API_KEY_ENV_PATTERN,
+    PlannerProviderError,
+    get_planner_provider_preset,
+    resolve_planner_api_key,
+    validate_planner_provider_base_url,
+)
 from app.provider_configs import ProviderConfig
 
 RUNTIME_CONFIG_ROLES = ("planner", "frontend", "backend", "review")
@@ -197,6 +203,9 @@ def validate_runtime_config(
     for role, role_config in normalized.items():
         if not role_config.enabled:
             continue
+        if role == "planner" and role_config.provider_preset_id:
+            _validate_planner_api_runtime_role(role_config, errors, warnings)
+            continue
 
         missing_fields = [
             field_name
@@ -274,6 +283,47 @@ def validate_runtime_config(
         errors=errors,
         warnings=warnings,
     )
+
+
+def _validate_planner_api_runtime_role(
+    role_config: RuntimeRoleConfig,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    preset = get_planner_provider_preset(role_config.provider_preset_id or "")
+    if preset is None:
+        errors.append(
+            f"Runtime config role `planner` references unknown planner provider preset `{role_config.provider_preset_id}`."
+        )
+        return
+
+    if role_config.protocol and role_config.protocol != preset.protocol:
+        errors.append(
+            f"Runtime config role `planner` protocol `{role_config.protocol}` does not match preset `{preset.protocol}`."
+        )
+    if not (role_config.model or preset.default_model):
+        errors.append("Runtime config role `planner` requires a Planner model.")
+    try:
+        validate_planner_provider_base_url(
+            preset_id=preset.preset_id,
+            base_url=role_config.base_url or preset.default_base_url,
+        )
+    except PlannerProviderError as exc:
+        errors.append(f"Runtime config role `planner` baseUrl is invalid: {exc.summary}")
+
+    api_key_env = role_config.api_key_env or preset.api_key_env
+    try:
+        key_resolution = resolve_planner_api_key(
+            api_key_env,
+            provider_id=preset.preset_id,
+        )
+    except PlannerProviderError as exc:
+        errors.append(f"Runtime config role `planner` apiKeyEnv is invalid: {exc.summary}")
+        return
+    if key_resolution.availability == "missing_key":
+        warnings.append(
+            f"Planner provider preset `{preset.preset_id}` availability is missing_key for env `{api_key_env}`."
+        )
 
 
 def _stored_config_for_workspace(

@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-6.2 Planner Runtime Config Validation
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_runtime_config.py` | Added Planner API preset validation for preset/protocol/model/baseUrl/apiKeyEnv and missing-key availability warnings. |
+| `apps/api/tests/test_agent_runtime_config.py` | Added runtime config validation coverage for valid preset metadata, unknown presets, and invalid base URLs. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-6.2 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py::test_runtime_config_api_validates_planner_provider_preset tests/test_agent_runtime_config.py::test_runtime_config_api_rejects_invalid_planner_provider_preset tests/test_agent_runtime_config.py::test_runtime_config_api_rejects_invalid_planner_base_url -q` | Pass: 3 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-6.1 Planner Runtime Config Metadata Fields
 
 **Date:** 2026-06-01
