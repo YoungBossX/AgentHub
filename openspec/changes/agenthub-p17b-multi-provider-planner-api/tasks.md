@@ -55,7 +55,7 @@
 - [x] 8.1 Add fake-client OpenAI Responses provider success tests.
 - [x] 8.2 Add fake-client OpenAI-compatible provider success tests.
 - [x] 8.3 Add fake-client Anthropic provider success tests.
-- [ ] 8.4 Add tests for assistant reply creating no TaskRun.
+- [x] 8.4 Add tests for assistant reply creating no TaskRun.
 - [ ] 8.5 Add tests for unsafe task_plan rejected by PlanValidator.
 - [ ] 8.6 Run targeted planner provider, runtime config, conversational routing, and mission trace tests.
 
