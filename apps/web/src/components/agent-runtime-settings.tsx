@@ -394,6 +394,16 @@ function PlannerProviderControls({
         onChange={(value) => onChange({ baseUrl: value || null })}
         value={draftRole.baseUrl ?? ""}
       />
+
+      <p className="rounded border border-blue-100 bg-blue-50 px-2 py-1.5 text-xs text-blue-800">
+        API Key 只从后端进程环境变量读取；这里保存的是环境变量名，不保存原始密钥。
+      </p>
+      {draftRole.availability === "missing_key" ? (
+        <p className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+          缺少环境变量 {draftRole.apiKeyEnv ?? "API_KEY"}。请在启动 AgentHub API
+          的 shell 中配置后重启后端服务。
+        </p>
+      ) : null}
     </div>
   )
 }
