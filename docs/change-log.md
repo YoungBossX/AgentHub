@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## P17b-8.6 Targeted Planner Test Matrix
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-8.6 complete after running targeted planner provider, runtime config, conversational routing, and mission trace tests. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py tests/test_agent_runtime_config.py tests/test_llm_planner.py tests/test_planning.py::test_api_planner_assistant_reply_creates_orchestrator_message_without_task -q` | Pass: 83 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-8.5 Unsafe Task Plan Rejection Test Matrix
 
 **Date:** 2026-06-01

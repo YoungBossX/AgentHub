@@ -57,7 +57,7 @@
 - [x] 8.3 Add fake-client Anthropic provider success tests.
 - [x] 8.4 Add tests for assistant reply creating no TaskRun.
 - [x] 8.5 Add tests for unsafe task_plan rejected by PlanValidator.
-- [ ] 8.6 Run targeted planner provider, runtime config, conversational routing, and mission trace tests.
+- [x] 8.6 Run targeted planner provider, runtime config, conversational routing, and mission trace tests.
 
 ## 9. Rehearsal And Freeze Review
 
