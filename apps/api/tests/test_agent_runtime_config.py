@@ -268,6 +268,7 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
         assert payload["roles"]["planner"]["baseUrl"] == "https://api.deepseek.com"
         assert payload["roles"]["planner"]["timeoutSeconds"] == 45
         assert payload["roles"]["planner"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
+        assert payload["roles"]["planner"]["availability"] == "missing_key"
         assert payload["roles"]["frontend"]["providerId"] == "local-claude-code-cli"
         assert payload["roles"]["backend"]["providerId"] == "local-codex-cli"
 

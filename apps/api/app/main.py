@@ -22,6 +22,7 @@ from app.agent_runtime_config import (
     RuntimeConfigValidationResult,
     RuntimeRoleConfig,
     get_effective_runtime_config,
+    runtime_role_availability,
     upsert_runtime_config,
     validate_runtime_config,
 )
@@ -524,6 +525,7 @@ def runtime_role_config_response(role_config: RuntimeRoleConfig) -> RuntimeRoleC
         baseUrl=role_config.base_url,
         timeoutSeconds=role_config.timeout_seconds,
         apiKeyEnv=role_config.api_key_env,
+        availability=runtime_role_availability(role_config),
     )
 
 

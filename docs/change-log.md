@@ -1,5 +1,32 @@
 # AgentHub Change Log
 
+## P17b-6.4 Planner Provider Availability Display
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/agent_runtime_config.py` | Added Planner runtime availability resolution for configured, missing_key, and unavailable states. |
+| `apps/api/app/main.py` / `apps/api/app/schemas.py` | Exposed Planner runtime availability in runtime config responses. |
+| `apps/api/tests/test_agent_runtime_config.py` | Added API coverage for missing_key availability on Planner API presets. |
+| `apps/web/src/lib/api.ts` | Added availability to runtime config types. |
+| `apps/web/src/components/agent-runtime-settings.tsx` | Displayed Planner provider availability as a runtime settings pill. |
+| `apps/web/src/components/workspace-shell.test.tsx` | Added UI coverage for availability rendering and preset save behavior. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-6.4 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py::test_runtime_config_api_persists_valid_workspace_config -q` | Pass: 1 test. |
+| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 9 files, 45 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-6.3 Planner Runtime Settings UI
 
 **Date:** 2026-06-01

@@ -238,11 +238,18 @@ const runtimeConfig = {
     planner: {
       adapterType: null,
       agentProfileId: null,
+      apiKeyEnv: "DEEPSEEK_API_KEY",
+      availability: "missing_key",
+      baseUrl: "https://api.deepseek.com",
       enabled: false,
       fallbackPolicy: "environment_default",
       mode: "read_only",
+      model: "deepseek-chat",
+      protocol: "openai_compatible_chat",
       providerId: null,
+      providerPresetId: "deepseek_api",
       role: "planner",
+      timeoutSeconds: null,
     },
     review: {
       adapterType: null,
@@ -355,6 +362,7 @@ describe("WorkspaceShell", () => {
       expect(screen.getByText("Claude CLI Planner · unchecked")).toBeTruthy()
       expect(screen.getByText("DeepSeek API")).toBeTruthy()
       expect(screen.getByText("MiMo API")).toBeTruthy()
+      expect(screen.getByText("missing_key")).toBeTruthy()
       expect(screen.getAllByText("Claude Code CLI · unchecked").length).toBeGreaterThan(0)
       expect(screen.getAllByText("Codex CLI · unchecked").length).toBeGreaterThan(0)
       expect(screen.getByText("Save runtime config")).toBeTruthy()
@@ -379,7 +387,7 @@ describe("WorkspaceShell", () => {
     })
 
     fireEvent.change(screen.getByLabelText("Planner API"), {
-      target: { value: "deepseek_api" },
+      target: { value: "mimo_api" },
     })
     fireEvent.click(screen.getByText("Save runtime config"))
 
@@ -388,11 +396,11 @@ describe("WorkspaceShell", () => {
     })
 
     const [, , roles] = apiMocks.updateAgentRuntimeConfig.mock.calls[0]
-    expect(roles.planner.providerPresetId).toBe("deepseek_api")
+    expect(roles.planner.providerPresetId).toBe("mimo_api")
     expect(roles.planner.protocol).toBe("openai_compatible_chat")
-    expect(roles.planner.model).toBe("deepseek-chat")
-    expect(roles.planner.baseUrl).toBe("https://api.deepseek.com")
-    expect(roles.planner.apiKeyEnv).toBe("DEEPSEEK_API_KEY")
+    expect(roles.planner.model).toBe("mimo-v2.5-pro")
+    expect(roles.planner.baseUrl).toBe("https://api.xiaomimimo.com/v1")
+    expect(roles.planner.apiKeyEnv).toBe("MIMO_API_KEY")
   })
 
   it("renders the workspace context ledger for the selected session", async () => {

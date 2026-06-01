@@ -182,6 +182,7 @@ function RuntimeRoleSelector({
       agentProfileId: draftRole.agentProfileId ?? null,
       adapterType: draftRole.adapterType ?? null,
       apiKeyEnv: draftRole.apiKeyEnv ?? null,
+      availability: draftRole.availability ?? null,
       baseUrl: draftRole.baseUrl ?? null,
       enabled: draftRole.enabled,
       fallbackPolicy: draftRole.fallbackPolicy ?? "environment_default",
@@ -270,6 +271,12 @@ function RuntimeRoleSelector({
         {role === "planner" && draftRole.providerPresetId ? (
           <RuntimePill label={draftRole.providerPresetId} tone="provider" />
         ) : null}
+        {role === "planner" && draftRole.availability ? (
+          <RuntimePill
+            label={draftRole.availability}
+            tone={draftRole.availability === "configured" ? "ok" : "danger"}
+          />
+        ) : null}
         {selectedProvider ? (
           <RuntimePill
             label={selectedProvider.available ? "available" : "unavailable"}
@@ -311,6 +318,7 @@ function PlannerProviderControls({
             onChange({
               adapterType: preset?.protocol ?? null,
               apiKeyEnv: preset?.apiKeyEnv ?? null,
+              availability: null,
               baseUrl: preset?.baseUrl ?? null,
               enabled: Boolean(preset),
               mode: "read_only",

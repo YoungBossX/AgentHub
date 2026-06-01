@@ -232,6 +232,7 @@ class RuntimeRoleConfigResponse(ApiModel):
     base_url: Optional[str] = Field(alias="baseUrl")
     timeout_seconds: Optional[int] = Field(alias="timeoutSeconds")
     api_key_env: Optional[str] = Field(alias="apiKeyEnv")
+    availability: Optional[str] = None
 
 
 class RuntimeConfigValidationResponse(ApiModel):

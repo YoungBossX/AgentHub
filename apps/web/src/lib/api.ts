@@ -71,6 +71,7 @@ export type RuntimeRoleConfig = {
   baseUrl: string | null
   timeoutSeconds: number | null
   apiKeyEnv: string | null
+  availability: string | null
 }
 
 export type RuntimeConfigValidation = {
@@ -101,6 +102,7 @@ export type RuntimeRoleConfigInput = {
   baseUrl?: string | null
   timeoutSeconds?: number | null
   apiKeyEnv?: string | null
+  availability?: string | null
 }
 
 export type WorkspaceSession = {

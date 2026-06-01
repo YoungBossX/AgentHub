@@ -100,6 +100,26 @@ class RuntimeRoleResolution:
         }
 
 
+def runtime_role_availability(role_config: RuntimeRoleConfig) -> Optional[str]:
+    if role_config.role != "planner" or not role_config.provider_preset_id:
+        return None
+    preset = get_planner_provider_preset(role_config.provider_preset_id)
+    if preset is None:
+        return "unavailable"
+    try:
+        validate_planner_provider_base_url(
+            preset_id=preset.preset_id,
+            base_url=role_config.base_url or preset.default_base_url,
+        )
+        key_resolution = resolve_planner_api_key(
+            role_config.api_key_env or preset.api_key_env,
+            provider_id=preset.preset_id,
+        )
+    except PlannerProviderError:
+        return "unavailable"
+    return key_resolution.availability
+
+
 def default_runtime_config(workspace_id: Optional[str]) -> RuntimeConfigSnapshot:
     return RuntimeConfigSnapshot(
         workspace_id=workspace_id,
