@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-9.7 Multi-provider Planner API Freeze Documentation
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `docs/project-state.md` | Recorded P17b baseline state, supported Planner API protocols/presets, and real-smoke caveats. |
+| `docs/p17b-freeze-review.md` | Added P17b freeze review with secret-handling, missing-key, fake-client, routing, and baseline evidence. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-9.7 complete. |
+| `docs/change-log.md` | Recorded this freeze documentation task. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-9.6 P6-P17 Baseline Regression
 
 **Date:** 2026-06-01

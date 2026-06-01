@@ -5,6 +5,32 @@ reference instead of repeating long context blocks.
 
 ## P17 Status
 
+### P17b Multi-provider Planner API
+
+P17b implementation and rehearsal completed on 2026-06-01.
+
+AgentHub now has AgentHub-native Planner API provider support for protocol
+families and presets:
+
+- `openai_responses` / `openai_api`;
+- `openai_compatible_chat` / `deepseek_api`, `mimo_api`, and
+  `custom_openai_compatible`;
+- `anthropic_messages` / `anthropic_api`;
+- existing `claude_cli`, `fake_test`, and `disabled`.
+
+Planner API providers only produce `ConversationOutcome` / PlanDraft. They do
+not execute code and do not replace ClaudeCodeAdapter or CodexAdapter coding
+agents. Runtime config stores provider preset/model/baseUrl/timeout/apiKeyEnv
+metadata only; raw API keys are read from environment variables and are not
+returned to the UI, mission trace, planner evidence, or logs.
+
+The freeze rehearsal did not claim real DeepSeek or MiMo success because
+`DEEPSEEK_API_KEY` and `MIMO_API_KEY` were not present in the process
+environment. Missing-key behavior, fake-client OpenAI/OpenAI-compatible/
+Anthropic success paths, `你好` chat routing, Breakout task planning, unsafe
+request refusal, and P6-P17 regression tests passed. Details are recorded in
+`docs/p17b-freeze-review.md`.
+
 ### P17-8 Rehearsal And Freeze Review
 
 P17-8 completed on 2026-05-29.

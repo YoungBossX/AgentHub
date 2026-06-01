@@ -67,7 +67,7 @@
 - [x] 9.4 Verify `帮我做打砖块` -> `task_plan` or honest provider failure, then PlanValidator when a plan is produced.
 - [x] 9.5 Verify unsafe path request -> refusal or approval-required.
 - [x] 9.6 Verify P6-P17 baselines remain intact.
-- [ ] 9.7 Update `docs/project-state.md`, `docs/change-log.md`, and add `docs/p17b-freeze-review.md`.
+- [x] 9.7 Update `docs/project-state.md`, `docs/change-log.md`, and add `docs/p17b-freeze-review.md`.
 - [ ] 9.8 Run `pnpm check`, `pnpm test`, `pnpm demo:api:test`, `git diff --check`, and `openspec validate agenthub-p17b-multi-provider-planner-api --strict`.
 
 ## 10. Explicit Non-goals
