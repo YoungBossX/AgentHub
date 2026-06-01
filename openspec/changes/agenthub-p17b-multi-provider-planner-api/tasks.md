@@ -31,7 +31,7 @@
 
 - [x] 5.1 Add shared ConversationOutcome JSON schema / structured-output payload helpers.
 - [x] 5.2 Use JSON schema mode for `openai_responses` where supported.
-- [ ] 5.3 Use tool/schema or strongest available structured mode for `anthropic_messages`.
+- [x] 5.3 Use tool/schema or strongest available structured mode for `anthropic_messages`.
 - [ ] 5.4 Use capability-driven JSON schema, JSON object, tool-call, response-format, or strict JSON prompt strategy for `openai_compatible_chat`.
 - [ ] 5.5 Add invalid JSON and schema-validation failure tests proving unvalidated output creates no task.
 

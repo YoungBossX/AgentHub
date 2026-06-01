@@ -511,6 +511,18 @@ def test_anthropic_messages_planner_provider_uses_fake_client() -> None:
     assert client.headers["x-api-key"] == "test-secret-value"
     assert client.payload["model"] == "claude-test"
     assert client.payload["tool_choice"]["name"] == "emit_conversation_outcome"
+    assert client.payload["tools"][0]["input_schema"]["required"] == ["outcomeType"]
+    assert (
+        client.payload["tools"][0]["input_schema"]["properties"]["outcomeType"]["enum"]
+        == [
+            "assistant_reply",
+            "task_plan",
+            "clarification",
+            "refusal",
+            "approval_required",
+            "unsupported",
+        ]
+    )
     assert "test-secret-value" not in json.dumps(result.to_metadata())
 
 

@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17b-5.3 Anthropic Planner Tool Schema Mode
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_planner_providers.py` | Strengthened Anthropic Messages provider coverage to assert ConversationOutcome tool/schema output. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-5.3 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_anthropic_messages_planner_provider_uses_fake_client -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-5.2 OpenAI Responses JSON Schema Mode
 
 **Date:** 2026-06-01
