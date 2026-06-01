@@ -1,5 +1,24 @@
 # AgentHub Change Log
 
+## P17b-10.1 Non-goals Confirmation
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Confirmed P17b non-goals and marked the final task complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-9.8 Final Validation
 
 **Date:** 2026-06-01

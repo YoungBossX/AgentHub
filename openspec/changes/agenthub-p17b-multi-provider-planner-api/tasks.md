@@ -72,4 +72,4 @@
 
 ## 10. Explicit Non-goals
 
-- [ ] 10.1 Confirm P17b does not use API LLMs as coding agents, replace ClaudeCodeAdapter or CodexAdapter, store raw API keys, expose secrets to frontend, add CC Switch integration, add provider marketplace, add cloud token manager, add production deploy, bypass PlanValidator, or remove `claude_cli`.
+- [x] 10.1 Confirm P17b does not use API LLMs as coding agents, replace ClaudeCodeAdapter or CodexAdapter, store raw API keys, expose secrets to frontend, add CC Switch integration, add provider marketplace, add cloud token manager, add production deploy, bypass PlanValidator, or remove `claude_cli`.
