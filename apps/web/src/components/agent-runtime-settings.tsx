@@ -11,9 +11,30 @@ import type {
 import { cn } from "@/lib/utils"
 
 const CONFIGURABLE_ROLES = [
-  { label: "Planner Agent", role: "planner", mode: "read_only" },
-  { label: "Frontend Agent", role: "frontend", mode: "frontend" },
-  { label: "Backend Agent", role: "backend", mode: "backend" },
+  {
+    description: "理解用户意图，决定聊天回复、澄清、拒绝或生成 PlanDraft。",
+    label: "Planner LLM",
+    role: "planner",
+    mode: "read_only",
+  },
+  {
+    description: "执行前端目标内的代码修改，并产出 diff / build / preview 证据。",
+    label: "Frontend Agent",
+    role: "frontend",
+    mode: "frontend",
+  },
+  {
+    description: "执行后端目标内的代码修改，并遵守 Target Registry 边界。",
+    label: "Backend Agent",
+    role: "backend",
+    mode: "backend",
+  },
+  {
+    description: "进行只读评审、QA 和风险提示，默认不阻塞预览或部署。",
+    label: "Review Agent",
+    role: "review",
+    mode: "read_only",
+  },
 ] as const
 
 const PLANNER_PROVIDER_PRESETS = [
@@ -93,7 +114,7 @@ export function AgentRuntimeSettings({
   }
 
   return (
-    <section className="mt-4 rounded-lg border border-[var(--border)] bg-white p-3">
+    <section className="rounded-lg border border-[var(--border)] bg-white p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
@@ -106,10 +127,11 @@ export function AgentRuntimeSettings({
         <ShieldCheck aria-hidden="true" className="text-emerald-600" size={16} />
       </div>
 
-      <div className="mt-3 grid gap-3">
-        {CONFIGURABLE_ROLES.map(({ label, mode, role }) => (
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        {CONFIGURABLE_ROLES.map(({ description, label, mode, role }) => (
           <RuntimeRoleSelector
             config={config}
+            description={description}
             draftRole={draftRoles[role] ?? config.roles[role]}
             key={role}
             label={label}
@@ -151,6 +173,7 @@ export function AgentRuntimeSettings({
 
 function RuntimeRoleSelector({
   config,
+  description,
   draftRole,
   label,
   mode,
@@ -158,6 +181,7 @@ function RuntimeRoleSelector({
   role,
 }: {
   config: AgentRuntimeConfig
+  description: string
   draftRole: RuntimeRoleConfigInput
   label: string
   mode: string
@@ -197,9 +221,14 @@ function RuntimeRoleSelector({
   }
 
   return (
-    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-2">
+    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-950">{label}</p>
+        <div>
+          <p className="text-sm font-semibold text-slate-950">{label}</p>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            {description}
+          </p>
+        </div>
         <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
           <input
             checked={draftRole.enabled}
