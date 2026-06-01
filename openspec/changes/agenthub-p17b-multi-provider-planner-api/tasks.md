@@ -68,7 +68,7 @@
 - [x] 9.5 Verify unsafe path request -> refusal or approval-required.
 - [x] 9.6 Verify P6-P17 baselines remain intact.
 - [x] 9.7 Update `docs/project-state.md`, `docs/change-log.md`, and add `docs/p17b-freeze-review.md`.
-- [ ] 9.8 Run `pnpm check`, `pnpm test`, `pnpm demo:api:test`, `git diff --check`, and `openspec validate agenthub-p17b-multi-provider-planner-api --strict`.
+- [x] 9.8 Run `pnpm check`, `pnpm test`, `pnpm demo:api:test`, `git diff --check`, and `openspec validate agenthub-p17b-multi-provider-planner-api --strict`.
 
 ## 10. Explicit Non-goals
 

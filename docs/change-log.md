@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-9.8 Final Validation
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-9.8 complete after final validation passed. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass. |
+| `pnpm test` | Pass: web 45 tests, API 376 tests, demo-api 5 tests. |
+| `pnpm demo:api:test` | Pass: 5 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-9.7 Multi-provider Planner API Freeze Documentation
 
 **Date:** 2026-06-01
