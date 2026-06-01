@@ -1,7 +1,13 @@
 import Link from "next/link"
 import { ArrowLeft, Settings } from "lucide-react"
 
-export default function RuntimeSettingsPage() {
+import { RuntimeSettingsPageClient } from "@/components/runtime-settings-page-client"
+import { getDemoWorkspace } from "@/lib/api"
+
+export default async function RuntimeSettingsPage() {
+  const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:8000"
+  const workspace = await getDemoWorkspace(backendUrl)
+
   return (
     <main className="min-h-screen overflow-y-auto bg-[var(--background)] px-5 py-6">
       <div className="mx-auto grid max-w-5xl gap-6">
@@ -41,6 +47,11 @@ export default function RuntimeSettingsPage() {
             </div>
           </div>
         </section>
+
+        <RuntimeSettingsPageClient
+          backendUrl={backendUrl}
+          workspace={workspace}
+        />
       </div>
     </main>
   )

@@ -7,7 +7,7 @@
 ## 2. Dedicated Runtime Settings Page
 
 - [x] 2.1 Add a dedicated runtime settings page or route for Planner, Frontend, Backend, and Review configuration.
-- [ ] 2.2 Reuse the existing runtime config, provider config, agent profile, and planner preset API calls without changing runtime execution semantics.
+- [x] 2.2 Reuse the existing runtime config, provider config, agent profile, and planner preset API calls without changing runtime execution semantics.
 - [ ] 2.3 Organize the settings page into clear sections for Planner LLM, Frontend Agent, Backend Agent, and Review Agent, with provider/profile metadata visible where useful.
 
 ## 3. Save And Cancel Behavior
