@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Mapping, Protocol
 from urllib.parse import urlparse, urlunparse
 
 from app.config import Settings, get_settings
@@ -18,6 +19,7 @@ PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT = "openai_compatible_chat"
 PLANNER_PROTOCOL_ANTHROPIC_MESSAGES = "anthropic_messages"
 DEFAULT_CLAUDE_PLANNER_BINARY = "claude"
 STDERR_LIMIT = 1200
+API_KEY_ENV_PATTERN = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 
 
 @dataclass(frozen=True)
@@ -275,6 +277,58 @@ class PlannerProviderError(ValueError):
             "errorSummary": self.summary,
             "providerId": self.provider_id,
         }
+
+
+@dataclass(frozen=True)
+class PlannerApiKeyResolution:
+    api_key_env: str
+    api_key: str | None
+    availability: str
+    error_code: str | None = None
+    error_summary: str | None = None
+
+    def to_metadata(self) -> dict[str, Any]:
+        metadata: dict[str, Any] = {
+            "apiKeyEnv": self.api_key_env,
+            "availability": self.availability,
+        }
+        if self.error_code:
+            metadata["errorCode"] = self.error_code
+        if self.error_summary:
+            metadata["errorSummary"] = self.error_summary
+        return metadata
+
+
+def resolve_planner_api_key(
+    api_key_env: str,
+    *,
+    provider_id: str | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> PlannerApiKeyResolution:
+    normalized_env = api_key_env.strip()
+    if not normalized_env or not API_KEY_ENV_PATTERN.fullmatch(normalized_env):
+        raise PlannerProviderError(
+            code="INVALID_PLANNER_API_KEY_ENV",
+            summary="Planner API key env name must be an uppercase environment variable name.",
+            provider_id=provider_id,
+        )
+
+    env = os.environ if environ is None else environ
+    api_key = env.get(normalized_env)
+    if not api_key:
+        return PlannerApiKeyResolution(
+            api_key_env=normalized_env,
+            api_key=None,
+            availability="missing_key",
+            error_code="PLANNER_API_KEY_MISSING",
+            error_summary=f"Planner API key env {normalized_env} is not configured.",
+        )
+
+    return PlannerApiKeyResolution(
+        api_key_env=normalized_env,
+        api_key=api_key,
+        availability="configured",
+    )
 
 
 @dataclass(frozen=True)

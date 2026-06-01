@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-3.1 Environment-only Planner API Key Resolver
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added an environment-only Planner API key resolver with missing-key metadata and invalid env-name rejection. |
+| `apps/api/tests/test_planner_providers.py` | Added tests for configured keys, missing keys, invalid env names, and secret-free metadata. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-3.1 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_resolve_planner_api_key_reads_environment_without_exposing_secret tests/test_planner_providers.py::test_resolve_planner_api_key_reports_missing_key_without_api_call tests/test_planner_providers.py::test_resolve_planner_api_key_rejects_invalid_env_names -q` | Pass: 6 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-2.4 Custom Planner Base URL Validation
 
 **Date:** 2026-06-01

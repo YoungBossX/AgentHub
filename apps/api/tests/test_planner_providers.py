@@ -16,6 +16,7 @@ from app.planner_providers import (
     get_planner_provider_preset,
     list_planner_provider_protocols,
     list_planner_provider_presets,
+    resolve_planner_api_key,
     resolve_planner_provider,
     validate_planner_provider_base_url,
 )
@@ -175,6 +176,48 @@ def test_validate_planner_provider_base_url_rejects_unsupported_override() -> No
         )
 
     assert exc_info.value.code == "UNSUPPORTED_PLANNER_BASE_URL_OVERRIDE"
+
+
+def test_resolve_planner_api_key_reads_environment_without_exposing_secret() -> None:
+    resolution = resolve_planner_api_key(
+        "DEEPSEEK_API_KEY",
+        provider_id="deepseek_api",
+        environ={"DEEPSEEK_API_KEY": "test-secret-value"},
+    )
+
+    assert resolution.api_key == "test-secret-value"
+    assert resolution.availability == "configured"
+    metadata = resolution.to_metadata()
+    assert metadata == {
+        "apiKeyEnv": "DEEPSEEK_API_KEY",
+        "availability": "configured",
+    }
+    assert "test-secret-value" not in json.dumps(metadata)
+
+
+def test_resolve_planner_api_key_reports_missing_key_without_api_call() -> None:
+    resolution = resolve_planner_api_key(
+        "MIMO_API_KEY",
+        provider_id="mimo_api",
+        environ={},
+    )
+
+    assert resolution.api_key is None
+    assert resolution.availability == "missing_key"
+    assert resolution.to_metadata() == {
+        "apiKeyEnv": "MIMO_API_KEY",
+        "availability": "missing_key",
+        "errorCode": "PLANNER_API_KEY_MISSING",
+        "errorSummary": "Planner API key env MIMO_API_KEY is not configured.",
+    }
+
+
+@pytest.mark.parametrize("api_key_env", ["", "sk-raw-key", "deepseek_api_key", "API KEY"])
+def test_resolve_planner_api_key_rejects_invalid_env_names(api_key_env: str) -> None:
+    with pytest.raises(PlannerProviderError) as exc_info:
+        resolve_planner_api_key(api_key_env, environ={})
+
+    assert exc_info.value.code == "INVALID_PLANNER_API_KEY_ENV"
 
 
 def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
