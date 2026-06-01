@@ -1,5 +1,28 @@
 # AgentHub Change Log
 
+## P17b-2.1 Planner Provider Presets
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added built-in Planner provider preset metadata for OpenAI, DeepSeek, MiMo, Anthropic, and custom OpenAI-compatible APIs. |
+| `apps/api/tests/test_planner_providers.py` | Added preset registry coverage. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-2.1 complete. |
+| `docs/change-log.md` | Recorded this implementation. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_preset_registry_lists_builtin_presets -q` | Pass: 1 test. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-1.4 Planner Protocol Registry Tests
 
 **Date:** 2026-06-01

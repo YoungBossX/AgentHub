@@ -110,6 +110,54 @@ def get_planner_provider_protocol(protocol: str) -> PlannerProviderProtocolMetad
     return None
 
 
+@dataclass(frozen=True)
+class PlannerProviderPresetMetadata:
+    preset_id: str
+    display_name: str
+
+    def to_metadata(self) -> dict[str, Any]:
+        return {
+            "presetId": self.preset_id,
+            "displayName": self.display_name,
+        }
+
+
+BUILT_IN_PLANNER_PROVIDER_PRESETS: tuple[PlannerProviderPresetMetadata, ...] = (
+    PlannerProviderPresetMetadata(
+        preset_id="openai_api",
+        display_name="OpenAI API",
+    ),
+    PlannerProviderPresetMetadata(
+        preset_id="deepseek_api",
+        display_name="DeepSeek API",
+    ),
+    PlannerProviderPresetMetadata(
+        preset_id="mimo_api",
+        display_name="MiMo API",
+    ),
+    PlannerProviderPresetMetadata(
+        preset_id="anthropic_api",
+        display_name="Anthropic API",
+    ),
+    PlannerProviderPresetMetadata(
+        preset_id="custom_openai_compatible",
+        display_name="Custom OpenAI-compatible API",
+    ),
+)
+
+
+def list_planner_provider_presets() -> list[PlannerProviderPresetMetadata]:
+    return list(BUILT_IN_PLANNER_PROVIDER_PRESETS)
+
+
+def get_planner_provider_preset(preset_id: str) -> PlannerProviderPresetMetadata | None:
+    normalized = preset_id.strip().lower()
+    for item in BUILT_IN_PLANNER_PROVIDER_PRESETS:
+        if item.preset_id == normalized:
+            return item
+    return None
+
+
 class PlannerProviderError(ValueError):
     def __init__(
         self,

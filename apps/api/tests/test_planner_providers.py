@@ -13,7 +13,9 @@ from app.planner_providers import (
     FakePlannerProvider,
     PlannerProviderError,
     get_planner_provider_protocol,
+    get_planner_provider_preset,
     list_planner_provider_protocols,
+    list_planner_provider_presets,
     resolve_planner_provider,
 )
 
@@ -58,6 +60,24 @@ def test_planner_provider_protocol_registry_lists_supported_protocols() -> None:
     assert protocols["disabled"].real_provider is False
     assert get_planner_provider_protocol("CLAUDE_CLI").protocol == "claude_cli"
     assert get_planner_provider_protocol("mystery") is None
+
+
+def test_planner_provider_preset_registry_lists_builtin_presets() -> None:
+    presets = {item.preset_id: item for item in list_planner_provider_presets()}
+
+    assert set(presets) == {
+        "openai_api",
+        "deepseek_api",
+        "mimo_api",
+        "anthropic_api",
+        "custom_openai_compatible",
+    }
+    assert presets["openai_api"].display_name == "OpenAI API"
+    assert presets["deepseek_api"].display_name == "DeepSeek API"
+    assert presets["mimo_api"].display_name == "MiMo API"
+    assert presets["anthropic_api"].display_name == "Anthropic API"
+    assert get_planner_provider_preset("OPENAI_API").preset_id == "openai_api"
+    assert get_planner_provider_preset("unknown") is None
 
 
 def test_planner_provider_protocol_metadata_exposes_capability_flags() -> None:
