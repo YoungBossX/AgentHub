@@ -340,7 +340,7 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("计划中")).toBeTruthy()
   })
 
-  it("renders agent runtime settings for planner, frontend, and backend", async () => {
+  it("keeps detailed runtime settings out of the chat sidebar", async () => {
     apiMocks.listSessionMessages.mockResolvedValue([])
     apiMocks.listSessionTasks.mockResolvedValue([])
 
@@ -354,57 +354,17 @@ describe("WorkspaceShell", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("Agent Runtime Settings")).toBeTruthy()
-      expect(screen.getByText("Planner Agent")).toBeTruthy()
-      expect(screen.getAllByText("Frontend Agent").length).toBeGreaterThan(0)
-      expect(screen.getByText("Backend Agent")).toBeTruthy()
-      expect(screen.getByText("Source: default")).toBeTruthy()
-      expect(screen.getByText("Claude CLI Planner · unchecked")).toBeTruthy()
-      expect(screen.getByText("DeepSeek API")).toBeTruthy()
-      expect(screen.getByText("MiMo API")).toBeTruthy()
-      expect(screen.getByText("missing_key")).toBeTruthy()
-      expect(screen.getAllByText("Claude Code CLI · unchecked").length).toBeGreaterThan(0)
-      expect(screen.getAllByText("Codex CLI · unchecked").length).toBeGreaterThan(0)
-      expect(screen.getByText("Save runtime config")).toBeTruthy()
+      expect(screen.getByText("最近会话")).toBeTruthy()
     })
-  })
 
-  it("saves planner API preset runtime settings", async () => {
-    apiMocks.listSessionMessages.mockResolvedValue([])
-    apiMocks.listSessionTasks.mockResolvedValue([])
-
-    render(
-      <WorkspaceShell
-        backendUrl="http://127.0.0.1:8000"
-        initialAgents={initialAgents}
-        initialSessions={initialSessions}
-        workspace={workspace}
-      />,
+    expect(screen.getByLabelText("打开运行设置").getAttribute("href")).toBe(
+      "/settings/runtime",
     )
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Planner API")).toBeTruthy()
-    })
-
-    fireEvent.change(screen.getByLabelText("Planner API"), {
-      target: { value: "mimo_api" },
-    })
-    fireEvent.click(screen.getByText("Save runtime config"))
-
-    await waitFor(() => {
-      expect(apiMocks.updateAgentRuntimeConfig).toHaveBeenCalled()
-    })
-
-    const [, , roles] = apiMocks.updateAgentRuntimeConfig.mock.calls[0]
-    expect(roles.planner.providerPresetId).toBe("mimo_api")
-    expect(roles.planner.protocol).toBe("openai_compatible_chat")
-    expect(roles.planner.model).toBe("mimo-v2.5-pro")
-    expect(roles.planner.baseUrl).toBe("https://api.xiaomimimo.com/v1")
-    expect(roles.planner.apiKeyEnv).toBe("MIMO_API_KEY")
-    expect(roles.frontend.providerPresetId).toBeUndefined()
-    expect(roles.frontend.apiKeyEnv).toBeUndefined()
-    expect(roles.backend.providerPresetId).toBeUndefined()
-    expect(roles.backend.apiKeyEnv).toBeUndefined()
+    expect(screen.queryByText("Agent Runtime Settings")).toBeNull()
+    expect(screen.queryByLabelText("Planner API")).toBeNull()
+    expect(screen.queryByText("Save runtime config")).toBeNull()
+    expect(apiMocks.getAgentRuntimeConfig).not.toHaveBeenCalled()
+    expect(apiMocks.updateAgentRuntimeConfig).not.toHaveBeenCalled()
   })
 
   it("renders the workspace context ledger for the selected session", async () => {
