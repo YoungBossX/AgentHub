@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-4.1 OpenAI Responses Planner Provider
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Added a fake-client-testable OpenAI Responses PlannerProvider with env-only key lookup and structured-output request payload. |
+| `apps/api/tests/test_planner_providers.py` | Added success and missing-key tests for the OpenAI Responses provider without real API calls. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-4.1 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_openai_responses_planner_provider_uses_fake_client tests/test_planner_providers.py::test_openai_responses_planner_provider_missing_key_fails_without_call -q` | Pass: 2 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-3.4 Planner API Missing-key And Secret-leak Tests
 
 **Date:** 2026-06-01

@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol
 from urllib.parse import urlparse, urlunparse
+from urllib.request import Request, urlopen
 
 from app.config import Settings, get_settings
 
@@ -379,6 +380,41 @@ class PlannerCommandRunner(Protocol):
         ...
 
 
+class PlannerHttpClient(Protocol):
+    def post_json(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str],
+        payload: Mapping[str, Any],
+        timeout: int,
+    ) -> dict[str, Any]:
+        ...
+
+
+class UrllibPlannerHttpClient:
+    def post_json(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str],
+        payload: Mapping[str, Any],
+        timeout: int,
+    ) -> dict[str, Any]:
+        request = Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=dict(headers),
+            method="POST",
+        )
+        with urlopen(request, timeout=timeout) as response:
+            body = response.read().decode("utf-8")
+        parsed = json.loads(body)
+        if not isinstance(parsed, dict):
+            raise ValueError("Planner API response must be a JSON object.")
+        return parsed
+
+
 class SubprocessPlannerCommandRunner:
     def run(
         self,
@@ -573,6 +609,98 @@ class ClaudeCliPlannerProvider:
         )
 
 
+class OpenAIResponsesPlannerProvider:
+    provider_id = "openai-api-planner"
+    provider_type = PLANNER_PROTOCOL_OPENAI_RESPONSES
+    planner_source = "real_llm"
+
+    def __init__(
+        self,
+        *,
+        http_client: PlannerHttpClient | None = None,
+        api_key_env: str = "OPENAI_API_KEY",
+        model: str = "gpt-4.1-mini",
+        base_url: str = "https://api.openai.com/v1",
+        timeout_sec: int = 60,
+        environ: Mapping[str, str] | None = None,
+    ) -> None:
+        self._http_client = http_client or UrllibPlannerHttpClient()
+        self._api_key_env = api_key_env
+        self._model = model
+        self._base_url = base_url.rstrip("/")
+        self._timeout_sec = timeout_sec
+        self._environ = environ
+
+    def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
+        started = time.monotonic()
+        key_resolution = resolve_planner_api_key(
+            self._api_key_env,
+            provider_id=self.provider_id,
+            environ=self._environ,
+        )
+        if key_resolution.api_key is None:
+            return self._api_error_result(
+                key_resolution.error_code or "PLANNER_API_KEY_MISSING",
+                key_resolution.error_summary or "Planner API key is missing.",
+                started,
+            )
+
+        try:
+            response = self._http_client.post_json(
+                f"{self._base_url}/responses",
+                headers={
+                    "Authorization": f"Bearer {key_resolution.api_key}",
+                    "Content-Type": "application/json",
+                },
+                payload=_openai_responses_payload(self._model, planner_input),
+                timeout=self._timeout_sec,
+            )
+            raw_output = _extract_openai_responses_text(response)
+        except TimeoutError:
+            return self._api_error_result(
+                "PLANNER_TIMEOUT",
+                f"OpenAI Responses planner timed out after {self._timeout_sec} seconds.",
+                started,
+            )
+        except Exception as exc:
+            return self._api_error_result(
+                _planner_error_code_for_text(str(exc)),
+                _excerpt(str(exc) or "OpenAI Responses planner failed."),
+                started,
+            )
+
+        if not raw_output.strip():
+            return self._api_error_result(
+                "PLANNER_EMPTY_OUTPUT",
+                "OpenAI Responses planner returned no output.",
+                started,
+            )
+        return PlannerProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            planner_source=self.planner_source,
+            status="succeeded",
+            raw_output=raw_output.strip(),
+            duration_ms=_duration_ms(started),
+        )
+
+    def _api_error_result(
+        self,
+        code: str,
+        summary: str,
+        started: float,
+    ) -> PlannerProviderResult:
+        return PlannerProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            planner_source=self.planner_source,
+            status="failed",
+            duration_ms=_duration_ms(started),
+            error_code=code,
+            error_summary=summary,
+        )
+
+
 def resolve_planner_provider(
     settings: Settings | None = None,
     *,
@@ -600,6 +728,21 @@ def resolve_planner_provider(
         or selected_adapter_type == PLANNER_PROVIDER_CLAUDE_CLI
     ):
         return ClaudeCliPlannerProvider(
+            timeout_sec=resolved_settings.llm_planner_timeout_sec,
+        )
+    if (
+        selected_provider_id in {"openai_api", "openai-api-planner"}
+        or selected_adapter_type == PLANNER_PROTOCOL_OPENAI_RESPONSES
+    ):
+        preset = get_planner_provider_preset("openai_api")
+        return OpenAIResponsesPlannerProvider(
+            api_key_env=preset.api_key_env if preset is not None else "OPENAI_API_KEY",
+            model=preset.default_model if preset is not None else "gpt-4.1-mini",
+            base_url=(
+                preset.default_base_url
+                if preset is not None and preset.default_base_url is not None
+                else "https://api.openai.com/v1"
+            ),
             timeout_sec=resolved_settings.llm_planner_timeout_sec,
         )
     raise PlannerProviderError(
@@ -634,3 +777,104 @@ def _planner_error_code_for_text(text: str) -> str:
     if "timeout" in normalized or "timed out" in normalized:
         return "PLANNER_TIMEOUT"
     return "PLANNER_RUNTIME_ERROR"
+
+
+def _openai_responses_payload(model: str, planner_input: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "model": model,
+        "input": [
+            {
+                "role": "developer",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": _planner_system_instruction(),
+                    }
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": json.dumps(
+                            planner_input,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                        ),
+                    }
+                ],
+            },
+        ],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "conversation_outcome",
+                "strict": True,
+                "schema": _conversation_outcome_schema(),
+            }
+        },
+    }
+
+
+def _planner_system_instruction() -> str:
+    return (
+        "You are AgentHub's Conversation Router and Planner LLM. Return one "
+        "ConversationOutcome JSON object only. You may answer normal chat, ask "
+        "clarifying questions, refuse unsafe requests, require approval, or "
+        "return a task_plan with a PlanDraft. Do not execute code. Do not call "
+        "coding agents directly. Every executable plan will be validated by "
+        "AgentHub before scheduling."
+    )
+
+
+def _conversation_outcome_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": True,
+        "properties": {
+            "outcomeType": {
+                "type": "string",
+                "enum": [
+                    "assistant_reply",
+                    "task_plan",
+                    "clarification",
+                    "refusal",
+                    "approval_required",
+                    "unsupported",
+                ],
+            },
+            "reply": {"type": ["string", "null"]},
+            "reason": {"type": ["string", "null"]},
+            "riskLevel": {"type": ["string", "null"]},
+            "planDraft": {"type": ["object", "null"], "additionalProperties": True},
+            "plannerProvider": {"type": ["object", "null"], "additionalProperties": True},
+            "validationResult": {"type": ["string", "null"]},
+            "fallbackMetadata": {"type": ["object", "null"], "additionalProperties": True},
+            "errorMetadata": {"type": ["object", "null"], "additionalProperties": True},
+        },
+        "required": ["outcomeType"],
+    }
+
+
+def _extract_openai_responses_text(response: Mapping[str, Any]) -> str:
+    output_text = response.get("output_text")
+    if isinstance(output_text, str):
+        return output_text
+    output = response.get("output")
+    if isinstance(output, list):
+        chunks: list[str] = []
+        for item in output:
+            if not isinstance(item, Mapping):
+                continue
+            content = item.get("content")
+            if not isinstance(content, list):
+                continue
+            for part in content:
+                if not isinstance(part, Mapping):
+                    continue
+                text = part.get("text")
+                if isinstance(text, str):
+                    chunks.append(text)
+        return "".join(chunks)
+    return ""

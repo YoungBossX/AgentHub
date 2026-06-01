@@ -11,6 +11,7 @@ from app.planner_providers import (
     ClaudeCliPlannerProvider,
     DisabledPlannerProvider,
     FakePlannerProvider,
+    OpenAIResponsesPlannerProvider,
     PlannerProviderError,
     get_planner_provider_protocol,
     get_planner_provider_preset,
@@ -354,6 +355,55 @@ def test_resolve_planner_provider_supports_claude_cli() -> None:
     assert provider.planner_source == "real_llm"
 
 
+def test_openai_responses_planner_provider_uses_fake_client() -> None:
+    client = FakePlannerHttpClient(
+        {
+            "output_text": json.dumps(
+                {
+                    "outcomeType": "assistant_reply",
+                    "reply": "你好，我可以帮你规划任务。",
+                }
+            )
+        }
+    )
+    provider = OpenAIResponsesPlannerProvider(
+        http_client=client,
+        api_key_env="OPENAI_API_KEY",
+        model="gpt-test",
+        base_url="https://api.openai.test/v1",
+        timeout_sec=7,
+        environ={"OPENAI_API_KEY": "test-secret-value"},
+    )
+
+    result = provider.create_plan({"originalUserRequest": "你好"})
+
+    assert result.status == "succeeded"
+    assert result.provider_type == "openai_responses"
+    assert result.planner_source == "real_llm"
+    assert json.loads(result.raw_output)["outcomeType"] == "assistant_reply"
+    assert client.url == "https://api.openai.test/v1/responses"
+    assert client.timeout == 7
+    assert client.headers["Authorization"] == "Bearer test-secret-value"
+    assert client.payload["model"] == "gpt-test"
+    assert client.payload["text"]["format"]["type"] == "json_schema"
+    assert "test-secret-value" not in json.dumps(result.to_metadata())
+
+
+def test_openai_responses_planner_provider_missing_key_fails_without_call() -> None:
+    client = FakePlannerHttpClient({"output_text": "{}"})
+    provider = OpenAIResponsesPlannerProvider(
+        http_client=client,
+        api_key_env="OPENAI_API_KEY",
+        environ={},
+    )
+
+    result = provider.create_plan({"originalUserRequest": "你好"})
+
+    assert result.status == "failed"
+    assert result.error_code == "PLANNER_API_KEY_MISSING"
+    assert client.url is None
+
+
 def test_resolve_planner_provider_supports_runtime_config_provider_id() -> None:
     provider = resolve_planner_provider(
         Settings(llm_planner_provider="disabled"),
@@ -514,3 +564,28 @@ class FakePlannerCommandRunner:
         if isinstance(self.result, BaseException):
             raise self.result
         return self.result
+
+
+class FakePlannerHttpClient:
+    def __init__(self, response: dict[str, object] | BaseException) -> None:
+        self.response = response
+        self.url: str | None = None
+        self.headers: dict[str, str] = {}
+        self.payload: dict[str, object] = {}
+        self.timeout: int | None = None
+
+    def post_json(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        payload: dict[str, object],
+        timeout: int,
+    ) -> dict[str, object]:
+        self.url = url
+        self.headers = headers
+        self.payload = payload
+        self.timeout = timeout
+        if isinstance(self.response, BaseException):
+            raise self.response
+        return self.response
