@@ -14,7 +14,7 @@ from app.llm_planner import (
 )
 from app.mission_trace import build_session_mission_trace
 from app.models import Agent, Message, Session, Task, Workspace
-from app.planner_providers import FakePlannerProvider
+from app.planner_providers import FakePlannerProvider, OpenAIResponsesPlannerProvider
 from app.target_registry import DEMO_FRONTEND_TARGET_ID
 
 
@@ -256,6 +256,89 @@ def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None
         create_llm_plan_tasks(db, message, provider=provider)
 
 
+def test_api_planner_provider_output_flows_through_plan_validator(db: DbSession) -> None:
+    message = _message(db, "Build a playable canvas game")
+    provider = OpenAIResponsesPlannerProvider(
+        http_client=FakePlannerHttpClient(
+            {
+                "output_text": json.dumps(
+                    {
+                        "outcomeType": "task_plan",
+                        "reason": "Create a validated frontend task.",
+                        "planDraft": _valid_plan_payload(
+                            [
+                                {
+                                    "title": "Implement playable game",
+                                    "intentType": "frontend_change",
+                                    "role": "frontend",
+                                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                                    "plannedFiles": ["apps/demo/src/App.tsx"],
+                                    "expectedArtifactTypes": ["diff", "review"],
+                                    "acceptanceCriteria": ["Keyboard controls work"],
+                                    "validationExpectations": ["pnpm build"],
+                                    "riskLevel": "medium",
+                                    "requiresApproval": False,
+                                }
+                            ]
+                        ),
+                    }
+                )
+            }
+        ),
+        api_key_env="OPENAI_API_KEY",
+        environ={"OPENAI_API_KEY": "test-secret-value"},
+    )
+
+    outcome = create_llm_plan_tasks(db, message, provider=provider)
+
+    assert len(outcome.tasks) == 1
+    plan = json.loads(outcome.tasks[0].plan_json)
+    assert plan["plannerProvider"]["providerType"] == "openai_responses"
+    assert plan["plannerEvidence"]["validationResult"] == "passed"
+    assert "test-secret-value" not in json.dumps(plan)
+
+
+def test_api_planner_provider_unsafe_plan_is_rejected_before_persistence(
+    db: DbSession,
+) -> None:
+    message = _message(db, "Edit unsafe file")
+    provider = OpenAIResponsesPlannerProvider(
+        http_client=FakePlannerHttpClient(
+            {
+                "output_text": json.dumps(
+                    {
+                        "outcomeType": "task_plan",
+                        "reason": "This unsafe plan must not persist.",
+                        "planDraft": _valid_plan_payload(
+                            [
+                                {
+                                    "title": "Edit unsafe file",
+                                    "intentType": "frontend_change",
+                                    "role": "frontend",
+                                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                                    "plannedFiles": ["apps/api/app/main.py"],
+                                    "expectedArtifactTypes": ["diff"],
+                                    "acceptanceCriteria": ["Should be rejected"],
+                                    "validationExpectations": ["pnpm build"],
+                                    "riskLevel": "high",
+                                    "requiresApproval": False,
+                                }
+                            ]
+                        ),
+                    }
+                )
+            }
+        ),
+        api_key_env="OPENAI_API_KEY",
+        environ={"OPENAI_API_KEY": "test-secret-value"},
+    )
+
+    with pytest.raises(LLMPlannerError, match="unsupported target files"):
+        create_llm_plan_tasks(db, message, provider=provider)
+
+    assert db.exec(select(Task)).all() == []
+
+
 def test_llm_planner_rejects_role_capability_target_and_command_policy_violations(
     db: DbSession,
 ) -> None:
@@ -337,3 +420,33 @@ def _provider_for_single_task(task: dict) -> FakePlannerProvider:
             "tasks": [task],
         },
     )
+
+
+def _valid_plan_payload(tasks: list[dict[str, object]]) -> dict[str, object]:
+    return {
+        "planId": "plan-api-provider-test",
+        "planner": "llm_v1",
+        "plannerMode": "llm_v1",
+        "version": 1,
+        "intent": "frontend_game",
+        "rationale": "API planner output must pass the same validator path.",
+        "acceptanceCriteria": ["Plan is validated"],
+        "validationExpectations": ["pnpm build"],
+        "guardrailNotes": ["Stay inside target allowed paths"],
+        "tasks": tasks,
+    }
+
+
+class FakePlannerHttpClient:
+    def __init__(self, response: dict[str, object]) -> None:
+        self.response = response
+
+    def post_json(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        payload: dict[str, object],
+        timeout: int,
+    ) -> dict[str, object]:
+        return self.response

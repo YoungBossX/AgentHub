@@ -24,7 +24,7 @@
 - [x] 4.1 Implement fake-client-testable `openai_responses` PlannerProvider.
 - [x] 4.2 Implement fake-client-testable `openai_compatible_chat` PlannerProvider for DeepSeek, MiMo, OpenRouter, vLLM, and custom compatible endpoints.
 - [x] 4.3 Implement fake-client-testable `anthropic_messages` PlannerProvider.
-- [ ] 4.4 Route all provider responses through ConversationOutcome parsing, PlanDraft schema validation, and PlanValidator before task persistence.
+- [x] 4.4 Route all provider responses through ConversationOutcome parsing, PlanDraft schema validation, and PlanValidator before task persistence.
 - [ ] 4.5 Preserve non-task outcomes as `orchestrator` replies with no TaskRun.
 
 ## 5. Structured Output Strategy

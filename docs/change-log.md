@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## P17b-4.4 API Planner Validation Path
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/tests/test_llm_planner.py` | Added API-provider integration coverage proving task plans pass ConversationOutcome, PlanDraft schema validation, and PlanValidator before persistence. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-4.4 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_api_planner_provider_output_flows_through_plan_validator tests/test_llm_planner.py::test_api_planner_provider_unsafe_plan_is_rejected_before_persistence -q` | Pass: 2 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-4.3 Anthropic Messages Planner Provider
 
 **Date:** 2026-06-01
