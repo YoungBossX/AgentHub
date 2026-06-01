@@ -1,5 +1,27 @@
 # AgentHub Change Log
 
+## P17b-7.1 Planner Provider Evidence Metadata
+
+**Date:** 2026-06-01
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/planner_providers.py` | Extended PlannerProviderResult metadata with provider preset, protocol, model, and base URL for API planner evidence. |
+| `apps/api/tests/test_planner_providers.py` | Added metadata assertions for OpenAI, OpenAI-compatible, and Anthropic planner providers without exposing secrets. |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-7.1 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_openai_responses_planner_provider_uses_fake_client tests/test_planner_providers.py::test_openai_compatible_chat_planner_provider_uses_fake_client tests/test_planner_providers.py::test_anthropic_messages_planner_provider_uses_fake_client -q` | Pass: 3 tests. |
+| `git diff --check` | Pass. |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+
+---
+
 ## P17b-6.5 Planner And Coding Runtime Settings Separation
 
 **Date:** 2026-06-01

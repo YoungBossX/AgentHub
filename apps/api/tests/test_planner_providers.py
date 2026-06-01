@@ -418,7 +418,12 @@ def test_openai_responses_planner_provider_uses_fake_client() -> None:
             "unsupported",
         ]
     )
-    assert "test-secret-value" not in json.dumps(result.to_metadata())
+    metadata = result.to_metadata()
+    assert metadata["providerPresetId"] == "openai_api"
+    assert metadata["protocol"] == "openai_responses"
+    assert metadata["model"] == "gpt-test"
+    assert metadata["baseUrl"] == "https://api.openai.test/v1"
+    assert "test-secret-value" not in json.dumps(metadata)
 
 
 def test_openai_responses_planner_provider_missing_key_fails_without_call() -> None:
@@ -474,7 +479,11 @@ def test_openai_compatible_chat_planner_provider_uses_fake_client() -> None:
     assert client.headers["Authorization"] == "Bearer test-secret-value"
     assert client.payload["model"] == "deepseek-chat"
     assert client.payload["response_format"] == {"type": "json_object"}
-    assert "test-secret-value" not in json.dumps(result.to_metadata())
+    metadata = result.to_metadata()
+    assert metadata["protocol"] == "openai_compatible_chat"
+    assert metadata["model"] == "deepseek-chat"
+    assert metadata["baseUrl"] == "https://api.deepseek.test"
+    assert "test-secret-value" not in json.dumps(metadata)
 
 
 def test_openai_compatible_chat_planner_provider_missing_key_fails_without_call() -> None:
@@ -540,7 +549,12 @@ def test_anthropic_messages_planner_provider_uses_fake_client() -> None:
             "unsupported",
         ]
     )
-    assert "test-secret-value" not in json.dumps(result.to_metadata())
+    metadata = result.to_metadata()
+    assert metadata["providerPresetId"] == "anthropic_api"
+    assert metadata["protocol"] == "anthropic_messages"
+    assert metadata["model"] == "claude-test"
+    assert metadata["baseUrl"] == "https://api.anthropic.test"
+    assert "test-secret-value" not in json.dumps(metadata)
 
 
 def test_anthropic_messages_planner_provider_missing_key_fails_without_call() -> None:

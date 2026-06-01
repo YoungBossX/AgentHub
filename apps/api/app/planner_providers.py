@@ -360,6 +360,10 @@ class PlannerProviderResult:
     error_code: str | None = None
     error_summary: str | None = None
     fallback_reason: str | None = None
+    provider_preset_id: str | None = None
+    protocol: str | None = None
+    model: str | None = None
+    base_url: str | None = None
 
     def to_metadata(self) -> dict[str, Any]:
         metadata: dict[str, Any] = {
@@ -375,6 +379,14 @@ class PlannerProviderResult:
             metadata["errorSummary"] = self.error_summary
         if self.fallback_reason:
             metadata["fallbackReason"] = self.fallback_reason
+        if self.provider_preset_id:
+            metadata["providerPresetId"] = self.provider_preset_id
+        if self.protocol:
+            metadata["protocol"] = self.protocol
+        if self.model:
+            metadata["model"] = self.model
+        if self.base_url:
+            metadata["baseUrl"] = self.base_url
         return metadata
 
 
@@ -638,6 +650,7 @@ class OpenAIResponsesPlannerProvider:
         api_key_env: str = "OPENAI_API_KEY",
         model: str = "gpt-4.1-mini",
         base_url: str = "https://api.openai.com/v1",
+        provider_preset_id: str | None = "openai_api",
         timeout_sec: int = 60,
         environ: Mapping[str, str] | None = None,
     ) -> None:
@@ -645,6 +658,7 @@ class OpenAIResponsesPlannerProvider:
         self._api_key_env = api_key_env
         self._model = model
         self._base_url = base_url.rstrip("/")
+        self._provider_preset_id = provider_preset_id
         self._timeout_sec = timeout_sec
         self._environ = environ
 
@@ -699,6 +713,10 @@ class OpenAIResponsesPlannerProvider:
             status="succeeded",
             raw_output=raw_output.strip(),
             duration_ms=_duration_ms(started),
+            provider_preset_id=self._provider_preset_id,
+            protocol=self.provider_type,
+            model=self._model,
+            base_url=self._base_url,
         )
 
     def _api_error_result(
@@ -715,6 +733,10 @@ class OpenAIResponsesPlannerProvider:
             duration_ms=_duration_ms(started),
             error_code=code,
             error_summary=summary,
+            provider_preset_id=self._provider_preset_id,
+            protocol=self.provider_type,
+            model=self._model,
+            base_url=self._base_url,
         )
 
 
@@ -730,6 +752,7 @@ class OpenAICompatibleChatPlannerProvider:
         api_key_env: str,
         model: str,
         base_url: str,
+        provider_preset_id: str | None = None,
         timeout_sec: int = 60,
         environ: Mapping[str, str] | None = None,
     ) -> None:
@@ -738,6 +761,7 @@ class OpenAICompatibleChatPlannerProvider:
         self._api_key_env = api_key_env
         self._model = model
         self._base_url = base_url.rstrip("/")
+        self._provider_preset_id = provider_preset_id
         self._timeout_sec = timeout_sec
         self._environ = environ
 
@@ -792,6 +816,10 @@ class OpenAICompatibleChatPlannerProvider:
             status="succeeded",
             raw_output=raw_output.strip(),
             duration_ms=_duration_ms(started),
+            provider_preset_id=self._provider_preset_id,
+            protocol=self.provider_type,
+            model=self._model,
+            base_url=self._base_url,
         )
 
     def _api_error_result(
@@ -808,6 +836,10 @@ class OpenAICompatibleChatPlannerProvider:
             duration_ms=_duration_ms(started),
             error_code=code,
             error_summary=summary,
+            provider_preset_id=self._provider_preset_id,
+            protocol=self.provider_type,
+            model=self._model,
+            base_url=self._base_url,
         )
 
 
@@ -823,6 +855,7 @@ class AnthropicMessagesPlannerProvider:
         api_key_env: str = "ANTHROPIC_API_KEY",
         model: str = "claude-sonnet-4-5",
         base_url: str = "https://api.anthropic.com",
+        provider_preset_id: str | None = "anthropic_api",
         timeout_sec: int = 60,
         environ: Mapping[str, str] | None = None,
     ) -> None:
@@ -830,6 +863,7 @@ class AnthropicMessagesPlannerProvider:
         self._api_key_env = api_key_env
         self._model = model
         self._base_url = base_url.rstrip("/")
+        self._provider_preset_id = provider_preset_id
         self._timeout_sec = timeout_sec
         self._environ = environ
 
@@ -885,6 +919,10 @@ class AnthropicMessagesPlannerProvider:
             status="succeeded",
             raw_output=raw_output.strip(),
             duration_ms=_duration_ms(started),
+            provider_preset_id=self._provider_preset_id,
+            protocol=self.provider_type,
+            model=self._model,
+            base_url=self._base_url,
         )
 
     def _api_error_result(
@@ -901,6 +939,10 @@ class AnthropicMessagesPlannerProvider:
             duration_ms=_duration_ms(started),
             error_code=code,
             error_summary=summary,
+            provider_preset_id=self._provider_preset_id,
+            protocol=self.provider_type,
+            model=self._model,
+            base_url=self._base_url,
         )
 
 
@@ -946,6 +988,7 @@ def resolve_planner_provider(
                 if preset is not None and preset.default_base_url is not None
                 else "https://api.openai.com/v1"
             ),
+            provider_preset_id="openai_api",
             timeout_sec=resolved_settings.llm_planner_timeout_sec,
         )
     if selected_provider_id in {"deepseek_api", "mimo_api"}:
@@ -959,6 +1002,7 @@ def resolve_planner_provider(
                 if preset is not None and preset.default_base_url is not None
                 else ""
             ),
+            provider_preset_id=selected_provider_id,
             timeout_sec=resolved_settings.llm_planner_timeout_sec,
         )
     if selected_provider_id in {"anthropic_api", "anthropic-api-planner"}:
@@ -971,6 +1015,7 @@ def resolve_planner_provider(
                 if preset is not None and preset.default_base_url is not None
                 else "https://api.anthropic.com"
             ),
+            provider_preset_id="anthropic_api",
             timeout_sec=resolved_settings.llm_planner_timeout_sec,
         )
     raise PlannerProviderError(
