@@ -184,6 +184,31 @@ def plan_for_message(
                     if planner_runtime is not None
                     else None
                 ),
+                provider_preset_id=(
+                    planner_runtime.role_config.provider_preset_id
+                    if planner_runtime is not None
+                    else None
+                ),
+                model=(
+                    planner_runtime.role_config.model
+                    if planner_runtime is not None
+                    else None
+                ),
+                base_url=(
+                    planner_runtime.role_config.base_url
+                    if planner_runtime is not None
+                    else None
+                ),
+                api_key_env=(
+                    planner_runtime.role_config.api_key_env
+                    if planner_runtime is not None
+                    else None
+                ),
+                timeout_seconds=(
+                    planner_runtime.role_config.timeout_seconds
+                    if planner_runtime is not None
+                    else None
+                ),
             )
             if planner_provider.planner_source != "disabled":
                 try:
@@ -247,7 +272,7 @@ def plan_for_message(
         _create_orchestrator_boundary_message(
             db,
             message,
-            _friendly_chat_fallback_reply(),
+            _friendly_chat_fallback_reply(llm_fallback),
         )
         return []
 
@@ -301,7 +326,7 @@ def plan_for_message(
             _create_orchestrator_boundary_message(
                 db,
                 message,
-                "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
+                _unsupported_or_unregistered_target_reply(llm_fallback),
             )
             return []
         return _create_dynamic_frontend_tasks(
@@ -1509,11 +1534,47 @@ def _is_pure_chat_request(content: str) -> bool:
     return normalized in greetings or normalized in capability_questions
 
 
-def _friendly_chat_fallback_reply() -> str:
+def _friendly_chat_fallback_reply(llm_fallback: Optional[dict] = None) -> str:
+    if llm_fallback and llm_fallback.get("reason") == "provider_failed":
+        detail = _planner_fallback_detail(llm_fallback)
+        return f"抱歉，{detail}。你可以通过 @frontend 或 @backend 直接指派编码 Agent。"
+    if llm_fallback and llm_fallback.get("reason") == "invalid_provider":
+        return "抱歉，LLM 路由配置无效。你可以通过 @frontend 或 @backend 直接指派编码 Agent。"
+    return "你好，有什么我可以帮你的？你可以提出具体的代码需求，或通过 @frontend 直接让 Agent 开始工作。"
+
+
+def _unsupported_or_unregistered_target_reply(llm_fallback: Optional[dict] = None) -> str:
+    prefix = ""
+    if llm_fallback and llm_fallback.get("reason") in {"provider_failed", "invalid_provider"}:
+        prefix = f"Planner LLM 未能完成本次路由：{_planner_fallback_detail(llm_fallback)}\n\n"
+    elif llm_fallback:
+        prefix = "当前 LLM 路由不可用。\n\n"
     return (
-        "你好，我可以帮你聊天、澄清需求、规划代码任务，并在需要时调用前端、后端或评审 Agent。"
-        "当前 LLM 路由不可用，所以我不会为这条普通聊天创建代码任务。"
+        f"{prefix}"
+        "我还不能安全地把这条消息直接变成可执行任务。"
+        "如果要写入桌面或其他本地目录，请先把对应目录注册为外部工作区/目标；"
+        "如果只是想改当前 demo，请提出一个限定在 demo app 内的前端/后端变更，"
+        "或显式使用 @frontend / @backend 指派。"
     )
+
+
+def _planner_fallback_detail(llm_fallback: dict) -> str:
+    summary = llm_fallback.get("errorSummary")
+    code = llm_fallback.get("errorCode")
+    provider = llm_fallback.get("providerId") or llm_fallback.get("providerType")
+    parts = []
+    if provider:
+        parts.append(f"provider={provider}")
+    if code:
+        parts.append(f"code={code}")
+    if isinstance(summary, str) and summary.strip():
+        parts.append(_safe_error_excerpt(summary))
+    return "；".join(parts) if parts else "请检查 Planner 配置、模型名、baseUrl 和后端环境变量。"
+
+
+def _safe_error_excerpt(value: str) -> str:
+    redacted = value.replace("\n", " ").strip()
+    return redacted[:240] + ("..." if len(redacted) > 240 else "")
 
 
 def _is_explicit_platform_mode_request(content: str) -> bool:
@@ -1580,14 +1641,18 @@ def _create_conversation_outcome_message(
 
 def _default_reply_for_conversation_outcome(outcome_type: str) -> str:
     if outcome_type == "clarification":
-        return "I need one more detail before I can plan this safely."
+        return "我还需要一些细节才能安全地规划这个任务，能再具体描述一下吗？"
     if outcome_type == "refusal":
-        return "I cannot safely perform that request."
+        return (
+            "这个请求涉及我无法操作的范围。我只能修改当前项目工作区内的文件，"
+            "无法操作系统文件、桌面、或其他项目目录。你可以在当前项目内提出"
+            "一个具体的代码需求，或者通过 @frontend 直接指派前端 Agent。"
+        )
     if outcome_type == "approval_required":
-        return "This request needs approval before executable work can start."
+        return "这个请求需要审批才能执行，请确认你已了解相关风险。"
     if outcome_type == "unsupported":
-        return "I cannot support that request yet."
-    return "I can help with AgentHub planning, coding tasks, reviews, previews, and staging deploys."
+        return "这个请求暂时超出我的能力范围。可以试试换个方式描述你的需求？"
+    return "我可以帮你规划任务、写代码、做审查、预览和部署。需要我做什么？"
 
 
 def _coding_title_for(intent: FrontendIntent) -> str:

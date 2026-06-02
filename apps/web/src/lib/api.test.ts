@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  analyzeExternalProject,
   approveTaskRun,
+  checkAgentRuntimeProvider,
+  createExternalProjectTarget,
   createSessionMessage,
   createTaskRun,
   createPreviewDeployment,
@@ -17,6 +20,7 @@ import {
   listProviderConfigs,
   listWorkspaceAgentProfiles,
   listWorkspaceAgents,
+  listWorkspaceTargets,
   listTaskRunDeployments,
   listTaskRunDiffs,
   listTaskRunPreviews,
@@ -30,6 +34,7 @@ import {
   startTaskRunPreview,
   stopPreview,
   updateAgentRuntimeConfig,
+  updateSessionTargetSelection,
 } from "./api"
 
 describe("getBackendHealth", () => {
@@ -140,6 +145,193 @@ describe("workspace and session API", () => {
       "http://127.0.0.1:8000/workspaces/workspace-1/sessions",
       {
         body: JSON.stringify({ title: "Second session" }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    )
+  })
+
+  it("lists workspace targets and updates a session target selection", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input.toString()
+      if (url.endsWith("/target-selection") && init?.method === "PATCH") {
+        return new Response(
+          JSON.stringify({
+            activeBackendTargetId: "demo-backend",
+            activeFrontendTargetId: "external-sample-app",
+            boundBranch: "main",
+            createdAt: "2026-05-14T00:00:00Z",
+            id: "session-1",
+            lastMessageAt: "2026-05-14T00:00:00Z",
+            sessionType: "demo",
+            status: "active",
+            title: "First session",
+            updatedAt: "2026-05-14T00:00:00Z",
+            workspaceId: "workspace-1",
+            worktreePath: "/repo/.worktrees/workspace-1/session-1",
+          }),
+          { status: 200 },
+        )
+      }
+
+      return new Response(
+        JSON.stringify([
+          {
+            allowedAgents: ["frontend", "qa", "review"],
+            allowedPaths: ["src"],
+            analysisStatus: "manual",
+            baseUrl: null,
+            buildCommand: "pnpm build",
+            checkCommand: "pnpm check",
+            deniedPaths: [".env", "node_modules"],
+            deployProviderIds: [],
+            detectedFramework: "vite-react",
+            devCommand: "pnpm dev",
+            name: "External Sample",
+            packageManager: "pnpm",
+            previewCommand: "pnpm dev",
+            projectType: "vite-react",
+            relatedTargetIds: [],
+            requiresApproval: false,
+            requiresPlatformMode: false,
+            root: "/Users/demo/Desktop/sample-app",
+            stagingOutputDir: "dist",
+            stagingServeCommand: null,
+            targetId: "external-sample-app",
+            testCommand: "pnpm test",
+            type: "frontend",
+          },
+        ]),
+        { status: 200 },
+      )
+    })
+
+    const targets = await listWorkspaceTargets(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      fetchMock,
+    )
+    const session = await updateSessionTargetSelection(
+      "http://127.0.0.1:8000",
+      "session-1",
+      {
+        backendTargetId: "demo-backend",
+        frontendTargetId: "external-sample-app",
+      },
+      fetchMock,
+    )
+
+    expect(targets[0].targetId).toBe("external-sample-app")
+    expect(session.activeFrontendTargetId).toBe("external-sample-app")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/targets",
+      {
+        cache: "no-store",
+      },
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/sessions/session-1/target-selection",
+      {
+        body: JSON.stringify({
+          backendTargetId: "demo-backend",
+          frontendTargetId: "external-sample-app",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      },
+    )
+  })
+
+  it("analyzes and registers external project targets", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input.toString()
+      if (url.endsWith("/external-targets") && init?.method === "POST") {
+        return new Response(
+          JSON.stringify({
+            allowedPaths: ["src"],
+            analysisStatus: "manual",
+            buildCommand: "pnpm build",
+            checkCommand: "pnpm check",
+            createdAt: "2026-06-02T00:00:00Z",
+            deniedPaths: [".env", "node_modules"],
+            deployProviderIds: [],
+            detectedFramework: "vite-react",
+            devCommand: "pnpm dev",
+            id: "external-target-1",
+            name: "External Sample",
+            packageManager: "pnpm",
+            previewCommand: "pnpm dev",
+            projectType: "vite-react",
+            rootPath: "/Users/demo/Desktop/sample-app",
+            stagingOutputDir: "dist",
+            stagingServeCommand: null,
+            targetId: "external-sample-app",
+            testCommand: "pnpm test",
+            updatedAt: "2026-06-02T00:00:00Z",
+            workspaceId: "workspace-1",
+          }),
+          { status: 201 },
+        )
+      }
+
+      return new Response(
+        JSON.stringify({
+          allowedPaths: ["src"],
+          analysisStatus: "ready",
+          analysisWarnings: [],
+          buildCommand: "pnpm build",
+          checkCommand: "pnpm check",
+          confidence: "high",
+          deniedPaths: [".env", "node_modules"],
+          detectedFramework: "vite-react",
+          devCommand: "pnpm dev",
+          packageManager: "pnpm",
+          previewCommand: "pnpm dev",
+          projectType: "vite-react",
+          rootPath: "/Users/demo/Desktop/sample-app",
+          testCommand: "pnpm test",
+        }),
+        { status: 200 },
+      )
+    })
+
+    const analysis = await analyzeExternalProject(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      "/Users/demo/Desktop/sample-app",
+      fetchMock,
+    )
+    const registered = await createExternalProjectTarget(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      {
+        allowedPaths: analysis.allowedPaths,
+        name: "External Sample",
+        projectType: analysis.projectType,
+        rootPath: analysis.rootPath,
+      },
+      fetchMock,
+    )
+
+    expect(analysis.projectType).toBe("vite-react")
+    expect(registered.targetId).toBe("external-sample-app")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/external-targets/analyze",
+      {
+        body: JSON.stringify({ rootPath: "/Users/demo/Desktop/sample-app" }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/external-targets",
+      {
+        body: JSON.stringify({
+          allowedPaths: ["src"],
+          name: "External Sample",
+          projectType: "vite-react",
+          rootPath: "/Users/demo/Desktop/sample-app",
+        }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       },
@@ -355,6 +547,56 @@ describe("workspace and session API", () => {
         }),
         headers: { "Content-Type": "application/json" },
         method: "PUT",
+      },
+    )
+  })
+
+  it("checks runtime provider availability without sending raw secrets", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          role: "frontend",
+          providerId: "local-claude-code-cli",
+          adapterType: "claude_code",
+          authStatus: "available",
+          availability: "available",
+          available: true,
+          message: "Claude Code CLI 已检测可用。",
+        }),
+        { status: 200 },
+      )
+    })
+
+    const result = await checkAgentRuntimeProvider(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      "frontend",
+      {
+        agentProfileId: "agent-frontend",
+        providerId: "local-claude-code-cli",
+        adapterType: "claude_code",
+        mode: "frontend",
+        enabled: true,
+      },
+      fetchMock,
+    )
+
+    expect(result.availability).toBe("available")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/runtime-config/check-provider",
+      {
+        body: JSON.stringify({
+          role: "frontend",
+          roleConfig: {
+            agentProfileId: "agent-frontend",
+            providerId: "local-claude-code-cli",
+            adapterType: "claude_code",
+            mode: "frontend",
+            enabled: true,
+          },
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       },
     )
   })

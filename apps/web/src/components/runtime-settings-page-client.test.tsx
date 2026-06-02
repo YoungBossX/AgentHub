@@ -5,14 +5,28 @@ import { RuntimeSettingsPageClient } from "./runtime-settings-page-client"
 import type { AgentRuntimeConfig, Workspace } from "@/lib/api"
 
 const apiMocks = vi.hoisted(() => ({
+  analyzeExternalProject: vi.fn(),
+  checkAgentRuntimeProvider: vi.fn(),
+  createExternalProjectTarget: vi.fn(),
   getAgentRuntimeConfig: vi.fn(),
+  getDemoWorkspace: vi.fn(),
+  listWorkspaceSessions: vi.fn(),
+  listWorkspaceTargets: vi.fn(),
   updateAgentRuntimeConfig: vi.fn(),
+  updateSessionTargetSelection: vi.fn(),
 }))
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
+  analyzeExternalProject: apiMocks.analyzeExternalProject,
+  checkAgentRuntimeProvider: apiMocks.checkAgentRuntimeProvider,
+  createExternalProjectTarget: apiMocks.createExternalProjectTarget,
   getAgentRuntimeConfig: apiMocks.getAgentRuntimeConfig,
+  getDemoWorkspace: apiMocks.getDemoWorkspace,
+  listWorkspaceSessions: apiMocks.listWorkspaceSessions,
+  listWorkspaceTargets: apiMocks.listWorkspaceTargets,
   updateAgentRuntimeConfig: apiMocks.updateAgentRuntimeConfig,
+  updateSessionTargetSelection: apiMocks.updateSessionTargetSelection,
 }))
 
 const workspace: Workspace = {
@@ -166,10 +180,136 @@ const runtimeConfig: AgentRuntimeConfig = {
   workspaceId: "workspace-1",
 }
 
+const workspaceSessions = [
+  {
+    activeBackendTargetId: "demo-backend",
+    activeFrontendTargetId: "demo-frontend",
+    boundBranch: "main",
+    createdAt: "2026-05-16T00:00:00Z",
+    id: "session-1",
+    lastMessageAt: "2026-05-16T00:00:00Z",
+    sessionType: "demo",
+    status: "active",
+    title: "Mini CRM",
+    updatedAt: "2026-05-16T00:00:00Z",
+    workspaceId: "workspace-1",
+    worktreePath: "/repo/.worktrees/session-1",
+  },
+]
+
+const workspaceTargets = [
+  {
+    allowedAgents: ["frontend", "qa", "review"],
+    allowedPaths: ["apps/demo/src"],
+    analysisStatus: "ready",
+    baseUrl: null,
+    buildCommand: "pnpm build",
+    checkCommand: "pnpm check",
+    deniedPaths: [".env", "node_modules"],
+    deployProviderIds: ["local_static"],
+    detectedFramework: "vite-react",
+    devCommand: "pnpm demo:dev",
+    name: "Demo Frontend",
+    packageManager: "pnpm",
+    previewCommand: "pnpm demo:dev",
+    projectType: "vite-react",
+    relatedTargetIds: ["demo-backend"],
+    requiresApproval: false,
+    requiresPlatformMode: false,
+    root: "apps/demo",
+    stagingOutputDir: "dist",
+    stagingServeCommand: null,
+    targetId: "demo-frontend",
+    testCommand: null,
+    type: "frontend",
+  },
+  {
+    allowedAgents: ["backend", "qa", "review"],
+    allowedPaths: ["apps/demo-api/app", "apps/demo-api/tests"],
+    analysisStatus: "ready",
+    baseUrl: "http://127.0.0.1:5174",
+    buildCommand: null,
+    checkCommand: "python -m compileall .",
+    deniedPaths: [".env", "node_modules"],
+    deployProviderIds: [],
+    detectedFramework: "fastapi",
+    devCommand: "pnpm demo:api:dev",
+    name: "Demo Backend",
+    packageManager: "pip",
+    previewCommand: null,
+    projectType: "fastapi",
+    relatedTargetIds: ["demo-frontend"],
+    requiresApproval: false,
+    requiresPlatformMode: false,
+    root: "apps/demo-api",
+    stagingOutputDir: null,
+    stagingServeCommand: null,
+    targetId: "demo-backend",
+    testCommand: "pnpm demo:api:test",
+    type: "backend",
+  },
+]
+
 describe("RuntimeSettingsPageClient", () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    apiMocks.getDemoWorkspace.mockResolvedValue(workspace)
     apiMocks.getAgentRuntimeConfig.mockResolvedValue(runtimeConfig)
+    apiMocks.listWorkspaceSessions.mockResolvedValue(workspaceSessions)
+    apiMocks.listWorkspaceTargets.mockResolvedValue(workspaceTargets)
+    apiMocks.analyzeExternalProject.mockResolvedValue({
+      allowedPaths: ["src"],
+      analysisStatus: "ready",
+      analysisWarnings: [],
+      buildCommand: "pnpm build",
+      checkCommand: "pnpm check",
+      confidence: "high",
+      deniedPaths: [".env", "node_modules"],
+      detectedFramework: "vite-react",
+      devCommand: "pnpm dev",
+      packageManager: "pnpm",
+      previewCommand: "pnpm dev",
+      projectType: "vite-react",
+      rootPath: "/Users/demo/Desktop/sample-app",
+      testCommand: "pnpm test",
+    })
+    apiMocks.createExternalProjectTarget.mockResolvedValue({
+      allowedPaths: ["src"],
+      analysisStatus: "manual",
+      buildCommand: "pnpm build",
+      checkCommand: "pnpm check",
+      createdAt: "2026-06-02T00:00:00Z",
+      deniedPaths: [".env", "node_modules"],
+      deployProviderIds: [],
+      detectedFramework: "vite-react",
+      devCommand: "pnpm dev",
+      id: "external-target-1",
+      name: "外部项目 sample-app",
+      packageManager: "pnpm",
+      previewCommand: "pnpm dev",
+      projectType: "vite-react",
+      rootPath: "/Users/demo/Desktop/sample-app",
+      stagingOutputDir: null,
+      stagingServeCommand: null,
+      targetId: "external-sample-app",
+      testCommand: "pnpm test",
+      updatedAt: "2026-06-02T00:00:00Z",
+      workspaceId: "workspace-1",
+    })
+    apiMocks.updateSessionTargetSelection.mockResolvedValue({
+      ...workspaceSessions[0],
+      activeFrontendTargetId: "demo-frontend",
+      activeBackendTargetId: "demo-backend",
+    })
+    apiMocks.checkAgentRuntimeProvider.mockResolvedValue({
+      role: "planner",
+      providerId: "deepseek_api",
+      adapterType: "openai_compatible_chat",
+      authStatus: "configured",
+      availability: "configured",
+      available: true,
+      message: "DeepSeek API 已配置密钥环境变量。",
+    })
     apiMocks.updateAgentRuntimeConfig.mockResolvedValue({
       ...runtimeConfig,
       configSource: "workspace",
@@ -188,6 +328,100 @@ describe("RuntimeSettingsPageClient", () => {
 
   afterEach(() => cleanup())
 
+  it("loads the demo workspace on the client when the route renders immediately", async () => {
+    render(
+      <RuntimeSettingsPageClient backendUrl="http://127.0.0.1:8000" />,
+    )
+
+    expect(screen.getByText("正在加载运行设置...")).toBeTruthy()
+
+    await waitFor(() => {
+      expect(apiMocks.getDemoWorkspace).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+      )
+      expect(apiMocks.getAgentRuntimeConfig).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+      )
+      expect(apiMocks.listWorkspaceTargets).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+      )
+      expect(screen.getByText("工作区设置")).toBeTruthy()
+      expect(screen.getByText("当前会话目标")).toBeTruthy()
+      expect(screen.getByText("规划模型")).toBeTruthy()
+    })
+  })
+
+  it("saves the selected session target mapping from workspace settings", async () => {
+    render(
+      <RuntimeSettingsPageClient
+        backendUrl="http://127.0.0.1:8000"
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("前端目标")).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByText("保存目标"))
+
+    await waitFor(() => {
+      expect(apiMocks.updateSessionTargetSelection).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "session-1",
+        {
+          backendTargetId: "demo-backend",
+          frontendTargetId: "demo-frontend",
+        },
+      )
+      expect(screen.getByText("会话目标已保存。")).toBeTruthy()
+    })
+  })
+
+  it("analyzes and registers an external project from workspace settings", async () => {
+    render(
+      <RuntimeSettingsPageClient
+        backendUrl="http://127.0.0.1:8000"
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("本地项目路径")).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText("本地项目路径"), {
+      target: { value: "/Users/demo/Desktop/sample-app" },
+    })
+    fireEvent.click(screen.getByText("分析"))
+
+    await waitFor(() => {
+      expect(apiMocks.analyzeExternalProject).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        "/Users/demo/Desktop/sample-app",
+      )
+      expect(screen.getByText("外部项目分析完成，可以注册到工作区。")).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByText("注册到工作区"))
+
+    await waitFor(() => {
+      expect(apiMocks.createExternalProjectTarget).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        expect.objectContaining({
+          name: "外部项目 sample-app",
+          rootPath: "/Users/demo/Desktop/sample-app",
+          targetId: "external-sample-app",
+        }),
+      )
+      expect(screen.getByText("外部项目已注册：外部项目 sample-app")).toBeTruthy()
+    })
+  })
+
   it("keeps edits as draft until Save is clicked", async () => {
     render(
       <RuntimeSettingsPageClient
@@ -197,10 +431,10 @@ describe("RuntimeSettingsPageClient", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("Planner LLM")).toBeTruthy()
+      expect(screen.getByText("规划模型")).toBeTruthy()
     })
 
-    fireEvent.change(screen.getByLabelText("Planner API"), {
+    fireEvent.change(screen.getByLabelText("规划 API"), {
       target: { value: "mimo_api" },
     })
 
@@ -217,10 +451,10 @@ describe("RuntimeSettingsPageClient", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Planner API")).toBeTruthy()
+      expect(screen.getByLabelText("规划 API")).toBeTruthy()
     })
 
-    const plannerApi = screen.getByLabelText("Planner API") as HTMLSelectElement
+    const plannerApi = screen.getByLabelText("规划 API") as HTMLSelectElement
     fireEvent.change(plannerApi, { target: { value: "mimo_api" } })
     fireEvent.click(screen.getByText("取消"))
 
@@ -238,10 +472,10 @@ describe("RuntimeSettingsPageClient", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Planner API")).toBeTruthy()
+      expect(screen.getByLabelText("规划 API")).toBeTruthy()
     })
 
-    fireEvent.change(screen.getByLabelText("Planner API"), {
+    fireEvent.change(screen.getByLabelText("规划 API"), {
       target: { value: "mimo_api" },
     })
     fireEvent.click(screen.getByText("保存"))
@@ -272,16 +506,42 @@ describe("RuntimeSettingsPageClient", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("Planner LLM")).toBeTruthy()
+      expect(screen.getByText("规划模型")).toBeTruthy()
     })
 
     expect(screen.getAllByText(/未检测/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/缺少密钥环境变量/).length).toBeGreaterThan(0)
-    expect(
-      screen.getByText(/API Key 只从后端进程环境变量读取/),
-    ).toBeTruthy()
     expect(screen.getByText(/缺少环境变量 DEEPSEEK_API_KEY/)).toBeTruthy()
     expect(screen.queryByText("missing_key")).toBeNull()
     expect(screen.queryByText("Claude CLI Planner · unchecked")).toBeNull()
+  })
+
+  it("checks a runtime provider and updates the visible status", async () => {
+    render(
+      <RuntimeSettingsPageClient
+        backendUrl="http://127.0.0.1:8000"
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("规划 API")).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getAllByRole("button", { name: "检测" })[0])
+
+    await waitFor(() => {
+      expect(apiMocks.checkAgentRuntimeProvider).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        "planner",
+        expect.objectContaining({
+          providerPresetId: "deepseek_api",
+          apiKeyEnv: "DEEPSEEK_API_KEY",
+        }),
+      )
+      expect(screen.getByText("DeepSeek API 已配置密钥环境变量。")).toBeTruthy()
+      expect(screen.getAllByText("已配置").length).toBeGreaterThan(0)
+    })
   })
 })

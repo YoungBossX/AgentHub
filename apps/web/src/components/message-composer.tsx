@@ -24,9 +24,9 @@ export function MessageComposer({
   onSubmit,
 }: MessageComposerProps) {
   return (
-    <div className="mx-auto grid w-full max-w-3xl shrink-0 gap-2">
+    <div className="mx-auto grid w-full max-w-4xl shrink-0 gap-2">
       {contextArtifact ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-xs shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-xs shadow-sm">
           <div className="min-w-0">
             <span className="font-semibold text-[var(--primary)]">
               Follow-up context
@@ -46,11 +46,11 @@ export function MessageComposer({
         </div>
       ) : null}
       <form
-        className="flex gap-2 rounded-xl border border-[var(--border)] bg-white p-2 shadow-sm"
+        className="flex gap-2 rounded-lg border border-[var(--border)] bg-white p-2 shadow-sm"
         data-region="composer"
         onSubmit={onSubmit}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-[var(--surface-muted)] px-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md bg-[var(--surface-muted)] px-3">
           <MessageSquare
             aria-hidden="true"
             className="shrink-0 text-[var(--muted-foreground)]"

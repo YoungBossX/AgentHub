@@ -189,6 +189,7 @@ class ProviderConfigResponse(ApiModel):
 
 
 class RuntimeRoleConfigRequest(BaseModel):
+    role: Optional[str] = None
     agent_profile_id: Optional[str] = Field(default=None, alias="agentProfileId")
     provider_id: Optional[str] = Field(default=None, alias="providerId")
     adapter_type: Optional[str] = Field(default=None, alias="adapterType")
@@ -201,6 +202,7 @@ class RuntimeRoleConfigRequest(BaseModel):
     base_url: Optional[str] = Field(default=None, alias="baseUrl")
     timeout_seconds: Optional[int] = Field(default=None, alias="timeoutSeconds")
     api_key_env: Optional[str] = Field(default=None, alias="apiKeyEnv")
+    availability: Optional[str] = None
     api_key: Optional[str] = Field(default=None, alias="apiKey", exclude=True)
     authorization: Optional[str] = Field(default=None, exclude=True)
     authorization_header: Optional[str] = Field(
@@ -216,6 +218,23 @@ class RuntimeConfigUpdateRequest(BaseModel):
     roles: dict[str, RuntimeRoleConfigRequest]
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+class RuntimeProviderCheckRequest(BaseModel):
+    role: str
+    role_config: RuntimeRoleConfigRequest = Field(alias="roleConfig")
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+class RuntimeProviderCheckResponse(ApiModel):
+    role: str
+    provider_id: Optional[str] = Field(alias="providerId")
+    adapter_type: Optional[str] = Field(alias="adapterType")
+    auth_status: str = Field(alias="authStatus")
+    availability: str
+    available: bool
+    message: str
 
 
 class RuntimeRoleConfigResponse(ApiModel):

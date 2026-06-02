@@ -12,26 +12,22 @@ import { cn } from "@/lib/utils"
 
 const CONFIGURABLE_ROLES = [
   {
-    description: "理解用户意图，决定聊天回复、澄清、拒绝或生成 PlanDraft。",
-    label: "Planner LLM",
+    label: "规划模型",
     role: "planner",
     mode: "read_only",
   },
   {
-    description: "执行前端目标内的代码修改，并产出 diff / build / preview 证据。",
-    label: "Frontend Agent",
+    label: "前端 Agent",
     role: "frontend",
     mode: "frontend",
   },
   {
-    description: "执行后端目标内的代码修改，并遵守 Target Registry 边界。",
-    label: "Backend Agent",
+    label: "后端 Agent",
     role: "backend",
     mode: "backend",
   },
   {
-    description: "进行只读评审、QA 和风险提示，默认不阻塞预览或部署。",
-    label: "Review Agent",
+    label: "评审 Agent",
     role: "review",
     mode: "read_only",
   },
@@ -73,7 +69,7 @@ const PLANNER_PROVIDER_PRESETS = [
   {
     baseUrl: "",
     id: "custom_openai_compatible",
-    label: "Custom OpenAI-compatible",
+    label: "自定义 OpenAI 兼容 API",
     model: "",
     protocol: "openai_compatible_chat",
     apiKeyEnv: "CUSTOM_OPENAI_COMPATIBLE_API_KEY",
@@ -82,20 +78,24 @@ const PLANNER_PROVIDER_PRESETS = [
 
 type AgentRuntimeSettingsProps = {
   busy: boolean
+  checkingRole: string | null
   config: AgentRuntimeConfig | null
   draftRoles: Record<string, RuntimeRoleConfigInput>
   onRoleChange: (role: string, nextRole: RuntimeRoleConfigInput) => void
   onCancel: () => void
+  onCheckProvider: (role: string, roleConfig: RuntimeRoleConfigInput) => void
   onSave: () => void
   statusMessage: string | null
 }
 
 export function AgentRuntimeSettings({
   busy,
+  checkingRole,
   config,
   draftRoles,
   onRoleChange,
   onCancel,
+  onCheckProvider,
   onSave,
   statusMessage,
 }: AgentRuntimeSettingsProps) {
@@ -105,11 +105,11 @@ export function AgentRuntimeSettings({
         <div className="flex items-center gap-2">
           <Bot aria-hidden="true" className="text-[var(--primary)]" size={16} />
           <p className="text-sm font-semibold text-slate-950">
-            Agent Runtime Settings
+            运行设置
           </p>
         </div>
         <p className="mt-2 text-xs text-[var(--muted-foreground)]">
-          Runtime config loading
+          正在加载运行设置...
         </p>
       </section>
     )
@@ -119,25 +119,28 @@ export function AgentRuntimeSettings({
     <section className="rounded-lg border border-[var(--border)] bg-white p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-            Agent Runtime Settings
+          <p className="text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
+            运行设置
           </p>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            Source: {config.configSource}
+            来源：{formatConfigSourceLabel(config.configSource)}
           </p>
         </div>
         <ShieldCheck aria-hidden="true" className="text-emerald-600" size={16} />
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        {CONFIGURABLE_ROLES.map(({ description, label, mode, role }) => (
+        {CONFIGURABLE_ROLES.map(({ label, mode, role }) => (
           <RuntimeRoleSelector
             config={config}
-            description={description}
+            checking={checkingRole === role}
             draftRole={draftRoles[role] ?? config.roles[role]}
             key={role}
             label={label}
             mode={mode}
+            onCheckProvider={() =>
+              onCheckProvider(role, draftRoles[role] ?? config.roles[role])
+            }
             onChange={(nextRole) => onRoleChange(role, nextRole)}
             role={role}
           />
@@ -181,19 +184,21 @@ export function AgentRuntimeSettings({
 }
 
 function RuntimeRoleSelector({
+  checking,
   config,
-  description,
   draftRole,
   label,
   mode,
+  onCheckProvider,
   onChange,
   role,
 }: {
   config: AgentRuntimeConfig
-  description: string
+  checking: boolean
   draftRole: RuntimeRoleConfigInput
   label: string
   mode: string
+  onCheckProvider: () => void
   onChange: (nextRole: RuntimeRoleConfigInput) => void
   role: string
 }) {
@@ -206,9 +211,10 @@ function RuntimeRoleSelector({
   const selectedProfile = config.availableProfiles.find(
     (profile) => profile.id === draftRole.agentProfileId,
   )
-  const selectedProvider = config.availableProviders.find(
-    (provider) => provider.providerId === draftRole.providerId,
-  )
+  const canCheckProvider =
+    role === "planner"
+      ? Boolean(draftRole.providerPresetId || draftRole.providerId)
+      : Boolean(draftRole.providerId)
 
   function patchRole(next: Partial<RuntimeRoleConfigInput>) {
     onChange({
@@ -232,25 +238,31 @@ function RuntimeRoleSelector({
   return (
     <div className="rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-3">
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold text-slate-950">{label}</p>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {description}
-          </p>
+        <p className="text-sm font-semibold text-slate-950">{label}</p>
+        <div className="flex items-center gap-2">
+          <Button
+            className="h-7 bg-white px-2 text-xs text-slate-700 hover:bg-slate-50"
+            disabled={!canCheckProvider || checking}
+            onClick={onCheckProvider}
+            type="button"
+            variant="secondary"
+          >
+            {checking ? "检测中..." : "检测"}
+          </Button>
+          <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
+            <input
+              checked={draftRole.enabled}
+              className="h-3.5 w-3.5"
+              onChange={(event) => patchRole({ enabled: event.target.checked })}
+              type="checkbox"
+            />
+            启用
+          </label>
         </div>
-        <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
-          <input
-            checked={draftRole.enabled}
-            className="h-3.5 w-3.5"
-            onChange={(event) => patchRole({ enabled: event.target.checked })}
-            type="checkbox"
-          />
-          Enabled
-        </label>
       </div>
 
-      <label className="mt-2 block text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-        Profile
+      <label className="mt-2 block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
+        Agent 档案
         <select
           className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
           onChange={(event) => {
@@ -264,7 +276,7 @@ function RuntimeRoleSelector({
           }}
           value={draftRole.agentProfileId ?? ""}
         >
-          <option value="">Select profile</option>
+          <option value="">选择档案</option>
           {profileOptions.map((profile) => (
             <option disabled={profile.status !== "available"} key={profile.id} value={profile.id}>
               {profile.displayName} · {formatAvailabilityLabel(profile.status)}
@@ -273,8 +285,8 @@ function RuntimeRoleSelector({
         </select>
       </label>
 
-      <label className="mt-2 block text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-        Provider
+      <label className="mt-2 block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
+        提供方
         <select
           className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
           onChange={(event) => {
@@ -290,7 +302,7 @@ function RuntimeRoleSelector({
           }}
           value={draftRole.providerId ?? ""}
         >
-          <option value="">Select provider</option>
+          <option value="">选择提供方</option>
           {providerOptions.map((provider) => (
             <option disabled={!provider.available} key={provider.providerId} value={provider.providerId}>
               {provider.displayName} · {formatAuthStatusLabel(provider.authStatus)}
@@ -304,32 +316,21 @@ function RuntimeRoleSelector({
       ) : null}
 
       <div className="mt-2 flex flex-wrap gap-1">
-        <RuntimePill label={draftRole.adapterType ?? "adapter unset"} tone="provider" />
-        <RuntimePill label={mode} tone="mode" />
+        <RuntimePill label={draftRole.adapterType ?? "未设置适配器"} tone="provider" />
+        <RuntimePill label={formatModeLabel(mode)} tone="mode" />
         {role === "planner" && draftRole.providerPresetId ? (
           <RuntimePill label={draftRole.providerPresetId} tone="provider" />
         ) : null}
-        {role === "planner" && draftRole.availability ? (
+        {draftRole.availability ? (
           <RuntimePill
             label={formatAvailabilityLabel(draftRole.availability)}
-            tone={draftRole.availability === "configured" ? "ok" : "danger"}
-          />
-        ) : null}
-        {selectedProvider ? (
-          <RuntimePill
-            label={selectedProvider.available ? "可用" : "不可用"}
-            tone={selectedProvider.available ? "ok" : "danger"}
+            tone={isPositiveAvailability(draftRole.availability) ? "ok" : "danger"}
           />
         ) : null}
       </div>
       {selectedProfile ? (
         <div className="mt-2 flex flex-wrap gap-1">
-          {selectedProfile.capabilityTags.slice(0, 3).map((tag) => (
-            <RuntimePill key={tag} label={tag} tone="capability" />
-          ))}
-          {selectedProfile.supportedTargets.slice(0, 2).map((target) => (
-            <RuntimePill key={target} label={target} tone="target" />
-          ))}
+          <RuntimePill label={formatAvailabilityLabel(selectedProfile.status)} tone="ok" />
         </div>
       ) : null}
     </div>
@@ -345,8 +346,8 @@ function PlannerProviderControls({
 }) {
   return (
     <div className="mt-2 grid gap-2">
-      <label className="block text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-        Planner API
+      <label className="block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
+        规划 API
         <select
           className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
           onChange={(event) => {
@@ -367,7 +368,7 @@ function PlannerProviderControls({
           }}
           value={draftRole.providerPresetId ?? ""}
         >
-          <option value="">Select planner API preset</option>
+          <option value="">选择规划 API 预设</option>
           {PLANNER_PROVIDER_PRESETS.map((preset) => (
             <option key={preset.id} value={preset.id}>
               {preset.label}
@@ -378,30 +379,26 @@ function PlannerProviderControls({
 
       <div className="grid gap-2 sm:grid-cols-2">
         <RuntimeTextInput
-          label="Model"
+          label="模型"
           onChange={(value) => onChange({ model: value || null })}
           value={draftRole.model ?? ""}
         />
         <RuntimeTextInput
-          label="apiKeyEnv"
+          label="密钥环境变量"
           onChange={(value) => onChange({ apiKeyEnv: value || null })}
           value={draftRole.apiKeyEnv ?? ""}
         />
       </div>
 
       <RuntimeTextInput
-        label="Base URL"
+        label="接口地址"
         onChange={(value) => onChange({ baseUrl: value || null })}
         value={draftRole.baseUrl ?? ""}
       />
 
-      <p className="rounded border border-blue-100 bg-blue-50 px-2 py-1.5 text-xs text-blue-800">
-        API Key 只从后端进程环境变量读取；这里保存的是环境变量名，不保存原始密钥。
-      </p>
       {draftRole.availability === "missing_key" ? (
         <p className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
-          缺少环境变量 {draftRole.apiKeyEnv ?? "API_KEY"}。请在启动 AgentHub API
-          的 shell 中配置后重启后端服务。
+          缺少环境变量 {draftRole.apiKeyEnv ?? "API_KEY"}
         </p>
       ) : null}
     </div>
@@ -418,7 +415,7 @@ function RuntimeTextInput({
   value: string
 }) {
   return (
-    <label className="block text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+    <label className="block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
       {label}
       <input
         className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
@@ -467,8 +464,42 @@ function profileSupportsRole(profile: AgentProfile, role: string) {
   return roleAliases.some((candidate) => profile.supportedRoles.includes(candidate))
 }
 
+function formatConfigSourceLabel(source: string) {
+  switch (source) {
+    case "default":
+      return "默认"
+    case "workspace":
+      return "工作区"
+    default:
+      return source
+  }
+}
+
+function formatModeLabel(mode: string) {
+  switch (mode) {
+    case "read_only":
+      return "只读"
+    case "frontend":
+      return "前端"
+    case "backend":
+      return "后端"
+    case "review":
+      return "评审"
+    case "qa":
+      return "质检"
+    case "debug":
+      return "调试"
+    case "platform_maintenance":
+      return "平台维护"
+    default:
+      return mode
+  }
+}
+
 function formatAuthStatusLabel(status: string) {
   switch (status) {
+    case "available":
+      return "可用"
     case "unchecked":
       return "未检测"
     case "configured":
@@ -501,6 +532,10 @@ function formatAvailabilityLabel(status: string) {
     default:
       return status
   }
+}
+
+function isPositiveAvailability(status: string) {
+  return ["available", "configured", "not_required"].includes(status)
 }
 
 function formatValidationMessage(message: string) {

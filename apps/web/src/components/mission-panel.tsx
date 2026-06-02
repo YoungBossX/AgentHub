@@ -16,7 +16,7 @@ export function MissionPanel({ ledger }: WorkspaceContextCardProps) {
         : "等待证据"
 
   return (
-    <section className="mx-auto w-full max-w-3xl rounded-lg border border-[var(--border)] bg-white px-4 py-3 shadow-sm">
+    <section className="mx-auto w-full max-w-4xl rounded-lg border border-[var(--border)] bg-white px-4 py-3 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
@@ -29,7 +29,7 @@ export function MissionPanel({ ledger }: WorkspaceContextCardProps) {
             {(ledger?.activeAgents.length ? ledger.activeAgents : ["orchestrator"]).map(
               (role) => (
                 <span
-                  className="rounded border border-[var(--border)] bg-[var(--surface-muted)] px-2 py-1 font-mono text-[11px] text-slate-700"
+                  className="rounded-full border border-[var(--border)] bg-[var(--surface-muted)] px-2.5 py-1 font-mono text-[11px] text-slate-700"
                   key={role}
                 >
                   @{role}

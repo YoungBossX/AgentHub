@@ -16,6 +16,8 @@ from app.agent_runtime_config import (
 )
 from app.main import app, get_db
 from app.models import Agent, Workspace
+from app.provider_configs import ProviderConfig
+from app.provider_health import check_runtime_role_provider
 
 
 @pytest.fixture
@@ -204,6 +206,7 @@ def test_runtime_config_validate_does_not_persist_candidate() -> None:
 
         assert response.status_code == 200
         assert response.json()["valid"] is True
+        assert response.json()["warnings"] == []
         assert persisted.json()["configSource"] == "default"
         assert persisted.json()["roles"]["frontend"]["enabled"] is False
 
@@ -271,6 +274,24 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
         assert payload["roles"]["planner"]["availability"] == "missing_key"
         assert payload["roles"]["frontend"]["providerId"] == "local-claude-code-cli"
         assert payload["roles"]["backend"]["providerId"] == "local-codex-cli"
+
+
+def test_runtime_config_put_allows_browser_cors_preflight() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+
+        response = client.options(
+            f"/workspaces/{workspace_id}/runtime-config",
+            headers={
+                "Origin": "http://127.0.0.1:3000",
+                "Access-Control-Request-Method": "PUT",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:3000"
+        assert "PUT" in response.headers["access-control-allow-methods"]
 
 
 def test_runtime_config_api_validates_planner_provider_preset() -> None:
@@ -469,6 +490,139 @@ def test_runtime_config_api_rejects_backend_platform_maintenance_mode() -> None:
             "cannot use mode `platform_maintenance`" in error
             for error in payload["errors"]
         )
+
+
+def test_runtime_config_provider_check_reports_missing_planner_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/check-provider",
+            json={
+                "role": "planner",
+                "roleConfig": {
+                    "providerPresetId": "deepseek_api",
+                    "protocol": "openai_compatible_chat",
+                    "model": "deepseek-chat",
+                    "baseUrl": "https://api.deepseek.com",
+                    "apiKeyEnv": "DEEPSEEK_API_KEY",
+                    "mode": "read_only",
+                    "enabled": True,
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["authStatus"] == "missing_key"
+        assert payload["availability"] == "missing_key"
+        assert payload["available"] is False
+        assert "DEEPSEEK_API_KEY" in payload["message"]
+
+
+def test_runtime_config_provider_check_accepts_ui_role_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/check-provider",
+            json={
+                "role": "planner",
+                "roleConfig": {
+                    "role": "planner",
+                    "agentProfileId": None,
+                    "providerId": None,
+                    "adapterType": "openai_compatible_chat",
+                    "mode": "read_only",
+                    "enabled": True,
+                    "fallbackPolicy": "environment_default",
+                    "providerPresetId": "deepseek_api",
+                    "protocol": "openai_compatible_chat",
+                    "model": "deepseek-chat",
+                    "baseUrl": "https://api.deepseek.com",
+                    "timeoutSeconds": None,
+                    "apiKeyEnv": "DEEPSEEK_API_KEY",
+                    "availability": "missing_key",
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["availability"] == "missing_key"
+
+
+def test_runtime_config_provider_check_reports_mock_as_available_without_auth() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/check-provider",
+            json={
+                "role": "review",
+                "roleConfig": {
+                    "agentProfileId": profiles["qa"]["id"],
+                    "providerId": "local-scripted-mock",
+                    "adapterType": "scripted_mock",
+                    "mode": "review",
+                    "enabled": True,
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["providerId"] == "local-scripted-mock"
+        assert payload["authStatus"] == "not_required"
+        assert payload["availability"] == "not_required"
+        assert payload["available"] is True
+
+
+def test_runtime_provider_health_checks_local_cli_with_version_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr("app.provider_health.shutil.which", lambda command: f"/bin/{command}")
+
+    def fake_run(command: list[str], **_: object) -> object:
+        calls.append(command)
+        return object()
+
+    monkeypatch.setattr("app.provider_health.subprocess.run", fake_run)
+
+    result = check_runtime_role_provider(
+        RuntimeRoleConfig(
+            role="frontend",
+            agent_profile_id="agent-frontend",
+            provider_id="local-codex-cli",
+            adapter_type="codex",
+            mode="frontend",
+            enabled=True,
+        ),
+        providers=[
+            ProviderConfig(
+                provider_id="local-codex-cli",
+                display_name="Codex CLI",
+                adapter_type="codex",
+                auth_status="unchecked",
+                available=True,
+                default_for_roles=["frontend"],
+                supported_modes=["frontend"],
+            )
+        ],
+    )
+
+    assert result.available is True
+    assert result.auth_status == "available"
+    assert result.availability == "available"
+    assert calls == [["/bin/codex", "--version"]]
 
 
 def _workspace(db: DbSession) -> Workspace:

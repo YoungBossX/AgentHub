@@ -99,10 +99,10 @@ def test_messages_are_persisted_and_scoped_to_selected_session(
     session_one_messages = client.get(f"/sessions/{session_one.id}/messages")
     session_two_messages = client.get(f"/sessions/{session_two.id}/messages")
 
-    assert [message["contentMd"] for message in session_one_messages.json()] == [
-        "@orchestrator build a login page",
-        "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
-    ]
+    session_one_content = [message["contentMd"] for message in session_one_messages.json()]
+    assert session_one_content[0] == "@orchestrator build a login page"
+    assert "不能安全地把这条消息直接变成可执行任务" in session_one_content[1]
+    assert "注册为外部工作区/目标" in session_one_content[1]
     assert [message["contentMd"] for message in session_two_messages.json()] == [
         "separate thread"
     ]

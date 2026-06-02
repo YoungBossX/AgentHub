@@ -624,6 +624,26 @@ def test_resolve_planner_provider_supports_runtime_config_provider_id() -> None:
     assert provider.provider_id == "claude-cli-planner"
 
 
+def test_resolve_planner_provider_supports_runtime_api_preset_over_disabled_default() -> None:
+    provider = resolve_planner_provider(
+        Settings(llm_planner_provider="disabled"),
+        adapter_type="openai_compatible_chat",
+        provider_preset_id="deepseek_api",
+        model="deepseek-reasoner",
+        base_url="https://api.deepseek.com",
+        api_key_env="DEEPSEEK_API_KEY",
+        timeout_seconds=23,
+    )
+
+    assert isinstance(provider, OpenAICompatibleChatPlannerProvider)
+    assert provider.provider_id == "deepseek-api-planner"
+    assert provider._provider_preset_id == "deepseek_api"
+    assert provider._model == "deepseek-reasoner"
+    assert provider._base_url == "https://api.deepseek.com"
+    assert provider._api_key_env == "DEEPSEEK_API_KEY"
+    assert provider._timeout_sec == 23
+
+
 def test_existing_planner_provider_resolution_stays_compatible() -> None:
     disabled = resolve_planner_provider(Settings(llm_planner_provider="disabled"))
     fake = resolve_planner_provider(

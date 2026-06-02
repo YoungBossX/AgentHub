@@ -1,8 +1,11 @@
+from sqlalchemy import text
+from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel, create_engine, select
 from uuid import uuid4
 
-from app.db import create_db_and_tables, engine
+from app.db import create_db_and_tables, engine, _ensure_sqlite_demo_schema_columns
+from app.external_workspaces import list_external_project_targets
 from app.models import (
     Agent,
     AgentProfileDraft,
@@ -286,6 +289,82 @@ def test_p0_model_boundary_and_required_fields() -> None:
 
     for model, fields in expected_fields.items():
         assert set(model.model_fields) == fields
+
+
+def test_sqlite_schema_compatibility_adds_external_target_staging_columns() -> None:
+    legacy_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    with legacy_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE externalprojecttarget (
+                    id VARCHAR NOT NULL PRIMARY KEY,
+                    workspace_id VARCHAR NOT NULL,
+                    target_id VARCHAR NOT NULL,
+                    name VARCHAR NOT NULL,
+                    root_path VARCHAR NOT NULL,
+                    project_type VARCHAR NOT NULL,
+                    allowed_paths_json VARCHAR NOT NULL,
+                    denied_paths_json VARCHAR NOT NULL,
+                    dev_command VARCHAR,
+                    test_command VARCHAR,
+                    check_command VARCHAR,
+                    build_command VARCHAR,
+                    preview_command VARCHAR,
+                    package_manager VARCHAR,
+                    detected_framework VARCHAR,
+                    analysis_status VARCHAR NOT NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO externalprojecttarget (
+                    id,
+                    workspace_id,
+                    target_id,
+                    name,
+                    root_path,
+                    project_type,
+                    allowed_paths_json,
+                    denied_paths_json,
+                    analysis_status,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    'legacy-target-row',
+                    'workspace-1',
+                    'external-legacy-target',
+                    'Legacy Target',
+                    '/tmp/legacy-target',
+                    'vite-react',
+                    '["src"]',
+                    '[".env"]',
+                    'manual',
+                    '2026-05-31 00:00:00.000000',
+                    '2026-05-31 00:00:00.000000'
+                )
+                """
+            )
+        )
+
+    _ensure_sqlite_demo_schema_columns(legacy_engine)
+
+    with DbSession(legacy_engine) as db:
+        targets = list_external_project_targets(db, "workspace-1")
+
+    assert len(targets) == 1
+    assert targets[0].staging_output_dir is None
+    assert targets[0].staging_serve_command is None
+    assert targets[0].deploy_provider_ids_json == "[]"
 
 
 def test_seed_records_are_queryable() -> None:

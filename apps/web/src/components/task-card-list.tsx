@@ -245,7 +245,7 @@ export function TaskCardList({
   }
 
   return (
-    <ol className="relative grid gap-3.5 pl-8 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-slate-200">
+    <ol className="relative grid gap-3.5 pl-8 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-[var(--border-strong)]">
       {tasks.map((task, index) => {
         const latestRun = task.taskRuns[task.taskRuns.length - 1] ?? null
         const taskDiffs = task.taskRuns.flatMap((taskRun) => diffsByRunId[taskRun.id] ?? [])
@@ -267,7 +267,7 @@ export function TaskCardList({
           <li className="relative" key={task.id}>
             <span
               className={cn(
-                "absolute -left-8 top-5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-4 border-white text-[10px] font-bold shadow-sm",
+                "absolute -left-8 top-5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-4 border-[#fbfcfc] text-[10px] font-bold shadow-sm",
                 task.status === "completed" && "bg-green-600 text-white",
                 task.status === "failed" && "bg-red-600 text-white",
                 task.status === "waiting_approval" && "bg-amber-500 text-white",
@@ -282,7 +282,7 @@ export function TaskCardList({
             </span>
             <article
               className={cn(
-                "rounded-xl border bg-white p-4 shadow-sm ring-1 ring-transparent transition hover:shadow-md",
+                "rounded-lg border bg-white p-4 shadow-sm ring-1 ring-transparent transition hover:shadow-md",
                 task.status === "completed"
                   ? "border-green-200"
                   : "border-[var(--border)]",
@@ -295,10 +295,10 @@ export function TaskCardList({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-600">
+                    <span className="rounded-full bg-[var(--surface-muted)] px-2.5 py-1 font-mono text-xs text-slate-600">
                       任务 {index + 1}
                     </span>
-                    <span className="rounded border border-[var(--border)] bg-white px-2 py-1 font-mono text-xs text-[var(--muted-foreground)]">
+                    <span className="rounded-full border border-[var(--border)] bg-white px-2.5 py-1 font-mono text-xs text-[var(--muted-foreground)]">
                       @{task.assignedAgentRole ?? "unassigned"}
                     </span>
                   </div>
@@ -362,7 +362,7 @@ export function TaskCardList({
                 taskArtifactItems={taskArtifactItems}
               />
               {task.taskRuns.length > 0 ? (
-                <div className="mt-3 grid gap-2 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                <div className="mt-3 grid gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/80 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
                       运行记录
@@ -451,13 +451,13 @@ function ArtifactMessageCards({
   return (
     <section
       aria-label="Artifact message cards"
-      className="mt-3 grid gap-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3"
+      className="mt-3 grid gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/80 p-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
           Artifact Cards
         </p>
-        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500 shadow-sm">
           {taskArtifactItems.length} session-scoped
         </span>
       </div>
@@ -504,7 +504,7 @@ function PlanReviewSummary({ metadata }: { metadata: PlanReviewMetadata | null }
   }
 
   return (
-    <section className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs">
+    <section className="mt-3 rounded-lg border border-[var(--border)] bg-white p-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-bold text-slate-700">计划审阅</span>
         {metadata.plannerMode ? (

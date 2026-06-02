@@ -73,6 +73,7 @@ from app.planning import MentionParseError, plan_for_message
 from app.project_analyzer import ProjectAnalysisResult, analyze_external_project
 from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
 from app.provider_configs import ProviderConfig, list_provider_configs
+from app.provider_health import ProviderHealthCheckResult, check_runtime_role_provider
 from app.repositories import (
     create_session_message,
     get_demo_workspace,
@@ -126,6 +127,8 @@ from app.schemas import (
     RuntimeConfigResponse,
     RuntimeConfigUpdateRequest,
     RuntimeConfigValidationResponse,
+    RuntimeProviderCheckRequest,
+    RuntimeProviderCheckResponse,
     RuntimeRoleConfigResponse,
     SessionCreateRequest,
     SessionExecutionLedgerResponse,
@@ -172,7 +175,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(LOCAL_FRONTEND_ORIGINS),
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -539,6 +542,20 @@ def runtime_config_validation_response(
     )
 
 
+def runtime_provider_check_response(
+    result: ProviderHealthCheckResult,
+) -> RuntimeProviderCheckResponse:
+    return RuntimeProviderCheckResponse(
+        role=result.role,
+        providerId=result.provider_id,
+        adapterType=result.adapter_type,
+        authStatus=result.auth_status,
+        availability=result.availability,
+        available=result.available,
+        message=result.message,
+    )
+
+
 def runtime_role_config_from_request(
     role: str,
     request: Any,
@@ -674,6 +691,26 @@ def validate_runtime_config_endpoint(
         providers=list_provider_configs(),
     )
     return runtime_config_validation_response(validation)
+
+
+@app.post(
+    "/workspaces/{workspace_id}/runtime-config/check-provider",
+    response_model=RuntimeProviderCheckResponse,
+)
+def check_runtime_config_provider(
+    workspace_id: str,
+    request: RuntimeProviderCheckRequest,
+    db: DbSession = Depends(get_db),
+) -> RuntimeProviderCheckResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    role_config = runtime_role_config_from_request(request.role, request.role_config)
+    return runtime_provider_check_response(
+        check_runtime_role_provider(
+            role_config,
+            providers=list_provider_configs(),
+        )
+    )
 
 
 @app.put(

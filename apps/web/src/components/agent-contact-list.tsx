@@ -22,7 +22,7 @@ export function AgentContactList({
   selectedAgentId,
 }: AgentContactListProps) {
   return (
-    <section className="mt-4 rounded-lg border border-[var(--border)] bg-white p-3">
+    <section className="grid gap-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
@@ -37,7 +37,7 @@ export function AgentContactList({
 
       <div
         aria-label="Agent visual mode"
-        className="mt-3 grid grid-cols-2 rounded-md bg-[var(--surface-muted)] p-1"
+        className="grid grid-cols-2 rounded-full bg-white/70 p-1 shadow-sm ring-1 ring-white/80"
         role="group"
       >
         <AgentModeButton
@@ -54,23 +54,23 @@ export function AgentContactList({
         />
       </div>
 
-      <div className="mt-3 grid max-h-[310px] gap-2 overflow-y-auto pr-1">
+      <div className="grid gap-1.5 overflow-x-hidden">
         {agents.map((agent) => {
           const selected = agent.id === selectedAgentId
           return (
             <button
               className={cn(
-                "grid gap-2 rounded-md border p-2.5 text-left transition",
+                "grid min-w-0 gap-1.5 rounded-lg border p-2.5 text-left transition",
                 selected
-                  ? "border-[var(--primary-border)] bg-[var(--primary-soft)]"
-                  : "border-[var(--border)] bg-white hover:bg-[var(--surface-muted)]",
+                  ? "border-white bg-white text-slate-950 shadow-sm"
+                  : "border-transparent bg-transparent text-slate-700 hover:bg-white/70",
               )}
               key={agent.id}
               onClick={() => onSelectAgent(agent.id)}
               type="button"
             >
-              <span className="flex items-start gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-950 text-[11px] font-bold text-white">
+              <span className="flex min-w-0 items-start gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-[11px] font-bold text-white">
                   {agent.avatarInitials}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -85,25 +85,25 @@ export function AgentContactList({
                   </span>
                 </span>
               </span>
-              <span className="flex flex-wrap gap-1">
+              <span className="flex min-w-0 flex-wrap gap-1 overflow-hidden">
                 <AgentMetaPill label={agent.providerId} tone="provider" />
-                {agent.supportedTargets.slice(0, 2).map((target) => (
+                {agent.supportedTargets.slice(0, 1).map((target) => (
                   <AgentMetaPill key={target} label={target} tone="target" />
                 ))}
-                {agent.supportedTargets.length > 2 ? (
+                {agent.supportedTargets.length > 1 ? (
                   <AgentMetaPill
-                    label={`+${agent.supportedTargets.length - 2} targets`}
+                    label={`+${agent.supportedTargets.length - 1} targets`}
                     tone="target"
                   />
                 ) : null}
               </span>
-              <span className="flex flex-wrap gap-1">
-                {agent.capabilityTags.slice(0, 3).map((tag) => (
+              <span className="flex min-w-0 flex-wrap gap-1 overflow-hidden">
+                {agent.capabilityTags.slice(0, 2).map((tag) => (
                   <AgentMetaPill key={tag} label={tag} tone="capability" />
                 ))}
-                {agent.capabilityTags.length > 3 ? (
+                {agent.capabilityTags.length > 2 ? (
                   <AgentMetaPill
-                    label={`+${agent.capabilityTags.length - 3} caps`}
+                    label={`+${agent.capabilityTags.length - 2} caps`}
                     tone="capability"
                   />
                 ) : null}
@@ -130,9 +130,9 @@ function AgentModeButton({
   return (
     <button
       className={cn(
-        "inline-flex min-h-8 items-center justify-center gap-1 rounded px-2 text-[11px] font-semibold transition",
+        "inline-flex min-h-8 items-center justify-center gap-1 rounded-full px-2 text-[11px] font-semibold transition",
         active
-          ? "bg-white text-slate-950 shadow-sm"
+          ? "bg-slate-950 text-white shadow-sm"
           : "text-[var(--muted-foreground)] hover:text-slate-900",
       )}
       onClick={onClick}
@@ -154,7 +154,7 @@ function AgentMetaPill({
   return (
     <span
       className={cn(
-        "max-w-full truncate rounded border px-1.5 py-0.5 text-[10px] font-medium",
+        "max-w-[118px] truncate rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
         tone === "provider"
           ? "border-blue-200 bg-blue-50 text-blue-700"
           : tone === "target"

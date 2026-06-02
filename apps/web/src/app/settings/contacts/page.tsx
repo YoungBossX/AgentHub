@@ -1,10 +1,13 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
-import { RuntimeSettingsPageClient } from "@/components/runtime-settings-page-client"
+import { ContactSettingsPageClient } from "@/components/contact-settings-page-client"
+import { getDemoWorkspace, listWorkspaceAgents } from "@/lib/api"
 
-export default function RuntimeSettingsPage() {
+export default async function ContactSettingsPage() {
   const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:8000"
+  const workspace = await getDemoWorkspace(backendUrl)
+  const agents = workspace ? await listWorkspaceAgents(backendUrl, workspace.id) : []
 
   return (
     <main className="h-screen overflow-y-auto bg-[var(--background)] px-5 py-6">
@@ -15,7 +18,7 @@ export default function RuntimeSettingsPage() {
               AgentHub 设置
             </p>
             <h1 className="mt-1 text-2xl font-semibold text-slate-950">
-              运行设置
+              联系人设置
             </h1>
           </div>
           <Link
@@ -27,7 +30,7 @@ export default function RuntimeSettingsPage() {
           </Link>
         </header>
 
-        <RuntimeSettingsPageClient backendUrl={backendUrl} />
+        <ContactSettingsPageClient agents={agents} workspace={workspace} />
       </div>
     </main>
   )

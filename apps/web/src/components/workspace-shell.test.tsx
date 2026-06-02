@@ -314,7 +314,7 @@ describe("WorkspaceShell", () => {
     })
   })
 
-  it("renders built-in agent contacts and local IM visual modes", async () => {
+  it("renders settings navigation links and keeps contacts off the chat sidebar", async () => {
     apiMocks.listSessionMessages.mockResolvedValue([])
     apiMocks.listSessionTasks.mockResolvedValue([])
 
@@ -327,17 +327,18 @@ describe("WorkspaceShell", () => {
       />,
     )
 
-    expect(screen.getByText("Agent 联系人")).toBeTruthy()
-    expect(screen.getByText("Direct chat")).toBeTruthy()
-    expect(screen.getByText("Group workflow")).toBeTruthy()
-    expect(screen.getByText("Manager / Orchestrator")).toBeTruthy()
-    expect(screen.getByText("Frontend Agent")).toBeTruthy()
-    expect(screen.getByText("Review Agent")).toBeTruthy()
-    expect(screen.getByText("@frontend · codex")).toBeTruthy()
-    expect(screen.getByText("@review · claude_code")).toBeTruthy()
-    expect(screen.getByText("local-codex-cli")).toBeTruthy()
-    expect(screen.getAllByText("demo-frontend").length).toBeGreaterThan(0)
-    expect(screen.getByText("计划中")).toBeTruthy()
+    expect(screen.getByText("联系人设置").closest("a")?.getAttribute("href")).toBe(
+      "/settings/contacts",
+    )
+    expect(screen.getByText("运行设置").closest("a")?.getAttribute("href")).toBe(
+      "/settings/runtime",
+    )
+    expect(screen.getByText("其他设置").closest("a")?.getAttribute("href")).toBe(
+      "/settings/other",
+    )
+    expect(screen.getByText("新建会话")).toBeTruthy()
+    expect(screen.queryByText("Agent 联系人")).toBeNull()
+    expect(screen.queryByText("Direct chat")).toBeNull()
   })
 
   it("keeps detailed runtime settings out of the chat sidebar", async () => {
@@ -357,11 +358,10 @@ describe("WorkspaceShell", () => {
       expect(screen.getByText("最近会话")).toBeTruthy()
     })
 
-    expect(screen.getByLabelText("打开运行设置").getAttribute("href")).toBe(
+    expect(screen.getByText("运行设置").closest("a")?.getAttribute("href")).toBe(
       "/settings/runtime",
     )
-    expect(screen.queryByText("Agent Runtime Settings")).toBeNull()
-    expect(screen.queryByLabelText("Planner API")).toBeNull()
+    expect(screen.queryByLabelText("规划 API")).toBeNull()
     expect(screen.queryByText("Save runtime config")).toBeNull()
     expect(apiMocks.getAgentRuntimeConfig).not.toHaveBeenCalled()
     expect(apiMocks.updateAgentRuntimeConfig).not.toHaveBeenCalled()
@@ -424,7 +424,7 @@ describe("WorkspaceShell", () => {
     }
     const orchestratorReply = {
       contentMd:
-        "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
+        "我还不能安全地把这条消息直接变成可执行任务。如果要写入桌面或其他本地目录，请先把对应目录注册为外部工作区/目标；如果只是想改当前 demo，请提出一个限定在 demo app 内的前端/后端变更，或显式使用 @frontend / @backend 指派。",
       createdAt: "2026-05-29T08:13:56Z",
       id: "message-orchestrator",
       messageKind: "chat",
@@ -456,7 +456,7 @@ describe("WorkspaceShell", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "I could not safely turn that into a demo-target task yet. Please ask for a bounded change inside the demo app, or explicitly mention @frontend for a frontend assignment.",
+          "我还不能安全地把这条消息直接变成可执行任务。如果要写入桌面或其他本地目录，请先把对应目录注册为外部工作区/目标；如果只是想改当前 demo，请提出一个限定在 demo app 内的前端/后端变更，或显式使用 @frontend / @backend 指派。",
         ),
       ).toBeTruthy()
     })

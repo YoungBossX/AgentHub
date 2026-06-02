@@ -622,7 +622,61 @@ def test_disabled_llm_router_returns_friendly_chat_fallback_without_task(
         ).all()
 
     assert messages[-1].sender_type == "orchestrator"
-    assert "不会为这条普通聊天创建代码任务" in messages[-1].content_md
+    assert "LLM 路由" in messages[-1].content_md or "有什么我可以帮你的" in messages[-1].content_md
+
+
+def test_failed_llm_router_exposes_error_summary_in_chat_fallback(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="deepseek_api",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="deepseek-api-planner",
+            payload={"outcomeType": "assistant_reply", "reply": "unused"},
+        ),
+    )
+
+    def fail_planner(*_args: object, **_kwargs: object) -> object:
+        raise planning_module.LLMPlannerError("model deepseek-v4-pro not found")
+
+    monkeypatch.setattr(
+        planning_module,
+        "create_llm_conversation_outcome",
+        fail_planner,
+    )
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "你好"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at)
+        ).all()
+
+    assert "deepseek-v4-pro" in messages[-1].content_md
+    assert "抱歉" in messages[-1].content_md
+    assert "LLM_PLANNER_FAILED" in messages[-1].content_md
 
 
 def test_no_mention_message_uses_configured_llm_planner_provider(
@@ -1073,6 +1127,14 @@ def test_runtime_config_selects_planner_provider_for_no_mention_message(
     def fake_resolver(settings: Settings, **kwargs: Optional[str]) -> FakePlannerProvider:
         captured["provider_id"] = kwargs.get("provider_id")
         captured["adapter_type"] = kwargs.get("adapter_type")
+        captured["provider_preset_id"] = kwargs.get("provider_preset_id")
+        captured["model"] = kwargs.get("model")
+        captured["base_url"] = kwargs.get("base_url")
+        captured["api_key_env"] = kwargs.get("api_key_env")
+        timeout_seconds = kwargs.get("timeout_seconds")
+        captured["timeout_seconds"] = (
+            str(timeout_seconds) if timeout_seconds is not None else None
+        )
         return FakePlannerProvider(
             provider_id="runtime-planner-test",
             payload={
@@ -1119,11 +1181,17 @@ def test_runtime_config_selects_planner_provider_for_no_mention_message(
                 "planner": RuntimeRoleConfig(
                     role="planner",
                     agent_profile_id="agent-orchestrator",
-                    provider_id="claude-cli-planner",
-                    adapter_type="claude_cli",
+                    provider_id=None,
+                    adapter_type="openai_compatible_chat",
                     mode="read_only",
                     enabled=True,
                     fallback_policy="deterministic",
+                    provider_preset_id="deepseek_api",
+                    protocol="openai_compatible_chat",
+                    model="deepseek-reasoner",
+                    base_url="https://api.deepseek.com",
+                    timeout_seconds=23,
+                    api_key_env="DEEPSEEK_API_KEY",
                 )
             },
         )
@@ -1137,13 +1205,18 @@ def test_runtime_config_selects_planner_provider_for_no_mention_message(
     tasks = client.get(f"/sessions/{session_id}/tasks").json()
 
     assert captured == {
-        "provider_id": "claude-cli-planner",
-        "adapter_type": "claude_cli",
+        "provider_id": None,
+        "adapter_type": "openai_compatible_chat",
+        "provider_preset_id": "deepseek_api",
+        "model": "deepseek-reasoner",
+        "base_url": "https://api.deepseek.com",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "timeout_seconds": "23",
     }
     assert tasks[0]["planJson"]["plannerProviderId"] == "runtime-planner-test"
     assert (
-        tasks[0]["planJson"]["plannerEvidence"]["runtimeConfigResolution"]["providerId"]
-        == "claude-cli-planner"
+        tasks[0]["planJson"]["plannerEvidence"]["runtimeConfigResolution"]["providerPresetId"]
+        == "deepseek_api"
     )
     assert (
         tasks[0]["planJson"]["runtimeConfigResolution"]["configSource"]
@@ -1677,7 +1750,7 @@ def test_unsupported_broad_saas_request_is_handled_honestly(
         ).all()
 
     assert len(messages) == 1
-    assert "could not safely turn that into a demo-target task" in messages[0].content_md
+    assert "不能安全地把这条消息直接变成可执行任务" in messages[0].content_md
 
 
 def test_no_mention_bounded_request_without_existing_plan_uses_orchestrator_default(

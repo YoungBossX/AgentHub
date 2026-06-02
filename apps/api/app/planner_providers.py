@@ -961,12 +961,18 @@ def resolve_planner_provider(
     fake_payload: dict[str, Any] | None = None,
     provider_id: str | None = None,
     adapter_type: str | None = None,
+    provider_preset_id: str | None = None,
+    model: str | None = None,
+    base_url: str | None = None,
+    api_key_env: str | None = None,
+    timeout_seconds: int | None = None,
 ) -> PlannerProvider:
     resolved_settings = settings or get_settings()
     selected_provider_id = (
-        provider_id or resolved_settings.llm_planner_provider
+        provider_preset_id or provider_id or resolved_settings.llm_planner_provider
     ).strip().lower()
     selected_adapter_type = (adapter_type or "").strip().lower()
+    timeout_sec = timeout_seconds or resolved_settings.llm_planner_timeout_sec
     if selected_provider_id == PLANNER_PROVIDER_DISABLED:
         return DisabledPlannerProvider()
     if selected_provider_id == PLANNER_PROVIDER_FAKE_TEST:
@@ -982,7 +988,7 @@ def resolve_planner_provider(
         or selected_adapter_type == PLANNER_PROVIDER_CLAUDE_CLI
     ):
         return ClaudeCliPlannerProvider(
-            timeout_sec=resolved_settings.llm_planner_timeout_sec,
+            timeout_sec=timeout_sec,
         )
     if (
         selected_provider_id in {"openai_api", "openai-api-planner"}
@@ -990,42 +996,54 @@ def resolve_planner_provider(
     ):
         preset = get_planner_provider_preset("openai_api")
         return OpenAIResponsesPlannerProvider(
-            api_key_env=preset.api_key_env if preset is not None else "OPENAI_API_KEY",
-            model=preset.default_model if preset is not None else "gpt-4.1-mini",
-            base_url=(
-                preset.default_base_url
-                if preset is not None and preset.default_base_url is not None
-                else "https://api.openai.com/v1"
-            ),
+            api_key_env=api_key_env
+            or (preset.api_key_env if preset is not None else "OPENAI_API_KEY"),
+            model=model
+            or (preset.default_model if preset is not None else "gpt-4.1-mini"),
+            base_url=base_url
+            or (preset.default_base_url if preset is not None else None)
+            or "https://api.openai.com/v1",
             provider_preset_id="openai_api",
-            timeout_sec=resolved_settings.llm_planner_timeout_sec,
+            timeout_sec=timeout_sec,
         )
-    if selected_provider_id in {"deepseek_api", "mimo_api"}:
+    if (
+        selected_provider_id
+        in {"deepseek_api", "mimo_api", "custom_openai_compatible"}
+        or selected_adapter_type == PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT
+    ):
         preset = get_planner_provider_preset(selected_provider_id)
+        normalized_preset_id = (
+            preset.preset_id
+            if preset is not None
+            else provider_preset_id or selected_provider_id or "custom_openai_compatible"
+        )
         return OpenAICompatibleChatPlannerProvider(
-            provider_id=f"{selected_provider_id.replace('_', '-')}-planner",
-            api_key_env=preset.api_key_env if preset is not None else "CUSTOM_OPENAI_COMPATIBLE_API_KEY",
-            model=preset.default_model if preset is not None else "",
-            base_url=(
-                preset.default_base_url
-                if preset is not None and preset.default_base_url is not None
-                else ""
+            provider_id=f"{normalized_preset_id.replace('_', '-')}-planner",
+            api_key_env=api_key_env
+            or (
+                preset.api_key_env
+                if preset is not None
+                else "CUSTOM_OPENAI_COMPATIBLE_API_KEY"
             ),
-            provider_preset_id=selected_provider_id,
-            timeout_sec=resolved_settings.llm_planner_timeout_sec,
+            model=model or (preset.default_model if preset is not None else ""),
+            base_url=base_url
+            or (preset.default_base_url if preset is not None else None)
+            or "",
+            provider_preset_id=normalized_preset_id,
+            timeout_sec=timeout_sec,
         )
     if selected_provider_id in {"anthropic_api", "anthropic-api-planner"}:
         preset = get_planner_provider_preset("anthropic_api")
         return AnthropicMessagesPlannerProvider(
-            api_key_env=preset.api_key_env if preset is not None else "ANTHROPIC_API_KEY",
-            model=preset.default_model if preset is not None else "claude-sonnet-4-5",
-            base_url=(
-                preset.default_base_url
-                if preset is not None and preset.default_base_url is not None
-                else "https://api.anthropic.com"
-            ),
+            api_key_env=api_key_env
+            or (preset.api_key_env if preset is not None else "ANTHROPIC_API_KEY"),
+            model=model
+            or (preset.default_model if preset is not None else "claude-sonnet-4-5"),
+            base_url=base_url
+            or (preset.default_base_url if preset is not None else None)
+            or "https://api.anthropic.com",
             provider_preset_id="anthropic_api",
-            timeout_sec=resolved_settings.llm_planner_timeout_sec,
+            timeout_sec=timeout_sec,
         )
     raise PlannerProviderError(
         code="UNKNOWN_PLANNER_PROVIDER",

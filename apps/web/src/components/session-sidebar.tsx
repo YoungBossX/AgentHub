@@ -1,10 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { GitBranch, Plus, Settings } from "lucide-react"
+import { type ReactNode } from "react"
+import {
+  ChevronRight,
+  GitBranch,
+  MoreHorizontal,
+  Plus,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react"
 
-import { AgentContactList } from "@/components/agent-contact-list"
-import { Button } from "@/components/ui/button"
 import type { AgentContact, Workspace, WorkspaceSession } from "@/lib/api"
 import { formatCompactDateTime } from "@/lib/date-format"
 import { cn } from "@/lib/utils"
@@ -12,12 +18,8 @@ import { cn } from "@/lib/utils"
 type SessionSidebarProps = {
   agents: AgentContact[]
   isPending: boolean
-  mode: "direct" | "group"
   onCreateSession: () => void
-  onModeChange: (mode: "direct" | "group") => void
-  onSelectAgent: (agentId: string) => void
   onSelectSession: (sessionId: string) => void
-  selectedAgentId: string | null
   selectedSessionId: string | null
   sessions: WorkspaceSession[]
   taskCount: number
@@ -27,23 +29,19 @@ type SessionSidebarProps = {
 export function SessionSidebar({
   agents,
   isPending,
-  mode,
   onCreateSession,
-  onModeChange,
-  onSelectAgent,
   onSelectSession,
-  selectedAgentId,
   selectedSessionId,
   sessions,
   taskCount,
   workspace,
 }: SessionSidebarProps) {
   return (
-    <aside className="flex min-h-0 flex-col overflow-hidden border-b border-[var(--border)] bg-[#FBF9FF] lg:border-b-0 lg:border-r">
-      <div className="shrink-0 p-4">
-        <div className="rounded-lg bg-transparent p-2">
+    <aside className="flex min-h-0 flex-col overflow-hidden border-b border-white/70 bg-[linear-gradient(180deg,#edf8f7_0%,#f7fafb_58%,#ffffff_100%)] lg:border-b-0 lg:border-r">
+      <div className="shrink-0 p-5 pb-4">
+        <div className="rounded-lg bg-transparent">
           <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--primary-soft)] text-[var(--primary)]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white shadow-sm">
               <GitBranch aria-hidden="true" size={18} />
             </span>
             <div className="min-w-0">
@@ -57,65 +55,69 @@ export function SessionSidebar({
                 {workspace.rootPath}
               </p>
             </div>
-            <Link
-              aria-label="打开运行设置"
-              className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-white text-slate-600 transition hover:border-[var(--primary-border)] hover:text-[var(--primary)]"
-              href="/settings/runtime"
-            >
-              <Settings aria-hidden="true" size={16} />
-            </Link>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-            <WorkspaceMeta label="会话" value={String(sessions.length)} />
-            <WorkspaceMeta label="当前任务" value={String(taskCount)} />
           </div>
         </div>
 
-        <Button
-          className="mt-4 w-full"
+        <section className="mt-6 grid gap-1.5">
+          <p className="mb-1 px-1 text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+            Main menu
+          </p>
+          <SidebarSettingsLink
+            href="/settings/contacts"
+            icon={<Users aria-hidden="true" size={17} />}
+            label="联系人设置"
+            meta={`${agents.length} 个`}
+          />
+          <SidebarSettingsLink
+            href="/settings/runtime"
+            icon={<SlidersHorizontal aria-hidden="true" size={17} />}
+            label="运行设置"
+            meta="工作区 / Agent"
+          />
+          <SidebarSettingsLink
+            href="/settings/other"
+            icon={<MoreHorizontal aria-hidden="true" size={17} />}
+            label="其他设置"
+            meta="预留"
+          />
+        </section>
+
+        <button
+          className="mt-4 flex min-h-11 w-full items-center gap-3 rounded-full bg-slate-950 px-4 text-left text-sm font-semibold text-white shadow-sm transition hover:bg-black disabled:opacity-60"
           disabled={isPending}
           onClick={onCreateSession}
           type="button"
         >
           <Plus aria-hidden="true" size={16} />
-          新建会话
-        </Button>
-
-        <AgentContactList
-          agents={agents}
-          mode={mode}
-          onModeChange={onModeChange}
-          onSelectAgent={onSelectAgent}
-          selectedAgentId={selectedAgentId}
-        />
+          <span className="min-w-0 flex-1 truncate">新建会话</span>
+        </button>
       </div>
 
       <nav
-        className="min-h-0 flex-1 overflow-y-auto px-3 pb-4"
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         data-region="sidebar-scroll"
       >
-        <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+        <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
           最近会话
         </div>
-        <div className="grid gap-1.5">
+        <div className="grid min-w-0 gap-2 overflow-hidden">
           {sessions.map((session) => {
             const selected = session.id === selectedSessionId
             const smoke = session.title.toLowerCase().includes("smoke")
             return (
               <button
                 className={cn(
-                  "grid gap-1.5 rounded-lg border-r-4 p-2.5 text-left transition",
+                  "grid min-w-0 gap-1.5 overflow-hidden rounded-lg border-l-4 p-3 text-left transition",
                   selected
-                    ? "border-r-[var(--primary)] bg-[var(--primary-soft)]/80 text-slate-950 shadow-sm"
-                    : "border-r-transparent bg-transparent text-slate-700 hover:bg-white/80",
+                    ? "border-l-slate-950 bg-white text-slate-950 shadow-sm"
+                    : "border-l-transparent bg-transparent text-slate-700 hover:bg-white/75",
                   smoke && !selected && "opacity-55",
                 )}
                 key={session.id}
                 onClick={() => onSelectSession(session.id)}
                 type="button"
               >
-                <span className="flex items-start justify-between gap-3">
+                <span className="flex min-w-0 items-start justify-between gap-3">
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold">
                       {session.title}
@@ -127,7 +129,7 @@ export function SessionSidebar({
                   {smoke && !selected ? null : <SessionStatusDot status={session.status} />}
                 </span>
                 {selected ? (
-                  <span className="text-xs font-semibold text-[var(--primary)]">
+                  <span className="text-xs font-semibold text-slate-950">
                     聚焦 {taskCount} 个任务
                   </span>
                 ) : null}
@@ -136,21 +138,55 @@ export function SessionSidebar({
           })}
 
           {sessions.length === 0 ? (
-            <div className="rounded-md border border-dashed border-[var(--border)] bg-white p-4 text-sm text-[var(--muted-foreground)]">
+            <div className="rounded-lg border border-dashed border-[var(--border)] bg-white/80 p-4 text-sm text-[var(--muted-foreground)]">
               暂无会话。
             </div>
           ) : null}
         </div>
       </nav>
 
-      <div className="shrink-0 border-t border-[var(--border)] p-4 text-xs text-[var(--muted-foreground)]">
+      <div className="shrink-0 border-t border-white/70 p-5 text-xs text-[var(--muted-foreground)]">
         <div className="flex items-center justify-between">
-          <span>文档</span>
-          <span>API</span>
-          <span>支持</span>
+          <span>本地 Demo</span>
+          <span>单用户</span>
+          <span>SSE</span>
         </div>
       </div>
     </aside>
+  )
+}
+
+function SidebarSettingsLink({
+  href,
+  icon,
+  label,
+  meta,
+}: {
+  href: string
+  icon: ReactNode
+  label: string
+  meta: string
+}) {
+  return (
+    <Link
+      className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-left text-sm text-slate-700 transition hover:bg-white/70 hover:text-slate-950"
+      href={href}
+    >
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center text-slate-950">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-semibold">{label}</span>
+        <span className="mt-0.5 block truncate text-xs text-[var(--muted-foreground)]">
+          {meta}
+        </span>
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="shrink-0 text-slate-400"
+        size={15}
+      />
+    </Link>
   )
 }
 
@@ -160,15 +196,6 @@ function formatSessionTime(value: string | null) {
   }
 
   return formatCompactDateTime(value)
-}
-
-function WorkspaceMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded bg-[var(--surface-muted)] p-2">
-      <p className="text-[11px] text-[var(--text-muted)]">{label}</p>
-      <p className="mt-1 font-semibold text-slate-950">{value}</p>
-    </div>
-  )
 }
 
 function SessionStatusDot({ status }: { status: string }) {

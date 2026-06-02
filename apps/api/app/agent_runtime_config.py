@@ -96,6 +96,12 @@ class RuntimeRoleResolution:
             "mode": self.role_config.mode,
             "enabled": self.role_config.enabled,
             "fallbackPolicy": self.role_config.fallback_policy,
+            "providerPresetId": self.role_config.provider_preset_id,
+            "protocol": self.role_config.protocol,
+            "model": self.role_config.model,
+            "baseUrl": self.role_config.base_url,
+            "timeoutSeconds": self.role_config.timeout_seconds,
+            "apiKeyEnv": self.role_config.api_key_env,
             "configSource": self.config_source,
         }
 
@@ -268,10 +274,6 @@ def validate_runtime_config(
         if role_config.adapter_type != provider.adapter_type:
             errors.append(
                 f"Runtime config role `{role}` adapter `{role_config.adapter_type}` does not match provider `{provider.adapter_type}`."
-            )
-        if role_config.adapter_type != profile.adapter_type:
-            warnings.append(
-                f"Runtime config role `{role}` uses provider adapter `{role_config.adapter_type}` with agent profile adapter `{profile.adapter_type}`."
             )
         if role_config.mode not in provider.supported_modes:
             errors.append(

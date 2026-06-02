@@ -1,6 +1,7 @@
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import Engine
 
 from app.config import get_settings, sqlite_path_from_url
 from app.seed import seed_demo_data
@@ -25,50 +26,77 @@ def create_db_and_tables() -> None:
 
 
 def ensure_demo_schema_columns() -> None:
-    if not settings.database_url.startswith("sqlite"):
+    _ensure_sqlite_demo_schema_columns(engine)
+
+
+def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
+    if not str(db_engine.url).startswith("sqlite"):
         return
 
-    inspector = inspect(engine)
+    inspector = inspect(db_engine)
     table_names = set(inspector.get_table_names())
-    if "session" not in table_names:
+
+    _ensure_table_columns(
+        db_engine,
+        inspector,
+        table_names,
+        "session",
+        {
+            "active_frontend_target_id": "TEXT",
+            "active_backend_target_id": "TEXT",
+        },
+    )
+    _ensure_table_columns(
+        db_engine,
+        inspector,
+        table_names,
+        "externalprojecttarget",
+        {
+            "staging_output_dir": "TEXT",
+            "staging_serve_command": "TEXT",
+            "deploy_provider_ids_json": "TEXT NOT NULL DEFAULT '[]'",
+        },
+    )
+    _ensure_table_columns(
+        db_engine,
+        inspector,
+        table_names,
+        "taskrun",
+        {
+            "runner_id": "TEXT",
+            "last_heartbeat_at": "DATETIME",
+            "lease_expires_at": "DATETIME",
+            "stale_detected_at": "DATETIME",
+            "stale_reason": "TEXT",
+        },
+    )
+
+
+def _ensure_table_columns(
+    db_engine: Engine,
+    inspector,
+    table_names: set[str],
+    table_name: str,
+    column_definitions: dict[str, str],
+) -> None:
+    if table_name not in table_names:
         return
 
-    existing_columns = {column["name"] for column in inspector.get_columns("session")}
+    existing_columns = {
+        column["name"] for column in inspector.get_columns(table_name)
+    }
     missing_columns = [
-        column_name
-        for column_name in ("active_frontend_target_id", "active_backend_target_id")
+        (column_name, column_type)
+        for column_name, column_type in column_definitions.items()
         if column_name not in existing_columns
     ]
-    if missing_columns:
-        with engine.begin() as connection:
-            for column_name in missing_columns:
-                connection.execute(
-                    text(f"ALTER TABLE session ADD COLUMN {column_name} TEXT")
-                )
-
-    if "taskrun" not in table_names:
+    if not missing_columns:
         return
 
-    task_run_columns = {column["name"] for column in inspector.get_columns("taskrun")}
-    task_run_column_definitions = {
-        "runner_id": "TEXT",
-        "last_heartbeat_at": "DATETIME",
-        "lease_expires_at": "DATETIME",
-        "stale_detected_at": "DATETIME",
-        "stale_reason": "TEXT",
-    }
-    missing_task_run_columns = [
-        (column_name, column_type)
-        for column_name, column_type in task_run_column_definitions.items()
-        if column_name not in task_run_columns
-    ]
-    if not missing_task_run_columns:
-        return
-
-    with engine.begin() as connection:
-        for column_name, column_type in missing_task_run_columns:
+    with db_engine.begin() as connection:
+        for column_name, column_type in missing_columns:
             connection.execute(
-                text(f"ALTER TABLE taskrun ADD COLUMN {column_name} {column_type}")
+                text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
             )
 
 

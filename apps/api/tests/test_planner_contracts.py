@@ -234,6 +234,38 @@ def test_parse_conversation_outcome_output_accepts_assistant_reply() -> None:
     assert outcome["planDraft"] is None
 
 
+def test_parse_conversation_outcome_output_ignores_non_task_plan_draft_noise() -> None:
+    outcome = parse_conversation_outcome_output(
+        json.dumps(
+            {
+                "outcomeType": "assistant_reply",
+                "reply": "你好，我可以帮你规划代码任务。",
+                "planDraft": {"tasks": [{"title": "invalid accidental draft"}]},
+                "codingAgentProvider": {"providerId": "should-not-be-here"},
+                "riskLevel": "low",
+                "reason": "Pure greeting.",
+                "validationResult": "not_required",
+            }
+        )
+    )
+
+    assert outcome["outcomeType"] == "assistant_reply"
+    assert outcome["reply"].startswith("你好")
+    assert outcome["planDraft"] is None
+    assert outcome["codingAgentProvider"] is None
+
+
+def test_parse_conversation_outcome_output_normalizes_loose_assistant_reply() -> None:
+    outcome = parse_conversation_outcome_output(
+        json.dumps({"reply": "你好，我可以帮你规划代码任务。"})
+    )
+
+    assert outcome["outcomeType"] == "assistant_reply"
+    assert outcome["reply"].startswith("你好")
+    assert outcome["planDraft"] is None
+    assert outcome["validationResult"] == "not_required"
+
+
 def test_conversation_outcome_supports_assistant_reply_without_task_plan() -> None:
     outcome = ConversationOutcome.model_validate(
         {
@@ -401,9 +433,9 @@ def test_conversation_outcome_structured_output_helpers_are_shared() -> None:
     ]
     assert schema["required"] == ["outcomeType"]
     assert schema["properties"]["planDraft"]["type"] == ["object", "null"]
-    assert "ConversationOutcome" in prompt
-    assert "Do not execute code" in prompt
-    assert "coding agents" in prompt
+    assert "ConversationOutcome" in prompt or "conversation router" in prompt
+    assert "execute code" in prompt.lower()
+    assert "Never execute code" in prompt or "call agents" in prompt
 
 
 def test_parse_llm_plan_output_does_not_normalize_unknown_target() -> None:

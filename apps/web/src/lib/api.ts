@@ -13,6 +13,88 @@ export type Workspace = {
   createdAt: string
 }
 
+export type TargetProject = {
+  targetId: string
+  name: string
+  type: "frontend" | "backend" | "platform" | string
+  root: string
+  allowedPaths: string[]
+  deniedPaths: string[]
+  devCommand: string | null
+  testCommand: string | null
+  checkCommand: string | null
+  buildCommand: string | null
+  previewCommand: string | null
+  stagingOutputDir: string | null
+  stagingServeCommand: string | null
+  deployProviderIds: string[]
+  baseUrl: string | null
+  packageManager: string | null
+  detectedFramework: string | null
+  projectType: string | null
+  analysisStatus: string | null
+  allowedAgents: string[]
+  requiresPlatformMode: boolean
+  requiresApproval: boolean
+  relatedTargetIds: string[]
+}
+
+export type ExternalProjectAnalysis = {
+  rootPath: string
+  projectType: string
+  detectedFramework: string
+  packageManager: string
+  allowedPaths: string[]
+  deniedPaths: string[]
+  devCommand: string | null
+  testCommand: string | null
+  checkCommand: string | null
+  buildCommand: string | null
+  previewCommand: string | null
+  analysisStatus: string
+  analysisWarnings: string[]
+  confidence: string
+}
+
+export type ExternalProjectTargetInput = {
+  targetId?: string | null
+  name: string
+  rootPath: string
+  projectType: string
+  allowedPaths: string[]
+  deniedPaths?: string[]
+  devCommand?: string | null
+  testCommand?: string | null
+  checkCommand?: string | null
+  buildCommand?: string | null
+  previewCommand?: string | null
+  stagingOutputDir?: string | null
+  stagingServeCommand?: string | null
+  deployProviderIds?: string[]
+  packageManager?: string | null
+  detectedFramework?: string | null
+}
+
+export type ExternalProjectTarget = ExternalProjectTargetInput & {
+  id: string
+  workspaceId: string
+  targetId: string
+  deniedPaths: string[]
+  devCommand: string | null
+  testCommand: string | null
+  checkCommand: string | null
+  buildCommand: string | null
+  previewCommand: string | null
+  stagingOutputDir: string | null
+  stagingServeCommand: string | null
+  deployProviderIds: string[]
+  packageManager: string | null
+  detectedFramework: string | null
+  analysisStatus: string
+  createdAt: string
+  updatedAt: string
+}
+
 export type AgentContact = {
   id: string
   displayName: string
@@ -89,6 +171,16 @@ export type AgentRuntimeConfig = {
   validation: RuntimeConfigValidation
 }
 
+export type RuntimeProviderCheck = {
+  role: string
+  providerId: string | null
+  adapterType: string | null
+  authStatus: string
+  availability: string
+  available: boolean
+  message: string
+}
+
 export type RuntimeRoleConfigInput = {
   agentProfileId?: string | null
   providerId?: string | null
@@ -112,6 +204,8 @@ export type WorkspaceSession = {
   sessionType: string
   boundBranch: string
   worktreePath: string
+  activeFrontendTargetId?: string | null
+  activeBackendTargetId?: string | null
   status: string
   lastMessageAt: string | null
   createdAt: string
@@ -361,6 +455,94 @@ export async function listWorkspaceSessions(
   return (await response.json()) as WorkspaceSession[]
 }
 
+export async function listWorkspaceTargets(
+  backendUrl: string,
+  workspaceId: string,
+  fetcher: Fetcher = fetch,
+): Promise<TargetProject[]> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/targets`),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as TargetProject[]
+}
+
+export async function analyzeExternalProject(
+  backendUrl: string,
+  workspaceId: string,
+  rootPath: string,
+  fetcher: Fetcher = fetch,
+): Promise<ExternalProjectAnalysis> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/external-targets/analyze`),
+    {
+      body: JSON.stringify({ rootPath }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error("Could not analyze external project")
+  }
+
+  return (await response.json()) as ExternalProjectAnalysis
+}
+
+export async function createExternalProjectTarget(
+  backendUrl: string,
+  workspaceId: string,
+  input: ExternalProjectTargetInput,
+  fetcher: Fetcher = fetch,
+): Promise<ExternalProjectTarget> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/external-targets`),
+    {
+      body: JSON.stringify(input),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error("Could not register external project")
+  }
+
+  return (await response.json()) as ExternalProjectTarget
+}
+
+export async function updateSessionTargetSelection(
+  backendUrl: string,
+  sessionId: string,
+  selection: {
+    frontendTargetId?: string | null
+    backendTargetId?: string | null
+  },
+  fetcher: Fetcher = fetch,
+): Promise<WorkspaceSession> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/sessions/${sessionId}/target-selection`),
+    {
+      body: JSON.stringify(selection),
+      headers: { "Content-Type": "application/json" },
+      method: "PATCH",
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error("Could not update session target selection")
+  }
+
+  return (await response.json()) as WorkspaceSession
+}
+
 export async function listWorkspaceAgents(
   backendUrl: string,
   workspaceId: string,
@@ -453,6 +635,29 @@ export async function updateAgentRuntimeConfig(
   }
 
   return (await response.json()) as AgentRuntimeConfig
+}
+
+export async function checkAgentRuntimeProvider(
+  backendUrl: string,
+  workspaceId: string,
+  role: string,
+  roleConfig: RuntimeRoleConfigInput,
+  fetcher: Fetcher = fetch,
+): Promise<RuntimeProviderCheck> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/runtime-config/check-provider`),
+    {
+      body: JSON.stringify({ role, roleConfig }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error("Could not check runtime provider")
+  }
+
+  return (await response.json()) as RuntimeProviderCheck
 }
 
 export async function createWorkspaceSession(

@@ -107,7 +107,7 @@ export function PreviewCard({
   preview,
 }: PreviewCardProps) {
   return (
-    <article className="rounded-md border border-[var(--border)] bg-white p-3">
+    <article className="rounded-lg border border-[var(--border)] bg-white p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
@@ -121,7 +121,7 @@ export function PreviewCard({
             {preview.url}
           </p>
         </div>
-        <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
+        <span className="rounded-full border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-[var(--muted-foreground)]">
           {statusLabel(preview.healthStatus)}
         </span>
       </div>
@@ -215,8 +215,8 @@ export function PreviewPanel({
   const activeKind = selectedItem?.kind ?? "empty"
 
   return (
-    <aside className="flex min-h-0 flex-col overflow-hidden border-t border-[var(--border)] bg-[#FBF9FF] lg:border-l lg:border-t-0">
-      <header className="shrink-0 border-b border-[var(--border)] bg-white px-4 py-3 shadow-sm">
+    <aside className="flex min-h-0 flex-col overflow-hidden border-t border-[var(--border)] bg-[#f7f8f8] lg:border-l lg:border-t-0">
+      <header className="shrink-0 border-b border-[var(--border)] bg-white/95 px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
@@ -231,7 +231,7 @@ export function PreviewPanel({
                 : "从时间线选择 Diff、预览或部署产物。"}
             </p>
             {selectedItem ? (
-              <p className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-normal text-slate-600">
+              <p className="mt-2 inline-flex rounded-full bg-[var(--surface-muted)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-normal text-slate-600">
                 {artifactKindLabel(selectedItem.kind)}
               </p>
             ) : null}
@@ -260,7 +260,7 @@ export function PreviewPanel({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-4 gap-2 rounded-xl bg-slate-100 p-1">
+        <div className="mt-4 grid grid-cols-4 gap-1 rounded-full bg-[var(--surface-muted)] p-1">
           <ArtifactRailItem
             active={activeKind === "diff"}
             count={artifactItems.filter((item) => item.kind === "diff").length}
@@ -314,7 +314,7 @@ export function PreviewPanel({
       >
         {selectedItem ? <ArtifactSummary item={selectedItem} /> : null}
 
-        <section className="rounded-xl border border-[var(--border)] bg-white p-3 shadow-sm">
+        <section className="rounded-lg border border-[var(--border)] bg-white p-3 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
               预览环境
@@ -323,7 +323,7 @@ export function PreviewPanel({
               Vite
             </span>
           </div>
-          <div className="mt-3 rounded-lg bg-slate-100 p-2">
+          <div className="mt-3 rounded-lg bg-[var(--surface-muted)] p-2">
             <div className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
@@ -346,8 +346,8 @@ export function PreviewPanel({
             onStopPreview={onStopPreview}
           />
         ) : (
-          <div className="flex min-h-[360px] w-full items-start justify-center rounded-xl border border-dashed border-[var(--border)] bg-[radial-gradient(#DDD6FE_1px,transparent_1px)] [background-size:18px_18px] p-8 pt-20 text-center text-sm text-[var(--muted-foreground)]">
-            <div className="w-full max-w-64 rounded-xl border border-[var(--border)] bg-white px-6 py-7 shadow-sm">
+          <div className="flex min-h-[360px] w-full items-start justify-center rounded-lg border border-dashed border-[var(--border)] bg-white/60 p-8 pt-20 text-center text-sm text-[var(--muted-foreground)]">
+            <div className="w-full max-w-64 rounded-lg border border-[var(--border)] bg-white px-6 py-7 shadow-sm">
               <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary)] text-white">
                 <Monitor aria-hidden="true" size={18} />
               </span>
@@ -368,7 +368,7 @@ function ArtifactSummary({ item }: { item: ArtifactPanelItem }) {
   const rows = summaryRows(item)
 
   return (
-    <section className="rounded-xl border border-[var(--border)] bg-white p-3 shadow-sm">
+    <section className="rounded-lg border border-[var(--border)] bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
@@ -378,14 +378,14 @@ function ArtifactSummary({ item }: { item: ArtifactPanelItem }) {
             {item.taskTitle}
           </p>
         </div>
-        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-mono text-[11px] font-semibold text-slate-600">
+        <span className="rounded-full bg-[var(--surface-muted)] px-2.5 py-1 font-mono text-[11px] font-semibold text-slate-600">
           {item.taskRunId.slice(0, 8)}
         </span>
       </div>
 
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
         {rows.map((row) => (
-          <div className="min-w-0 rounded-lg bg-slate-50 px-2.5 py-2" key={row.label}>
+          <div className="min-w-0 rounded-lg bg-[var(--surface-muted)] px-2.5 py-2" key={row.label}>
             <dt className="text-[var(--text-muted)]">{row.label}</dt>
             <dd className="mt-1 truncate font-semibold text-slate-800">{row.value}</dd>
           </div>
@@ -435,7 +435,7 @@ function ArtifactDetail({
         preview={item.artifact}
       />
       <iframe
-        className="min-h-[420px] w-full rounded-xl border border-[var(--border)] bg-white shadow-sm"
+        className="min-h-[420px] w-full rounded-lg border border-[var(--border)] bg-white shadow-sm"
         key={`${item.artifact.id}-${frameKey}`}
         src={item.artifact.url}
         title="Vite React 预览"
@@ -458,9 +458,9 @@ function ArtifactRailItem({
   return (
     <button
       className={cn(
-        "rounded-lg px-2 py-2 text-center text-sm font-semibold transition",
+        "rounded-full px-2 py-2 text-center text-sm font-semibold transition",
         active
-          ? "bg-white text-[var(--primary)] shadow-sm"
+          ? "bg-slate-950 text-white shadow-sm"
           : "text-slate-500 hover:bg-white/70",
         count === 0 && "cursor-not-allowed opacity-50 hover:bg-transparent",
       )}

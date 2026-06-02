@@ -274,6 +274,7 @@ def parse_conversation_outcome_output(raw_text: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise LLMPlannerError("LLM planner output must be a JSON object.")
     if "outcomeType" in payload:
+        payload = _normalize_non_task_conversation_payload(payload)
         try:
             outcome = ConversationOutcome.model_validate(payload)
         except ValidationError as exc:
@@ -284,6 +285,17 @@ def parse_conversation_outcome_output(raw_text: str) -> dict[str, Any]:
         if outcome.outcome_type == "task_plan":
             _validate_plan_response_payload(outcome_payload["planDraft"])
         return outcome_payload
+    reply = _reply_from_loose_assistant_payload(payload)
+    if reply is not None:
+        return ConversationOutcome(
+            outcomeType="assistant_reply",
+            reply=reply,
+            riskLevel=_string_value(payload.get("riskLevel")) or "low",
+            reason=_string_value(payload.get("reason"))
+            or "Loose assistant reply normalized by AgentHub.",
+            plannerProvider={},
+            validationResult="not_required",
+        ).to_payload()
     # Backward compatibility for existing tests and deterministic fake planner
     # payloads that still emit a raw PlannerResponse.
     _validate_plan_response_payload(payload)
@@ -310,6 +322,35 @@ def _validate_plan_response_payload(payload: dict[str, Any]) -> None:
         raise LLMPlannerError("LLM planner output must include tasks.")
     if not response.rationale.strip():
         raise LLMPlannerError("LLM planner output must include rationale.")
+
+
+def _reply_from_loose_assistant_payload(payload: dict[str, Any]) -> str | None:
+    if any(key in payload for key in ("planDraft", "tasks", "plannedFiles", "targetId")):
+        return None
+    for key in ("reply", "message", "content", "answer"):
+        value = _string_value(payload.get(key))
+        if value:
+            return value
+    return None
+
+
+def _normalize_non_task_conversation_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    outcome_type = _string_value(payload.get("outcomeType"))
+    if outcome_type == "task_plan":
+        return payload
+    if outcome_type not in {
+        "assistant_reply",
+        "clarification",
+        "refusal",
+        "approval_required",
+        "unsupported",
+    }:
+        return payload
+
+    normalized = dict(payload)
+    normalized.pop("planDraft", None)
+    normalized.pop("codingAgentProvider", None)
+    return normalized
 
 
 def _extract_json_payload(raw_text: str) -> Any:

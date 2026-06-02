@@ -84,10 +84,6 @@ export function WorkspaceShell({
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [ledger, setLedger] = useState<SessionExecutionLedger | null>(null)
-  const [agentMode, setAgentMode] = useState<"direct" | "group">("group")
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(
-    initialAgents[0]?.id ?? null,
-  )
 
   const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
   const selectedSession = useMemo(
@@ -443,8 +439,13 @@ export function WorkspaceShell({
     setDraft("")
     runClientAction(async () => {
       const created = await createSessionMessage(backendUrl, selectedSessionId, content)
-      const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
-      setMessages((current) => [...current, created])
+      const [nextMessages, nextTasks] = await Promise.all([
+        listSessionMessages(backendUrl, selectedSessionId),
+        listSessionTasks(backendUrl, selectedSessionId),
+      ])
+      setMessages((current) =>
+        nextMessages.length > 0 ? nextMessages : [...current, created],
+      )
       setTasks(nextTasks)
       await refreshLedger()
       setSessions((current) =>
@@ -460,7 +461,7 @@ export function WorkspaceShell({
 
   if (!workspace) {
     return (
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+      <section className="m-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm">
         <h2 className="text-lg font-semibold">工作区不可用</h2>
         <p className="mt-3 text-sm leading-6 text-[var(--muted-foreground)]">
           请先启动 API 并初始化 SQLite 数据库，然后刷新 AgentHub。
@@ -471,153 +472,149 @@ export function WorkspaceShell({
 
   return (
     <section
-      className="grid h-screen grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-[var(--surface)] lg:grid-cols-[280px_minmax(0,1fr)_400px]"
+      className="h-screen overflow-hidden bg-[var(--background)] p-3 sm:p-4 lg:p-6"
       data-region="app-shell"
     >
-      <header
-        className="col-span-full border-b border-[var(--border)] bg-[var(--surface)] px-5 py-3"
-        data-region="top-header"
-      >
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--code-bg)] text-blue-400">
-              <Radio aria-hidden="true" size={17} />
-            </span>
-            <div>
-              <h1 className="text-lg font-bold text-[var(--primary-strong)]">
-                AgentHub
-              </h1>
-              <p className="text-xs font-medium text-[var(--text-secondary)]">
-                代码 Agent 指挥中心
-              </p>
+      <div className="grid h-full min-h-0 overflow-hidden rounded-[28px] bg-white shadow-[0_28px_80px_rgba(15,23,42,0.18)] ring-1 ring-white/70 lg:grid-cols-[310px_minmax(0,1fr)_420px]">
+        <SessionSidebar
+          agents={initialAgents}
+          isPending={isPending}
+          onCreateSession={handleCreateSession}
+          onSelectSession={selectSession}
+          selectedSessionId={selectedSessionId}
+          sessions={sessions}
+          taskCount={tasks.length}
+          workspace={workspace}
+        />
+
+        <main className="flex min-h-0 flex-col overflow-hidden bg-[#fbfcfc]">
+          <header
+            className="shrink-0 border-b border-[var(--border)] bg-white/95 px-5 py-4"
+            data-region="top-header"
+          >
+            <div className="rounded-lg border border-[var(--border)] bg-white px-4 py-3 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+                  <span className="font-semibold text-[var(--text-muted)]">
+                    AgentHub
+                  </span>
+                  <span className="text-slate-300">›</span>
+                  <span className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-slate-950">
+                    <Radio aria-hidden="true" size={15} />
+                    当前会话
+                  </span>
+                </div>
+                <div className="hidden shrink-0 sm:flex">{healthSlot}</div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-xl font-semibold leading-tight text-slate-950 xl:text-2xl">
+                    {selectedSession?.title ?? "未选择会话"}
+                  </h2>
+                  <p className="mt-2 truncate text-sm text-[var(--muted-foreground)]">
+                    {workspace.rootPath} · {tasks.length} 个任务 ·{" "}
+                    {hasCompletedRun ? "已有执行证据" : "等待运行"}
+                  </p>
+                </div>
+
+                <DemoPipeline
+                  hasCompletedRun={hasCompletedRun}
+                  hasRecoveredRun={hasRecoveredRun}
+                  hasRequirement={hasRequirement}
+                  hasRunningTask={hasRunningTask}
+                  hasTasks={tasks.length > 0}
+                />
+                <div className="sm:hidden">{healthSlot}</div>
+              </div>
             </div>
-          </div>
+          </header>
 
-          <DemoPipeline
-            hasCompletedRun={hasCompletedRun}
-            hasRecoveredRun={hasRecoveredRun}
-            hasRequirement={hasRequirement}
-            hasRunningTask={hasRunningTask}
-            hasTasks={tasks.length > 0}
-          />
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden bg-[#fbfcfc] p-5">
+            {syncError ? (
+              <div
+                className="mx-auto w-full max-w-4xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 shadow-sm"
+                role="alert"
+              >
+                {syncError}
+              </div>
+            ) : null}
 
-          <div className="flex items-center gap-3">{healthSlot}</div>
-        </div>
-      </header>
+            {selectedSession ? <MissionPanel ledger={ledger} /> : null}
 
-      <SessionSidebar
-        agents={initialAgents}
-        isPending={isPending}
-        mode={agentMode}
-        onCreateSession={handleCreateSession}
-        onModeChange={setAgentMode}
-        onSelectAgent={setSelectedAgentId}
-        onSelectSession={selectSession}
-        selectedAgentId={selectedAgentId}
-        selectedSessionId={selectedSessionId}
-        sessions={sessions}
-        taskCount={tasks.length}
-        workspace={workspace}
-      />
-
-      <main className="flex min-h-0 flex-col overflow-hidden bg-white">
-        <header className="shrink-0 border-b border-[var(--border)] px-5 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-            当前会话
-          </p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">
-            {selectedSession?.title ?? "未选择会话"}
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            {workspace.rootPath} · {tasks.length} 个任务 ·{" "}
-            {hasCompletedRun ? "已有执行证据" : "等待运行"}
-          </p>
-        </header>
-
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden bg-[#FDFBFF] p-5">
-          {syncError ? (
-            <div
-              className="mx-auto w-full max-w-3xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
-              role="alert"
-            >
-              {syncError}
-            </div>
-          ) : null}
-
-          {selectedSession ? <MissionPanel ledger={ledger} /> : null}
-
-          <ChatThread
-            messages={visibleMessages}
-            onQuoteMessage={handleQuoteMessage}
-            selectedSession={selectedSession}
-            taskCount={tasks.length}
-            taskListSlot={
-              selectedSession && tasks.length > 0 ? (
-                <section className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-                        Agent 任务时间线
-                      </p>
-                      <h3 className="mt-1 text-base font-semibold text-slate-950">
-                        执行计划与操作
-                      </h3>
+            <ChatThread
+              messages={visibleMessages}
+              onQuoteMessage={handleQuoteMessage}
+              selectedSession={selectedSession}
+              taskCount={tasks.length}
+              taskListSlot={
+                selectedSession && tasks.length > 0 ? (
+                  <section className="py-2">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+                          Agent 任务时间线
+                        </p>
+                        <h3 className="mt-1 text-base font-semibold text-slate-950">
+                          执行计划与操作
+                        </h3>
+                      </div>
+                      <span className="rounded-full border border-[var(--border)] bg-white px-3 py-1 text-xs font-semibold text-[var(--muted-foreground)] shadow-sm">
+                        {tasks.length} 个任务
+                      </span>
                     </div>
-                    <span className="rounded bg-white px-2 py-1 text-xs font-medium text-[var(--muted-foreground)]">
-                      {tasks.length} 个任务
-                    </span>
-                  </div>
-                  <TaskCardList
-                    artifactRefreshKey={lastEventSequence + artifactRefreshVersion}
-                    backendUrl={backendUrl}
-                    busy={isPending}
-                    onApproveRun={handleApproveTaskRun}
-                    onArtifactsChange={handleArtifactsChange}
-                    onCreateDeploy={handleCreateDeployment}
-                    onCreateReview={handleCreateReview}
-                    onCreateRun={handleCreateTaskRun}
-                    onDenyRun={handleDenyTaskRun}
-                    onForceCodexFailure={handleForceCodexFailure}
-                    onInterruptRun={handleInterruptTaskRun}
-                    onOpenPreview={handleOpenPreview}
-                    onRetryRun={handleRetryTaskRun}
-                    onRetryWithFallback={handleRetryTaskRunWithFallback}
-                    onSelectArtifact={setSelectedArtifactId}
-                    onStartPreview={handleStartPreview}
-                    onUseArtifactContext={handleUseArtifactContext}
-                    selectedArtifactId={selectedArtifactId}
-                    tasks={tasks}
-                  />
-                </section>
-              ) : null
-            }
-          />
-
-          {selectedSession ? (
-            <MessageComposer
-              contextArtifact={contextArtifact}
-              draft={draft}
-              isPending={isPending}
-              onClearContext={() => setContextArtifactId(null)}
-              onDraftChange={setDraft}
-              onSubmit={handleSendMessage}
+                    <TaskCardList
+                      artifactRefreshKey={lastEventSequence + artifactRefreshVersion}
+                      backendUrl={backendUrl}
+                      busy={isPending}
+                      onApproveRun={handleApproveTaskRun}
+                      onArtifactsChange={handleArtifactsChange}
+                      onCreateDeploy={handleCreateDeployment}
+                      onCreateReview={handleCreateReview}
+                      onCreateRun={handleCreateTaskRun}
+                      onDenyRun={handleDenyTaskRun}
+                      onForceCodexFailure={handleForceCodexFailure}
+                      onInterruptRun={handleInterruptTaskRun}
+                      onOpenPreview={handleOpenPreview}
+                      onRetryRun={handleRetryTaskRun}
+                      onRetryWithFallback={handleRetryTaskRunWithFallback}
+                      onSelectArtifact={setSelectedArtifactId}
+                      onStartPreview={handleStartPreview}
+                      onUseArtifactContext={handleUseArtifactContext}
+                      selectedArtifactId={selectedArtifactId}
+                      tasks={tasks}
+                    />
+                  </section>
+                ) : null
+              }
             />
-          ) : null}
-        </div>
-      </main>
 
-      <ArtifactPanel
-        artifactItems={artifactItems}
-        busy={isPending}
-        frameKey={previewFrameKey}
-        onClose={() => setSelectedArtifactId(null)}
-        onCreateDeploy={handleCreateDeployment}
-        onOpenPreview={handleOpenPreview}
-        onRefresh={handleRefreshPreviews}
-        onSelectArtifact={setSelectedArtifactId}
-        onStopPreview={handleStopPreview}
-        selectedArtifactId={selectedArtifactId}
-      />
+            {selectedSession ? (
+              <MessageComposer
+                contextArtifact={contextArtifact}
+                draft={draft}
+                isPending={isPending}
+                onClearContext={() => setContextArtifactId(null)}
+                onDraftChange={setDraft}
+                onSubmit={handleSendMessage}
+              />
+            ) : null}
+          </div>
+        </main>
+
+        <ArtifactPanel
+          artifactItems={artifactItems}
+          busy={isPending}
+          frameKey={previewFrameKey}
+          onClose={() => setSelectedArtifactId(null)}
+          onCreateDeploy={handleCreateDeployment}
+          onOpenPreview={handleOpenPreview}
+          onRefresh={handleRefreshPreviews}
+          onSelectArtifact={setSelectedArtifactId}
+          onStopPreview={handleStopPreview}
+          selectedArtifactId={selectedArtifactId}
+        />
+      </div>
     </section>
   )
 }
@@ -654,23 +651,23 @@ function DemoPipeline({
   ]
 
   return (
-    <div className="flex flex-col items-start gap-1 xl:items-center">
-      <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+    <div className="flex max-w-full flex-col items-start gap-2">
+      <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)] xl:text-right">
         演示流程
       </p>
-      <ol className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+      <ol className="flex max-w-full items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {stages.map((stage, index) => (
-          <li className="flex items-center gap-1.5" key={stage.label}>
+          <li className="flex shrink-0 items-center gap-2" key={stage.label}>
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5",
-                stage.state === "complete" &&
-                  "border-emerald-200 bg-emerald-50 text-emerald-700",
-                stage.state === "ready" && "border-cyan-200 bg-cyan-50 text-cyan-700",
+                "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3",
+                (stage.state === "complete" || stage.state === "ready") &&
+                  "border-black bg-black text-white",
                 stage.state === "running" && "border-blue-200 bg-blue-50 text-blue-700",
                 stage.state === "recovered" &&
-                  "border-purple-200 bg-purple-50 text-purple-700",
-                stage.state === "pending" && "border-transparent text-slate-500",
+                  "border-emerald-200 bg-emerald-50 text-emerald-700",
+                stage.state === "pending" &&
+                  "border-transparent bg-[var(--surface-muted)] text-slate-500",
               )}
             >
               {stage.state === "pending" ? (
@@ -684,7 +681,7 @@ function DemoPipeline({
             </span>
             {index < stages.length - 1 ? (
               <span className="text-slate-300" aria-hidden="true">
-                -
+                /
               </span>
             ) : null}
           </li>
