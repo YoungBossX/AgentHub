@@ -60,16 +60,16 @@
 
 ## 8. P18-8 Memory Eval and Freeze Review
 
-- [ ] 8.1 Add targeted evals for Preference Recall Rate.
-- [ ] 8.2 Add targeted evals for Cross-Agent Consistency Rate.
-- [ ] 8.3 Add targeted evals for Memory Precision@5.
-- [ ] 8.4 Add targeted evals for Stale Memory Injection Count.
-- [ ] 8.5 Add targeted evals for Prompt Injection Write Block Rate.
-- [ ] 8.6 Add targeted evals for Snapshot Consistency Rate.
-- [ ] 8.7 Rehearse a saved preference or project rule flowing to Planner and coding agents through the same snapshot.
-- [ ] 8.8 Run freeze validation and document limitations honestly in `docs/project-state.md`, `docs/change-log.md`, and a P18 freeze review doc.
+- [x] 8.1 Add targeted evals for Preference Recall Rate.
+- [x] 8.2 Add targeted evals for Cross-Agent Consistency Rate.
+- [x] 8.3 Add targeted evals for Memory Precision@5.
+- [x] 8.4 Add targeted evals for Stale Memory Injection Count.
+- [x] 8.5 Add targeted evals for Prompt Injection Write Block Rate.
+- [x] 8.6 Add targeted evals for Snapshot Consistency Rate.
+- [x] 8.7 Rehearse a saved preference or project rule flowing to Planner and coding agents through the same snapshot.
+- [x] 8.8 Run freeze validation and document limitations honestly in `docs/project-state.md`, `docs/change-log.md`, and a P18 freeze review doc.
 
 ## 9. Explicit Non-goals Confirmation
 
-- [ ] 9.1 Confirm P18 does not implement mandatory vector database, full knowledge graph, RRF fusion, automatic long-term learning without review, multi-user shared memory, provider marketplace, cloud secret manager, production deploy, or guardrail replacement.
-- [ ] 9.2 Confirm Claude Code / Codex private memory cannot override AgentHub canonical memory.
+- [x] 9.1 Confirm P18 does not implement mandatory vector database, full knowledge graph, RRF fusion, automatic long-term learning without review, multi-user shared memory, provider marketplace, cloud secret manager, production deploy, or guardrail replacement.
+- [x] 9.2 Confirm Claude Code / Codex private memory cannot override AgentHub canonical memory.

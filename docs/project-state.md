@@ -3376,3 +3376,25 @@ P2 baseline:
 
 No app code, adapter code, backend API behavior, frontend behavior, or tests
 changed during the P2 final freeze review.
+
+### P18 Memory and Instruction Control Plane
+
+P18 adds AgentHub canonical memory as the auditable source of truth for Planner
+LLM, Claude Code, Codex, Review Agent, and future coding agents.
+
+Current P18 baseline:
+
+- Managed `AGENTS.md` / `CLAUDE.md` bridge with deterministic hashes.
+- Session-level `memorySnapshotId` recorded in planner evidence, TaskRun
+  metrics, canonical context, and mission trace.
+- Canonical memory item model with active, pending_review, warm, archived,
+  rejected, and deleted states.
+- Explicit user memory write policy and prompt-injection guard.
+- Keyword/BM25-style retrieval with scope, target, role, status, scoring, and
+  stale-memory filtering.
+- External AGENTS/CLAUDE scan into pending suggestions with conflict detection.
+- `/settings/memory` page for reviewing and managing memory status.
+
+P18 keeps Target Registry, PlanValidator, Guardrails, runtime config, and the
+scheduler as the hard security boundary. Memory guides agent behavior but does
+not grant permissions.

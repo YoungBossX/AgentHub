@@ -1,5 +1,35 @@
 # AgentHub Change Log
 
+## P18 Memory and Instruction Control Plane
+
+**Date:** 2026-06-04
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/memory_instructions.py` | Added deterministic managed instruction bridge for AGENTS/CLAUDE outlet artifacts. |
+| `apps/api/app/memory_snapshots.py` | Added session memory snapshot creation, refresh, and metadata. |
+| `apps/api/app/memory_store.py` | Added canonical memory item model service, lifecycle states, versions, and filters. |
+| `apps/api/app/memory_write_policy.py` | Added explicit user write policy and prompt-injection guard. |
+| `apps/api/app/memory_retrieval.py` | Added keyword/BM25-style retrieval with scoring and metadata filters. |
+| `apps/api/app/external_memory_scan.py` | Added external AGENTS/CLAUDE scan into pending suggestions with conflict detection. |
+| `apps/api/app/memory_evals.py` | Added deterministic memory effectiveness metric helpers. |
+| `apps/web/src/app/settings/memory/page.tsx` / `apps/web/src/components/memory-settings-page-client.tsx` | Added memory management settings UI. |
+| `docs/p18-freeze-review.md` | Added freeze review, metric evidence, validation, and caveats. |
+| `openspec/changes/agenthub-p18-memory-instruction-control-plane/tasks.md` | Marked P18 implementation, eval, non-goal, and freeze tasks complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p18-memory-instruction-control-plane --strict` | Pass |
+
+---
+
 ## P17c Runtime Settings Page
 
 **Date:** 2026-06-01
