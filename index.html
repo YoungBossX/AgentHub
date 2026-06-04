@@ -3,24 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentHub - 多 Agent 协作编码平台</title>
+    <title>AgentHub - Multi-Agent Coding Platform | IM 驱动的 AI 协作开发</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #667eea;
-            --primary-alt: #764ba2;
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #111118;
-            --bg-tertiary: #1a1a24;
-            --text-primary: #f8f9fa;
-            --text-secondary: #a0aec0;
-            --text-muted: #6b7280;
-            --border: #2d2d3a;
-            --border-light: #3a3a4a;
-            --success: #4ade80;
-            --warning: #fbbf24;
+            --bg-deep: #050508;
+            --bg-primary: #0a0a10;
+            --bg-secondary: #0f0f18;
+            --bg-elevated: #161622;
+            --bg-card: #12121c;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --text-muted: #555566;
+            --accent-cyan: #00f5d4;
+            --accent-cyan-dim: rgba(0, 245, 212, 0.15);
+            --accent-purple: #a855f7;
+            --accent-purple-dim: rgba(168, 85, 247, 0.12);
+            --accent-amber: #fbbf24;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --glow-cyan: 0 0 40px rgba(0, 245, 212, 0.2);
+            --glow-purple: 0 0 40px rgba(168, 85, 247, 0.2);
         }
 
         * {
@@ -29,12 +34,76 @@
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-deep);
             color: var(--text-primary);
             line-height: 1.6;
             overflow-x: hidden;
+        }
+
+        /* Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Noise Overlay */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E");
+        }
+
+        /* Gradient Orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(0, 245, 212, 0.08) 0%, transparent 70%);
+            top: -150px;
+            right: -100px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.06) 0%, transparent 70%);
+            bottom: 20%;
+            left: -100px;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, 30px); }
         }
 
         /* Navigation */
@@ -43,15 +112,15 @@
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(10, 10, 15, 0.85);
+            background: rgba(5, 5, 8, 0.8);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
             z-index: 1000;
-            padding: 1.25rem 2rem;
+            padding: 1rem 2rem;
         }
 
         .nav-content {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -59,36 +128,86 @@
         }
 
         .nav-logo {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
+            font-family: 'Syne', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .nav-logo span {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-alt) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .nav-logo .logo-mark {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--bg-deep);
         }
 
         .nav-links {
             display: flex;
-            gap: 2rem;
+            gap: 2.5rem;
             list-style: none;
         }
 
         .nav-links a {
             color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 500;
-            transition: color 0.2s;
-            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--accent-cyan);
+            transition: width 0.3s ease;
         }
 
         .nav-links a:hover {
             color: var(--text-primary);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-github {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-github:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .nav-github svg {
+            width: 18px;
+            height: 18px;
         }
 
         /* Hero Section */
@@ -98,55 +217,80 @@
             align-items: center;
             padding: 8rem 2rem 4rem;
             position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 800px;
-            height: 800px;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.08) 0%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
+            z-index: 2;
         }
 
         .hero-content {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            width: 100%;
             display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
+            grid-template-columns: 1fr 1fr;
             gap: 4rem;
             align-items: center;
-            width: 100%;
         }
 
         .hero-text {
             opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInUp 0.7s ease forwards;
-            animation-delay: 0.15s;
+            transform: translateY(30px);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.2s;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            background: var(--accent-cyan-dim);
+            border: 1px solid rgba(0, 245, 212, 0.2);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hero-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
         }
 
         .hero-title {
-            font-size: 3.5rem;
-            font-weight: 700;
-            line-height: 1.05;
-            margin-bottom: 1.25rem;
-            letter-spacing: -0.03em;
+            font-family: 'Syne', sans-serif;
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-title .highlight {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .hero-description {
             font-size: 1.1rem;
             color: var(--text-secondary);
-            margin-bottom: 2rem;
-            line-height: 1.7;
-            max-width: 540px;
+            margin-bottom: 2.5rem;
+            line-height: 1.8;
+            max-width: 500px;
         }
 
-        .hero-buttons {
+        .hero-actions {
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
@@ -156,147 +300,212 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.9rem 1.75rem;
+            padding: 0.875rem 1.5rem;
             border-radius: 10px;
             font-weight: 600;
             text-decoration: none;
-            transition: all 0.25s ease;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             cursor: pointer;
             border: none;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-family: inherit;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-alt) 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--accent-cyan), #00d4aa);
+            color: var(--bg-deep);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.35);
+            box-shadow: 0 10px 40px rgba(0, 245, 212, 0.3);
         }
 
         .btn-secondary {
-            background: var(--bg-tertiary);
+            background: transparent;
             color: var(--text-primary);
             border: 1px solid var(--border);
         }
 
         .btn-secondary:hover {
-            border-color: var(--border-light);
-            background: var(--bg-secondary);
+            border-color: var(--accent-cyan);
+            background: var(--accent-cyan-dim);
         }
 
-        /* Terminal Demo Card */
+        /* Terminal Card */
         .hero-visual {
             opacity: 0;
-            transform: translateX(20px);
-            animation: fadeInRight 0.7s ease forwards;
-            animation-delay: 0.35s;
+            transform: translateX(30px);
+            animation: slideRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.4s;
         }
 
-        .terminal-card {
-            background: var(--bg-secondary);
+        .terminal {
+            background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.03),
+                0 20px 60px -20px rgba(0, 0, 0, 0.8),
+                inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
 
         .terminal-header {
-            background: var(--bg-tertiary);
-            padding: 0.75rem 1rem;
+            background: var(--bg-elevated);
+            padding: 0.875rem 1rem;
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 0.4rem;
         }
 
         .terminal-dot {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
         }
 
-        .terminal-dot.red { background: #ef4444; }
-        .terminal-dot.yellow { background: #eab308; }
-        .terminal-dot.green { background: #22c55e; }
+        .terminal-dot.red { background: #ff5f57; }
+        .terminal-dot.yellow { background: #febc2e; }
+        .terminal-dot.green { background: #28c840; }
 
         .terminal-title {
             flex: 1;
             text-align: center;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
         }
 
         .terminal-body {
             padding: 1.25rem;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.82rem;
-            line-height: 1.6;
+            font-size: 0.8rem;
+            line-height: 1.8;
         }
 
         .terminal-line {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
         }
 
-        .terminal-prompt {
-            color: var(--primary);
+        .terminal-line:nth-child(1) { animation-delay: 0.6s; }
+        .terminal-line:nth-child(2) { animation-delay: 0.8s; }
+        .terminal-line:nth-child(3) { animation-delay: 1s; }
+        .terminal-line:nth-child(4) { animation-delay: 1.2s; }
+        .terminal-line:nth-child(5) { animation-delay: 1.4s; }
+        .terminal-line:nth-child(6) { animation-delay: 1.6s; }
+        .terminal-line:nth-child(7) { animation-delay: 1.8s; }
+        .terminal-line:nth-child(8) { animation-delay: 2s; }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
         }
 
-        .terminal-command {
+        .prompt {
+            color: var(--accent-cyan);
+        }
+
+        .cmd {
             color: var(--text-primary);
         }
 
-        .terminal-output {
+        .out {
             color: var(--text-secondary);
         }
 
-        .terminal-success {
-            color: var(--success);
+        .success {
+            color: var(--accent-cyan);
         }
 
-        .terminal-warning {
-            color: var(--warning);
+        .warning {
+            color: var(--accent-amber);
         }
 
-        .terminal-comment {
+        .comment {
             color: var(--text-muted);
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            position: relative;
+            z-index: 2;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 2rem;
+        }
+
+        .stats-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .stat-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .stat-value .accent {
+            color: var(--accent-cyan);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
         }
 
         /* Features Section */
         .features {
-            padding: 6rem 2rem;
-            background: var(--bg-secondary);
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
+            padding: 8rem 2rem;
+            position: relative;
+            z-index: 2;
         }
 
         .section-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         .section-header {
-            text-align: center;
             margin-bottom: 4rem;
         }
 
-        .section-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.75rem;
-            letter-spacing: -0.02em;
+        .section-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
         }
 
-        .section-subtitle {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            max-width: 520px;
-            margin: 0 auto;
+        .section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+            max-width: 600px;
         }
 
         .features-grid {
@@ -306,70 +515,125 @@
         }
 
         .feature-card {
-            background: var(--bg-primary);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.75rem;
-            transition: all 0.25s ease;
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
         }
 
         .feature-card:hover {
-            border-color: var(--border-light);
-            transform: translateY(-2px);
+            border-color: var(--border-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
         }
 
         .feature-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            background: rgba(102, 126, 234, 0.1);
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'JetBrains Mono', monospace;
             font-size: 1.25rem;
-            color: var(--primary);
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .feature-icon.cyan {
+            background: var(--accent-cyan-dim);
+            color: var(--accent-cyan);
+        }
+
+        .feature-icon.purple {
+            background: var(--accent-purple-dim);
+            color: var(--accent-purple);
+        }
+
+        .feature-icon.amber {
+            background: rgba(251, 191, 36, 0.12);
+            color: var(--accent-amber);
         }
 
         .feature-title {
-            font-size: 1.05rem;
+            font-family: 'Syne', sans-serif;
+            font-size: 1.1rem;
             font-weight: 600;
             color: var(--text-primary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
         }
 
-        .feature-description {
+        .feature-desc {
             font-size: 0.9rem;
             color: var(--text-secondary);
-            line-height: 1.6;
+            line-height: 1.7;
         }
 
         /* Tech Stack Section */
-        .tech-stack {
-            padding: 6rem 2rem;
+        .tech {
+            padding: 8rem 2rem;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            z-index: 2;
         }
 
         .tech-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            align-items: start;
+            gap: 3rem;
+            margin-top: 4rem;
         }
 
         .tech-card {
-            background: var(--bg-secondary);
+            background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 1.75rem;
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .tech-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tech-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--accent-purple-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-purple);
+            font-size: 1rem;
         }
 
         .tech-card-title {
-            font-size: 1rem;
+            font-family: 'Syne', sans-serif;
+            font-size: 1.1rem;
             font-weight: 600;
             color: var(--text-primary);
-            margin-bottom: 1.25rem;
-            letter-spacing: -0.01em;
         }
 
         .tech-list {
@@ -381,138 +645,221 @@
 
         .tech-item {
             display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.5rem 0;
-        }
-
-        .tech-item::before {
-            content: '→';
-            color: var(--primary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            margin-top: 0.15rem;
-        }
-
-        .tech-item-content h4 {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 0.2rem;
-        }
-
-        .tech-item-content p {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .tech-highlights {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .tech-highlight {
-            display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            background: var(--bg-elevated);
             border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
         }
 
-        .tech-highlight-text {
-            font-size: 0.85rem;
+        .tech-item:hover {
+            border-color: var(--border-hover);
+        }
+
+        .tech-item-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            flex-shrink: 0;
+        }
+
+        .tech-item-text {
+            font-size: 0.9rem;
             color: var(--text-secondary);
+        }
+
+        .tech-item-text strong {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* Workflow Section */
+        .workflow {
+            padding: 8rem 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .workflow-steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-top: 4rem;
+        }
+
+        .workflow-step {
+            text-align: center;
+            padding: 2rem 1rem;
+            position: relative;
+        }
+
+        .workflow-step::after {
+            content: '→';
+            position: absolute;
+            right: -0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.25rem;
+        }
+
+        .workflow-step:last-child::after {
+            display: none;
+        }
+
+        .workflow-number {
+            font-family: 'Syne', sans-serif;
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--bg-elevated);
+            line-height: 1;
+            margin-bottom: 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .workflow-step:hover .workflow-number {
+            color: var(--accent-cyan-dim);
+        }
+
+        .workflow-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .workflow-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 8rem 2rem;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .cta-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+        }
+
+        .cta-desc {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-actions {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
         }
 
         /* Footer */
         footer {
-            background: var(--bg-secondary);
+            background: var(--bg-deep);
             border-top: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 2.5rem 2rem;
+            padding: 3rem 2rem;
+            position: relative;
+            z-index: 2;
         }
 
         .footer-content {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 2rem;
         }
 
         .footer-brand {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
-            font-weight: 600;
+            font-family: 'Syne', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
             color: var(--text-primary);
         }
 
         .footer-links {
             display: flex;
-            gap: 1.5rem;
+            gap: 2rem;
             list-style: none;
         }
 
         .footer-links a {
-            color: var(--text-secondary);
+            color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-            cursor: pointer;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
         }
 
         .footer-links a:hover {
             color: var(--text-primary);
         }
 
-        .footer-copyright {
-            font-size: 0.85rem;
+        .footer-copy {
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
         /* Animations */
-        @keyframes fadeInUp {
+        @keyframes slideUp {
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
-        @keyframes fadeInRight {
+        @keyframes slideRight {
             to {
                 opacity: 1;
                 transform: translateX(0);
             }
         }
 
-        /* Responsive Design */
-        @media (max-width: 1024px) {
+        /* Responsive */
+        @media (max-width: 1200px) {
             .hero-content {
                 grid-template-columns: 1fr;
                 gap: 3rem;
             }
 
             .hero-title {
-                font-size: 2.75rem;
+                font-size: 3rem;
             }
 
             .features-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .tech-grid {
-                grid-template-columns: 1fr;
+            .workflow-steps {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .workflow-step::after {
+                display: none;
             }
         }
 
         @media (max-width: 768px) {
             nav {
-                padding: 1rem;
+                padding: 0.875rem 1rem;
             }
 
             .nav-links {
@@ -527,17 +874,17 @@
                 font-size: 2.25rem;
             }
 
-            .hero-description {
-                font-size: 1rem;
-            }
-
-            .hero-buttons {
+            .hero-actions {
                 flex-direction: column;
             }
 
             .btn {
                 width: 100%;
                 justify-content: center;
+            }
+
+            .stats-content {
+                grid-template-columns: repeat(2, 1fr);
             }
 
             .features {
@@ -552,12 +899,38 @@
                 grid-template-columns: 1fr;
             }
 
-            .tech-stack {
+            .tech {
                 padding: 4rem 1rem;
+            }
+
+            .tech-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .workflow {
+                padding: 4rem 1rem;
+            }
+
+            .workflow-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .cta {
+                padding: 4rem 1rem;
+            }
+
+            .cta-title {
+                font-size: 1.75rem;
+            }
+
+            .cta-actions {
+                flex-direction: column;
+                align-items: center;
             }
 
             .footer-content {
                 flex-direction: column;
+                gap: 1.5rem;
                 text-align: center;
             }
 
@@ -580,15 +953,27 @@
     </style>
 </head>
 <body>
+    <div class="grid-bg"></div>
+    <div class="noise-overlay"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
     <!-- Navigation -->
     <nav>
         <div class="nav-content">
-            <div class="nav-logo">Agent<span>Hub</span></div>
+            <div class="nav-logo">
+                <div class="logo-mark">AH</div>
+                AgentHub
+            </div>
             <ul class="nav-links">
-                <li><a href="#features">核心功能</a></li>
+                <li><a href="#features">功能特性</a></li>
                 <li><a href="#tech">技术栈</a></li>
-                <li><a href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+                <li><a href="#workflow">工作流程</a></li>
             </ul>
+            <a href="https://github.com/YoungBossX/AgentHub" class="nav-github" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                GitHub
+            </a>
         </div>
     </nav>
 
@@ -596,64 +981,62 @@
     <section class="hero">
         <div class="hero-content">
             <div class="hero-text">
-                <h1 class="hero-title">多 Agent<br>协作编码平台</h1>
+                <div class="hero-badge">LOCAL DEMO MVP</div>
+                <h1 class="hero-title">
+                    Multi-Agent<br>
+                    <span class="highlight">Coding Platform</span>
+                </h1>
                 <p class="hero-description">
-                    以 IM 聊天为核心交互范式，像使用微信、飞书一样与多个 AI Agent 协作。支持单聊、群聊、@提及、产物内联预览，专为开发者打造。
+                    像使用微信、飞书一样，通过 IM 聊天与多个 AI Agent 协作编程。支持 @orchestrator、@frontend、@backend、@qa 多角色协作，自动生成真实 Git Diff 和实时预览。
                 </p>
-                <div class="hero-buttons">
+                <div class="hero-actions">
                     <a href="https://github.com/YoungBossX/AgentHub" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
-                        查看 GitHub
+                        View on GitHub
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </a>
-                    <a href="#features" class="btn btn-secondary">
-                        了解功能
-                    </a>
+                    <a href="#features" class="btn btn-secondary">Explore Features</a>
                 </div>
             </div>
 
             <div class="hero-visual">
-                <div class="terminal-card">
+                <div class="terminal">
                     <div class="terminal-header">
-                        <div class="terminal-dot red"></div>
-                        <div class="terminal-dot yellow"></div>
-                        <div class="terminal-dot green"></div>
-                        <div class="terminal-title">~ agenthub demo</div>
+                        <div class="terminal-dots">
+                            <div class="terminal-dot red"></div>
+                            <div class="terminal-dot yellow"></div>
+                            <div class="terminal-dot green"></div>
+                        </div>
+                        <div class="terminal-title">agenthub — demo session</div>
                     </div>
                     <div class="terminal-body">
                         <div class="terminal-line">
-                            <span class="terminal-prompt">agenthub$</span>
-                            <span class="terminal-command"> @orchestrator 构建登录页面</span>
+                            <span class="prompt">you $</span>
+                            <span class="cmd"> @orchestrator build a login page</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="terminal-output">[orchestrator]</span>
-                            <span class="terminal-success"> 规划任务...</span>
+                            <span class="out">[orchestrator]</span>
+                            <span class="success"> Parsing @mentions...</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="terminal-output">[orchestrator]</span>
-                            <span class="terminal-comment"> 创建执行计划:</span>
+                            <span class="out">[orchestrator]</span>
+                            <span class="comment"> Creating 3-step plan:</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="terminal-output"> → 1. @frontend 生成组件</span>
+                            <span class="out">  → 1. @frontend Generate login component</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="terminal-output"> → 2. @qa 验证变更</span>
+                            <span class="out">  → 2. @qa Review & validate</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="terminal-output"> → 3. 预览 & 部署</span>
+                            <span class="out">  → 3. Preview & deploy card</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="terminal-output">[frontend]</span>
-                            <span class="terminal-warning"> 修改 App.tsx...</span>
+                            <span class="out">[frontend]</span>
+                            <span class="warning"> Modifying apps/demo/src/App.tsx...</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="terminal-output">[frontend]</span>
-                            <span class="terminal-success"> ✓ Diff 生成</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="terminal-prompt">agenthub$</span>
-                            <span class="terminal-command"> preview --port 5173</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="terminal-success">✓ 预览运行在 http://localhost:5173</span>
+                            <span class="out">[frontend]</span>
+                            <span class="success"> ✓ Diff ready • Preview at :5173</span>
                         </div>
                     </div>
                 </div>
@@ -661,62 +1044,82 @@
         </div>
     </section>
 
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stats-content">
+            <div class="stat-item">
+                <div class="stat-value">4</div>
+                <div class="stat-label">Agent Roles (orchestrator, frontend, backend, qa)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">3</div>
+                <div class="stat-label">Adapters (Codex, Claude Code, ScriptedMock)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">15<span class="accent">+</span></div>
+                <div class="stat-label">API Endpoints</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">100<span class="accent">%</span></div>
+                <div class="stat-label">Real Git Diffs & Previews</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Features Section -->
     <section class="features" id="features">
         <div class="section-container">
             <div class="section-header">
-                <h2 class="section-title">核心功能</h2>
-                <p class="section-subtitle">
-                    生产级基础架构，没有虚假演示，只有真实的代码协作和产物预览。
-                </p>
+                <div class="section-tag">// 功能特性</div>
+                <h2 class="section-title">IM 驱动的多 Agent 协作开发</h2>
             </div>
 
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">IM</div>
-                    <h3 class="feature-title">IM 聊天式交互</h3>
-                    <p class="feature-description">
-                        左侧会话列表，支持新建/置顶/归档/搜索。单聊模式 1v1 对话，群聊模式 @多个 Agent 协作。
+                    <div class="feature-icon cyan">💬</div>
+                    <h3 class="feature-title">IM 聊天交互</h3>
+                    <p class="feature-desc">
+                        左侧 Session 列表 + 中间聊天流。支持 @orchestrator、@frontend、@backend、@qa 多角色协作，像使用微信一样自然。
                     </p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">ORCH</div>
-                    <h3 class="feature-title">主 Agent 协调器</h3>
-                    <p class="feature-description">
-                        自动理解用户意图，将复杂任务拆解并分派给合适的子 Agent，聚合产出并汇报结果。
+                    <div class="feature-icon purple">🎯</div>
+                    <h3 class="feature-title">协调器自动规划</h3>
+                    <p class="feature-desc">
+                        Orchestrator 自动解析用户意图，拆解为 2-4 步任务计划，分配给前端、后端、QA 等专业 Agent 执行。
                     </p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">AGT</div>
-                    <h3 class="feature-title">多 Agent 接入</h3>
-                    <p class="feature-description">
-                        统一适配器层，接入 Claude Code、Codex 等主流平台，支持用户自建 Agent。
+                    <div class="feature-icon cyan">🔗</div>
+                    <h3 class="feature-title">多适配器切换</h3>
+                    <p class="feature-desc">
+                        统一适配器层支持 Codex CLI、Claude Code CLI 和 ScriptedMock。真实 Agent 不可用时自动降级到 Mock 保证 Demo 可用。
                     </p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">DIFF</div>
+                    <div class="feature-icon purple">📊</div>
                     <h3 class="feature-title">真实 Git Diff</h3>
-                    <p class="feature-description">
-                        会话级别的 Git 工作区隔离，每一处变更都被追踪、Diff 和可验证。
+                    <p class="feature-desc">
+                        每个 Session 独立 Git Worktree 隔离。所有代码变更实时生成 Diff，支持 Monaco Editor 逐行对比查看。
                     </p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">PREV</div>
-                    <h3 class="feature-title">产物预览与编辑</h3>
-                    <p class="feature-description">
-                        Agent 回复中内联网页预览卡片、Diff 视图卡片，点击展开全屏预览和代码编辑器。
+                    <div class="feature-icon amber">👁️</div>
+                    <h3 class="feature-title">实时预览</h3>
+                    <p class="feature-desc">
+                        Agent 执行完成后自动生成 Vite React 预览卡片，右侧 iframe 面板实时展示修改效果，支持刷新和全屏查看。
                     </p>
                 </div>
 
                 <div class="feature-card">
-                    <div class="feature-icon">DEP</div>
-                    <h3 class="feature-title">一键部署发布</h3>
-                    <p class="feature-description">
-                        聊天中直接发送部署指令，生成预览 URL、静态站点部署或源码打包下载。
+                    <div class="feature-icon cyan">🚀</div>
+                    <h3 class="feature-title">部署卡片</h3>
+                    <p class="feature-desc">
+                        预览健康后一键生成部署卡片，展示状态、URL、端口等信息。当前为 Mock 部署，未来支持真实部署。
                     </p>
                 </div>
             </div>
@@ -724,67 +1127,109 @@
     </section>
 
     <!-- Tech Stack Section -->
-    <section class="tech-stack" id="tech">
+    <section class="tech" id="tech">
         <div class="section-container">
             <div class="section-header">
-                <h2 class="section-title">技术栈</h2>
-                <p class="section-subtitle">
-                    简洁、可靠、经过生产验证的组件。
-                </p>
+                <div class="section-tag">// 技术栈</div>
+                <h2 class="section-title">成熟的技术栈，开箱即用</h2>
             </div>
 
             <div class="tech-grid">
                 <div class="tech-card">
-                    <h3 class="tech-card-title">核心组件</h3>
+                    <div class="tech-card-header">
+                        <div class="tech-card-icon">⚡</div>
+                        <h3 class="tech-card-title">核心组件</h3>
+                    </div>
                     <ul class="tech-list">
                         <li class="tech-item">
-                            <div class="tech-item-content">
-                                <h4>产品 UI</h4>
-                                <p>Next.js + TypeScript + Tailwind</p>
-                            </div>
+                            <div class="tech-item-dot"></div>
+                            <div class="tech-item-text"><strong>Frontend</strong> — Next.js 16 + React 19 + TypeScript 5.9</div>
                         </li>
                         <li class="tech-item">
-                            <div class="tech-item-content">
-                                <h4>后端</h4>
-                                <p>FastAPI + SQLModel + SQLite</p>
-                            </div>
+                            <div class="tech-item-dot"></div>
+                            <div class="tech-item-text"><strong>Backend</strong> — FastAPI 0.121 + SQLModel + SQLite</div>
                         </li>
                         <li class="tech-item">
-                            <div class="tech-item-content">
-                                <h4>适配器</h4>
-                                <p>Codex + Claude Code + Mock</p>
-                            </div>
+                            <div class="tech-item-dot"></div>
+                            <div class="tech-item-text"><strong>Styling</strong> — Tailwind CSS 4.1 + shadcn/ui 风格组件</div>
                         </li>
                         <li class="tech-item">
-                            <div class="tech-item-content">
-                                <h4>实时通信</h4>
-                                <p>SSE + TaskRunEvent</p>
-                            </div>
+                            <div class="tech-item-dot"></div>
+                            <div class="tech-item-text"><strong>Diff Viewer</strong> — Monaco Editor 0.55</div>
                         </li>
                     </ul>
                 </div>
 
                 <div class="tech-card">
-                    <h3 class="tech-card-title">已验证功能</h3>
-                    <div class="tech-highlights">
-                        <div class="tech-highlight">
-                            <span class="tech-highlight-text">✓ 单用户本地 Demo 已验证</span>
-                        </div>
-                        <div class="tech-highlight">
-                            <span class="tech-highlight-text">✓ P0 → P1 → P2 路线图已定义</span>
-                        </div>
-                        <div class="tech-highlight">
-                            <span class="tech-highlight-text">✓ ScriptedMock 降级保证可靠性</span>
-                        </div>
-                        <div class="tech-highlight">
-                            <span class="tech-highlight-text">✓ 会话级工作区隔离</span>
-                        </div>
-                        <div class="tech-highlight">
-                            <span class="tech-highlight-text">✓ 无需外部服务依赖</span>
-                        </div>
+                    <div class="tech-card-header">
+                        <div class="tech-card-icon">🛡️</div>
+                        <h3 class="tech-card-title">架构特性</h3>
                     </div>
+                    <ul class="tech-list">
+                        <li class="tech-item">
+                            <div class="tech-item-dot"></div>
+                            <div class="tech-item-text"><strong>Realtime</strong> — SSE + TaskRunEvent 持久化</div>
+                        </li>
+                        <li class="tech-item">
+                            <div class="tech-item-dot"></div>
+                            <div class="tech-item-text"><strong>Isolation</strong> — 每个 Session 独立 Git Worktree</div>
+                        </li>
+                        <li class="tech-item">
+                            <div class="tech-item-dot"></div>
+                            <div class="tech-item-text"><strong>Fallback</strong> — ScriptedMock 降级保证 Demo 可用</div>
+                        </li>
+                        <li class="tech-item">
+                            <div class="tech-item-dot"></div>
+                            <div class="tech-item-text"><strong>Guardrails</strong> — 命令白名单 + 路径保护</div>
+                        </li>
+                    </ul>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- Workflow Section -->
+    <section class="workflow" id="workflow">
+        <div class="section-container">
+            <div class="section-header">
+                <div class="section-tag">// 工作流程</div>
+                <h2 class="section-title">从需求到部署的完整闭环</h2>
+            </div>
+
+            <div class="workflow-steps">
+                <div class="workflow-step">
+                    <div class="workflow-number">01</div>
+                    <h4 class="workflow-title">需求输入</h4>
+                    <p class="workflow-desc">在聊天中 @orchestrator 描述需求</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-number">02</div>
+                    <h4 class="workflow-title">自动规划</h4>
+                    <p class="workflow-desc">协调器拆解为可执行任务</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-number">03</div>
+                    <h4 class="workflow-title">Agent 执行</h4>
+                    <p class="workflow-desc">前端/后端 Agent 写真实代码</p>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-number">04</div>
+                    <h4 class="workflow-title">预览部署</h4>
+                    <p class="workflow-desc">实时 Diff + 预览 + 部署卡片</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <h2 class="cta-title">开始使用 AgentHub</h2>
+        <p class="cta-desc">克隆仓库，运行安装脚本，几分钟内即可启动本地多 Agent 编码环境。</p>
+        <div class="cta-actions">
+            <a href="https://github.com/YoungBossX/AgentHub" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
+                View on GitHub
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
         </div>
     </section>
 
@@ -793,29 +1238,13 @@
         <div class="footer-content">
             <div class="footer-brand">AgentHub</div>
             <ul class="footer-links">
-                <li><a href="#features">核心功能</a></li>
+                <li><a href="#features">功能特性</a></li>
                 <li><a href="#tech">技术栈</a></li>
+                <li><a href="#workflow">工作流程</a></li>
                 <li><a href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noopener noreferrer">GitHub</a></li>
             </ul>
-            <p class="footer-copyright">© 2026 AgentHub. MIT 许可证。</p>
+            <p class="footer-copy">© 2026 AgentHub · MIT License · Local Demo MVP</p>
         </div>
     </footer>
-
-    <script>
-        // Smooth scroll for anchor links only
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                const target = document.querySelector(targetId);
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-    </script>
 </body>
 </html>
