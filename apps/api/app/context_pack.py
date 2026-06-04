@@ -23,6 +23,10 @@ from app.memory_snapshots import (
     ensure_session_memory_snapshot,
     memory_snapshot_metadata,
 )
+from app.memory_retrieval import (
+    retrieved_memory_context,
+    retrieve_relevant_memories,
+)
 from app.models import (
     Artifact,
     Deployment,
@@ -81,6 +85,16 @@ def build_session_context_pack(
     )
     app_contract = _app_contract_context(merged_context)
     handoff_notes = handoff_context_for_task(db, task)
+    relevant_memories = retrieved_memory_context(
+        retrieve_relevant_memories(
+            db,
+            query=f"{original_request} {task.title}",
+            workspace_id=session.workspace_id if session is not None else None,
+            target_id=_string_value(merged_context.get("targetId")),
+            agent_role=_agent_role_for_task(db, task),
+            limit=5,
+        )
+    )
 
     context_pack = {
         "version": "session_context_pack_v1",
@@ -122,6 +136,7 @@ def build_session_context_pack(
         "artifactReferences": [artifact_reference] if artifact_reference else [],
         "appContract": app_contract,
         "handoffNotes": handoff_notes,
+        "relevantMemories": relevant_memories,
         "targetProject": _target_project_context(db, task, merged_context),
         "relatedTargetProjects": _related_target_project_context(
             db,
@@ -178,6 +193,15 @@ def _task_runs_for_session(db: DbSession, session_id: str) -> list[TaskRun]:
         .where(TaskRun.task_id.in_(task_ids))
         .order_by(TaskRun.created_at, TaskRun.id)
     ).all()
+
+
+def _agent_role_for_task(db: DbSession, task: Task) -> Optional[str]:
+    if task.assigned_agent_id is None:
+        return None
+    from app.models import Agent
+
+    agent = db.get(Agent, task.assigned_agent_id)
+    return agent.role if agent is not None else None
 
 
 def _latest_diff_context(

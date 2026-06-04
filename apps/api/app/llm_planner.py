@@ -18,6 +18,10 @@ from app.memory_snapshots import (
     memory_snapshot_for_session,
     memory_snapshot_metadata,
 )
+from app.memory_retrieval import (
+    retrieved_memory_context,
+    retrieve_relevant_memories,
+)
 from app.mission_trace import build_session_mission_trace
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_contracts import ConversationOutcome, PlannerRequest, PlannerResponse
@@ -103,6 +107,15 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
     targets = list_targets_for_workspace(db, session.workspace_id)
     recent_messages = _recent_messages(db, message.session_id)
     mission_trace = build_session_mission_trace(db, message.session_id).model_dump(by_alias=True)
+    relevant_memories = retrieved_memory_context(
+        retrieve_relevant_memories(
+            db,
+            query=message.content_md,
+            workspace_id=session.workspace_id,
+            agent_role="orchestrator",
+            limit=5,
+        )
+    )
     session_context_pack = {
         "sessionId": session.id,
         "workspaceId": session.workspace_id,
@@ -120,6 +133,7 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
             },
         },
         "recentMessages": recent_messages,
+        "relevantMemories": relevant_memories,
         "missionTrace": mission_trace,
         "ledger": {},
         "latestDiff": None,

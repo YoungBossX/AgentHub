@@ -109,6 +109,12 @@ def build_canonical_shared_context(
             created_at=timestamp,
             trust_level="system",
         ),
+        "relevantMemories": _field(
+            filter_protected_values(session_context_pack.get("relevantMemories", [])),
+            source="memory_retrieval",
+            created_at=timestamp,
+            trust_level="system",
+        ),
         "missionTrace": _field(
             filter_protected_values(session_context_pack.get("missionTrace")),
             source="mission_trace",

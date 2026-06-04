@@ -34,12 +34,12 @@
 
 ## 5. P18-5 Memory Retrieval v1
 
-- [ ] 5.1 Implement or plan SQLite FTS5 / BM25-style keyword retrieval.
-- [ ] 5.2 Add metadata filters for scope, target, role, status, and time window.
-- [ ] 5.3 Apply importance/trust scoring, time decay, stale penalty, conflict penalty, and token-cost penalty.
-- [ ] 5.4 Retrieve relevant memory for Planner and follow-up task context.
-- [ ] 5.5 Keep embedding, RRF, and graph retrieval out of mandatory P18 scope.
-- [ ] 5.6 Add tests for Memory Precision@5, status filtering, target filtering, role filtering, and stale-memory exclusion.
+- [x] 5.1 Implement or plan SQLite FTS5 / BM25-style keyword retrieval.
+- [x] 5.2 Add metadata filters for scope, target, role, status, and time window.
+- [x] 5.3 Apply importance/trust scoring, time decay, stale penalty, conflict penalty, and token-cost penalty.
+- [x] 5.4 Retrieve relevant memory for Planner and follow-up task context.
+- [x] 5.5 Keep embedding, RRF, and graph retrieval out of mandatory P18 scope.
+- [x] 5.6 Add tests for Memory Precision@5, status filtering, target filtering, role filtering, and stale-memory exclusion.
 
 ## 6. P18-6 External Agent Memory Scan
 
