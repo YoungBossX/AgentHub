@@ -5,6 +5,7 @@ import { type ReactNode } from "react"
 import {
   ChevronRight,
   GitBranch,
+  Brain,
   MoreHorizontal,
   Plus,
   SlidersHorizontal,
@@ -73,6 +74,12 @@ export function SessionSidebar({
             icon={<SlidersHorizontal aria-hidden="true" size={17} />}
             label="运行设置"
             meta="工作区 / Agent"
+          />
+          <SidebarSettingsLink
+            href="/settings/memory"
+            icon={<Brain aria-hidden="true" size={17} />}
+            label="记忆设置"
+            meta="规则 / 偏好"
           />
           <SidebarSettingsLink
             href="/settings/other"

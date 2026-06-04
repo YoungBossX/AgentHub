@@ -51,12 +51,12 @@
 
 ## 7. P18-7 Memory Management UI
 
-- [ ] 7.1 Add `/settings/memory` or equivalent settings surface.
-- [ ] 7.2 Show active, pending, warm, archived, rejected, and deleted memory.
-- [ ] 7.3 Allow confirm, reject, archive, delete, and supersede actions where policy allows.
-- [ ] 7.4 Show source, scope, target, agent role, trust level, status, and compiled-to outlet state.
-- [ ] 7.5 Show current `memorySnapshotId` for a session where useful.
-- [ ] 7.6 Add UI tests for review actions, filters, and snapshot display.
+- [x] 7.1 Add `/settings/memory` or equivalent settings surface.
+- [x] 7.2 Show active, pending, warm, archived, rejected, and deleted memory.
+- [x] 7.3 Allow confirm, reject, archive, delete, and supersede actions where policy allows.
+- [x] 7.4 Show source, scope, target, agent role, trust level, status, and compiled-to outlet state.
+- [x] 7.5 Show current `memorySnapshotId` for a session where useful.
+- [x] 7.6 Add UI tests for review actions, filters, and snapshot display.
 
 ## 8. P18-8 Memory Eval and Freeze Review
 

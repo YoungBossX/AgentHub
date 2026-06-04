@@ -17,6 +17,7 @@ import {
   getBackendHealth,
   getDemoWorkspace,
   interruptTaskRun,
+  listWorkspaceMemory,
   listProviderConfigs,
   listWorkspaceAgentProfiles,
   listWorkspaceAgents,
@@ -34,6 +35,7 @@ import {
   startTaskRunPreview,
   stopPreview,
   updateAgentRuntimeConfig,
+  updateMemoryItemStatus,
   updateSessionTargetSelection,
 } from "./api"
 
@@ -597,6 +599,96 @@ describe("workspace and session API", () => {
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
+      },
+    )
+  })
+
+  it("lists and updates workspace memory items", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input.toString()
+      if (url.endsWith("/memory/memory-1/status") && init?.method === "PATCH") {
+        return new Response(
+          JSON.stringify({
+            id: "memory-1",
+            workspaceId: "workspace-1",
+            scope: "user",
+            memoryType: "user_preference",
+            source: "user_explicit",
+            status: "archived",
+            trustLevel: "user_confirmed",
+            title: "Tone",
+            contentMd: "先给结论。",
+            contentHash: "hash",
+            version: 1,
+            importance: 80,
+            targetIds: [],
+            agentRoles: [],
+            lastUsedAt: null,
+            supersededBy: null,
+            compiledToAgentsMd: false,
+            compiledToClaudeMd: false,
+            createdAt: "2026-05-16T00:00:00Z",
+            updatedAt: "2026-05-16T00:00:00Z",
+          }),
+          { status: 200 },
+        )
+      }
+      return new Response(
+        JSON.stringify([
+          {
+            id: "memory-1",
+            workspaceId: "workspace-1",
+            scope: "user",
+            memoryType: "user_preference",
+            source: "user_explicit",
+            status: "active",
+            trustLevel: "user_confirmed",
+            title: "Tone",
+            contentMd: "先给结论。",
+            contentHash: "hash",
+            version: 1,
+            importance: 80,
+            targetIds: [],
+            agentRoles: [],
+            lastUsedAt: null,
+            supersededBy: null,
+            compiledToAgentsMd: true,
+            compiledToClaudeMd: true,
+            createdAt: "2026-05-16T00:00:00Z",
+            updatedAt: "2026-05-16T00:00:00Z",
+          },
+        ]),
+        { status: 200 },
+      )
+    })
+
+    const items = await listWorkspaceMemory(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      "active",
+      fetchMock,
+    )
+    const archived = await updateMemoryItemStatus(
+      "http://127.0.0.1:8000",
+      "memory-1",
+      "archived",
+      fetchMock,
+    )
+
+    expect(items[0].compiledToAgentsMd).toBe(true)
+    expect(archived.status).toBe("archived")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/memory?status=active",
+      {
+        cache: "no-store",
+      },
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/memory/memory-1/status",
+      {
+        body: JSON.stringify({ status: "archived" }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       },
     )
   })

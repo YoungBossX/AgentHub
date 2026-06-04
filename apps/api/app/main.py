@@ -69,8 +69,16 @@ from app.memory_snapshots import (
     ensure_session_memory_snapshot,
     refresh_session_memory_snapshot,
 )
+from app.memory_store import (
+    MemoryFilter,
+    MemoryStoreError,
+    list_memory_items,
+    memory_agent_roles,
+    memory_target_ids,
+    transition_memory_item,
+)
 from app.mission_trace import build_session_mission_trace
-from app.models import Agent, Message, Task, TaskRun
+from app.models import Agent, MemoryItem, Message, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import SessionExecutionLedger
 from app.models import TaskRunEvent
@@ -127,6 +135,8 @@ from app.schemas import (
     ExternalProjectTargetResponse,
     MessageCreateRequest,
     MessageResponse,
+    MemoryItemResponse,
+    MemoryItemStatusUpdateRequest,
     PreviewResponse,
     ProviderConfigResponse,
     ReviewArtifactResponse,
@@ -607,6 +617,32 @@ def runtime_config_response(
     )
 
 
+def memory_item_response(item: MemoryItem) -> MemoryItemResponse:
+    compiled = item.status == "active"
+    return MemoryItemResponse(
+        id=item.id,
+        workspaceId=item.workspace_id,
+        scope=item.scope,
+        memoryType=item.memory_type,
+        source=item.source,
+        status=item.status,
+        trustLevel=item.trust_level,
+        title=item.title,
+        contentMd=item.content_md,
+        contentHash=item.content_hash,
+        version=item.version,
+        importance=item.importance,
+        targetIds=memory_target_ids(item),
+        agentRoles=memory_agent_roles(item),
+        lastUsedAt=item.last_used_at,
+        supersededBy=item.superseded_by,
+        compiledToAgentsMd=compiled,
+        compiledToClaudeMd=compiled,
+        createdAt=item.created_at,
+        updatedAt=item.updated_at,
+    )
+
+
 def runtime_config_profiles_for_workspace(
     db: DbSession,
     workspace_id: str,
@@ -748,6 +784,42 @@ def update_runtime_config(
         profiles=profiles,
         providers=providers,
     )
+
+
+@app.get(
+    "/workspaces/{workspace_id}/memory",
+    response_model=list[MemoryItemResponse],
+)
+def read_workspace_memory_items(
+    workspace_id: str,
+    status_filter: Optional[str] = Query(default=None, alias="status"),
+    db: DbSession = Depends(get_db),
+) -> list[MemoryItemResponse]:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return [
+        memory_item_response(item)
+        for item in list_memory_items(
+            db,
+            MemoryFilter(workspace_id=workspace_id, status=status_filter),
+        )
+    ]
+
+
+@app.patch(
+    "/memory/{memory_item_id}/status",
+    response_model=MemoryItemResponse,
+)
+def update_memory_item_status(
+    memory_item_id: str,
+    request: MemoryItemStatusUpdateRequest,
+    db: DbSession = Depends(get_db),
+) -> MemoryItemResponse:
+    try:
+        item = transition_memory_item(db, memory_item_id, request.status)
+    except MemoryStoreError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return memory_item_response(item)
 
 
 @app.get(

@@ -333,6 +333,9 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("运行设置").closest("a")?.getAttribute("href")).toBe(
       "/settings/runtime",
     )
+    expect(screen.getByText("记忆设置").closest("a")?.getAttribute("href")).toBe(
+      "/settings/memory",
+    )
     expect(screen.getByText("其他设置").closest("a")?.getAttribute("href")).toBe(
       "/settings/other",
     )

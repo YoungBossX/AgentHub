@@ -269,6 +269,33 @@ class RuntimeConfigResponse(ApiModel):
     validation: RuntimeConfigValidationResponse
 
 
+class MemoryItemResponse(ApiModel):
+    id: str
+    workspace_id: Optional[str] = Field(alias="workspaceId")
+    scope: str
+    memory_type: str = Field(alias="memoryType")
+    source: str
+    status: str
+    trust_level: str = Field(alias="trustLevel")
+    title: str
+    content_md: str = Field(alias="contentMd")
+    content_hash: str = Field(alias="contentHash")
+    version: int
+    importance: int
+    target_ids: list[str] = Field(alias="targetIds")
+    agent_roles: list[str] = Field(alias="agentRoles")
+    last_used_at: Optional[datetime] = Field(alias="lastUsedAt")
+    superseded_by: Optional[str] = Field(alias="supersededBy")
+    compiled_to_agents_md: bool = Field(alias="compiledToAgentsMd")
+    compiled_to_claude_md: bool = Field(alias="compiledToClaudeMd")
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class MemoryItemStatusUpdateRequest(BaseModel):
+    status: str
+
+
 class SessionResponse(ApiModel):
     id: str
     workspace_id: str = Field(alias="workspaceId")

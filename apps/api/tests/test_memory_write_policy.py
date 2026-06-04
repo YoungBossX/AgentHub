@@ -182,6 +182,37 @@ def test_memory_write_route_creates_orchestrator_reply_without_task(
         assert tasks == []
 
 
+def test_memory_management_api_lists_and_updates_status(client: TestClient) -> None:
+    with _db() as db:
+        session = _session(db)
+        result = maybe_create_explicit_user_memory(
+            db,
+            session=session,
+            content="记住这个：以后回答先给结论。",
+        )
+        memory_id = result.memory_item.id
+        workspace_id = session.workspace_id
+
+    list_response = client.get(f"/workspaces/{workspace_id}/memory")
+    assert list_response.status_code == 200
+    listed = list_response.json()
+    assert listed[0]["id"] == memory_id
+    assert listed[0]["compiledToAgentsMd"] is True
+    assert listed[0]["compiledToClaudeMd"] is True
+
+    archived = client.patch(
+        f"/memory/{memory_id}/status",
+        json={"status": "archived"},
+    )
+    assert archived.status_code == 200
+    assert archived.json()["status"] == "archived"
+    assert archived.json()["compiledToAgentsMd"] is False
+
+    filtered = client.get(f"/workspaces/{workspace_id}/memory?status=active")
+    assert filtered.status_code == 200
+    assert filtered.json() == []
+
+
 def _db() -> DbSession:
     override = app.dependency_overrides[get_db]
     return next(override())

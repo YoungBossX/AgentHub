@@ -206,8 +206,32 @@ export type WorkspaceSession = {
   worktreePath: string
   activeFrontendTargetId?: string | null
   activeBackendTargetId?: string | null
+  memorySnapshotId?: string | null
   status: string
   lastMessageAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type MemoryItem = {
+  id: string
+  workspaceId: string | null
+  scope: string
+  memoryType: string
+  source: string
+  status: string
+  trustLevel: string
+  title: string
+  contentMd: string
+  contentHash: string
+  version: number
+  importance: number
+  targetIds: string[]
+  agentRoles: string[]
+  lastUsedAt: string | null
+  supersededBy: string | null
+  compiledToAgentsMd: boolean
+  compiledToClaudeMd: boolean
   createdAt: string
   updatedAt: string
 }
@@ -658,6 +682,49 @@ export async function checkAgentRuntimeProvider(
   }
 
   return (await response.json()) as RuntimeProviderCheck
+}
+
+export async function listWorkspaceMemory(
+  backendUrl: string,
+  workspaceId: string,
+  status: string | null = null,
+  fetcher: Fetcher = fetch,
+): Promise<MemoryItem[]> {
+  const suffix = status ? `?status=${encodeURIComponent(status)}` : ""
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/memory${suffix}`),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return []
+  }
+
+  return (await response.json()) as MemoryItem[]
+}
+
+export async function updateMemoryItemStatus(
+  backendUrl: string,
+  memoryItemId: string,
+  status: string,
+  fetcher: Fetcher = fetch,
+): Promise<MemoryItem> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/memory/${memoryItemId}/status`),
+    {
+      body: JSON.stringify({ status }),
+      headers: { "Content-Type": "application/json" },
+      method: "PATCH",
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error("Could not update memory status")
+  }
+
+  return (await response.json()) as MemoryItem
 }
 
 export async function createWorkspaceSession(
