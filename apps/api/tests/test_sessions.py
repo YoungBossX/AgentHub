@@ -9,7 +9,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
 from app.main import app, get_db, get_worktree_service
-from app.models import Agent, Session, Task, TaskRun, Workspace
+from app.models import Agent, MemorySnapshot, Session, Task, TaskRun, Workspace
 from app.repositories import next_session_title
 from app.worktrees import WorktreeService, safe_path_segment
 
@@ -100,6 +100,7 @@ def test_create_three_sessions_persists_unique_worktree_paths(
         )
         assert response.status_code == 201
         created.append(response.json())
+        assert created[-1]["memorySnapshotId"]
 
     worktree_paths = {session["worktreePath"] for session in created}
     assert len(worktree_paths) == 3
@@ -108,6 +109,20 @@ def test_create_three_sessions_persists_unique_worktree_paths(
         worktree = Path(path)
         assert worktree.exists()
         assert (worktree / ".git").exists()
+
+    db_override = app.dependency_overrides[get_db]
+    db_generator = db_override()
+    db = next(db_generator)
+    try:
+        snapshot_ids = {session["memorySnapshotId"] for session in created}
+        snapshots = db.exec(
+            select(MemorySnapshot).where(MemorySnapshot.id.in_(snapshot_ids))
+        ).all()
+        assert len(snapshots) == 3
+        assert all(snapshot.agents_md_hash for snapshot in snapshots)
+        assert all(snapshot.context_pack_hash for snapshot in snapshots)
+    finally:
+        db_generator.close()
 
     list_response = client.get(f"/workspaces/{workspace['id']}/sessions")
     assert list_response.status_code == 200

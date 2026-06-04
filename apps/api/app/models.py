@@ -54,6 +54,21 @@ class ExternalProjectTarget(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
+class MemorySnapshot(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    workspace_id: Optional[str] = Field(default=None, foreign_key="workspace.id", index=True)
+    schema_version: str = "memory_snapshot_v1"
+    agents_md_hash: str
+    claude_md_hash: str
+    project_memory_version: str
+    user_preference_version: str
+    target_registry_version: str
+    runtime_config_version: str
+    context_pack_hash: str
+    meta_json: str = "{}"
+    created_at: datetime = Field(default_factory=utc_now)
+
+
 class Session(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     workspace_id: str = Field(foreign_key="workspace.id", index=True)
@@ -63,6 +78,7 @@ class Session(SQLModel, table=True):
     worktree_path: str = Field(index=True, unique=True)
     active_frontend_target_id: Optional[str] = None
     active_backend_target_id: Optional[str] = None
+    memory_snapshot_id: Optional[str] = Field(default=None, foreign_key="memorysnapshot.id")
     status: str = "active"
     last_message_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utc_now)

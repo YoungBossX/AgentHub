@@ -44,6 +44,7 @@ def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
         {
             "active_frontend_target_id": "TEXT",
             "active_backend_target_id": "TEXT",
+            "memory_snapshot_id": "TEXT",
         },
     )
     _ensure_table_columns(

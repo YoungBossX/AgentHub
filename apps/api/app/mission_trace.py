@@ -5,7 +5,12 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.ledger import refresh_session_ledger
+from app.memory_snapshots import (
+    memory_snapshot_for_session,
+    memory_snapshot_metadata,
+)
 from app.models import Artifact, Task, TaskRun, TaskRunEvent
+from app.models import Session as AgentHubSession
 from app.schemas import SessionMissionTraceResponse
 
 BLOCKING_SCHEDULER_STATES = {
@@ -33,8 +38,15 @@ def build_session_mission_trace(
     events = _events_for_runs(db, run_ids)
     artifacts = _artifacts_for_runs(db, run_ids)
     blockers = _blockers_for_tasks(tasks)
+    session = db.get(AgentHubSession, session_id)
+    snapshot = (
+        memory_snapshot_for_session(db, session)
+        if session is not None
+        else None
+    )
     return SessionMissionTraceResponse(
         currentGoal=ledger.current_goal,
+        memorySnapshot=memory_snapshot_metadata(snapshot) or None,
         tasks=[_task_trace(task) for task in tasks],
         taskRuns=[_task_run_trace(task_run) for task_run in task_runs],
         events=[_event_trace(event) for event in events],
@@ -101,6 +113,7 @@ def _task_run_trace(task_run: TaskRun) -> dict[str, Any]:
         "adapterType": metrics.get("adapterType"),
         "providerAssignment": metrics.get("providerAssignment"),
         "runtimeConfigResolution": metrics.get("runtimeConfigResolution"),
+        "memorySnapshot": metrics.get("memorySnapshot"),
         "errorCode": task_run.error_code,
         "errorMessage": task_run.error_message,
         "navigation": {

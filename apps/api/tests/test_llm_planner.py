@@ -57,6 +57,10 @@ def test_llm_planner_input_includes_context_targets_messages_and_guardrails(
 
     assert planner_input["originalUserRequest"] == "Build a playable canvas game"
     assert planner_input["canonicalSharedContext"]["version"] == "canonical_shared_context_v1"
+    memory_snapshot = planner_input["canonicalSharedContext"]["fields"]["memorySnapshot"]["value"]
+    assert memory_snapshot["memorySnapshotId"]
+    assert memory_snapshot["agentsMdHash"]
+    assert memory_snapshot["contextPackHash"]
     assert planner_input["recentMessages"][0]["contentMd"] == "Build a playable canvas game"
     assert any(
         target["targetId"] == DEMO_FRONTEND_TARGET_ID
@@ -158,6 +162,7 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
     assert frontend_plan["llmPlanner"]["plannerSource"] == "fake_test"
     assert frontend_plan["plannerEvidence"]["plannerSource"] == "fake_test"
     assert frontend_plan["plannerEvidence"]["validationResult"] == "passed"
+    assert frontend_plan["plannerEvidence"]["memorySnapshot"]["memorySnapshotId"]
     assert frontend_plan["plannerEvidence"]["createdTaskIds"] == [
         task.id for task in outcome.tasks
     ]
@@ -172,9 +177,11 @@ def test_llm_planner_creates_validated_tasks_and_plan_draft(db: DbSession) -> No
     assert json.loads(outcome.tasks[1].depends_on_task_ids) == [frontend_task.id]
 
     trace = build_session_mission_trace(db, message.session_id)
+    assert trace.memory_snapshot["memorySnapshotId"] == frontend_plan["plannerEvidence"]["memorySnapshot"]["memorySnapshotId"]
     traced_task = next(task for task in trace.tasks if task["id"] == frontend_task.id)
     assert traced_task["plannerEvidence"]["providerId"] == "test-llm-planner"
     assert traced_task["plannerEvidence"]["plannerSource"] == "fake_test"
+    assert traced_task["plannerEvidence"]["memorySnapshot"]["memorySnapshotId"] == trace.memory_snapshot["memorySnapshotId"]
 
 
 def test_llm_planner_normalizes_safe_dependency_aliases(db: DbSession) -> None:

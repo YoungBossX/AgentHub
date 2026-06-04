@@ -278,6 +278,7 @@ class SessionResponse(ApiModel):
     worktree_path: str = Field(alias="worktreePath")
     active_frontend_target_id: Optional[str] = Field(alias="activeFrontendTargetId")
     active_backend_target_id: Optional[str] = Field(alias="activeBackendTargetId")
+    memory_snapshot_id: Optional[str] = Field(default=None, alias="memorySnapshotId")
     status: str
     last_message_at: Optional[datetime] = Field(alias="lastMessageAt")
     created_at: datetime = Field(alias="createdAt")
@@ -345,6 +346,7 @@ class SessionExecutionLedgerResponse(ApiModel):
 
 class SessionMissionTraceResponse(ApiModel):
     current_goal: Optional[str] = Field(alias="currentGoal")
+    memory_snapshot: Optional[dict[str, Any]] = Field(default=None, alias="memorySnapshot")
     tasks: list[dict[str, Any]]
     task_runs: list[dict[str, Any]] = Field(alias="taskRuns")
     events: list[dict[str, Any]]
@@ -413,6 +415,10 @@ class TaskRunResponse(ApiModel):
     runtime_config_resolution: Optional[dict[str, Any]] = Field(
         default=None,
         alias="runtimeConfigResolution",
+    )
+    memory_snapshot: Optional[dict[str, Any]] = Field(
+        default=None,
+        alias="memorySnapshot",
     )
     approval_request: Optional[ApprovalRequestResponse] = Field(
         default=None,

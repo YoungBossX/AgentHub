@@ -24,6 +24,7 @@ from app.main import (
     get_db,
     task_run_response,
 )
+from app.memory_snapshots import refresh_session_memory_snapshot
 from app.guardrails import ApprovalRequestPayload, request_task_run_approval
 from app.reviews import create_scripted_review_for_task_run
 from app.models import (
@@ -166,6 +167,61 @@ def test_create_task_run_records_runner_heartbeat_and_lease(client: TestClient) 
         assert stored.last_heartbeat_at is not None
         assert stored.lease_expires_at is not None
         assert stored.lease_expires_at > stored.last_heartbeat_at
+
+
+def test_create_task_run_records_memory_snapshot_consistently(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        session = db.exec(select(Session).where(Session.title == "TaskRun session")).one()
+        assert session.memory_snapshot_id is None
+
+        task_run = create_task_run(db, task_id())
+        db.refresh(session)
+        run = task_run_response(db, task_run).model_dump(by_alias=True)
+        context_pack = build_session_context_pack(
+            db,
+            db.get(Task, task_run.task_id),
+        )
+
+        assert session.memory_snapshot_id
+        assert run["memorySnapshot"]["memorySnapshotId"] == session.memory_snapshot_id
+        assert (
+            context_pack["memorySnapshot"]["memorySnapshotId"]
+            == session.memory_snapshot_id
+        )
+        assert (
+            context_pack["canonicalContext"]["fields"]["memorySnapshot"]["value"][
+                "memorySnapshotId"
+            ]
+            == session.memory_snapshot_id
+        )
+
+
+def test_memory_snapshot_refresh_is_explicit_and_blocks_active_runs(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        session = db.exec(select(Session).where(Session.title == "TaskRun session")).one()
+        first = refresh_session_memory_snapshot(db, session.id)
+        assert first.id == session.memory_snapshot_id
+
+        task_run = create_task_run(db, task_id())
+        blocked = client.post(f"/sessions/{session.id}/memory-snapshot/refresh")
+        assert blocked.status_code == 409
+        assert task_run.id in blocked.json()["detail"]
+
+        transition_task_run(db, task_run.id, "completed")
+        refreshed = client.post(f"/sessions/{session.id}/memory-snapshot/refresh")
+        assert refreshed.status_code == 200
+        second_snapshot_id = refreshed.json()["memorySnapshotId"]
+
+        assert second_snapshot_id
+        assert second_snapshot_id != first.id
+
+        stored_run = db.get(TaskRun, task_run.id)
+        metrics = json.loads(stored_run.metrics_json)
+        assert metrics["memorySnapshot"]["memorySnapshotId"] == first.id
 
 
 def test_refresh_task_run_heartbeat_extends_active_lease(client: TestClient) -> None:

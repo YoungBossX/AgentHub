@@ -14,6 +14,10 @@ from app.llm_planner import (
     create_llm_plan_tasks_from_outcome,
     llm_planner_fallback_metadata,
 )
+from app.memory_snapshots import (
+    ensure_session_memory_snapshot,
+    memory_snapshot_metadata,
+)
 from app.agent_runtime_config import resolve_runtime_role_config
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
@@ -137,9 +141,20 @@ def _attach_planner_runtime_evidence(
     tasks: list[Task],
     runtime_resolution,
 ) -> None:
-    if runtime_resolution is None:
+    if not tasks:
         return
-    metadata = runtime_resolution.to_metadata()
+    session = db.get(AgentHubSession, tasks[0].session_id)
+    memory_snapshot = (
+        ensure_session_memory_snapshot(db, session)
+        if session is not None
+        else None
+    )
+    runtime_metadata = (
+        runtime_resolution.to_metadata()
+        if runtime_resolution is not None
+        else None
+    )
+    snapshot_metadata = memory_snapshot_metadata(memory_snapshot)
     for task in tasks:
         try:
             plan = json.loads(task.plan_json)
@@ -150,9 +165,13 @@ def _attach_planner_runtime_evidence(
         planner_evidence = plan.get("plannerEvidence")
         if not isinstance(planner_evidence, dict):
             planner_evidence = {}
-        planner_evidence["runtimeConfigResolution"] = metadata
+        if runtime_metadata is not None:
+            planner_evidence["runtimeConfigResolution"] = runtime_metadata
+            plan["runtimeConfigResolution"] = runtime_metadata
+        if snapshot_metadata:
+            planner_evidence["memorySnapshot"] = snapshot_metadata
+            plan["memorySnapshot"] = snapshot_metadata
         plan["plannerEvidence"] = planner_evidence
-        plan["runtimeConfigResolution"] = metadata
         task.plan_json = json.dumps(plan, separators=(",", ":"))
         db.add(task)
     db.commit()

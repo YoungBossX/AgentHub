@@ -44,8 +44,17 @@ def build_canonical_shared_context(
             {
                 "sessionId": session_context_pack.get("sessionId"),
                 "workspaceId": session_context_pack.get("workspaceId"),
+                "memorySnapshotId": _dict_value(
+                    session_context_pack.get("memorySnapshot")
+                ).get("memorySnapshotId"),
             },
             source="session",
+            created_at=timestamp,
+            trust_level="system",
+        ),
+        "memorySnapshot": _field(
+            session_context_pack.get("memorySnapshot"),
+            source="memory_snapshot",
             created_at=timestamp,
             trust_level="system",
         ),

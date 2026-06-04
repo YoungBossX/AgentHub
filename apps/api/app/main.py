@@ -63,6 +63,12 @@ from app.ledger import (
     refresh_session_ledger,
     refresh_session_ledger_for_task_run,
 )
+from app.memory_snapshots import (
+    MemorySnapshotError,
+    create_memory_snapshot,
+    ensure_session_memory_snapshot,
+    refresh_session_memory_snapshot,
+)
 from app.mission_trace import build_session_mission_trace
 from app.models import Agent, Message, Task, TaskRun
 from app.models import Session as AgentHubSession
@@ -837,6 +843,11 @@ def create_workspace_session(
         title=request.title or next_session_title(db, workspace.id),
         session_type="demo",
         bound_branch=workspace.default_branch,
+        memory_snapshot_id=create_memory_snapshot(
+            db,
+            workspace_id=workspace.id,
+            reason="session_create",
+        ).id,
         worktree_path=str(worktrees.session_path(workspace.id, "")),
         status="active",
         last_message_at=now,
@@ -863,7 +874,26 @@ def read_session(
     session = get_session(db, session_id)
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    ensure_session_memory_snapshot(db, session)
     return session
+
+
+@app.post("/sessions/{session_id}/memory-snapshot/refresh", response_model=SessionResponse)
+def refresh_memory_snapshot_for_session(
+    session_id: str,
+    db: DbSession = Depends(get_db),
+) -> AgentHubSession:
+    session = get_session(db, session_id)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    try:
+        refresh_session_memory_snapshot(db, session_id)
+    except MemorySnapshotError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    refreshed = get_session(db, session_id)
+    if refreshed is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return refreshed
 
 
 @app.patch("/sessions/{session_id}", response_model=SessionResponse)
@@ -1129,6 +1159,7 @@ def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
         metricsJson=metrics,
         providerAssignment=metrics.get("providerAssignment"),
         runtimeConfigResolution=metrics.get("runtimeConfigResolution"),
+        memorySnapshot=metrics.get("memorySnapshot"),
         approvalRequest=latest_approval_request(db, task_run),
         createdAt=task_run.created_at,
         updatedAt=task_run.updated_at,

@@ -13,6 +13,11 @@ from app.agent_profiles import profile_for_agent
 from app.canonical_context import build_canonical_shared_context, filter_protected_values
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
+from app.memory_snapshots import (
+    ensure_session_memory_snapshot,
+    memory_snapshot_for_session,
+    memory_snapshot_metadata,
+)
 from app.mission_trace import build_session_mission_trace
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_contracts import ConversationOutcome, PlannerRequest, PlannerResponse
@@ -93,6 +98,7 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
     session = db.get(AgentHubSession, message.session_id)
     if session is None:
         raise LLMPlannerError("Session is unavailable for LLM planning.")
+    memory_snapshot = ensure_session_memory_snapshot(db, session)
 
     targets = list_targets_for_workspace(db, session.workspace_id)
     recent_messages = _recent_messages(db, message.session_id)
@@ -100,6 +106,7 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
     session_context_pack = {
         "sessionId": session.id,
         "workspaceId": session.workspace_id,
+        "memorySnapshot": memory_snapshot_metadata(memory_snapshot),
         "currentGoal": message.content_md,
         "originalUserRequest": message.content_md,
         "currentTask": {
@@ -544,6 +551,12 @@ def _attach_planner_evidence(
     plan_draft: dict[str, Any],
 ) -> None:
     created_task_ids = [task.id for task in tasks]
+    session = db.get(AgentHubSession, tasks[0].session_id) if tasks else None
+    memory_snapshot = (
+        memory_snapshot_for_session(db, session)
+        if session is not None
+        else None
+    )
     evidence = {
         "providerId": provider_result.provider_id,
         "providerType": provider_result.provider_type,
@@ -554,6 +567,7 @@ def _attach_planner_evidence(
         "planRationale": _string_value(raw_output.get("rationale")),
         "planId": plan_draft.get("planId"),
         "createdTaskIds": created_task_ids,
+        "memorySnapshot": memory_snapshot_metadata(memory_snapshot),
     }
     if provider_result.fallback_reason:
         evidence["fallbackReason"] = provider_result.fallback_reason

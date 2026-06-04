@@ -19,6 +19,10 @@ from app.ledger import (
     changed_files_for_ledger,
     refresh_session_ledger,
 )
+from app.memory_snapshots import (
+    ensure_session_memory_snapshot,
+    memory_snapshot_metadata,
+)
 from app.models import (
     Artifact,
     Deployment,
@@ -56,6 +60,11 @@ def build_session_context_pack(
         merged_context.update(plan_context)
 
     session = db.get(AgentHubSession, task.session_id)
+    memory_snapshot = (
+        ensure_session_memory_snapshot(db, session)
+        if session is not None
+        else None
+    )
     ledger = refresh_session_ledger(db, task.session_id)
     task_runs = _task_runs_for_session(db, task.session_id)
     latest_diff = _latest_diff_context(db, task_runs)
@@ -77,6 +86,7 @@ def build_session_context_pack(
         "version": "session_context_pack_v1",
         "sessionId": task.session_id,
         "workspaceId": session.workspace_id if session is not None else None,
+        "memorySnapshot": memory_snapshot_metadata(memory_snapshot) or None,
         "currentGoal": ledger.current_goal,
         "originalUserRequest": original_request,
         "currentTask": {

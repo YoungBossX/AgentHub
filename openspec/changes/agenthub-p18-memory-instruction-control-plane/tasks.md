@@ -8,12 +8,12 @@
 
 ## 2. P18-2 Memory Snapshot Model
 
-- [ ] 2.1 Add or plan a persisted memory snapshot model with `memorySnapshotId`.
-- [ ] 2.2 Associate sessions with a memory snapshot by default.
-- [ ] 2.3 Record snapshot IDs and relevant hashes/versions on Planner evidence, TaskRun metadata, mission trace, or artifact metadata where appropriate.
-- [ ] 2.4 Ensure Planner, Claude Code, Codex, and Review Agent use the same snapshot for one session/task chain.
-- [ ] 2.5 Prevent running TaskRuns from silently switching snapshots.
-- [ ] 2.6 Add tests for snapshot consistency and explicit session refresh behavior.
+- [x] 2.1 Add or plan a persisted memory snapshot model with `memorySnapshotId`.
+- [x] 2.2 Associate sessions with a memory snapshot by default.
+- [x] 2.3 Record snapshot IDs and relevant hashes/versions on Planner evidence, TaskRun metadata, mission trace, or artifact metadata where appropriate.
+- [x] 2.4 Ensure Planner, Claude Code, Codex, and Review Agent use the same snapshot for one session/task chain.
+- [x] 2.5 Prevent running TaskRuns from silently switching snapshots.
+- [x] 2.6 Add tests for snapshot consistency and explicit session refresh behavior.
 
 ## 3. P18-3 Canonical Memory Model
 

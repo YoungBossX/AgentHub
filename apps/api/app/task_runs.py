@@ -13,6 +13,10 @@ from sqlmodel import select
 from app.events import append_task_run_event
 from app.diffs import capture_base_ref_for_worktree
 from app.agent_selection_policy import AgentSelectionError, validate_agent_selection
+from app.memory_snapshots import (
+    ensure_session_memory_snapshot,
+    memory_snapshot_metadata,
+)
 from app.models import Agent, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
@@ -70,6 +74,7 @@ def create_task_run(
 ) -> TaskRun:
     task = _task_or_raise(db, task_id)
     session = _session_or_raise(db, task.session_id)
+    memory_snapshot = ensure_session_memory_snapshot(db, session)
     agent = _agent_or_raise(db, task.assigned_agent_id)
     runtime_resolution = _runtime_resolution_for_task(db, task, session, agent)
     selected_adapter = adapter_type or (
@@ -120,6 +125,7 @@ def create_task_run(
         "adapterType": selected_adapter,
         "providerAssignment": provider_assignment.to_metadata(),
         "agentSelection": agent_selection.to_metadata(),
+        "memorySnapshot": memory_snapshot_metadata(memory_snapshot),
     }
     if runtime_resolution is not None and adapter_type is None:
         metrics["runtimeConfigResolution"] = runtime_resolution.to_metadata()
@@ -170,6 +176,7 @@ def create_task_run(
         {
             "adapterType": selected_adapter,
             "providerAssignment": provider_assignment.to_metadata(),
+            "memorySnapshotId": memory_snapshot.id,
         },
     )
     if checkpoint is not None:
