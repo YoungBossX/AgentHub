@@ -9,14 +9,13 @@ from sqlmodel import select
 
 from app.agent_runtime_config import get_effective_runtime_config
 from app.memory_instructions import compile_instruction_artifacts
+from app.memory_store import memory_collection_versions
 from app.models import MemorySnapshot, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
 from app.target_registry import TargetProject, list_targets_for_workspace
 
 MEMORY_SNAPSHOT_SCHEMA_VERSION = "memory_snapshot_v1"
-PROJECT_MEMORY_VERSION = "project-memory-v1"
-USER_PREFERENCE_VERSION = "user-preferences-v1"
 ACTIVE_TASK_RUN_STATES = {
     "created",
     "queued",
@@ -40,6 +39,7 @@ def create_memory_snapshot(
 ) -> MemorySnapshot:
     targets = list_targets_for_workspace(db, workspace_id) if workspace_id else ()
     artifacts = compile_instruction_artifacts(targets=targets)
+    memory_versions = memory_collection_versions(db, workspace_id)
     target_registry_payload = _target_registry_payload(targets)
     runtime_config_payload = get_effective_runtime_config(db, workspace_id).to_payload()
     target_registry_version = _stable_hash(target_registry_payload)
@@ -49,8 +49,8 @@ def create_memory_snapshot(
             "schemaVersion": MEMORY_SNAPSHOT_SCHEMA_VERSION,
             "agentsMdHash": artifacts.agents_md_hash,
             "claudeMdHash": artifacts.claude_md_hash,
-            "projectMemoryVersion": PROJECT_MEMORY_VERSION,
-            "userPreferenceVersion": USER_PREFERENCE_VERSION,
+            "projectMemoryVersion": memory_versions.project_memory_version,
+            "userPreferenceVersion": memory_versions.user_preference_version,
             "targetRegistryVersion": target_registry_version,
             "runtimeConfigVersion": runtime_config_version,
         }
@@ -60,8 +60,8 @@ def create_memory_snapshot(
         schema_version=MEMORY_SNAPSHOT_SCHEMA_VERSION,
         agents_md_hash=artifacts.agents_md_hash,
         claude_md_hash=artifacts.claude_md_hash,
-        project_memory_version=PROJECT_MEMORY_VERSION,
-        user_preference_version=USER_PREFERENCE_VERSION,
+        project_memory_version=memory_versions.project_memory_version,
+        user_preference_version=memory_versions.user_preference_version,
         target_registry_version=target_registry_version,
         runtime_config_version=runtime_config_version,
         context_pack_hash=context_pack_hash,

@@ -69,6 +69,27 @@ class MemorySnapshot(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
 
 
+class MemoryItem(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    workspace_id: Optional[str] = Field(default=None, foreign_key="workspace.id", index=True)
+    scope: str = Field(index=True)
+    memory_type: str = Field(index=True)
+    source: str = Field(index=True)
+    status: str = Field(default="pending_review", index=True)
+    trust_level: str = Field(default="untrusted", index=True)
+    title: str
+    content_md: str
+    content_hash: str
+    version: int = 1
+    importance: int = 50
+    target_ids_json: str = "[]"
+    agent_roles_json: str = "[]"
+    last_used_at: Optional[datetime] = None
+    superseded_by: Optional[str] = Field(default=None, foreign_key="memoryitem.id")
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
 class Session(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     workspace_id: str = Field(foreign_key="workspace.id", index=True)

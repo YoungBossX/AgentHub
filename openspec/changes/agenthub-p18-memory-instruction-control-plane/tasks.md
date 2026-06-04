@@ -17,11 +17,11 @@
 
 ## 3. P18-3 Canonical Memory Model
 
-- [ ] 3.1 Add memory item schema with scope, type, source, status, trustLevel, targetIds, agentRoles, lastUsedAt, supersededBy, and timestamps.
-- [ ] 3.2 Support statuses: active, pending_review, warm, archived, rejected, deleted.
-- [ ] 3.3 Define memory types for project rules, user preferences, decisions, patterns, feedback, session summaries, and external suggestions.
-- [ ] 3.4 Add version/hash metadata for project memory and user preference memory.
-- [ ] 3.5 Add tests for schema validation, status transitions, supersession, and scope filters.
+- [x] 3.1 Add memory item schema with scope, type, source, status, trustLevel, targetIds, agentRoles, lastUsedAt, supersededBy, and timestamps.
+- [x] 3.2 Support statuses: active, pending_review, warm, archived, rejected, deleted.
+- [x] 3.3 Define memory types for project rules, user preferences, decisions, patterns, feedback, session summaries, and external suggestions.
+- [x] 3.4 Add version/hash metadata for project memory and user preference memory.
+- [x] 3.5 Add tests for schema validation, status transitions, supersession, and scope filters.
 
 ## 4. P18-4 Memory Write Policy and Prompt-injection Guard
 
