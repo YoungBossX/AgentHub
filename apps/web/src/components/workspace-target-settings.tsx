@@ -4,7 +4,6 @@ import { FolderGit2, FolderPlus, RefreshCw, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type {
-  ExternalProjectAnalysis,
   TargetProject,
   Workspace,
   WorkspaceSession,
@@ -12,16 +11,15 @@ import type {
 import { cn } from "@/lib/utils"
 
 type WorkspaceTargetSettingsProps = {
-  analysis: ExternalProjectAnalysis | null
   backendTargetId: string
   busy: boolean
   frontendTargetId: string
-  isAnalyzing: boolean
   isRegistering: boolean
   isSavingTargets: boolean
-  onAnalyze: () => void
+  manualAllowedPaths: string
   onBackendTargetChange: (targetId: string) => void
   onFrontendTargetChange: (targetId: string) => void
+  onManualAllowedPathsChange: (value: string) => void
   onRefresh: () => void
   onRegister: () => void
   onRootPathChange: (rootPath: string) => void
@@ -36,16 +34,15 @@ type WorkspaceTargetSettingsProps = {
 }
 
 export function WorkspaceTargetSettings({
-  analysis,
   backendTargetId,
   busy,
   frontendTargetId,
-  isAnalyzing,
   isRegistering,
   isSavingTargets,
-  onAnalyze,
+  manualAllowedPaths,
   onBackendTargetChange,
   onFrontendTargetChange,
+  onManualAllowedPathsChange,
   onRefresh,
   onRegister,
   onRootPathChange,
@@ -60,7 +57,6 @@ export function WorkspaceTargetSettings({
 }: WorkspaceTargetSettingsProps) {
   const frontendTargets = targets.filter((target) => target.type === "frontend")
   const backendTargets = targets.filter((target) => target.type === "backend")
-  const canRegister = Boolean(analysis && analysis.allowedPaths.length > 0)
 
   return (
     <section className="rounded-lg border border-[var(--border)] bg-white p-5">
@@ -151,8 +147,12 @@ export function WorkspaceTargetSettings({
             </p>
           </div>
 
+          <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
+            只需填写项目路径和允许写入的目录，无需预判项目类型。
+          </p>
+
           <label className="mt-3 block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
-            本地项目路径
+            项目路径
             <input
               className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
               onChange={(event) => onRootPathChange(event.target.value)}
@@ -161,28 +161,25 @@ export function WorkspaceTargetSettings({
             />
           </label>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <label className="mt-2 block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
+            允许写入路径（逗号分隔，如 src, app）
+            <input
+              className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
+              onChange={(event) => onManualAllowedPathsChange(event.target.value)}
+              placeholder="src, app"
+              value={manualAllowedPaths}
+            />
+          </label>
+
+          <div className="mt-3">
             <Button
-              className="bg-white text-slate-700 hover:bg-slate-50"
-              disabled={!rootPath.trim() || isAnalyzing || busy}
-              onClick={onAnalyze}
-              type="button"
-              variant="secondary"
-            >
-              {isAnalyzing ? "分析中..." : "分析"}
-            </Button>
-            <Button
-              disabled={!canRegister || isRegistering || busy}
+              disabled={!rootPath.trim() || !manualAllowedPaths.trim() || isRegistering || busy}
               onClick={onRegister}
               type="button"
             >
-              {isRegistering ? "注册中..." : "注册到工作区"}
+              {isRegistering ? "注册中..." : "注册"}
             </Button>
           </div>
-
-          {analysis ? (
-            <AnalysisSummary analysis={analysis} />
-          ) : null}
         </div>
       </div>
 
@@ -233,32 +230,6 @@ function TargetSelect({
   )
 }
 
-function AnalysisSummary({ analysis }: { analysis: ExternalProjectAnalysis }) {
-  return (
-    <div className="mt-3 rounded border border-[var(--border)] bg-white p-2 text-xs text-slate-700">
-      <div className="flex flex-wrap gap-1">
-        <MiniPill label={formatProjectType(analysis.projectType)} tone="type" />
-        <MiniPill label={analysis.packageManager} tone="neutral" />
-        <MiniPill label={formatAnalysisStatus(analysis.analysisStatus)} tone="status" />
-        <MiniPill label={`置信度 ${formatConfidence(analysis.confidence)}`} tone="neutral" />
-      </div>
-      <p className="mt-2 truncate text-[11px] text-[var(--muted-foreground)]">
-        可写路径：{analysis.allowedPaths.join(", ") || "无"}
-      </p>
-      {analysis.devCommand ? (
-        <p className="mt-1 truncate text-[11px] text-[var(--muted-foreground)]">
-          dev：{analysis.devCommand}
-        </p>
-      ) : null}
-      {analysis.analysisWarnings.length > 0 ? (
-        <p className="mt-2 text-[11px] text-amber-700">
-          {analysis.analysisWarnings[0]}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
 function TargetPill({ target }: { target: TargetProject }) {
   return (
     <span
@@ -278,29 +249,6 @@ function TargetPill({ target }: { target: TargetProject }) {
   )
 }
 
-function MiniPill({
-  label,
-  tone,
-}: {
-  label: string
-  tone: "type" | "status" | "neutral"
-}) {
-  return (
-    <span
-      className={cn(
-        "rounded border px-1.5 py-0.5 text-[10px] font-medium",
-        tone === "type"
-          ? "border-blue-200 bg-blue-50 text-blue-700"
-          : tone === "status"
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-            : "border-slate-200 bg-slate-50 text-slate-600",
-      )}
-    >
-      {label}
-    </span>
-  )
-}
-
 function formatTargetType(type: string) {
   switch (type) {
     case "frontend":
@@ -311,44 +259,5 @@ function formatTargetType(type: string) {
       return "平台"
     default:
       return type
-  }
-}
-
-function formatProjectType(type: string) {
-  switch (type) {
-    case "vite-react":
-      return "Vite React"
-    case "nextjs":
-      return "Next.js"
-    case "fastapi":
-      return "FastAPI"
-    case "node-api":
-      return "Node API"
-    case "python-package":
-      return "Python"
-    default:
-      return "未知项目"
-  }
-}
-
-function formatAnalysisStatus(status: string) {
-  switch (status) {
-    case "ready":
-      return "可注册"
-    case "needs_confirmation":
-      return "需确认"
-    default:
-      return status
-  }
-}
-
-function formatConfidence(confidence: string) {
-  switch (confidence) {
-    case "high":
-      return "高"
-    case "low":
-      return "低"
-    default:
-      return confidence
   }
 }

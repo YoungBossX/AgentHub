@@ -5,7 +5,6 @@ import { RuntimeSettingsPageClient } from "./runtime-settings-page-client"
 import type { AgentRuntimeConfig, Workspace } from "@/lib/api"
 
 const apiMocks = vi.hoisted(() => ({
-  analyzeExternalProject: vi.fn(),
   checkAgentRuntimeProvider: vi.fn(),
   createExternalProjectTarget: vi.fn(),
   getAgentRuntimeConfig: vi.fn(),
@@ -18,7 +17,6 @@ const apiMocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
-  analyzeExternalProject: apiMocks.analyzeExternalProject,
   checkAgentRuntimeProvider: apiMocks.checkAgentRuntimeProvider,
   createExternalProjectTarget: apiMocks.createExternalProjectTarget,
   getAgentRuntimeConfig: apiMocks.getAgentRuntimeConfig,
@@ -257,22 +255,6 @@ describe("RuntimeSettingsPageClient", () => {
     apiMocks.getAgentRuntimeConfig.mockResolvedValue(runtimeConfig)
     apiMocks.listWorkspaceSessions.mockResolvedValue(workspaceSessions)
     apiMocks.listWorkspaceTargets.mockResolvedValue(workspaceTargets)
-    apiMocks.analyzeExternalProject.mockResolvedValue({
-      allowedPaths: ["src"],
-      analysisStatus: "ready",
-      analysisWarnings: [],
-      buildCommand: "pnpm build",
-      checkCommand: "pnpm check",
-      confidence: "high",
-      deniedPaths: [".env", "node_modules"],
-      detectedFramework: "vite-react",
-      devCommand: "pnpm dev",
-      packageManager: "pnpm",
-      previewCommand: "pnpm dev",
-      projectType: "vite-react",
-      rootPath: "/Users/demo/Desktop/sample-app",
-      testCommand: "pnpm test",
-    })
     apiMocks.createExternalProjectTarget.mockResolvedValue({
       allowedPaths: ["src"],
       analysisStatus: "manual",
@@ -380,7 +362,7 @@ describe("RuntimeSettingsPageClient", () => {
     })
   })
 
-  it("analyzes and registers an external project from workspace settings", async () => {
+  it("registers an external project from workspace settings", async () => {
     render(
       <RuntimeSettingsPageClient
         backendUrl="http://127.0.0.1:8000"
@@ -389,24 +371,16 @@ describe("RuntimeSettingsPageClient", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByLabelText("本地项目路径")).toBeTruthy()
+      expect(screen.getByLabelText("项目路径")).toBeTruthy()
     })
 
-    fireEvent.change(screen.getByLabelText("本地项目路径"), {
+    fireEvent.change(screen.getByLabelText("项目路径"), {
       target: { value: "/Users/demo/Desktop/sample-app" },
     })
-    fireEvent.click(screen.getByText("分析"))
-
-    await waitFor(() => {
-      expect(apiMocks.analyzeExternalProject).toHaveBeenCalledWith(
-        "http://127.0.0.1:8000",
-        "workspace-1",
-        "/Users/demo/Desktop/sample-app",
-      )
-      expect(screen.getByText("外部项目分析完成，可以注册到工作区。")).toBeTruthy()
+    fireEvent.change(screen.getByLabelText("允许写入路径（逗号分隔，如 src, app）"), {
+      target: { value: "src, app" },
     })
-
-    fireEvent.click(screen.getByText("注册到工作区"))
+    fireEvent.click(screen.getByText("注册"))
 
     await waitFor(() => {
       expect(apiMocks.createExternalProjectTarget).toHaveBeenCalledWith(

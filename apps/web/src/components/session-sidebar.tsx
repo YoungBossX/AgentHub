@@ -37,7 +37,7 @@ export function SessionSidebar({
   workspace,
 }: SessionSidebarProps) {
   return (
-    <aside className="flex min-h-0 flex-col overflow-hidden border-b border-white/70 bg-[linear-gradient(180deg,#edf8f7_0%,#f7fafb_58%,#ffffff_100%)] lg:border-b-0 lg:border-r">
+    <aside className="flex min-h-0 flex-col overflow-hidden border-b border-white/70 bg-[linear-gradient(150deg,#eef7f6_0%,#f6fbfa_46%,#ffffff_100%)] lg:border-b-0 lg:border-r">
       <div className="shrink-0 p-5 pb-4">
         <div className="rounded-lg bg-transparent">
           <div className="flex items-start gap-3">

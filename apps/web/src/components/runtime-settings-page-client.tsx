@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react"
 import { AgentRuntimeSettings } from "@/components/agent-runtime-settings"
 import { WorkspaceTargetSettings } from "@/components/workspace-target-settings"
 import {
-  analyzeExternalProject,
   checkAgentRuntimeProvider,
   createExternalProjectTarget,
   getDemoWorkspace,
@@ -15,7 +14,6 @@ import {
   updateAgentRuntimeConfig,
   updateSessionTargetSelection,
   type AgentRuntimeConfig,
-  type ExternalProjectAnalysis,
   type RuntimeProviderCheck,
   type RuntimeRoleConfigInput,
   type TargetProject,
@@ -42,15 +40,13 @@ export function RuntimeSettingsPageClient({
   const [frontendTargetId, setFrontendTargetId] = useState("")
   const [backendTargetId, setBackendTargetId] = useState("")
   const [externalRootPath, setExternalRootPath] = useState("")
-  const [externalAnalysis, setExternalAnalysis] =
-    useState<ExternalProjectAnalysis | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [workspaceStatusMessage, setWorkspaceStatusMessage] = useState<string | null>(null)
   const [isLoadingConfig, setIsLoadingConfig] = useState(true)
   const [checkingRole, setCheckingRole] = useState<string | null>(null)
-  const [isAnalyzingExternal, setIsAnalyzingExternal] = useState(false)
   const [isRegisteringExternal, setIsRegisteringExternal] = useState(false)
   const [isSavingTargets, setIsSavingTargets] = useState(false)
+  const [manualAllowedPaths, setManualAllowedPaths] = useState("")
   const hasUnsavedChanges = config
     ? JSON.stringify(draftRoles) !== JSON.stringify(config.roles)
     : false
@@ -178,36 +174,24 @@ export function RuntimeSettingsPageClient({
     setWorkspaceStatusMessage(null)
   }
 
-  async function handleAnalyzeExternalProject() {
+  async function handleRegisterExternalProject() {
     if (!workspace) {
-      setWorkspaceStatusMessage("无法分析：未找到可配置的工作区。")
+      setWorkspaceStatusMessage("无法注册：未找到可配置的工作区。")
       return
     }
 
-    setIsAnalyzingExternal(true)
-    setWorkspaceStatusMessage(null)
-    try {
-      const result = await analyzeExternalProject(
-        backendUrl,
-        workspace.id,
-        externalRootPath,
-      )
-      setExternalAnalysis(result)
-      setWorkspaceStatusMessage(
-        result.analysisStatus === "ready"
-          ? "外部项目分析完成，可以注册到工作区。"
-          : "外部项目已分析，请确认可写路径和项目类型后再注册。",
-      )
-    } catch {
-      setWorkspaceStatusMessage("外部项目分析失败，请检查路径和后端服务。")
-    } finally {
-      setIsAnalyzingExternal(false)
+    if (!externalRootPath.trim()) {
+      setWorkspaceStatusMessage("请先输入外部项目路径。")
+      return
     }
-  }
 
-  async function handleRegisterExternalProject() {
-    if (!workspace || !externalAnalysis) {
-      setWorkspaceStatusMessage("无法注册：请先分析一个外部项目。")
+    const allowedPaths = manualAllowedPaths
+      .split(",")
+      .map((p) => p.trim())
+      .filter((p) => p)
+
+    if (!allowedPaths.length) {
+      setWorkspaceStatusMessage("请填写至少一个允许写入的路径。")
       return
     }
 
@@ -218,22 +202,21 @@ export function RuntimeSettingsPageClient({
         backendUrl,
         workspace.id,
         {
-          allowedPaths: externalAnalysis.allowedPaths,
-          buildCommand: externalAnalysis.buildCommand,
-          checkCommand: externalAnalysis.checkCommand,
-          deniedPaths: externalAnalysis.deniedPaths,
-          detectedFramework: externalAnalysis.detectedFramework,
-          devCommand: externalAnalysis.devCommand,
-          name: externalTargetNameFor(externalAnalysis.rootPath),
-          packageManager: externalAnalysis.packageManager,
-          previewCommand: externalAnalysis.previewCommand,
-          projectType: externalAnalysis.projectType,
-          rootPath: externalAnalysis.rootPath,
-          targetId: externalTargetIdFor(externalAnalysis.rootPath),
-          testCommand: externalAnalysis.testCommand,
+          allowedPaths: allowedPaths,
+          buildCommand: null,
+          checkCommand: null,
+          deniedPaths: [],
+          devCommand: null,
+          name: externalTargetNameFor(externalRootPath),
+          previewCommand: null,
+          projectType: "unknown",
+          rootPath: externalRootPath,
+          targetId: externalTargetIdFor(externalRootPath),
+          testCommand: null,
         },
       )
       await refreshWorkspaceTargets()
+      setManualAllowedPaths("")
       setWorkspaceStatusMessage(`外部项目已注册：${registered.name}`)
     } catch {
       setWorkspaceStatusMessage("外部项目注册失败，可能 targetId 已存在或路径不符合安全规则。")
@@ -369,14 +352,12 @@ export function RuntimeSettingsPageClient({
   return (
     <div className="grid gap-5">
       <WorkspaceTargetSettings
-        analysis={externalAnalysis}
         backendTargetId={backendTargetId}
         busy={isLoadingConfig}
         frontendTargetId={frontendTargetId}
-        isAnalyzing={isAnalyzingExternal}
         isRegistering={isRegisteringExternal}
         isSavingTargets={isSavingTargets}
-        onAnalyze={handleAnalyzeExternalProject}
+        manualAllowedPaths={manualAllowedPaths}
         onBackendTargetChange={(targetId) => {
           setBackendTargetId(targetId)
           setWorkspaceStatusMessage(null)
@@ -385,11 +366,11 @@ export function RuntimeSettingsPageClient({
           setFrontendTargetId(targetId)
           setWorkspaceStatusMessage(null)
         }}
+        onManualAllowedPathsChange={setManualAllowedPaths}
         onRefresh={refreshWorkspaceTargets}
         onRegister={handleRegisterExternalProject}
         onRootPathChange={(rootPath) => {
           setExternalRootPath(rootPath)
-          setExternalAnalysis(null)
           setWorkspaceStatusMessage(null)
         }}
         onSaveTargets={handleSaveTargets}

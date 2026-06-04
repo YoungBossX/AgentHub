@@ -33,7 +33,7 @@ export function ContactSettingsPageClient({
         </p>
       </div>
 
-      <div className="rounded-lg border border-[var(--border)] bg-[#f8fbfb] p-4 shadow-sm">
+      <div className="rounded-lg border border-[var(--border)] bg-[linear-gradient(150deg,#f2faf8_0%,#f8fbfb_52%,#ffffff_100%)] p-4 shadow-sm">
         <AgentContactList
           agents={agents}
           mode={mode}

@@ -195,9 +195,12 @@ def _validate_root_path(root_path: str) -> Path:
         raise ExternalWorkspaceRegistrationError("Filesystem root cannot be registered")
     if path == home:
         raise ExternalWorkspaceRegistrationError("Home directory cannot be registered")
-    if path.parent == home and path.name in {"Desktop", "Documents", "Downloads"}:
+    if (path == home / "Desktop"
+        or path == home / "Documents"
+        or path == home / "Downloads"):  # pragma: no cover — macOS Path.home is /Users/xxx
         raise ExternalWorkspaceRegistrationError(
-            f"Broad home directory parent cannot be registered: {path}"
+            f"Cannot register this directory directly: {path}. "
+            "Choose a specific project directory, e.g. ~/Desktop/my-project."
         )
     for system_root in SYSTEM_ROOTS:
         if path == system_root or system_root in path.parents:
