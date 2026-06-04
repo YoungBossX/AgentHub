@@ -43,11 +43,11 @@
 
 ## 6. P18-6 External Agent Memory Scan
 
-- [ ] 6.1 Scan repo `AGENTS.md` and `CLAUDE.md` into external memory suggestions.
-- [ ] 6.2 Plan safe scanning for Claude Code local auto memory and Codex global/repo instructions.
-- [ ] 6.3 Detect conflicts between external suggestions and AgentHub canonical memory.
-- [ ] 6.4 Ensure external suggestions never auto-import as active memory.
-- [ ] 6.5 Add tests for suggestion creation, conflict detection, and no automatic override.
+- [x] 6.1 Scan repo `AGENTS.md` and `CLAUDE.md` into external memory suggestions.
+- [x] 6.2 Plan safe scanning for Claude Code local auto memory and Codex global/repo instructions.
+- [x] 6.3 Detect conflicts between external suggestions and AgentHub canonical memory.
+- [x] 6.4 Ensure external suggestions never auto-import as active memory.
+- [x] 6.5 Add tests for suggestion creation, conflict detection, and no automatic override.
 
 ## 7. P18-7 Memory Management UI
 
