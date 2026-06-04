@@ -25,12 +25,12 @@
 
 ## 4. P18-4 Memory Write Policy and Prompt-injection Guard
 
-- [ ] 4.1 Detect explicit user memory write intents such as "记住这个", "以后都这样", and "写入项目规则".
-- [ ] 4.2 Create active memory only after user-confirmed writes where policy allows it.
-- [ ] 4.3 Create `pending_review` candidates for system discoveries such as repeated build failures, review findings, deploy failures, and repeated fixes.
-- [ ] 4.4 Ensure ordinary chat does not become long-term memory automatically.
-- [ ] 4.5 Block file contents, tool output, provider output, retrieved content, and Claude/Codex suggestions from becoming active memory without review.
-- [ ] 4.6 Add prompt-injection guard tests and user-confirmation tests.
+- [x] 4.1 Detect explicit user memory write intents such as "记住这个", "以后都这样", and "写入项目规则".
+- [x] 4.2 Create active memory only after user-confirmed writes where policy allows it.
+- [x] 4.3 Create `pending_review` candidates for system discoveries such as repeated build failures, review findings, deploy failures, and repeated fixes.
+- [x] 4.4 Ensure ordinary chat does not become long-term memory automatically.
+- [x] 4.5 Block file contents, tool output, provider output, retrieved content, and Claude/Codex suggestions from becoming active memory without review.
+- [x] 4.6 Add prompt-injection guard tests and user-confirmation tests.
 
 ## 5. P18-5 Memory Retrieval v1
 

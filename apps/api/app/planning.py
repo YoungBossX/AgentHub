@@ -18,6 +18,7 @@ from app.memory_snapshots import (
     ensure_session_memory_snapshot,
     memory_snapshot_metadata,
 )
+from app.memory_write_policy import maybe_create_explicit_user_memory
 from app.agent_runtime_config import resolve_runtime_role_config
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
@@ -187,6 +188,10 @@ def plan_for_message(
     parsed = parse_mentions(db, content)
     existing_tasks = list_session_tasks(db, message.session_id)
     routed_role = parsed.roles[0] if parsed.roles else "orchestrator"
+    if routed_role == "orchestrator":
+        memory_write = _maybe_handle_explicit_memory_write(db, message, content)
+        if memory_write:
+            return []
     llm_fallback = None
     if routed_role == "orchestrator":
         try:
@@ -1509,6 +1514,29 @@ def _external_task_files(target: TargetProject) -> list[str]:
         if not files:
             files.append(allowed_path)
     return files[:4]
+
+
+def _maybe_handle_explicit_memory_write(
+    db: DbSession,
+    message: Message,
+    content: str,
+) -> bool:
+    session = db.get(AgentHubSession, message.session_id)
+    if session is None:
+        return False
+    memory_write = maybe_create_explicit_user_memory(
+        db,
+        session=session,
+        content=content,
+    )
+    if memory_write is None:
+        return False
+    _create_orchestrator_boundary_message(
+        db,
+        message,
+        memory_write.reply,
+    )
+    return True
 
 
 def _demo_frontend_task_files(target: TargetProject, content: str) -> list[str]:
