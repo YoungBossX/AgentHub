@@ -1692,6 +1692,76 @@ def test_llm_assistant_reply_for_safe_external_frontend_request_falls_back_to_ta
     assert traced_task["plannerEvidence"]["llmOutcomeType"] == "assistant_reply"
 
 
+def test_p18c_library_request_misclassified_as_assistant_reply_routes_to_task(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    prompt = (
+        "帮我在桌面开发一个简单的图书管理系统。有登录页面，初始账户和密码是 "
+        "18088888888 / 888888。登录后进入管理页面，只需要有图书管理功能："
+        "加入图书、删除图书、修改图书、查询图书。"
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "assistant_reply",
+                "reply": "我来规划一个图书管理系统。",
+                "riskLevel": "low",
+                "reason": "Router misclassified a library app request as chat.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "not_required",
+            },
+        ),
+    )
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        project = tmp_path / "p18c-library-app"
+        (project / "src").mkdir(parents=True)
+        (project / "src" / "App.tsx").write_text("export default function App() { return null }\n")
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-p18c-library-app",
+                name="P18c Library App",
+                root_path=str(project),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        session.active_frontend_target_id = "external-p18c-library-app"
+        db.add(session)
+        db.commit()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": prompt},
+    )
+
+    assert response.status_code == 201
+    task = client.get(f"/sessions/{session_id}/tasks").json()[0]
+
+    assert task["assignedAgentRole"] == "frontend"
+    assert task["planJson"]["planner"] == "orchestrator_external_target_v1"
+    assert task["planJson"]["plannerSource"] == "fallback"
+    assert task["planJson"]["targetId"] == "external-p18c-library-app"
+    assert task["planJson"]["plannerEvidence"]["fallbackReason"] == "non_task_coding_outcome"
+
+
 def test_llm_assistant_reply_for_platform_request_does_not_fallback_to_frontend(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
