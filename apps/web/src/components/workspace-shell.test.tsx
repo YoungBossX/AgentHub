@@ -398,6 +398,77 @@ describe("WorkspaceShell", () => {
     expect(apiMocks.updateAgentRuntimeConfig).not.toHaveBeenCalled()
   })
 
+  it("shows direct and group conversation modes without creating tasks", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("对话模式")).toBeTruthy()
+      expect(screen.getByText("群聊")).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "单聊" }))
+
+    expect(screen.getByText("单聊聚焦当前对话，不改变后端路由。")).toBeTruthy()
+    expect(apiMocks.createSessionMessage).not.toHaveBeenCalled()
+    expect(apiMocks.createTaskRun).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "群聊" }))
+
+    expect(
+      screen.getByText("群聊显示 Orchestrator 与角色 Agent 协作，不改变调度规则。"),
+    ).toBeTruthy()
+    expect(apiMocks.createTaskRun).not.toHaveBeenCalled()
+  })
+
+  it("stages quoted messages as composer context and clears them", async () => {
+    const existingMessage = {
+      contentMd: "请实现一个图书管理系统",
+      createdAt: "2026-06-07T00:00:00Z",
+      id: "message-existing",
+      messageKind: "chat",
+      parentMessageId: null,
+      senderId: null,
+      senderType: "user",
+      sessionId: "session-1",
+      streamState: "complete",
+    }
+    apiMocks.listSessionMessages.mockResolvedValue([existingMessage])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("请实现一个图书管理系统")).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Quote as context" }))
+
+    expect(screen.getByText("待发送上下文")).toBeTruthy()
+    expect(screen.getByText("引用消息 · 用户")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "清除上下文" }))
+
+    expect(screen.queryByText("待发送上下文")).toBeNull()
+    expect(apiMocks.createSessionMessage).not.toHaveBeenCalled()
+  })
+
   it("filters sessions from the sidebar without clearing the selected session", async () => {
     apiMocks.listSessionMessages.mockResolvedValue([])
     apiMocks.listSessionTasks.mockResolvedValue([])

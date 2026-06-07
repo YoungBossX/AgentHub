@@ -5,6 +5,8 @@ import {
   Circle,
   CircleDot,
   Radio,
+  UserRound,
+  Users,
 } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
@@ -81,6 +83,8 @@ export function WorkspaceShell({
   const [artifactItems, setArtifactItems] = useState<ArtifactPanelItem[]>([])
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
   const [contextArtifactId, setContextArtifactId] = useState<string | null>(null)
+  const [contextMessage, setContextMessage] = useState<ChatMessage | null>(null)
+  const [conversationMode, setConversationMode] = useState<"direct" | "group">("group")
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [ledger, setLedger] = useState<SessionExecutionLedger | null>(null)
@@ -423,10 +427,7 @@ export function WorkspaceShell({
   }
 
   function handleQuoteMessage(message: ChatMessage) {
-    setDraft((current) => {
-      const quote = `> ${message.contentMd}`
-      return current.trim() ? `${current}\n${quote}` : quote
-    })
+    setContextMessage(message)
   }
 
   function handleSendMessage(event: FormEvent<HTMLFormElement>) {
@@ -455,6 +456,8 @@ export function WorkspaceShell({
             : session,
         ),
       )
+      setContextArtifactId(null)
+      setContextMessage(null)
       setSyncError(null)
     }, "无法发送消息")
   }
@@ -517,6 +520,11 @@ export function WorkspaceShell({
                     {hasCompletedRun ? "已有执行证据" : "等待运行"}
                   </p>
                 </div>
+
+                <ConversationModeSwitch
+                  mode={conversationMode}
+                  onModeChange={setConversationMode}
+                />
 
                 <DemoPipeline
                   hasCompletedRun={hasCompletedRun}
@@ -592,9 +600,13 @@ export function WorkspaceShell({
             {selectedSession ? (
               <MessageComposer
                 contextArtifact={contextArtifact}
+                contextMessage={contextMessage}
                 draft={draft}
                 isPending={isPending}
-                onClearContext={() => setContextArtifactId(null)}
+                onClearContext={() => {
+                  setContextArtifactId(null)
+                  setContextMessage(null)
+                }}
                 onDraftChange={setDraft}
                 onSubmit={handleSendMessage}
               />
@@ -614,6 +626,59 @@ export function WorkspaceShell({
           onStopPreview={handleStopPreview}
           selectedArtifactId={selectedArtifactId}
         />
+      </div>
+    </section>
+  )
+}
+
+function ConversationModeSwitch({
+  mode,
+  onModeChange,
+}: {
+  mode: "direct" | "group"
+  onModeChange: (mode: "direct" | "group") => void
+}) {
+  return (
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+          对话模式
+        </p>
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          {mode === "direct"
+            ? "单聊聚焦当前对话，不改变后端路由。"
+            : "群聊显示 Orchestrator 与角色 Agent 协作，不改变调度规则。"}
+        </p>
+      </div>
+      <div className="grid grid-cols-2 rounded-full bg-white p-1 shadow-sm">
+        <button
+          aria-pressed={mode === "direct"}
+          className={cn(
+            "inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition",
+            mode === "direct"
+              ? "bg-slate-950 text-white"
+              : "text-slate-600 hover:bg-slate-100",
+          )}
+          onClick={() => onModeChange("direct")}
+          type="button"
+        >
+          <UserRound aria-hidden="true" size={14} />
+          单聊
+        </button>
+        <button
+          aria-pressed={mode === "group"}
+          className={cn(
+            "inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition",
+            mode === "group"
+              ? "bg-slate-950 text-white"
+              : "text-slate-600 hover:bg-slate-100",
+          )}
+          onClick={() => onModeChange("group")}
+          type="button"
+        >
+          <Users aria-hidden="true" size={14} />
+          群聊
+        </button>
       </div>
     </section>
   )
