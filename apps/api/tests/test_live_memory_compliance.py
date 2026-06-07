@@ -213,7 +213,9 @@ def test_prepare_p18c_session_setup_creates_target_session_and_snapshot(
     assert setup.rehearsal_root == str((tmp_path / "agenthub-rehearsals").resolve())
     assert setup.project_root.endswith("agenthub-rehearsals/p18c-library-app")
     assert setup.target_id == "external-p18c-library-app"
-    assert setup.allowed_paths == ("src",)
+    assert "src" in setup.allowed_paths
+    assert "package.json" in setup.allowed_paths
+    assert "vite.config.ts" in setup.allowed_paths
     assert setup.active_memory_rule_ids == tuple(rule.key for rule in P18C_MEMORY_RULES)
     assert setup.agents_md_hash
     assert setup.claude_md_hash

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import posixpath
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +37,17 @@ P18C_REQUIRED_PERSISTENCE = "localStorage"
 P18C_MEMORY_SOURCE = "p18c_live_memory_compliance"
 P18C_TARGET_ID = "external-p18c-library-app"
 P18C_PROJECT_DIRNAME = "p18c-library-app"
+P18C_ALLOWED_PROJECT_PATHS = (
+    "src",
+    "public",
+    "index.html",
+    "package.json",
+    "pnpm-lock.yaml",
+    "tsconfig.json",
+    "tsconfig.app.json",
+    "tsconfig.node.json",
+    "vite.config.ts",
+)
 
 ViolationCode = Literal[
     "project_location_memory_violation",
@@ -318,7 +330,7 @@ def prepare_p18c_session_setup(
         session_id=session.id,
         memory_snapshot_id=snapshot.id,
         active_memory_rule_ids=tuple(rule.key for rule in P18C_MEMORY_RULES),
-        allowed_paths=("src",),
+        allowed_paths=P18C_ALLOWED_PROJECT_PATHS,
         agents_md_hash=str(metadata["agentsMdHash"]),
         claude_md_hash=str(metadata["claudeMdHash"]),
         target_registry_version=str(metadata["targetRegistryVersion"]),
@@ -391,6 +403,11 @@ def _ensure_p18c_external_target(
 ) -> ExternalProjectTarget:
     existing = get_external_project_target(db, workspace.id, P18C_TARGET_ID)
     if existing is not None:
+        existing.allowed_paths_json = _json_string_list(P18C_ALLOWED_PROJECT_PATHS)
+        existing.updated_at = utc_now()
+        db.add(existing)
+        db.commit()
+        db.refresh(existing)
         return existing
     return register_external_project_target(
         db,
@@ -400,7 +417,7 @@ def _ensure_p18c_external_target(
             name="P18c Library Management App",
             root_path=str(project_root),
             project_type="vite-react",
-            allowed_paths=["src"],
+            allowed_paths=list(P18C_ALLOWED_PROJECT_PATHS),
             dev_command="pnpm dev --host 127.0.0.1 --port <port>",
             test_command="pnpm test",
             check_command="pnpm check",
@@ -415,6 +432,10 @@ def _ensure_p18c_external_target(
             detected_framework="vite-react",
         ),
     )
+
+
+def _json_string_list(values: tuple[str, ...]) -> str:
+    return json.dumps(list(values), separators=(",", ":"))
 
 
 def _has_change_log_update(changed_files: tuple[str, ...]) -> bool:
