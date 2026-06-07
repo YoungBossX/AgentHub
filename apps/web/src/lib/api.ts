@@ -303,6 +303,8 @@ export type SessionTask = {
   updatedAt: string
 }
 
+export type PMOPlanDecisionAction = "approve" | "reject" | "clarification"
+
 export type PlanReviewMetadata = {
   plannerMode?: string
   rationale?: string
@@ -887,6 +889,26 @@ export async function createTaskRun(
   fetcher: Fetcher = fetch,
 ): Promise<TaskRun> {
   return mutateTaskRun(apiUrl(backendUrl, `/tasks/${taskId}/runs`), fetcher)
+}
+
+export async function decideTaskPlan(
+  backendUrl: string,
+  taskId: string,
+  action: PMOPlanDecisionAction,
+  reason: string,
+  fetcher: Fetcher = fetch,
+): Promise<SessionTask> {
+  const response = await fetcher(apiUrl(backendUrl, `/tasks/${taskId}/plan-decision/${action}`), {
+    body: JSON.stringify({ reason }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error("Could not update PMO plan decision")
+  }
+
+  return (await response.json()) as SessionTask
 }
 
 export async function forceCodexFailure(

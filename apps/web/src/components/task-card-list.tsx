@@ -50,6 +50,9 @@ type TaskCardListProps = {
   onForceCodexFailure?: (taskId: string) => void
   onInterruptRun?: (taskRunId: string) => void
   onOpenPreview?: (preview: PreviewArtifact) => void
+  onApprovePlan?: (taskId: string) => void
+  onRejectPlan?: (taskId: string) => void
+  onRequestClarification?: (taskId: string) => void
   onRefreshPreviews?: (taskRunId: string) => void
   onRetryRun?: (taskRunId: string) => void
   onRetryWithFallback?: (taskRunId: string) => void
@@ -86,6 +89,9 @@ export function TaskCardList({
   onForceCodexFailure,
   onInterruptRun,
   onOpenPreview,
+  onApprovePlan,
+  onRejectPlan,
+  onRequestClarification,
   onRetryRun,
   onRetryWithFallback,
   onSelectArtifact,
@@ -263,6 +269,7 @@ export function TaskCardList({
         )
         const stateStyle = statusClasses(task.status)
         const scheduler = schedulerMeta(task)
+        const pmoDecision = pmoDecisionFromPlan(task)
         return (
           <li className="relative" key={task.id}>
             <span
@@ -323,6 +330,14 @@ export function TaskCardList({
               <PlanReviewSummary
                 metadata={task.planReviewMetadata ?? planReviewMetadataFromPlan(task)}
                 plannerEvidence={plannerEvidenceFromPlan(task)}
+              />
+              <PMODecisionSummary
+                decision={pmoDecision}
+                onApprove={onApprovePlan ? () => onApprovePlan(task.id) : undefined}
+                onReject={onRejectPlan ? () => onRejectPlan(task.id) : undefined}
+                onRequestClarification={
+                  onRequestClarification ? () => onRequestClarification(task.id) : undefined
+                }
               />
               <SchedulerSummary scheduler={scheduler} />
               <ArtifactChips
@@ -492,6 +507,13 @@ type PlannerEvidenceSummary = {
   validationResult?: string
 }
 
+type PMODecisionSummaryData = {
+  actor?: string
+  nextActionSummary?: string
+  reason?: string
+  state?: string
+}
+
 function PlanReviewSummary({
   metadata,
   plannerEvidence,
@@ -612,6 +634,94 @@ function PlanReviewSummary({
   )
 }
 
+function PMODecisionSummary({
+  decision,
+  onApprove,
+  onReject,
+  onRequestClarification,
+}: {
+  decision: PMODecisionSummaryData | null
+  onApprove?: () => void
+  onReject?: () => void
+  onRequestClarification?: () => void
+}) {
+  if (!decision?.state) {
+    return null
+  }
+  const pending = decision.state === "pending_review"
+  return (
+    <section className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-bold text-amber-950">PMO 决策</span>
+          <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-amber-800 ring-1 ring-amber-200">
+            {pmoDecisionLabel(decision.state)}
+          </span>
+          {decision.actor ? (
+            <span className="rounded-full bg-white/80 px-2 py-0.5 font-mono text-[11px] text-amber-800">
+              {decision.actor}
+            </span>
+          ) : null}
+        </div>
+        {pending ? (
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              className="h-8 px-2.5 text-xs"
+              disabled={!onApprove}
+              onClick={onApprove}
+              type="button"
+            >
+              批准计划
+            </Button>
+            <Button
+              className="h-8 px-2.5 text-xs"
+              disabled={!onRequestClarification}
+              onClick={onRequestClarification}
+              type="button"
+              variant="secondary"
+            >
+              要求澄清
+            </Button>
+            <Button
+              className="h-8 px-2.5 text-xs"
+              disabled={!onReject}
+              onClick={onReject}
+              type="button"
+              variant="secondary"
+            >
+              拒绝计划
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {decision.reason ? (
+        <p className="mt-2 line-clamp-2 text-amber-900">{decision.reason}</p>
+      ) : null}
+      {decision.nextActionSummary ? (
+        <p className="mt-1 line-clamp-2 text-[11px] text-amber-800">
+          {decision.nextActionSummary}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+function pmoDecisionLabel(state: string) {
+  if (state === "pending_review") {
+    return "待审阅"
+  }
+  if (state === "approved") {
+    return "已批准"
+  }
+  if (state === "rejected") {
+    return "已拒绝"
+  }
+  if (state === "clarification_needed") {
+    return "需澄清"
+  }
+  return state
+}
+
 function plannerEvidenceFromPlan(task: SessionTask): PlannerEvidenceSummary | null {
   const plan = task.planJson
   const evidence = objectValue(plan.plannerEvidence)
@@ -628,6 +738,20 @@ function plannerEvidenceFromPlan(task: SessionTask): PlannerEvidenceSummary | nu
     plannerSource: stringValue(source.plannerSource),
     providerId: stringValue(source.providerId),
     validationResult: stringValue(source.validationResult),
+  }
+}
+
+function pmoDecisionFromPlan(task: SessionTask): PMODecisionSummaryData | null {
+  const decision = objectValue(task.planJson.pmoDecision)
+  const state = stringValue(decision.state)
+  if (!state) {
+    return null
+  }
+  return {
+    actor: stringValue(decision.actor),
+    nextActionSummary: stringValue(decision.nextActionSummary),
+    reason: stringValue(decision.reason),
+    state,
   }
 }
 

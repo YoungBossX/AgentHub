@@ -33,6 +33,7 @@ import {
   createTaskRun,
   createTaskRunReview,
   createWorkspaceSession,
+  decideTaskPlan,
   denyTaskRun,
   forceCodexFailure,
   getSessionLedger,
@@ -331,6 +332,42 @@ export function WorkspaceShell({
     }, "无法批准任务运行")
   }
 
+  function handleApprovePlan(taskId: string) {
+    runClientAction(async () => {
+      await decideTaskPlan(
+        backendUrl,
+        taskId,
+        "approve",
+        "用户已在 AgentHub 界面批准 PMO 计划。",
+      )
+      await refreshSelectedTasks()
+    }, "无法批准 PMO 计划")
+  }
+
+  function handleRejectPlan(taskId: string) {
+    runClientAction(async () => {
+      await decideTaskPlan(
+        backendUrl,
+        taskId,
+        "reject",
+        "用户已在 AgentHub 界面拒绝 PMO 计划。",
+      )
+      await refreshSelectedTasks()
+    }, "无法拒绝 PMO 计划")
+  }
+
+  function handleRequestPlanClarification(taskId: string) {
+    runClientAction(async () => {
+      await decideTaskPlan(
+        backendUrl,
+        taskId,
+        "clarification",
+        "用户要求 Main Agent 先澄清计划。",
+      )
+      await refreshSelectedTasks()
+    }, "无法请求 PMO 澄清")
+  }
+
   function handleDenyTaskRun(taskRunId: string) {
     runClientAction(async () => {
       await denyTaskRun(
@@ -549,7 +586,7 @@ export function WorkspaceShell({
             ) : null}
 
             {selectedSession ? (
-              <MissionPanel ledger={ledger} selectedSession={selectedSession} />
+              <MissionPanel ledger={ledger} selectedSession={selectedSession} tasks={tasks} />
             ) : null}
 
             <ChatThread
@@ -586,6 +623,9 @@ export function WorkspaceShell({
                       onForceCodexFailure={handleForceCodexFailure}
                       onInterruptRun={handleInterruptTaskRun}
                       onOpenPreview={handleOpenPreview}
+                      onApprovePlan={handleApprovePlan}
+                      onRejectPlan={handleRejectPlan}
+                      onRequestClarification={handleRequestPlanClarification}
                       onRetryRun={handleRetryTaskRun}
                       onRetryWithFallback={handleRetryTaskRunWithFallback}
                       onSelectArtifact={setSelectedArtifactId}

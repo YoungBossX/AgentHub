@@ -1,13 +1,14 @@
 "use client"
 
-import type { SessionExecutionLedger, WorkspaceSession } from "@/lib/api"
+import type { SessionExecutionLedger, SessionTask, WorkspaceSession } from "@/lib/api"
 
 type WorkspaceContextCardProps = {
   ledger: SessionExecutionLedger | null
   selectedSession: WorkspaceSession | null
+  tasks?: SessionTask[]
 }
 
-export function MissionPanel({ ledger, selectedSession }: WorkspaceContextCardProps) {
+export function MissionPanel({ ledger, selectedSession, tasks = [] }: WorkspaceContextCardProps) {
   const latestEvidence = ledger?.latestDeploymentStatus
     ? `Deploy ${ledger.latestDeploymentStatus}`
     : ledger?.latestPreviewHealth
@@ -22,6 +23,7 @@ export function MissionPanel({ ledger, selectedSession }: WorkspaceContextCardPr
     : "未固定"
   const adapter = ledger?.lastSuccessfulAdapter ?? "未完成"
   const latestFiles = ledger?.latestChangedFiles.slice(0, 2).join(", ") || "无"
+  const pmoSummary = summarizePmo(tasks)
 
   return (
     <section className="mx-auto w-full max-w-4xl rounded-lg border border-[var(--border)] bg-white px-4 py-3 shadow-sm">
@@ -59,6 +61,27 @@ export function MissionPanel({ ledger, selectedSession }: WorkspaceContextCardPr
             label="部署"
             value={ledger?.latestDeploymentProvider ?? ledger?.latestDeploymentStatus ?? "无"}
           />
+          {tasks.length > 0 ? (
+            <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
+              <p className="font-bold text-slate-700">PMO 状态</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                <ContextMetric label="ready" value={pmoSummary.ready} />
+                <ContextMetric label="waiting" value={pmoSummary.waiting} />
+                <ContextMetric label="blocked" value={pmoSummary.blocked} />
+              </div>
+              <p className="mt-2 font-semibold text-slate-700">建议</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {pmoSummary.actions.map((action) => (
+                  <span
+                    className="rounded bg-white px-2 py-0.5 text-[11px] font-medium text-slate-700"
+                    key={action}
+                  >
+                    {action}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -81,4 +104,62 @@ function ContextPill({ label, value }: { label: string; value: string }) {
       <span className="truncate font-mono">{value}</span>
     </span>
   )
+}
+
+function ContextMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="rounded bg-white px-2 py-0.5 font-mono text-[11px] text-slate-700">
+      {label} {value}
+    </span>
+  )
+}
+
+function summarizePmo(tasks: SessionTask[]) {
+  let ready = 0
+  let waiting = 0
+  let blocked = 0
+  const actions = new Set<string>()
+  for (const task of tasks) {
+    const scheduler = objectValue(task.planJson.scheduler)
+    const schedulerState = stringValue(scheduler.state)
+    const pmoDecision = objectValue(task.planJson.pmoDecision)
+    if (pmoDecision.state === "pending_review") {
+      actions.add("审阅计划")
+    }
+    if (task.status === "pending" && schedulerState !== "waiting_dependency") {
+      ready += 1
+      actions.add("启动可运行任务")
+    } else if (
+      task.status === "waiting_dependency" ||
+      task.status === "waiting_target_lock" ||
+      schedulerState === "waiting_dependency" ||
+      schedulerState === "waiting_target_lock"
+    ) {
+      waiting += 1
+      actions.add("检查阻塞任务")
+    } else if (
+      task.status === "blocked" ||
+      task.status === "failed" ||
+      schedulerState === "blocked" ||
+      schedulerState === "retryable" ||
+      schedulerState === "fallback_available"
+    ) {
+      blocked += 1
+      actions.add("检查阻塞任务")
+    }
+  }
+  if (actions.size === 0) {
+    actions.add("等待下一步")
+  }
+  return { actions: Array.from(actions).slice(0, 3), blocked, ready, waiting }
+}
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined
 }

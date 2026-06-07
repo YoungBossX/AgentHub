@@ -130,6 +130,44 @@ describe("TaskCardList", () => {
     expect(screen.getByText("targetId was invalid before deterministic fallback.")).toBeTruthy()
   })
 
+  it("renders PMO plan decision actions for pending reviewed plans", () => {
+    const onApprovePlan = vi.fn()
+    const onRejectPlan = vi.fn()
+    const onRequestClarification = vi.fn()
+    const reviewedTask: SessionTask = {
+      ...baseTask,
+      planJson: {
+        pmoDecision: {
+          state: "pending_review",
+          actor: "orchestrator",
+          reason: "需要用户确认后再执行。",
+          nextActionSummary: "Review the plan and approve, reject, or request clarification.",
+        },
+      },
+    }
+
+    render(
+      createElement(TaskCardList, {
+        tasks: [reviewedTask],
+        onApprovePlan,
+        onRejectPlan,
+        onRequestClarification,
+      }),
+    )
+
+    expect(screen.getByText("PMO 决策")).toBeTruthy()
+    expect(screen.getByText("待审阅")).toBeTruthy()
+    expect(screen.getByText("需要用户确认后再执行。")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "批准计划" }))
+    fireEvent.click(screen.getByRole("button", { name: "拒绝计划" }))
+    fireEvent.click(screen.getByRole("button", { name: "要求澄清" }))
+
+    expect(onApprovePlan).toHaveBeenCalledWith("task-1")
+    expect(onRejectPlan).toHaveBeenCalledWith("task-1")
+    expect(onRequestClarification).toHaveBeenCalledWith("task-1")
+  })
+
   it("renders run history and P0 run controls", () => {
     const onCreateRun = vi.fn()
     const onForceCodexFailure = vi.fn()
