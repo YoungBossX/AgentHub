@@ -84,6 +84,34 @@ const initialSessions = [
   },
 ]
 
+const searchableSessions = [
+  initialSessions[0],
+  {
+    boundBranch: "main",
+    createdAt: "2026-05-16T01:00:00Z",
+    id: "session-2",
+    lastMessageAt: "2026-05-17T00:00:00Z",
+    sessionType: "demo",
+    status: "active",
+    title: "Library app rehearsal",
+    updatedAt: "2026-05-17T00:00:00Z",
+    workspaceId: "workspace-1",
+    worktreePath: "/repo/.worktrees/session-2",
+  },
+  {
+    boundBranch: "main",
+    createdAt: "2026-05-16T02:00:00Z",
+    id: "session-3",
+    lastMessageAt: null,
+    sessionType: "demo",
+    status: "active",
+    title: "Backend API cleanup",
+    updatedAt: "2026-05-16T02:00:00Z",
+    workspaceId: "workspace-1",
+    worktreePath: "/repo/.worktrees/session-3",
+  },
+]
+
 const initialAgents = [
   {
     adapterType: "scripted_mock",
@@ -368,6 +396,63 @@ describe("WorkspaceShell", () => {
     expect(screen.queryByText("Save runtime config")).toBeNull()
     expect(apiMocks.getAgentRuntimeConfig).not.toHaveBeenCalled()
     expect(apiMocks.updateAgentRuntimeConfig).not.toHaveBeenCalled()
+  })
+
+  it("filters sessions from the sidebar without clearing the selected session", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Session 1").length).toBeGreaterThan(0)
+      expect(screen.getByText("Library app rehearsal")).toBeTruthy()
+      expect(screen.getByText("Backend API cleanup")).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText("搜索会话"), {
+      target: { value: "library" },
+    })
+
+    expect(screen.getByText("Library app rehearsal")).toBeTruthy()
+    expect(screen.queryByText("Backend API cleanup")).toBeNull()
+    expect(screen.getByText("当前会话")).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "Session 1" })).toBeTruthy()
+    expect(apiMocks.createTaskRun).not.toHaveBeenCalled()
+  })
+
+  it("shows an empty search state while preserving session focus", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("搜索会话")).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText("搜索会话"), {
+      target: { value: "no such session" },
+    })
+
+    expect(screen.getByText("没有匹配的会话。")).toBeTruthy()
+    expect(screen.getByText("当前聚焦 0 个任务")).toBeTruthy()
+    expect(screen.getByRole("heading", { name: "Session 1" })).toBeTruthy()
+    expect(apiMocks.createSessionMessage).not.toHaveBeenCalled()
   })
 
   it("renders the workspace context ledger for the selected session", async () => {

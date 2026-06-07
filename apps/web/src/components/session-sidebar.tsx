@@ -1,13 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { type ReactNode } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 import {
   ChevronRight,
   GitBranch,
   Brain,
   MoreHorizontal,
   Plus,
+  Search,
   SlidersHorizontal,
   Users,
 } from "lucide-react"
@@ -37,6 +38,22 @@ export function SessionSidebar({
   taskCount,
   workspace,
 }: SessionSidebarProps) {
+  const [sessionSearch, setSessionSearch] = useState("")
+  const visibleSessions = useMemo(() => {
+    const query = sessionSearch.trim().toLowerCase()
+    if (!query) {
+      return sessions
+    }
+
+    return sessions.filter((session) =>
+      [
+        session.title,
+        session.status,
+        formatSessionTime(session.lastMessageAt),
+      ].some((value) => value.toLowerCase().includes(query)),
+    )
+  }, [sessionSearch, sessions])
+
   return (
     <aside className="flex min-h-0 flex-col overflow-hidden border-b border-white/70 bg-[linear-gradient(150deg,#eef7f6_0%,#f6fbfa_46%,#ffffff_100%)] lg:border-b-0 lg:border-r">
       <div className="shrink-0 p-5 pb-4">
@@ -104,11 +121,43 @@ export function SessionSidebar({
         className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         data-region="sidebar-scroll"
       >
-        <div className="mb-3 px-1 text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-          最近会话
+        <div className="mb-3 flex items-center justify-between gap-3 px-1">
+          <span className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+            最近会话
+          </span>
+          <span className="shrink-0 text-[11px] font-semibold text-[var(--muted-foreground)]">
+            {visibleSessions.length}/{sessions.length}
+          </span>
         </div>
+        <label className="mb-3 flex min-h-10 items-center gap-2 rounded-lg border border-white/70 bg-white/80 px-3 text-sm text-slate-700 shadow-sm">
+          <Search aria-hidden="true" className="shrink-0 text-slate-400" size={15} />
+          <span className="sr-only">搜索会话</span>
+          <input
+            aria-label="搜索会话"
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+            onChange={(event) => setSessionSearch(event.target.value)}
+            placeholder="搜索会话"
+            type="search"
+            value={sessionSearch}
+          />
+        </label>
+        {sessionSearch.trim() ? (
+          <div className="mb-2 px-1 text-xs text-[var(--muted-foreground)]">
+            正在筛选：{sessionSearch.trim()}
+          </div>
+        ) : null}
+        {selectedSessionId ? (
+          <div className="mb-3 rounded-lg border border-white/80 bg-white/70 px-3 py-2 text-xs text-slate-700">
+            当前聚焦 {taskCount} 个任务
+          </div>
+        ) : null}
+        {visibleSessions.length === 0 && sessions.length > 0 ? (
+          <div className="rounded-lg border border-dashed border-[var(--border)] bg-white/80 p-4 text-sm text-[var(--muted-foreground)]">
+            没有匹配的会话。
+          </div>
+        ) : null}
         <div className="grid min-w-0 gap-2 overflow-hidden">
-          {sessions.map((session) => {
+          {visibleSessions.map((session) => {
             const selected = session.id === selectedSessionId
             const smoke = session.title.toLowerCase().includes("smoke")
             return (
