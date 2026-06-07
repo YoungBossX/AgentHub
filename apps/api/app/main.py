@@ -85,6 +85,7 @@ from app.models import SessionExecutionLedger
 from app.models import TaskRunEvent
 from app.models import utc_now
 from app.planning import MentionParseError, plan_for_message
+from app.pmo_decisions import PmoDecisionError, apply_pmo_decision, require_supported_decision_payload
 from app.project_analyzer import ProjectAnalysisResult, analyze_external_project
 from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
 from app.provider_configs import ProviderConfig, list_provider_configs
@@ -141,6 +142,7 @@ from app.schemas import (
     MessageResponse,
     MemoryItemResponse,
     MemoryItemStatusUpdateRequest,
+    PMOPlanDecisionRequest,
     PreviewResponse,
     ProviderConfigResponse,
     ReviewArtifactResponse,
@@ -1823,6 +1825,83 @@ def read_session_tasks(
     if get_session(db, session_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return [task_response(db, task) for task in list_session_tasks(db, session_id)]
+
+
+@app.post("/tasks/{task_id}/plan-decision/approve", response_model=TaskResponse)
+def approve_task_plan_decision(
+    task_id: str,
+    request: PMOPlanDecisionRequest,
+    db: DbSession = Depends(get_db),
+) -> TaskResponse:
+    return _apply_task_plan_decision(
+        db,
+        task_id,
+        state="approved",
+        request=request,
+    )
+
+
+@app.post("/tasks/{task_id}/plan-decision/reject", response_model=TaskResponse)
+def reject_task_plan_decision(
+    task_id: str,
+    request: PMOPlanDecisionRequest,
+    db: DbSession = Depends(get_db),
+) -> TaskResponse:
+    return _apply_task_plan_decision(
+        db,
+        task_id,
+        state="rejected",
+        request=request,
+    )
+
+
+@app.post("/tasks/{task_id}/plan-decision/clarification", response_model=TaskResponse)
+def request_task_plan_clarification(
+    task_id: str,
+    request: PMOPlanDecisionRequest,
+    db: DbSession = Depends(get_db),
+) -> TaskResponse:
+    return _apply_task_plan_decision(
+        db,
+        task_id,
+        state="clarification_needed",
+        request=request,
+    )
+
+
+def _apply_task_plan_decision(
+    db: DbSession,
+    task_id: str,
+    *,
+    state: str,
+    request: PMOPlanDecisionRequest,
+) -> TaskResponse:
+    task = db.get(Task, task_id)
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    try:
+        payload = request.model_dump(exclude_none=True)
+        require_supported_decision_payload(payload)
+        plan = plan_json_for_task(task)
+        task.plan_json = json.dumps(
+            apply_pmo_decision(
+                plan,
+                state=state,
+                actor="user",
+                reason=request.reason,
+            ),
+            separators=(",", ":"),
+        )
+    except PmoDecisionError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    if state in {"rejected", "clarification_needed"}:
+        task.status = "blocked"
+    task.updated_at = utc_now()
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    refresh_session_ledger(db, task.session_id)
+    return task_response(db, task)
 
 
 @app.post(

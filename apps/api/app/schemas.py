@@ -431,6 +431,12 @@ class ApprovalDecisionRequest(BaseModel):
     reason: Optional[str] = None
 
 
+class PMOPlanDecisionRequest(BaseModel):
+    reason: Optional[str] = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class TaskRunResponse(ApiModel):
     id: str
     task_id: str = Field(alias="taskId")

@@ -3,10 +3,12 @@ import json
 from collections.abc import Iterator
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
 
+from app.main import app, get_db
 from app.mission_trace import build_session_mission_trace
 from app.models import Session, Task, Workspace
 from app.pmo_decisions import (
@@ -30,6 +32,60 @@ def db() -> Iterator[DbSession]:
     SQLModel.metadata.create_all(engine)
     with DbSession(engine) as session:
         yield session
+
+
+@pytest.fixture
+def client() -> Iterator[TestClient]:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+
+    def override_db() -> Iterator[DbSession]:
+        with DbSession(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_db
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def _seed_pending_review_task(db: DbSession) -> Task:
+    workspace = Workspace(
+        name="PMO workspace",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="PMO session",
+        bound_branch="main",
+        worktree_path=".worktrees/pmo-session",
+    )
+    plan = apply_pmo_decision(
+        {"planner": "llm_v1", "targetId": "demo-frontend"},
+        state="pending_review",
+        actor="orchestrator",
+        reason="User review required before execution",
+        now=FIXED_TIME,
+    )
+    task = Task(
+        session_id=session.id,
+        title="Reviewed frontend task",
+        intent_type="frontend_change",
+        plan_json=json.dumps(plan, separators=(",", ":")),
+    )
+    db.add(workspace)
+    db.add(session)
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
 
 
 def test_apply_pmo_decision_records_pending_review_metadata() -> None:
@@ -142,3 +198,67 @@ def test_pmo_decision_is_visible_in_mission_trace(db: DbSession) -> None:
     assert trace.tasks[0]["pmoDecision"]["state"] == "pending_review"
     assert trace.tasks[0]["pmoDecision"]["actor"] == "orchestrator"
     assert trace.tasks[0]["pmoDecision"]["reason"] == "User review required before execution"
+
+
+def test_approve_plan_decision_updates_task_without_creating_task_run(
+    client: TestClient,
+) -> None:
+    with next(app.dependency_overrides[get_db]()) as db:
+        task = _seed_pending_review_task(db)
+        task_id = task.id
+
+    response = client.post(
+        f"/tasks/{task_id}/plan-decision/approve",
+        json={"reason": "Looks safe"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["planJson"]["pmoDecision"]["state"] == "approved"
+    assert body["planJson"]["pmoDecision"]["actor"] == "user"
+    assert body["planJson"]["pmoDecision"]["reason"] == "Looks safe"
+    assert body["taskRuns"] == []
+
+
+@pytest.mark.parametrize(
+    ("action", "state"),
+    [
+        ("reject", "rejected"),
+        ("clarification", "clarification_needed"),
+    ],
+)
+def test_reject_or_clarification_plan_decision_does_not_create_task_run(
+    client: TestClient,
+    action: str,
+    state: str,
+) -> None:
+    with next(app.dependency_overrides[get_db]()) as db:
+        task = _seed_pending_review_task(db)
+        task_id = task.id
+
+    response = client.post(
+        f"/tasks/{task_id}/plan-decision/{action}",
+        json={"reason": "Need more control"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["planJson"]["pmoDecision"]["state"] == state
+    assert body["planJson"]["pmoDecision"]["reason"] == "Need more control"
+    assert body["taskRuns"] == []
+
+
+def test_plan_decision_action_rejects_raw_plan_mutation_payload(
+    client: TestClient,
+) -> None:
+    with next(app.dependency_overrides[get_db]()) as db:
+        task = _seed_pending_review_task(db)
+        task_id = task.id
+
+    response = client.post(
+        f"/tasks/{task_id}/plan-decision/approve",
+        json={"reason": "Looks safe", "planJson": {"targetId": "agenthub-platform"}},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "planJson"]
