@@ -3,6 +3,28 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+### P18c-2 Session And External Target Setup
+
+P18c-2 completed on 2026-06-07.
+
+AgentHub now has a P18c setup helper that prepares the allowed desktop
+rehearsal root, creates the empty target shell
+`~/Desktop/agenthub-rehearsals/p18c-library-app/src`, registers or reuses the
+external frontend target `external-p18c-library-app`, creates a fresh P18c
+session after active memory exists, and records setup evidence:
+
+- `memorySnapshotId`;
+- active P18c memory rule IDs;
+- AGENTS.md hash;
+- CLAUDE.md hash;
+- target registry version;
+- runtime config version;
+- context pack hash.
+
+P18c-2 does not implement the Library Management App and does not run
+ClaudeCodeAdapter, CodexAdapter, or ScriptedMock. The prepared target shell is
+only the safe external workspace boundary for the later live provider task.
+
 ## P18c Status
 
 ### P18c-1 Memory Compliance Harness

@@ -12,9 +12,10 @@ from app.live_memory_compliance import (
     ProviderEvidence,
     check_live_memory_compliance,
     ensure_p18c_memory_rules,
+    prepare_p18c_session_setup,
 )
 from app.memory_store import MemoryFilter, list_memory_items
-from app.models import Workspace
+from app.models import ExternalProjectTarget, MemorySnapshot, Session, Workspace
 
 
 def test_compliant_changed_files_pass_and_report_active_memory_rules() -> None:
@@ -168,6 +169,58 @@ def test_ensure_p18c_memory_rules_creates_active_canonical_memory() -> None:
     assert [item.id for item in reused] == [item.id for item in created]
     assert {item.title for item in active} == {rule.title for rule in P18C_MEMORY_RULES}
     assert all(item.trust_level == "user_confirmed" for item in active)
+
+
+def test_prepare_p18c_session_setup_creates_target_session_and_snapshot(
+    tmp_path,
+) -> None:
+    with _db() as db:
+        workspace = _workspace(db)
+        setup = prepare_p18c_session_setup(
+            db,
+            workspace=workspace,
+            rehearsal_root=tmp_path / "agenthub-rehearsals",
+        )
+        session = db.get(Session, setup.session_id)
+        snapshot = db.get(MemorySnapshot, setup.memory_snapshot_id)
+        target = db.get(ExternalProjectTarget, setup.external_target_db_id)
+
+    assert setup.rehearsal_root == str((tmp_path / "agenthub-rehearsals").resolve())
+    assert setup.project_root.endswith("agenthub-rehearsals/p18c-library-app")
+    assert setup.target_id == "external-p18c-library-app"
+    assert setup.allowed_paths == ("src",)
+    assert setup.active_memory_rule_ids == tuple(rule.key for rule in P18C_MEMORY_RULES)
+    assert setup.agents_md_hash
+    assert setup.claude_md_hash
+    assert setup.target_registry_version
+    assert setup.runtime_config_version
+    assert setup.context_pack_hash
+    assert session is not None
+    assert session.memory_snapshot_id == setup.memory_snapshot_id
+    assert session.active_frontend_target_id == setup.target_id
+    assert snapshot is not None
+    assert target is not None
+    assert target.target_id == setup.target_id
+
+
+def test_prepare_p18c_session_setup_reuses_existing_target(tmp_path) -> None:
+    with _db() as db:
+        workspace = _workspace(db)
+        first = prepare_p18c_session_setup(
+            db,
+            workspace=workspace,
+            rehearsal_root=tmp_path / "agenthub-rehearsals",
+        )
+        second = prepare_p18c_session_setup(
+            db,
+            workspace=workspace,
+            rehearsal_root=tmp_path / "agenthub-rehearsals",
+            session_title="P18c second setup",
+        )
+
+    assert first.target_id == second.target_id
+    assert first.external_target_db_id == second.external_target_db_id
+    assert first.session_id != second.session_id
 
 
 def _compliant_evidence(**overrides: object) -> LiveMemoryComplianceEvidence:

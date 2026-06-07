@@ -1,5 +1,29 @@
 # AgentHub Change Log
 
+## P18c-2 Session And External Target Setup
+
+**Date:** 2026-06-07
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/live_memory_compliance.py` | Added P18c setup evidence model and helper to prepare the desktop rehearsal root, register/reuse the external frontend target, create a fresh session, and capture memory snapshot/hash evidence. |
+| `apps/api/tests/test_live_memory_compliance.py` | Added coverage for P18c setup target/session/snapshot creation and target reuse. |
+| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | Marked P18c-2 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_live_memory_compliance.py -q` | Pass |
+| P18c setup smoke | Pass: prepared `/Users/luotianhang/Desktop/agenthub-rehearsals/p18c-library-app`, target `external-p18c-library-app`, fresh session, `memorySnapshotId`, 6 active memory rule IDs, AGENTS/CLAUDE hashes, and context pack hash. |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p18c-live-memory-compliance-library-app --strict` | Pass |
+
+---
+
 ## P18c-1 Memory Compliance Harness
 
 **Date:** 2026-06-07

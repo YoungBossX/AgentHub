@@ -2,18 +2,26 @@ from __future__ import annotations
 
 import posixpath
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from sqlmodel import Session as DbSession
 
+from app.external_workspaces import (
+    ExternalWorkspaceRegistration,
+    get_external_project_target,
+    register_external_project_target,
+)
 from app.memory_evals import snapshot_consistency_rate
+from app.memory_snapshots import ensure_session_memory_snapshot, memory_snapshot_metadata
 from app.memory_store import (
     MemoryFilter,
     MemoryItemInput,
     create_memory_item,
     list_memory_items,
 )
-from app.models import MemoryItem
+from app.models import ExternalProjectTarget, MemoryItem, Workspace
+from app.models import Session as AgentHubSession
 
 P18C_LIBRARY_APP_USER_PROMPT = (
     "帮我在桌面开发一个简单的图书管理系统。有登录页面，初始账户和密码是 "
@@ -24,6 +32,8 @@ P18C_EXPECTED_PROJECT_ROOT_PREFIX = "~/Desktop/agenthub-rehearsals/"
 P18C_REQUIRED_FRONTEND_STACK = ("vite", "react", "typescript")
 P18C_REQUIRED_PERSISTENCE = "localStorage"
 P18C_MEMORY_SOURCE = "p18c_live_memory_compliance"
+P18C_TARGET_ID = "external-p18c-library-app"
+P18C_PROJECT_DIRNAME = "p18c-library-app"
 
 ViolationCode = Literal[
     "project_location_memory_violation",
@@ -128,6 +138,40 @@ class LiveMemoryComplianceReport:
         }
 
 
+@dataclass(frozen=True)
+class P18cSessionSetupEvidence:
+    rehearsal_root: str
+    project_root: str
+    target_id: str
+    external_target_db_id: str
+    session_id: str
+    memory_snapshot_id: str
+    active_memory_rule_ids: tuple[str, ...]
+    allowed_paths: tuple[str, ...]
+    agents_md_hash: str
+    claude_md_hash: str
+    target_registry_version: str
+    runtime_config_version: str
+    context_pack_hash: str
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "rehearsalRoot": self.rehearsal_root,
+            "projectRoot": self.project_root,
+            "targetId": self.target_id,
+            "externalTargetDbId": self.external_target_db_id,
+            "sessionId": self.session_id,
+            "memorySnapshotId": self.memory_snapshot_id,
+            "activeMemoryRuleIds": list(self.active_memory_rule_ids),
+            "allowedPaths": list(self.allowed_paths),
+            "agentsMdHash": self.agents_md_hash,
+            "claudeMdHash": self.claude_md_hash,
+            "targetRegistryVersion": self.target_registry_version,
+            "runtimeConfigVersion": self.runtime_config_version,
+            "contextPackHash": self.context_pack_hash,
+        }
+
+
 P18C_MEMORY_RULES: tuple[P18cMemoryRule, ...] = (
     P18cMemoryRule(
         key="p18c-project-location",
@@ -217,6 +261,50 @@ def ensure_p18c_memory_rules(
     return tuple(items)
 
 
+def prepare_p18c_session_setup(
+    db: DbSession,
+    *,
+    workspace: Workspace,
+    rehearsal_root: Path | None = None,
+    session_title: str = "P18c Library Management Live Memory Smoke",
+) -> P18cSessionSetupEvidence:
+    root = (rehearsal_root or Path.home() / "Desktop" / "agenthub-rehearsals").expanduser()
+    root.mkdir(parents=True, exist_ok=True)
+    project_root = root / P18C_PROJECT_DIRNAME
+    (project_root / "src").mkdir(parents=True, exist_ok=True)
+
+    active_memory = ensure_p18c_memory_rules(db, workspace_id=workspace.id)
+    target = _ensure_p18c_external_target(db, workspace, project_root)
+    session = AgentHubSession(
+        workspace_id=workspace.id,
+        title=session_title,
+        session_type="p18c_live_memory_compliance",
+        bound_branch=workspace.default_branch,
+        worktree_path=f".worktrees/p18c-{session_title.lower().replace(' ', '-')}",
+        active_frontend_target_id=target.target_id,
+    )
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    snapshot = ensure_session_memory_snapshot(db, session)
+    metadata = memory_snapshot_metadata(snapshot)
+    return P18cSessionSetupEvidence(
+        rehearsal_root=str(root.resolve(strict=False)),
+        project_root=str(project_root.resolve(strict=False)),
+        target_id=target.target_id,
+        external_target_db_id=target.id,
+        session_id=session.id,
+        memory_snapshot_id=snapshot.id,
+        active_memory_rule_ids=tuple(rule.key for rule in P18C_MEMORY_RULES),
+        allowed_paths=("src",),
+        agents_md_hash=str(metadata["agentsMdHash"]),
+        claude_md_hash=str(metadata["claudeMdHash"]),
+        target_registry_version=str(metadata["targetRegistryVersion"]),
+        runtime_config_version=str(metadata["runtimeConfigVersion"]),
+        context_pack_hash=str(metadata["contextPackHash"]),
+    )
+
+
 def check_live_memory_compliance(
     evidence: LiveMemoryComplianceEvidence,
 ) -> LiveMemoryComplianceReport:
@@ -271,6 +359,39 @@ def check_live_memory_compliance(
         provider_evidence_exists=provider_evidence_exists,
         snapshot_consistency_rate=current_snapshot_consistency_rate,
         violations=tuple(dict.fromkeys(violations)),
+    )
+
+
+def _ensure_p18c_external_target(
+    db: DbSession,
+    workspace: Workspace,
+    project_root: Path,
+) -> ExternalProjectTarget:
+    existing = get_external_project_target(db, workspace.id, P18C_TARGET_ID)
+    if existing is not None:
+        return existing
+    return register_external_project_target(
+        db,
+        workspace,
+        ExternalWorkspaceRegistration(
+            target_id=P18C_TARGET_ID,
+            name="P18c Library Management App",
+            root_path=str(project_root),
+            project_type="vite-react",
+            allowed_paths=["src"],
+            dev_command="pnpm dev --host 127.0.0.1 --port <port>",
+            test_command="pnpm test",
+            check_command="pnpm check",
+            build_command="pnpm build",
+            preview_command="pnpm dev --host 127.0.0.1 --port <port>",
+            staging_output_dir="dist",
+            staging_serve_command=(
+                "python -m http.server <port> --bind 127.0.0.1 --directory dist"
+            ),
+            deploy_provider_ids=["local_staging"],
+            package_manager="pnpm",
+            detected_framework="vite-react",
+        ),
     )
 
 

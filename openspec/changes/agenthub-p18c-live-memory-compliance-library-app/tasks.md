@@ -7,11 +7,11 @@
 
 ## 2. P18c-2 Session And External Target Setup
 
-- [ ] 2.1 Create or prepare `~/Desktop/agenthub-rehearsals/` as the allowed rehearsal root without creating the library app implementation manually.
-- [ ] 2.2 Register or analyze the desktop rehearsal frontend target through existing external workspace / Target Registry paths where needed.
-- [ ] 2.3 Create a fresh AgentHub session after active memory exists and record `memorySnapshotId`.
-- [ ] 2.4 Verify AGENTS.md hash, CLAUDE.md hash, active memory ids, target registry version, runtime config version, and context pack hash are available for the session.
-- [ ] 2.5 Validate setup with targeted tests or smoke commands, `git diff --check`, and OpenSpec strict validation.
+- [x] 2.1 Create or prepare `~/Desktop/agenthub-rehearsals/` as the allowed rehearsal root without creating the library app implementation manually.
+- [x] 2.2 Register or analyze the desktop rehearsal frontend target through existing external workspace / Target Registry paths where needed.
+- [x] 2.3 Create a fresh AgentHub session after active memory exists and record `memorySnapshotId`.
+- [x] 2.4 Verify AGENTS.md hash, CLAUDE.md hash, active memory ids, target registry version, runtime config version, and context pack hash are available for the session.
+- [x] 2.5 Validate setup with targeted tests or smoke commands, `git diff --check`, and OpenSpec strict validation.
 
 ## 3. P18c-3 Live Library App Execution
 
