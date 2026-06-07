@@ -7,6 +7,7 @@ import pytest
 
 from app.config import Settings
 from app.llm_planner import llm_planner_fallback_metadata
+from app.planner_contracts import planner_conversation_system_prompt
 from app.planner_providers import (
     ClaudeCliPlannerProvider,
     DisabledPlannerProvider,
@@ -611,6 +612,66 @@ def test_anthropic_messages_planner_provider_missing_key_fails_without_call() ->
     assert result.status == "failed"
     assert result.error_code == "PLANNER_API_KEY_MISSING"
     assert client.url is None
+
+
+def test_api_and_claude_cli_planners_render_same_canonical_contract() -> None:
+    prompt = planner_conversation_system_prompt()
+    assert "For programming, coding, build, implement, create, develop" in prompt
+    assert "Example user: 你好" in prompt
+    assert "图书管理系统" in prompt
+    assert "task_plan" in prompt
+    assert "planDraft" in prompt
+
+    openai_client = FakePlannerHttpClient({"output_text": '{"outcomeType":"assistant_reply"}'})
+    OpenAIResponsesPlannerProvider(
+        http_client=openai_client,
+        api_key_env="OPENAI_API_KEY",
+        environ={"OPENAI_API_KEY": "test-secret-value"},
+    ).create_plan({"originalUserRequest": "你好"})
+
+    compatible_client = FakePlannerHttpClient(
+        {"choices": [{"message": {"content": '{"outcomeType":"assistant_reply"}'}}]}
+    )
+    OpenAICompatibleChatPlannerProvider(
+        http_client=compatible_client,
+        api_key_env="DEEPSEEK_API_KEY",
+        model="deepseek-chat",
+        base_url="https://api.deepseek.test",
+        environ={"DEEPSEEK_API_KEY": "test-secret-value"},
+    ).create_plan({"originalUserRequest": "你好"})
+
+    anthropic_client = FakePlannerHttpClient(
+        {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "input": {"outcomeType": "assistant_reply"},
+                }
+            ]
+        }
+    )
+    AnthropicMessagesPlannerProvider(
+        http_client=anthropic_client,
+        api_key_env="ANTHROPIC_API_KEY",
+        environ={"ANTHROPIC_API_KEY": "test-secret-value"},
+    ).create_plan({"originalUserRequest": "你好"})
+
+    runner = FakePlannerCommandRunner(
+        subprocess.CompletedProcess(
+            args=["claude"],
+            returncode=0,
+            stdout='{"outcomeType":"assistant_reply"}',
+            stderr="",
+        )
+    )
+    ClaudeCliPlannerProvider(command_runner=runner).create_plan(
+        {"originalUserRequest": "你好"}
+    )
+
+    assert openai_client.payload["input"][0]["content"][0]["text"] == prompt
+    assert compatible_client.payload["messages"][0]["content"] == prompt
+    assert anthropic_client.payload["system"] == prompt
+    assert runner.command[-1].startswith(f"{prompt}\n\nPlannerRequest JSON:\n")
 
 
 def test_resolve_planner_provider_supports_runtime_config_provider_id() -> None:
