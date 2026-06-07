@@ -228,7 +228,7 @@ export function PreviewPanel({
             <p className="mt-1 text-xs text-[var(--muted-foreground)]">
               {selectedItem
                 ? selectedItem.taskTitle
-                : "从时间线选择 Diff、预览或部署产物。"}
+                : "从任务时间线选择 Diff、评审、预览或部署产物。"}
             </p>
             {selectedItem ? (
               <p className="mt-2 inline-flex rounded-full bg-[var(--surface-muted)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-normal text-slate-600">
@@ -351,11 +351,10 @@ export function PreviewPanel({
               <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary)] text-white">
                 <Monitor aria-hidden="true" size={18} />
               </span>
-              <p className="mt-4 font-semibold text-slate-900">等待预览</p>
+              <p className="mt-4 font-semibold text-slate-900">等待产物</p>
               <p className="mt-1 leading-6">
-                完成运行并生成证据后，可在这里启动预览。
+                任务生成 Diff、评审、预览或部署证据后，可在这里查看详情。
               </p>
-              <div className="mt-5 h-9 rounded-lg bg-[var(--primary)]" />
             </div>
           </div>
         )}

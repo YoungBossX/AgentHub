@@ -456,10 +456,10 @@ function ArtifactMessageCards({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-          Artifact Cards
+          证据卡片
         </p>
         <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500 shadow-sm">
-          {taskArtifactItems.length} session-scoped
+          {taskArtifactItems.length} 个会话产物
         </span>
       </div>
 
@@ -872,7 +872,7 @@ function ArtifactMessageCard({
               type="button"
               variant="secondary"
             >
-              Use this diff as context
+              作为上下文
             </Button>
             <Button
               className="h-8 px-3 text-xs"
@@ -881,7 +881,7 @@ function ArtifactMessageCard({
               type="button"
               variant="secondary"
             >
-              {reviewed ? "Review ready" : "Review this diff"}
+              {reviewed ? "评审已就绪" : "评审 Diff"}
             </Button>
           </>
         ) : null}
@@ -893,7 +893,7 @@ function ArtifactMessageCard({
             type="button"
             variant="secondary"
           >
-            Use review as context
+            作为上下文
           </Button>
         ) : null}
         {item.kind === "preview" ? (
@@ -905,7 +905,7 @@ function ArtifactMessageCard({
               type="button"
               variant="secondary"
             >
-              Open preview
+              打开预览
             </Button>
             <Button
               className="h-8 px-3 text-xs"
@@ -916,7 +916,7 @@ function ArtifactMessageCard({
               type="button"
               variant="secondary"
             >
-              {deployed ? "Mock deploy ready" : "Create mock deploy"}
+              {deployed ? "部署卡已就绪" : "创建部署卡"}
             </Button>
           </>
         ) : null}
@@ -939,12 +939,12 @@ function artifactCardMeta(item: ArtifactPanelItem) {
   if (item.kind === "diff") {
     return {
       rows: [
-        { label: "Files", value: String(item.artifact.stats.filesChanged) },
-        { label: "Added", value: `+${item.artifact.stats.additions}` },
-        { label: "Deleted", value: `-${item.artifact.stats.deletions}` },
+        { label: "文件", value: String(item.artifact.stats.filesChanged) },
+        { label: "新增", value: `+${item.artifact.stats.additions}` },
+        { label: "删除", value: `-${item.artifact.stats.deletions}` },
       ],
       status: statusLabel(item.artifact.status),
-      summary: item.artifact.changedFiles[0] ?? "Git diff captured for this run.",
+      summary: item.artifact.changedFiles[0] ?? "本次运行已捕获 Git Diff。",
       title: item.artifact.title,
     }
   }
@@ -952,8 +952,8 @@ function artifactCardMeta(item: ArtifactPanelItem) {
   if (item.kind === "review") {
     return {
       rows: [
-        { label: "Risk", value: item.artifact.riskLevel },
-        { label: "Files", value: String(item.artifact.filesReviewed.length) },
+        { label: "风险", value: item.artifact.riskLevel },
+        { label: "文件", value: String(item.artifact.filesReviewed.length) },
         { label: "Adapter", value: item.artifact.adapterType },
       ],
       status: reviewLabel(item.artifact.status),
@@ -965,9 +965,9 @@ function artifactCardMeta(item: ArtifactPanelItem) {
   if (item.kind === "preview") {
     return {
       rows: [
-        { label: "Health", value: healthLabel(item.artifact.healthStatus) },
-        { label: "Status", value: statusLabel(item.artifact.status) },
-        { label: "Port", value: String(item.artifact.port) },
+        { label: "健康", value: healthLabel(item.artifact.healthStatus) },
+        { label: "状态", value: statusLabel(item.artifact.status) },
+        { label: "端口", value: String(item.artifact.port) },
       ],
       status: healthLabel(item.artifact.healthStatus),
       summary: item.artifact.url,
@@ -977,32 +977,32 @@ function artifactCardMeta(item: ArtifactPanelItem) {
 
   return {
     rows: [
-      { label: "Provider", value: item.artifact.provider },
-      { label: "Environment", value: item.artifact.environment },
+      { label: "提供方", value: item.artifact.provider },
+      { label: "环境", value: item.artifact.environment },
       { label: "URL", value: item.artifact.url ?? "mock://pending" },
     ],
     status: statusLabel(item.artifact.status),
-    summary: "Mock deploy card for local demo evidence. Not a production deployment.",
+    summary: "本地部署证据卡片，不代表生产发布。",
     title: item.artifact.title,
   }
 }
 
 function artifactCardKindLabel(kind: ArtifactPanelItem["kind"]) {
   const labels: Record<ArtifactPanelItem["kind"], string> = {
-    deployment: "Mock Deploy",
+    deployment: "部署",
     diff: "Diff",
-    preview: "Preview",
-    review: "Review",
+    preview: "预览",
+    review: "评审",
   }
   return labels[kind]
 }
 
 function artifactInspectLabel(kind: ArtifactPanelItem["kind"]) {
   const labels: Record<ArtifactPanelItem["kind"], string> = {
-    deployment: "View mock deploy",
-    diff: "View diff",
-    preview: "View preview",
-    review: "View review",
+    deployment: "查看部署",
+    diff: "查看 Diff",
+    preview: "查看预览",
+    review: "查看评审",
   }
   return labels[kind]
 }

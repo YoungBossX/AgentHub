@@ -777,19 +777,17 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(await screen.findByText("Artifact Cards")).toBeTruthy()
-    expect(screen.getByText("4 session-scoped")).toBeTruthy()
+    expect(await screen.findByText("证据卡片")).toBeTruthy()
+    expect(screen.getByText("4 个会话产物")).toBeTruthy()
     expect(
-      screen.getByText(
-        "Mock deploy card for local demo evidence. Not a production deployment.",
-      ),
+      screen.getByText("本地部署证据卡片，不代表生产发布。"),
     ).toBeTruthy()
 
-    fireEvent.click(screen.getByRole("button", { name: "View diff" }))
-    fireEvent.click(screen.getByRole("button", { name: "Use this diff as context" }))
-    fireEvent.click(screen.getByRole("button", { name: "View review" }))
-    fireEvent.click(screen.getByRole("button", { name: "Open preview" }))
-    fireEvent.click(screen.getByRole("button", { name: "View mock deploy" }))
+    fireEvent.click(screen.getByRole("button", { name: "查看 Diff" }))
+    fireEvent.click(screen.getAllByRole("button", { name: "作为上下文" })[0])
+    fireEvent.click(screen.getByRole("button", { name: "查看评审" }))
+    fireEvent.click(screen.getByRole("button", { name: "打开预览" }))
+    fireEvent.click(screen.getByRole("button", { name: "查看部署" }))
 
     expect(onSelectArtifact).toHaveBeenNthCalledWith(1, `diff:${sampleDiffArtifact.id}`)
     expect(onUseArtifactContext).toHaveBeenCalledWith(
@@ -859,9 +857,9 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(await screen.findByText("Artifact Cards")).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Review this diff" }))
-    fireEvent.click(screen.getByRole("button", { name: "Create mock deploy" }))
+    expect(await screen.findByText("证据卡片")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "评审 Diff" }))
+    fireEvent.click(screen.getByRole("button", { name: "创建部署卡" }))
 
     expect(onCreateReview).toHaveBeenCalledWith("run-1")
     expect(onCreateDeploy).toHaveBeenCalledWith(samplePreviewArtifact.id)

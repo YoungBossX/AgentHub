@@ -99,4 +99,23 @@ describe("PreviewCard", () => {
     ).toBeTruthy()
     expect(screen.getAllByText("通过").length).toBeGreaterThan(0)
   })
+
+  it("shows artifact workbench empty state before evidence is selected", () => {
+    render(
+      createElement(PreviewPanel, {
+        artifactItems: [],
+        frameKey: 1,
+        selectedArtifactId: null,
+      }),
+    )
+
+    expect(screen.getByText("证据工作台")).toBeTruthy()
+    expect(
+      screen.getByText("从任务时间线选择 Diff、评审、预览或部署产物。"),
+    ).toBeTruthy()
+    expect(screen.getByText("等待产物")).toBeTruthy()
+    expect(
+      screen.getByText("任务生成 Diff、评审、预览或部署证据后，可在这里查看详情。"),
+    ).toBeTruthy()
+  })
 })
