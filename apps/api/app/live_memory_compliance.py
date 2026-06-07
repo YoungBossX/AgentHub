@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 from sqlmodel import Session as DbSession
+from sqlmodel import select
 
 from app.external_workspaces import (
     ExternalWorkspaceRegistration,
@@ -22,6 +23,7 @@ from app.memory_store import (
 )
 from app.models import ExternalProjectTarget, MemoryItem, Workspace
 from app.models import Session as AgentHubSession
+from app.models import utc_now
 
 P18C_LIBRARY_APP_USER_PROMPT = (
     "帮我在桌面开发一个简单的图书管理系统。有登录页面，初始账户和密码是 "
@@ -175,47 +177,43 @@ class P18cSessionSetupEvidence:
 P18C_MEMORY_RULES: tuple[P18cMemoryRule, ...] = (
     P18cMemoryRule(
         key="p18c-project-location",
-        title="P18c desktop rehearsal project location",
+        title="P18c 项目统一存放目录",
         content_md=(
-            "New demo frontend projects should be created under "
-            "~/Desktop/agenthub-rehearsals/ unless the user says otherwise."
+            "若无特殊说明，新建项目统一存放至 "
+            "~/Desktop/agenthub-rehearsals/ 目录下。"
         ),
     ),
     P18cMemoryRule(
         key="p18c-frontend-stack",
-        title="P18c frontend stack default",
-        content_md=(
-            "New frontend demo projects should use Vite + React + TypeScript "
-            "by default."
-        ),
+        title="P18c 前端默认技术栈",
+        content_md="前端项目默认采用 Vite + React + TypeScript 技术栈。",
     ),
     P18cMemoryRule(
         key="p18c-localstorage-persistence",
-        title="P18c simple demo persistence default",
+        title="P18c 默认数据持久化",
         content_md=(
-            "Simple demo apps should use localStorage persistence by default, "
-            "not backend/database, unless explicitly requested."
+            "应用若无明确要求，默认使用 localStorage 做数据持久化，"
+            "不对接后端 / 数据库。"
         ),
     ),
     P18cMemoryRule(
         key="p18c-change-log-required",
-        title="P18c change-log evidence required",
-        content_md="Code changes must update docs/change-log.md when applicable.",
+        title="P18c 代码变更日志要求",
+        content_md="涉及代码变更时，需同步更新 docs/change-log.md。",
     ),
     P18cMemoryRule(
         key="p18c-platform-boundary",
-        title="P18c platform boundary",
+        title="P18c 平台代码边界",
         content_md=(
-            "Do not modify AgentHub platform code unless platform maintenance "
-            "mode is explicit."
+            "未明确开启平台维护模式时，禁止修改 AgentHub 平台底层代码。"
         ),
     ),
     P18cMemoryRule(
         key="p18c-provider-evidence-required",
-        title="P18c provider success evidence required",
+        title="P18c 第三方模型成功证据要求",
         content_md=(
-            "Real provider success must not be claimed without TaskRun / diff / "
-            "build evidence."
+            "若无任务运行记录、代码差异文件、构建日志等佐证材料，"
+            "不得宣称第三方模型服务调用成功。"
         ),
     ),
 )
@@ -226,10 +224,8 @@ def ensure_p18c_memory_rules(
     *,
     workspace_id: str,
 ) -> tuple[MemoryItem, ...]:
-    existing = list_memory_items(
-        db,
-        MemoryFilter(workspace_id=workspace_id, status="active"),
-    )
+    _archive_obsolete_p18c_memory_rules(db, workspace_id=workspace_id)
+    existing = list_memory_items(db, MemoryFilter(workspace_id=workspace_id, status="active"))
     existing_by_hash = {
         (item.title, item.content_md): item
         for item in existing
@@ -259,6 +255,32 @@ def ensure_p18c_memory_rules(
             )
         )
     return tuple(items)
+
+
+def _archive_obsolete_p18c_memory_rules(
+    db: DbSession,
+    *,
+    workspace_id: str,
+) -> None:
+    current_rule_keys = {(rule.title, rule.content_md) for rule in P18C_MEMORY_RULES}
+    statement = select(MemoryItem).where(
+        MemoryItem.workspace_id == workspace_id,
+        MemoryItem.source == P18C_MEMORY_SOURCE,
+        MemoryItem.status == "active",
+    )
+    obsolete_items = [
+        item
+        for item in db.exec(statement).all()
+        if (item.title, item.content_md) not in current_rule_keys
+    ]
+    if not obsolete_items:
+        return
+    now = utc_now()
+    for item in obsolete_items:
+        item.status = "archived"
+        item.updated_at = now
+        db.add(item)
+    db.commit()
 
 
 def prepare_p18c_session_setup(

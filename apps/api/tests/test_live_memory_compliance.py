@@ -169,6 +169,31 @@ def test_ensure_p18c_memory_rules_creates_active_canonical_memory() -> None:
     assert [item.id for item in reused] == [item.id for item in created]
     assert {item.title for item in active} == {rule.title for rule in P18C_MEMORY_RULES}
     assert all(item.trust_level == "user_confirmed" for item in active)
+    assert all("demo frontend" not in item.content_md for item in active)
+    assert all("simple demo apps" not in item.content_md for item in active)
+    assert any("若无特殊说明" in item.content_md for item in active)
+
+
+def test_ensure_p18c_memory_rules_archives_obsolete_active_rules() -> None:
+    with _db() as db:
+        workspace = _workspace(db)
+        old_rule = ensure_p18c_memory_rules(db, workspace_id=workspace.id)[0]
+        old_rule.content_md = "New demo frontend projects should use the old wording."
+        db.add(old_rule)
+        db.commit()
+
+        refreshed = ensure_p18c_memory_rules(db, workspace_id=workspace.id)
+        all_items = list_memory_items(db, MemoryFilter(workspace_id=workspace.id))
+        active = list_memory_items(
+            db,
+            MemoryFilter(workspace_id=workspace.id, status="active"),
+        )
+
+    archived = [item for item in all_items if item.status == "archived"]
+    assert len(refreshed) == len(P18C_MEMORY_RULES)
+    assert any(item.id == old_rule.id for item in archived)
+    assert {item.title for item in active} == {rule.title for rule in P18C_MEMORY_RULES}
+    assert all("old wording" not in item.content_md for item in active)
 
 
 def test_prepare_p18c_session_setup_creates_target_session_and_snapshot(
