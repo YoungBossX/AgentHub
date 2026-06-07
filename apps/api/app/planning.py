@@ -257,6 +257,18 @@ def plan_for_message(
                                 planner_runtime,
                             )
                             return fallback_tasks
+                        if _should_request_target_setup_for_non_task_llm_outcome(
+                            db,
+                            message,
+                            content,
+                            conversation.outcome,
+                        ):
+                            _create_orchestrator_boundary_message(
+                                db,
+                                message,
+                                _unsupported_or_unregistered_target_reply(),
+                            )
+                            return []
                         _create_conversation_outcome_message(
                             db,
                             message,
@@ -1723,6 +1735,23 @@ def _fallback_tasks_for_non_task_llm_outcome(
     )
     _record_fallback_created_task_ids(db, tasks)
     return tasks
+
+
+def _should_request_target_setup_for_non_task_llm_outcome(
+    db: DbSession,
+    message: Message,
+    content: str,
+    outcome: dict[str, Any],
+) -> bool:
+    if str(outcome.get("outcomeType") or "") != "assistant_reply":
+        return False
+    if _is_pure_chat_request(content):
+        return False
+    if list_session_tasks(db, message.session_id):
+        return False
+    if _active_external_target_for_role(db, message, "frontend") is not None:
+        return False
+    return _is_safe_external_frontend_request(content)
 
 
 def _record_fallback_created_task_ids(db: DbSession, tasks: list[Task]) -> None:

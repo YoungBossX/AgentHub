@@ -1933,6 +1933,62 @@ def test_invalid_llm_task_plan_records_validation_failure_before_fallback(
     assert task["planJson"]["plannerEvidence"]["validationResult"] == "failed"
 
 
+def test_p18c_library_request_without_target_requests_target_setup(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prompt = (
+        "帮我在桌面开发一个简单的图书管理系统。有登录页面，初始账户和密码是 "
+        "18088888888 / 888888。登录后进入管理页面，只需要有图书管理功能："
+        "加入图书、删除图书、修改图书、查询图书。"
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "assistant_reply",
+                "reply": "我来规划一个图书管理系统。",
+                "riskLevel": "low",
+                "reason": "Router misclassified a desktop app request as chat.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "not_required",
+            },
+        ),
+    )
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": prompt},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at)
+        ).all()
+
+    assert [message.sender_type for message in messages] == ["user", "orchestrator"]
+    assert "注册为外部工作区/目标" in messages[-1].content_md
+    assert "我来规划一个图书管理系统" not in messages[-1].content_md
+
+
 def test_explicit_platform_mode_request_creates_approval_gated_platform_task(
     client: TestClient,
 ) -> None:
