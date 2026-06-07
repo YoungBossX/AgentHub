@@ -10,7 +10,12 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
-from app.agent_directory import AgentDirectoryEntry, build_agent_directory
+from app.agent_directory import (
+    AgentCompatibility,
+    AgentDirectoryEntry,
+    build_agent_directory,
+    check_agent_compatibility,
+)
 from app.agent_profile_drafts import (
     AgentProfileDraftError,
     AgentProfileDraftInput,
@@ -121,6 +126,8 @@ from app.target_registry import (
 )
 from app.schemas import (
     AgentContactResponse,
+    AgentCompatibilityRequest,
+    AgentCompatibilityResponse,
     AgentDirectoryEntryResponse,
     AgentDirectoryResponse,
     AgentProfileDraftCreateRequest,
@@ -601,7 +608,22 @@ def agent_directory_entry_response(entry: AgentDirectoryEntry) -> AgentDirectory
         authStatus=entry.auth_status,
         available=entry.available,
         runtimeSelectedForRoles=entry.runtime_selected_for_roles,
+        compatibility=agent_compatibility_response(entry.compatibility),
         description=entry.description,
+    )
+
+
+def agent_compatibility_response(
+    compatibility: AgentCompatibility,
+) -> AgentCompatibilityResponse:
+    return AgentCompatibilityResponse(
+        compatible=compatibility.compatible,
+        reasons=compatibility.reasons,
+        warnings=compatibility.warnings,
+        role=compatibility.role,
+        targetId=compatibility.target_id,
+        mode=compatibility.mode,
+        requiredCapabilities=compatibility.required_capabilities or [],
     )
 
 
@@ -805,6 +827,55 @@ def read_workspace_agent_directory(
         profiles=runtime_config_profiles_for_workspace(db, workspace_id),
         providers=list_provider_configs(),
         runtime_config=get_effective_runtime_config(db, workspace_id),
+    )
+
+
+@app.post(
+    "/workspaces/{workspace_id}/agent-directory/check-compatibility",
+    response_model=AgentCompatibilityResponse,
+)
+def check_workspace_agent_directory_compatibility(
+    workspace_id: str,
+    request: AgentCompatibilityRequest,
+    db: DbSession = Depends(get_db),
+) -> AgentCompatibilityResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    profiles = runtime_config_profiles_for_workspace(db, workspace_id)
+    providers = list_provider_configs()
+    profile = next(
+        (candidate for candidate in profiles if candidate.id == request.agent_profile_id),
+        None,
+    )
+    if profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent profile not found")
+    provider = next(
+        (candidate for candidate in providers if candidate.provider_id == request.provider_id),
+        None,
+    )
+    if request.adapter_type != profile.adapter_type:
+        return agent_compatibility_response(
+            AgentCompatibility(
+                compatible=False,
+                reasons=[
+                    f"adapter `{request.adapter_type}` does not match profile `{profile.adapter_type}`"
+                ],
+                warnings=[],
+                role=request.role,
+                target_id=request.target_id,
+                mode=request.mode,
+                required_capabilities=request.required_capabilities,
+            )
+        )
+    return agent_compatibility_response(
+        check_agent_compatibility(
+            profile=profile,
+            provider=provider,
+            role=request.role,
+            target_id=request.target_id,
+            mode=request.mode,
+            required_capabilities=request.required_capabilities,
+        )
     )
 
 

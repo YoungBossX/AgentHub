@@ -223,12 +223,35 @@ class AgentDirectoryEntryResponse(ApiModel):
     auth_status: str = Field(alias="authStatus")
     available: bool
     runtime_selected_for_roles: list[str] = Field(alias="runtimeSelectedForRoles")
+    compatibility: "AgentCompatibilityResponse"
     description: str
 
 
 class AgentDirectoryResponse(ApiModel):
     workspace_id: str = Field(alias="workspaceId")
     entries: list[AgentDirectoryEntryResponse]
+
+
+class AgentCompatibilityRequest(BaseModel):
+    agent_profile_id: str = Field(alias="agentProfileId")
+    provider_id: str = Field(alias="providerId")
+    adapter_type: str = Field(alias="adapterType")
+    role: str
+    target_id: Optional[str] = Field(default=None, alias="targetId")
+    mode: Optional[str] = None
+    required_capabilities: list[str] = Field(default_factory=list, alias="requiredCapabilities")
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+class AgentCompatibilityResponse(ApiModel):
+    compatible: bool
+    reasons: list[str]
+    warnings: list[str]
+    role: Optional[str]
+    target_id: Optional[str] = Field(alias="targetId")
+    mode: Optional[str]
+    required_capabilities: list[str] = Field(alias="requiredCapabilities")
 
 
 class RuntimeRoleConfigRequest(BaseModel):

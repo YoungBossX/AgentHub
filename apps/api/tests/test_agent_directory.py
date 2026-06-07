@@ -30,6 +30,8 @@ def test_agent_directory_lists_builtins_drafts_runtime_selection_and_provider_st
         assert "frontend" in frontend["supportedModes"]
         assert frontend["safeForWrite"] is True
         assert frontend["runtimeSelectedForRoles"] == ["frontend"]
+        assert frontend["compatibility"]["compatible"] is True
+        assert frontend["compatibility"]["reasons"] == []
 
         draft = next(entry for entry in entries if entry["entryType"] == "draft")
         assert draft["displayName"] == "Accessibility Reviewer"
@@ -48,6 +50,49 @@ def test_agent_directory_rejects_unknown_workspace() -> None:
         response = client.get("/workspaces/missing-workspace/agent-directory")
 
         assert response.status_code == 404
+
+
+def test_agent_directory_compatibility_check_reports_reasons() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id()
+        entries = client.get(f"/workspaces/{workspace_id}/agent-directory").json()["entries"]
+        frontend = _entry_by_role(entries, "frontend")
+        draft = next(entry for entry in entries if entry["entryType"] == "draft")
+
+        compatible = client.post(
+            f"/workspaces/{workspace_id}/agent-directory/check-compatibility",
+            json={
+                "agentProfileId": frontend["agentProfileId"],
+                "providerId": "local-codex-cli",
+                "adapterType": "codex",
+                "role": "frontend",
+                "targetId": "demo-frontend",
+                "mode": "frontend",
+                "requiredCapabilities": ["code_write"],
+            },
+        )
+        incompatible = client.post(
+            f"/workspaces/{workspace_id}/agent-directory/check-compatibility",
+            json={
+                "agentProfileId": draft["agentProfileId"],
+                "providerId": "local-scripted-mock",
+                "adapterType": "scripted_mock",
+                "role": "frontend",
+                "targetId": "demo-frontend",
+                "mode": "frontend",
+                "requiredCapabilities": ["code_write"],
+            },
+        )
+
+        assert compatible.status_code == 200
+        assert compatible.json()["compatible"] is True
+        assert incompatible.status_code == 200
+        assert incompatible.json()["compatible"] is False
+        reasons = " ".join(incompatible.json()["reasons"])
+        assert "role" in reasons
+        assert "mode" in reasons
+        assert "capability" in reasons
+        assert "write-safe" in reasons
 
 
 @contextmanager
