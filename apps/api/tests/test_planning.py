@@ -480,6 +480,16 @@ def test_parse_app_contract_intent_supports_bounded_app_types() -> None:
     assert crm.app_type == "mini_crm_contacts"
 
 
+def test_fixed_modules_are_fallback_baselines_not_capability_limits() -> None:
+    library_request = "帮我开发一个图书管理系统，有登录页面和图书查询页面"
+
+    assert parse_app_contract_intent("build a todo app") is not None
+    assert parse_app_contract_intent("帮我做一个笔记应用") is not None
+    assert parse_app_contract_intent("帮我做一个 mini CRM") is not None
+    assert parse_app_contract_intent(library_request) is None
+    assert planning_module._is_safe_external_frontend_request(library_request) is True
+
+
 def test_orchestrator_supported_frontend_intent_creates_dynamic_task_graph(
     client: TestClient,
 ) -> None:
