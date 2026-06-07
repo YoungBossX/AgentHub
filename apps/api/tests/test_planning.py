@@ -1675,6 +1675,12 @@ def test_llm_assistant_reply_for_safe_external_frontend_request_falls_back_to_ta
     assert task["planJson"]["targetId"] == "external-dashboard"
     assert task["planJson"]["autoStart"] is True
 
+    trace = client.get(f"/sessions/{session_id}/mission-trace").json()
+    traced_task = trace["tasks"][0]
+    assert traced_task["plannerEvidence"]["fallbackReason"] == "non_task_coding_outcome"
+    assert traced_task["plannerEvidence"]["providerId"] == "fake-llm-planner"
+    assert traced_task["plannerEvidence"]["llmOutcomeType"] == "assistant_reply"
+
 
 def test_llm_assistant_reply_for_platform_request_does_not_fallback_to_frontend(
     client: TestClient,
