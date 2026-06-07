@@ -1679,6 +1679,7 @@ def _fallback_tasks_for_non_task_llm_outcome(
     llm_fallback["originalValidationResult"] = str(
         outcome.get("validationResult") or ""
     )
+    llm_fallback["deterministicExecutable"] = True
     llm_fallback["errorCode"] = "LLM_NON_TASK_CODING_OUTCOME"
     llm_fallback["errorSummary"] = (
         "LLM router returned assistant_reply for a safe external frontend coding request."
@@ -1707,6 +1708,11 @@ def _record_fallback_created_task_ids(db: DbSession, tasks: list[Task]) -> None:
             continue
         fallback["createdTaskIds"] = created_task_ids
         plan["plannerFallback"] = fallback
+        planner_evidence = plan.get("plannerEvidence")
+        if not isinstance(planner_evidence, dict):
+            planner_evidence = {}
+        planner_evidence["createdTaskIds"] = created_task_ids
+        plan["plannerEvidence"] = planner_evidence
         task.plan_json = json.dumps(plan, separators=(",", ":"))
         db.add(task)
     db.commit()
@@ -1821,7 +1827,33 @@ def _plan_draft_metadata(
 
 
 def _fallback_plan_metadata(llm_fallback: Optional[dict]) -> dict:
-    return {"plannerFallback": llm_fallback, "plannerSource": "fallback"} if llm_fallback else {}
+    if not llm_fallback:
+        return {}
+    return {
+        "plannerFallback": llm_fallback,
+        "plannerSource": "fallback",
+        "plannerEvidence": _planner_evidence_from_fallback(llm_fallback),
+    }
+
+
+def _planner_evidence_from_fallback(llm_fallback: dict) -> dict:
+    evidence = {
+        "plannerSource": "fallback",
+        "fallbackReason": llm_fallback.get("reason"),
+        "providerId": llm_fallback.get("providerId"),
+        "providerType": llm_fallback.get("providerType"),
+        "providerSource": llm_fallback.get("plannerSource"),
+        "status": llm_fallback.get("status"),
+        "llmOutcomeType": llm_fallback.get("originalOutcomeType"),
+        "deterministicExecutable": llm_fallback.get("deterministicExecutable"),
+        "validationResult": llm_fallback.get("originalValidationResult"),
+        "errorCode": llm_fallback.get("errorCode"),
+        "errorSummary": llm_fallback.get("errorSummary"),
+    }
+    for key in ("model", "providerPresetId", "protocol"):
+        if key in llm_fallback:
+            evidence[key] = llm_fallback[key]
+    return {key: value for key, value in evidence.items() if value not in (None, "")}
 
 
 def _validate_task_graph(task_specs: list[TaskSpec]) -> None:

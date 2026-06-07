@@ -1663,6 +1663,15 @@ def test_llm_assistant_reply_for_safe_external_frontend_request_falls_back_to_ta
     assert task["planJson"]["plannerFallback"]["createdTaskIds"] == [task["id"]]
     assert task["planJson"]["plannerFallback"]["errorCode"] == "LLM_NON_TASK_CODING_OUTCOME"
     assert task["planJson"]["plannerFallback"]["providerId"] == "fake-llm-planner"
+    assert task["planJson"]["plannerEvidence"]["plannerSource"] == "fallback"
+    assert task["planJson"]["plannerEvidence"]["fallbackReason"] == "non_task_coding_outcome"
+    assert task["planJson"]["plannerEvidence"]["providerId"] == "fake-llm-planner"
+    assert task["planJson"]["plannerEvidence"]["providerType"] == "fake_test"
+    assert task["planJson"]["plannerEvidence"]["providerSource"] == "fake_test"
+    assert task["planJson"]["plannerEvidence"]["llmOutcomeType"] == "assistant_reply"
+    assert task["planJson"]["plannerEvidence"]["deterministicExecutable"] is True
+    assert task["planJson"]["plannerEvidence"]["createdTaskIds"] == [task["id"]]
+    assert task["planJson"]["plannerEvidence"]["validationResult"] == "not_required"
     assert task["planJson"]["targetId"] == "external-dashboard"
     assert task["planJson"]["autoStart"] is True
 
