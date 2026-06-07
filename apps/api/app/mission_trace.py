@@ -99,6 +99,7 @@ def _task_trace(task: Task) -> dict[str, Any]:
         "dependsOnTaskIds": _json_list(task.depends_on_task_ids),
         "scheduler": scheduler,
         "plannerEvidence": _planner_evidence(plan),
+        "pmoDecision": _json_dict(json.dumps(plan.get("pmoDecision", {}))),
         "navigation": {"taskId": task.id},
     }
 
