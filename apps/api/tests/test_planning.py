@@ -1756,10 +1756,19 @@ def test_p18c_library_request_misclassified_as_assistant_reply_routes_to_task(
     task = client.get(f"/sessions/{session_id}/tasks").json()[0]
 
     assert task["assignedAgentRole"] == "frontend"
+    assert task["intentType"] == "frontend_change"
     assert task["planJson"]["planner"] == "orchestrator_external_target_v1"
     assert task["planJson"]["plannerSource"] == "fallback"
+    assert task["planJson"]["originalRequest"] == prompt
     assert task["planJson"]["targetId"] == "external-p18c-library-app"
+    assert task["planJson"]["frontendTargetId"] == "external-p18c-library-app"
+    assert task["planJson"]["allowedPaths"] == ["src"]
+    assert task["planJson"]["safeTarget"] == "src"
+    assert all(path.startswith("src/") for path in task["planJson"]["files"])
+    assert "backendTargetId" not in task["planJson"]
+    assert "database" not in json.dumps(task["planJson"]).lower()
     assert task["planJson"]["plannerEvidence"]["fallbackReason"] == "non_task_coding_outcome"
+    assert task["planJson"]["plannerEvidence"]["llmOutcomeType"] == "assistant_reply"
 
 
 def test_llm_assistant_reply_for_platform_request_does_not_fallback_to_frontend(
