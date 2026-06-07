@@ -261,9 +261,9 @@ def _matches_path_pattern(path: str, pattern: str) -> bool:
 
 
 def _target_type_for_external_project(project_type: str) -> TargetType:
-    if project_type in {"vite-react", "nextjs"}:
+    if project_type in {"vite-react", "nextjs", "external-frontend"}:
         return "frontend"
-    if project_type in {"fastapi", "node-api", "python-package"}:
+    if project_type in {"fastapi", "node-api", "python-package", "external-backend"}:
         return "backend"
     return "frontend"
 

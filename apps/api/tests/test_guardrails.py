@@ -191,6 +191,35 @@ def test_target_path_policy_allows_registered_allowed_paths_only() -> None:
     assert "protected" in protected.approval.reason.lower()
 
 
+def test_target_path_policy_allows_selected_folder_scope_except_protected_paths() -> None:
+    worktree = Path("/tmp/external-folder")
+
+    root_file = evaluate_target_path(
+        "README.md",
+        worktree,
+        allowed_paths=["*"],
+        denied_paths=[".git", ".env", "node_modules", ".venv", "secrets"],
+    )
+    nested_file = evaluate_target_path(
+        "app/main.py",
+        worktree,
+        allowed_paths=["*"],
+        denied_paths=[".git", ".env", "node_modules", ".venv", "secrets"],
+    )
+    protected = evaluate_target_path(
+        "node_modules/cache/index.js",
+        worktree,
+        allowed_paths=["*"],
+        denied_paths=[".git", ".env", "node_modules", ".venv", "secrets"],
+    )
+
+    assert root_file.allowed is True
+    assert nested_file.allowed is True
+    assert protected.allowed is False
+    assert protected.approval is not None
+    assert "protected" in protected.approval.reason.lower()
+
+
 def test_network_policy_defaults_to_approval_required() -> None:
     denied = evaluate_network_access()
     approved = evaluate_network_access(network_approved=True)

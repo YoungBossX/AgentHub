@@ -10,10 +10,12 @@ import {
   getDemoWorkspace,
   getAgentRuntimeConfig,
   listWorkspaceSessions,
+  listExternalTargetFolders,
   listWorkspaceTargets,
   updateAgentRuntimeConfig,
   updateSessionTargetSelection,
   type AgentRuntimeConfig,
+  type LocalFolderListing,
   type RuntimeProviderCheck,
   type RuntimeRoleConfigInput,
   type TargetProject,
@@ -46,7 +48,10 @@ export function RuntimeSettingsPageClient({
   const [checkingRole, setCheckingRole] = useState<string | null>(null)
   const [isRegisteringExternal, setIsRegisteringExternal] = useState(false)
   const [isSavingTargets, setIsSavingTargets] = useState(false)
-  const [manualAllowedPaths, setManualAllowedPaths] = useState("")
+  const [folderListing, setFolderListing] = useState<LocalFolderListing | null>(null)
+  const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false)
+  const [isLoadingFolders, setIsLoadingFolders] = useState(false)
+  const [externalTargetKind, setExternalTargetKind] = useState<"frontend" | "backend">("frontend")
   const hasUnsavedChanges = config
     ? JSON.stringify(draftRoles) !== JSON.stringify(config.roles)
     : false
@@ -185,16 +190,6 @@ export function RuntimeSettingsPageClient({
       return
     }
 
-    const allowedPaths = manualAllowedPaths
-      .split(",")
-      .map((p) => p.trim())
-      .filter((p) => p)
-
-    if (!allowedPaths.length) {
-      setWorkspaceStatusMessage("请填写至少一个允许写入的路径。")
-      return
-    }
-
     setIsRegisteringExternal(true)
     setWorkspaceStatusMessage(null)
     try {
@@ -202,27 +197,67 @@ export function RuntimeSettingsPageClient({
         backendUrl,
         workspace.id,
         {
-          allowedPaths: allowedPaths,
+          allowedPaths: ["*"],
           buildCommand: null,
           checkCommand: null,
           deniedPaths: [],
           devCommand: null,
-          name: externalTargetNameFor(externalRootPath),
+          name: externalTargetNameFor(externalRootPath, externalTargetKind),
           previewCommand: null,
-          projectType: "unknown",
+          projectType: externalProjectTypeFor(externalTargetKind),
           rootPath: externalRootPath,
-          targetId: externalTargetIdFor(externalRootPath),
+          targetId: externalTargetIdFor(externalRootPath, externalTargetKind),
           testCommand: null,
         },
       )
       await refreshWorkspaceTargets()
-      setManualAllowedPaths("")
       setWorkspaceStatusMessage(`外部项目已注册：${registered.name}`)
     } catch {
       setWorkspaceStatusMessage("外部项目注册失败，可能 targetId 已存在或路径不符合安全规则。")
     } finally {
       setIsRegisteringExternal(false)
     }
+  }
+
+  async function openFolderPicker() {
+    if (!workspace) {
+      setWorkspaceStatusMessage("无法选择文件夹：未找到可配置的工作区。")
+      return
+    }
+
+    setIsFolderPickerOpen(true)
+    await browseFolder(undefined)
+  }
+
+  async function browseFolder(path: string | undefined) {
+    if (!workspace) {
+      return
+    }
+
+    setIsLoadingFolders(true)
+    setWorkspaceStatusMessage(null)
+    try {
+      const listing = await listExternalTargetFolders(
+        backendUrl,
+        workspace.id,
+        path,
+      )
+      setFolderListing(listing)
+    } catch {
+      setWorkspaceStatusMessage("无法读取本地文件夹，请选择其他目录。")
+    } finally {
+      setIsLoadingFolders(false)
+    }
+  }
+
+  function selectCurrentFolder() {
+    if (!folderListing) {
+      return
+    }
+
+    setExternalRootPath(folderListing.currentPath)
+    setWorkspaceStatusMessage(null)
+    setIsFolderPickerOpen(false)
   }
 
   async function handleSaveTargets() {
@@ -355,18 +390,31 @@ export function RuntimeSettingsPageClient({
         backendTargetId={backendTargetId}
         busy={isLoadingConfig}
         frontendTargetId={frontendTargetId}
+        folderListing={folderListing}
+        externalTargetKind={externalTargetKind}
+        isFolderPickerOpen={isFolderPickerOpen}
+        isLoadingFolders={isLoadingFolders}
         isRegistering={isRegisteringExternal}
         isSavingTargets={isSavingTargets}
-        manualAllowedPaths={manualAllowedPaths}
         onBackendTargetChange={(targetId) => {
           setBackendTargetId(targetId)
+          setWorkspaceStatusMessage(null)
+        }}
+        onBrowseFolder={(path) => {
+          void browseFolder(path)
+        }}
+        onCloseFolderPicker={() => setIsFolderPickerOpen(false)}
+        onExternalTargetKindChange={(kind) => {
+          setExternalTargetKind(kind)
           setWorkspaceStatusMessage(null)
         }}
         onFrontendTargetChange={(targetId) => {
           setFrontendTargetId(targetId)
           setWorkspaceStatusMessage(null)
         }}
-        onManualAllowedPathsChange={setManualAllowedPaths}
+        onOpenFolderPicker={() => {
+          void openFolderPicker()
+        }}
         onRefresh={refreshWorkspaceTargets}
         onRegister={handleRegisterExternalProject}
         onRootPathChange={(rootPath) => {
@@ -374,6 +422,7 @@ export function RuntimeSettingsPageClient({
           setWorkspaceStatusMessage(null)
         }}
         onSaveTargets={handleSaveTargets}
+        onSelectCurrentFolder={selectCurrentFolder}
         onSessionChange={handleSessionChange}
         rootPath={externalRootPath}
         selectedSessionId={selectedSessionId}
@@ -398,17 +447,22 @@ export function RuntimeSettingsPageClient({
   )
 }
 
-function externalTargetNameFor(rootPath: string) {
-  const lastSegment = rootPath.replace(/\/+$/, "").split("/").filter(Boolean).at(-1)
-  return lastSegment ? `外部项目 ${lastSegment}` : "外部项目"
+function externalProjectTypeFor(kind: "frontend" | "backend") {
+  return kind === "backend" ? "external-backend" : "external-frontend"
 }
 
-function externalTargetIdFor(rootPath: string) {
+function externalTargetNameFor(rootPath: string, kind: "frontend" | "backend") {
+  const lastSegment = rootPath.replace(/\/+$/, "").split("/").filter(Boolean).at(-1)
+  const prefix = kind === "backend" ? "后端外部项目" : "前端外部项目"
+  return lastSegment ? `${prefix} ${lastSegment}` : prefix
+}
+
+function externalTargetIdFor(rootPath: string, kind: "frontend" | "backend") {
   const lastSegment = rootPath.replace(/\/+$/, "").split("/").filter(Boolean).at(-1)
   const slug = (lastSegment || "project")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48)
-  return `external-${slug || "project"}`
+  return `external-${kind}-${slug || "project"}`
 }

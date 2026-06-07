@@ -67,6 +67,23 @@ class ExternalProjectAnalysisResponse(ApiModel):
     confidence: str
 
 
+class LocalFolderEntryResponse(ApiModel):
+    name: str
+    path: str
+
+
+class LocalFolderStartResponse(ApiModel):
+    label: str
+    path: str
+
+
+class LocalFolderListingResponse(ApiModel):
+    current_path: str = Field(alias="currentPath")
+    parent_path: Optional[str] = Field(alias="parentPath")
+    starts: list[LocalFolderStartResponse]
+    children: list[LocalFolderEntryResponse]
+
+
 class TargetProjectResponse(ApiModel):
     target_id: str = Field(alias="targetId")
     name: str

@@ -63,6 +63,7 @@ from app.ledger import (
     refresh_session_ledger,
     refresh_session_ledger_for_task_run,
 )
+from app.local_folders import LocalFolderBrowseError, list_local_folders
 from app.memory_snapshots import (
     MemorySnapshotError,
     create_memory_snapshot,
@@ -133,6 +134,9 @@ from app.schemas import (
     ExternalProjectAnalysisResponse,
     ExternalProjectTargetCreateRequest,
     ExternalProjectTargetResponse,
+    LocalFolderEntryResponse,
+    LocalFolderListingResponse,
+    LocalFolderStartResponse,
     MessageCreateRequest,
     MessageResponse,
     MemoryItemResponse,
@@ -316,6 +320,23 @@ def external_project_analysis_response(
     )
 
 
+def local_folder_listing_response(
+    listing: "LocalFolderListing",
+) -> LocalFolderListingResponse:
+    return LocalFolderListingResponse(
+        currentPath=listing.current_path,
+        parentPath=listing.parent_path,
+        starts=[
+            LocalFolderStartResponse(label=start.label, path=start.path)
+            for start in listing.starts
+        ],
+        children=[
+            LocalFolderEntryResponse(name=child.name, path=child.path)
+            for child in listing.children
+        ],
+    )
+
+
 def target_project_response(target: TargetProject) -> TargetProjectResponse:
     return TargetProjectResponse(
         targetId=target.target_id,
@@ -374,6 +395,33 @@ def analyze_external_target(
     return external_project_analysis_response(
         analyze_external_project(request.root_path)
     )
+
+
+@app.get(
+    "/workspaces/{workspace_id}/external-targets/folders",
+    response_model=LocalFolderListingResponse,
+)
+def browse_external_target_folders(
+    workspace_id: str,
+    path: Optional[str] = Query(default=None),
+    db: DbSession = Depends(get_db),
+) -> LocalFolderListingResponse:
+    workspace = get_workspace(db, workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+
+    try:
+        return local_folder_listing_response(
+            list_local_folders(
+                workspace_root=workspace.root_path,
+                requested_path=path,
+            )
+        )
+    except LocalFolderBrowseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
 
 
 @app.post(

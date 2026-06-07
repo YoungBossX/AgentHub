@@ -139,6 +139,64 @@ def test_register_external_project_target(client: TestClient, tmp_path: Path) ->
     assert selection_response.json()["activeFrontendTargetId"] == "external-sample-vite"
 
 
+def test_register_external_project_target_can_allow_selected_folder_scope(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "plain-folder"
+    project.mkdir()
+    workspace = client.get("/workspaces/demo").json()
+
+    response = client.post(
+        f"/workspaces/{workspace['id']}/external-targets",
+        json={
+            "targetId": "external-plain-folder",
+            "name": "Plain Folder",
+            "rootPath": str(project),
+            "projectType": "unknown",
+            "allowedPaths": ["*"],
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["rootPath"] == str(project.resolve())
+    assert body["projectType"] == "unknown"
+    assert body["allowedPaths"] == ["*"]
+    assert ".git" in body["deniedPaths"]
+    assert "node_modules" in body["deniedPaths"]
+
+
+def test_register_selected_folder_scope_can_create_backend_target(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "plain-backend"
+    project.mkdir()
+    workspace = client.get("/workspaces/demo").json()
+
+    response = client.post(
+        f"/workspaces/{workspace['id']}/external-targets",
+        json={
+            "targetId": "external-backend-plain-folder",
+            "name": "Backend Folder",
+            "rootPath": str(project),
+            "projectType": "external-backend",
+            "allowedPaths": ["*"],
+        },
+    )
+    targets_response = client.get(f"/workspaces/{workspace['id']}/targets")
+
+    assert response.status_code == 201
+    targets = {target["targetId"]: target for target in targets_response.json()}
+    assert targets["external-backend-plain-folder"]["type"] == "backend"
+    assert targets["external-backend-plain-folder"]["allowedAgents"] == [
+        "backend",
+        "qa",
+        "review",
+    ]
+
+
 def test_session_target_selection_rejects_wrong_or_unknown_target(
     client: TestClient,
     tmp_path: Path,
@@ -220,6 +278,49 @@ def test_registration_requires_bounded_relative_allowed_paths(
             },
         )
         assert response.status_code == 400
+
+
+def test_browse_external_target_folders_lists_starts_and_children(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "plain-folder"
+    (project / "app").mkdir(parents=True)
+    (project / "node_modules").mkdir()
+    (project / ".git").mkdir()
+    (project / "README.md").write_text("not a folder\n")
+    workspace = client.get("/workspaces/demo").json()
+
+    starts_response = client.get(
+        f"/workspaces/{workspace['id']}/external-targets/folders"
+    )
+    children_response = client.get(
+        f"/workspaces/{workspace['id']}/external-targets/folders",
+        params={"path": str(project)},
+    )
+
+    assert starts_response.status_code == 200
+    starts_body = starts_response.json()
+    assert "starts" in starts_body
+    assert any(start["label"] == "工作区附近" for start in starts_body["starts"])
+
+    assert children_response.status_code == 200
+    children_body = children_response.json()
+    assert children_body["currentPath"] == str(project.resolve())
+    assert children_body["parentPath"] == str(project.parent.resolve())
+    assert [child["name"] for child in children_body["children"]] == ["app"]
+
+
+def test_browse_external_target_folders_rejects_unknown_workspace(
+    client: TestClient,
+    tmp_path: Path,
+) -> None:
+    response = client.get(
+        "/workspaces/missing/external-targets/folders",
+        params={"path": str(tmp_path)},
+    )
+
+    assert response.status_code == 404
 
 
 def test_external_registration_does_not_mutate_builtin_registry() -> None:

@@ -1,9 +1,10 @@
 "use client"
 
-import { FolderGit2, FolderPlus, RefreshCw, Save } from "lucide-react"
+import { ArrowUp, Folder, FolderGit2, FolderOpen, FolderPlus, RefreshCw, Save, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type {
+  LocalFolderListing,
   TargetProject,
   Workspace,
   WorkspaceSession,
@@ -14,16 +15,23 @@ type WorkspaceTargetSettingsProps = {
   backendTargetId: string
   busy: boolean
   frontendTargetId: string
+  folderListing: LocalFolderListing | null
   isRegistering: boolean
   isSavingTargets: boolean
-  manualAllowedPaths: string
+  isFolderPickerOpen: boolean
+  isLoadingFolders: boolean
+  externalTargetKind: "frontend" | "backend"
   onBackendTargetChange: (targetId: string) => void
+  onBrowseFolder: (path: string) => void
+  onCloseFolderPicker: () => void
+  onExternalTargetKindChange: (kind: "frontend" | "backend") => void
   onFrontendTargetChange: (targetId: string) => void
-  onManualAllowedPathsChange: (value: string) => void
+  onOpenFolderPicker: () => void
   onRefresh: () => void
   onRegister: () => void
   onRootPathChange: (rootPath: string) => void
   onSaveTargets: () => void
+  onSelectCurrentFolder: () => void
   onSessionChange: (sessionId: string) => void
   rootPath: string
   selectedSessionId: string
@@ -37,16 +45,23 @@ export function WorkspaceTargetSettings({
   backendTargetId,
   busy,
   frontendTargetId,
+  folderListing,
   isRegistering,
+  isFolderPickerOpen,
+  isLoadingFolders,
   isSavingTargets,
-  manualAllowedPaths,
+  externalTargetKind,
   onBackendTargetChange,
+  onBrowseFolder,
+  onCloseFolderPicker,
+  onExternalTargetKindChange,
   onFrontendTargetChange,
-  onManualAllowedPathsChange,
+  onOpenFolderPicker,
   onRefresh,
   onRegister,
   onRootPathChange,
   onSaveTargets,
+  onSelectCurrentFolder,
   onSessionChange,
   rootPath,
   selectedSessionId,
@@ -148,32 +163,52 @@ export function WorkspaceTargetSettings({
           </div>
 
           <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
-            只需填写项目路径和允许写入的目录，无需预判项目类型。
+            选择或填写一个文件夹即可，无需预判项目类型。
           </p>
 
           <label className="mt-3 block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
-            项目路径
-            <input
+            目标类型
+            <select
               className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
-              onChange={(event) => onRootPathChange(event.target.value)}
-              placeholder="/Users/you/Desktop/my-app"
-              value={rootPath}
-            />
+              onChange={(event) =>
+                onExternalTargetKindChange(event.target.value as "frontend" | "backend")
+              }
+              value={externalTargetKind}
+            >
+              <option value="frontend">前端目标</option>
+              <option value="backend">后端目标</option>
+            </select>
           </label>
 
-          <label className="mt-2 block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
-            允许写入路径（逗号分隔，如 src, app）
-            <input
-              className="mt-1 w-full rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
-              onChange={(event) => onManualAllowedPathsChange(event.target.value)}
-              placeholder="src, app"
-              value={manualAllowedPaths}
-            />
+          <label className="mt-3 block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
+            项目路径
+            <div className="mt-1 flex gap-2">
+              <input
+                className="min-w-0 flex-1 rounded border border-[var(--border)] bg-white px-2 py-1.5 text-xs font-medium text-slate-900"
+                onChange={(event) => onRootPathChange(event.target.value)}
+                placeholder="/Users/you/Desktop/my-app"
+                value={rootPath}
+              />
+              <Button
+                className="h-8 shrink-0 bg-white px-3 text-xs text-slate-700 hover:bg-slate-50"
+                disabled={busy || isLoadingFolders}
+                onClick={onOpenFolderPicker}
+                type="button"
+                variant="secondary"
+              >
+                <FolderOpen aria-hidden="true" size={14} />
+                选择文件夹
+              </Button>
+            </div>
           </label>
+
+          <p className="mt-2 rounded border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-600">
+            写入范围：当前文件夹下所有路径，受保护路径仍会被拒绝。
+          </p>
 
           <div className="mt-3">
             <Button
-              disabled={!rootPath.trim() || !manualAllowedPaths.trim() || isRegistering || busy}
+              disabled={!rootPath.trim() || isRegistering || busy}
               onClick={onRegister}
               type="button"
             >
@@ -182,6 +217,16 @@ export function WorkspaceTargetSettings({
           </div>
         </div>
       </div>
+
+      {isFolderPickerOpen ? (
+        <FolderPickerDialog
+          isLoading={isLoadingFolders}
+          listing={folderListing}
+          onBrowseFolder={onBrowseFolder}
+          onClose={onCloseFolderPicker}
+          onSelectCurrentFolder={onSelectCurrentFolder}
+        />
+      ) : null}
 
       {targets.length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -197,6 +242,113 @@ export function WorkspaceTargetSettings({
         </div>
       ) : null}
     </section>
+  )
+}
+
+function FolderPickerDialog({
+  isLoading,
+  listing,
+  onBrowseFolder,
+  onClose,
+  onSelectCurrentFolder,
+}: {
+  isLoading: boolean
+  listing: LocalFolderListing | null
+  onBrowseFolder: (path: string) => void
+  onClose: () => void
+  onSelectCurrentFolder: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4">
+      <div className="w-full max-w-2xl rounded-lg border border-[var(--border)] bg-white p-4 shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-950">选择文件夹</p>
+            <p className="mt-1 max-w-xl truncate text-xs text-[var(--muted-foreground)]">
+              {listing?.currentPath ?? "正在加载本地目录..."}
+            </p>
+          </div>
+          <Button
+            aria-label="关闭"
+            className="h-8 w-8 bg-white p-0 text-slate-700 hover:bg-slate-50"
+            onClick={onClose}
+            type="button"
+            variant="secondary"
+          >
+            <X aria-hidden="true" size={15} />
+          </Button>
+        </div>
+
+        {listing?.starts.length ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {listing.starts.map((start) => (
+              <Button
+                key={start.path}
+                className="h-8 bg-white px-3 text-xs text-slate-700 hover:bg-slate-50"
+                disabled={isLoading}
+                onClick={() => onBrowseFolder(start.path)}
+                type="button"
+                variant="secondary"
+              >
+                {start.label}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <Button
+            className="h-8 bg-white px-3 text-xs text-slate-700 hover:bg-slate-50"
+            disabled={!listing?.parentPath || isLoading}
+            onClick={() => {
+              if (listing?.parentPath) {
+                onBrowseFolder(listing.parentPath)
+              }
+            }}
+            type="button"
+            variant="secondary"
+          >
+            <ArrowUp aria-hidden="true" size={14} />
+            上一级
+          </Button>
+          <Button
+            className="h-8 px-3 text-xs"
+            disabled={!listing || isLoading}
+            onClick={onSelectCurrentFolder}
+            type="button"
+          >
+            <Folder aria-hidden="true" size={14} />
+            选择当前文件夹
+          </Button>
+        </div>
+
+        <div className="mt-3 max-h-72 overflow-y-auto rounded border border-[var(--border)] bg-[var(--surface-muted)] p-2">
+          {isLoading ? (
+            <p className="px-2 py-6 text-center text-xs text-[var(--muted-foreground)]">
+              正在加载...
+            </p>
+          ) : listing?.children.length ? (
+            <div className="grid gap-1">
+              {listing.children.map((child) => (
+                <button
+                  key={child.path}
+                  className="flex min-h-9 w-full items-center gap-2 rounded border border-transparent px-2 py-1.5 text-left text-xs font-medium text-slate-800 hover:border-blue-200 hover:bg-blue-50"
+                  onClick={() => onBrowseFolder(child.path)}
+                  type="button"
+                >
+                  <Folder aria-hidden="true" className="shrink-0 text-[var(--primary)]" size={15} />
+                  <span className="truncate">{child.name}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="px-2 py-6 text-center text-xs text-[var(--muted-foreground)]">
+              没有可浏览的子文件夹
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

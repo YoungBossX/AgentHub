@@ -95,6 +95,23 @@ export type ExternalProjectTarget = ExternalProjectTargetInput & {
   updatedAt: string
 }
 
+export type LocalFolderEntry = {
+  name: string
+  path: string
+}
+
+export type LocalFolderStart = {
+  label: string
+  path: string
+}
+
+export type LocalFolderListing = {
+  currentPath: string
+  parentPath: string | null
+  starts: LocalFolderStart[]
+  children: LocalFolderEntry[]
+}
+
 export type AgentContact = {
   id: string
   displayName: string
@@ -540,6 +557,39 @@ export async function createExternalProjectTarget(
   }
 
   return (await response.json()) as ExternalProjectTarget
+}
+
+export async function listExternalTargetFolders(
+  backendUrl: string,
+  workspaceId: string,
+  path?: string,
+  fetcher: Fetcher = fetch,
+): Promise<LocalFolderListing> {
+  const params = new URLSearchParams()
+  if (path) {
+    params.set("path", path)
+  }
+  const query = params.toString()
+  const response = await fetcher(
+    apiUrl(
+      backendUrl,
+      `/workspaces/${workspaceId}/external-targets/folders${query ? `?${query}` : ""}`,
+    ),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return {
+      children: [],
+      currentPath: path ?? "",
+      parentPath: null,
+      starts: [],
+    }
+  }
+
+  return (await response.json()) as LocalFolderListing
 }
 
 export async function updateSessionTargetSelection(

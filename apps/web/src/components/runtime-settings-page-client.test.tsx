@@ -9,6 +9,7 @@ const apiMocks = vi.hoisted(() => ({
   createExternalProjectTarget: vi.fn(),
   getAgentRuntimeConfig: vi.fn(),
   getDemoWorkspace: vi.fn(),
+  listExternalTargetFolders: vi.fn(),
   listWorkspaceSessions: vi.fn(),
   listWorkspaceTargets: vi.fn(),
   updateAgentRuntimeConfig: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   createExternalProjectTarget: apiMocks.createExternalProjectTarget,
   getAgentRuntimeConfig: apiMocks.getAgentRuntimeConfig,
   getDemoWorkspace: apiMocks.getDemoWorkspace,
+  listExternalTargetFolders: apiMocks.listExternalTargetFolders,
   listWorkspaceSessions: apiMocks.listWorkspaceSessions,
   listWorkspaceTargets: apiMocks.listWorkspaceTargets,
   updateAgentRuntimeConfig: apiMocks.updateAgentRuntimeConfig,
@@ -255,8 +257,20 @@ describe("RuntimeSettingsPageClient", () => {
     apiMocks.getAgentRuntimeConfig.mockResolvedValue(runtimeConfig)
     apiMocks.listWorkspaceSessions.mockResolvedValue(workspaceSessions)
     apiMocks.listWorkspaceTargets.mockResolvedValue(workspaceTargets)
+    apiMocks.listExternalTargetFolders.mockResolvedValue({
+      children: [
+        { name: "sample-app", path: "/Users/demo/Desktop/sample-app" },
+      ],
+      currentPath: "/Users/demo/Desktop",
+      parentPath: "/Users/demo",
+      starts: [
+        { label: "桌面", path: "/Users/demo/Desktop" },
+        { label: "文档", path: "/Users/demo/Documents" },
+        { label: "工作区附近", path: "/repo" },
+      ],
+    })
     apiMocks.createExternalProjectTarget.mockResolvedValue({
-      allowedPaths: ["src"],
+      allowedPaths: ["*"],
       analysisStatus: "manual",
       buildCommand: "pnpm build",
       checkCommand: "pnpm check",
@@ -266,14 +280,14 @@ describe("RuntimeSettingsPageClient", () => {
       detectedFramework: "vite-react",
       devCommand: "pnpm dev",
       id: "external-target-1",
-      name: "外部项目 sample-app",
+      name: "前端外部项目 sample-app",
       packageManager: "pnpm",
       previewCommand: "pnpm dev",
       projectType: "vite-react",
       rootPath: "/Users/demo/Desktop/sample-app",
       stagingOutputDir: null,
       stagingServeCommand: null,
-      targetId: "external-sample-app",
+      targetId: "external-frontend-sample-app",
       testCommand: "pnpm test",
       updatedAt: "2026-06-02T00:00:00Z",
       workspaceId: "workspace-1",
@@ -377,8 +391,120 @@ describe("RuntimeSettingsPageClient", () => {
     fireEvent.change(screen.getByLabelText("项目路径"), {
       target: { value: "/Users/demo/Desktop/sample-app" },
     })
-    fireEvent.change(screen.getByLabelText("允许写入路径（逗号分隔，如 src, app）"), {
-      target: { value: "src, app" },
+    fireEvent.click(screen.getByText("注册"))
+
+    await waitFor(() => {
+      expect(apiMocks.createExternalProjectTarget).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        expect.objectContaining({
+          name: "前端外部项目 sample-app",
+          projectType: "external-frontend",
+          allowedPaths: ["*"],
+          rootPath: "/Users/demo/Desktop/sample-app",
+          targetId: "external-frontend-sample-app",
+        }),
+      )
+      expect(screen.getByText("外部项目已注册：前端外部项目 sample-app")).toBeTruthy()
+    })
+  })
+
+  it("selects a local folder and registers the selected folder scope", async () => {
+    apiMocks.listExternalTargetFolders.mockImplementation(
+      async (_backendUrl: string, _workspaceId: string, path?: string) => {
+        if (path === "/Users/demo/Desktop/sample-app") {
+          return {
+            children: [],
+            currentPath: "/Users/demo/Desktop/sample-app",
+            parentPath: "/Users/demo/Desktop",
+            starts: [
+              { label: "桌面", path: "/Users/demo/Desktop" },
+              { label: "文档", path: "/Users/demo/Documents" },
+              { label: "工作区附近", path: "/repo" },
+            ],
+          }
+        }
+
+        return {
+          children: [
+            { name: "sample-app", path: "/Users/demo/Desktop/sample-app" },
+          ],
+          currentPath: "/Users/demo/Desktop",
+          parentPath: "/Users/demo",
+          starts: [
+            { label: "桌面", path: "/Users/demo/Desktop" },
+            { label: "文档", path: "/Users/demo/Documents" },
+            { label: "工作区附近", path: "/repo" },
+          ],
+        }
+      },
+    )
+
+    render(
+      <RuntimeSettingsPageClient
+        backendUrl="http://127.0.0.1:8000"
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("选择文件夹")).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByText("选择文件夹"))
+
+    await waitFor(() => {
+      expect(apiMocks.listExternalTargetFolders).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        undefined,
+      )
+      expect(screen.getByText("sample-app")).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByText("sample-app"))
+
+    await waitFor(() => {
+      expect(apiMocks.listExternalTargetFolders).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        "/Users/demo/Desktop/sample-app",
+      )
+    })
+
+    fireEvent.click(screen.getByText("选择当前文件夹"))
+    fireEvent.click(screen.getByText("注册"))
+
+    await waitFor(() => {
+      expect(apiMocks.createExternalProjectTarget).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        expect.objectContaining({
+          allowedPaths: ["*"],
+          projectType: "external-frontend",
+          rootPath: "/Users/demo/Desktop/sample-app",
+        }),
+      )
+    })
+  })
+
+  it("registers a selected folder as a backend target", async () => {
+    render(
+      <RuntimeSettingsPageClient
+        backendUrl="http://127.0.0.1:8000"
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("项目路径")).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText("目标类型"), {
+      target: { value: "backend" },
+    })
+    fireEvent.change(screen.getByLabelText("项目路径"), {
+      target: { value: "/Users/demo/Desktop/sample-api" },
     })
     fireEvent.click(screen.getByText("注册"))
 
@@ -387,12 +513,13 @@ describe("RuntimeSettingsPageClient", () => {
         "http://127.0.0.1:8000",
         "workspace-1",
         expect.objectContaining({
-          name: "外部项目 sample-app",
-          rootPath: "/Users/demo/Desktop/sample-app",
-          targetId: "external-sample-app",
+          name: "后端外部项目 sample-api",
+          allowedPaths: ["*"],
+          projectType: "external-backend",
+          rootPath: "/Users/demo/Desktop/sample-api",
+          targetId: "external-backend-sample-api",
         }),
       )
-      expect(screen.getByText("外部项目已注册：外部项目 sample-app")).toBeTruthy()
     })
   })
 

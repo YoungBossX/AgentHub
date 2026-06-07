@@ -18,6 +18,7 @@ import {
   getDemoWorkspace,
   interruptTaskRun,
   listWorkspaceMemory,
+  listExternalTargetFolders,
   listProviderConfigs,
   listWorkspaceAgentProfiles,
   listWorkspaceAgents,
@@ -336,6 +337,36 @@ describe("workspace and session API", () => {
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
+      },
+    )
+  })
+
+  it("lists local folders for external target registration", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          children: [{ name: "sample-app", path: "/Users/demo/Desktop/sample-app" }],
+          currentPath: "/Users/demo/Desktop",
+          parentPath: "/Users/demo",
+          starts: [{ label: "桌面", path: "/Users/demo/Desktop" }],
+        }),
+        { status: 200 },
+      )
+    })
+
+    const folders = await listExternalTargetFolders(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      "/Users/demo/Desktop",
+      fetchMock,
+    )
+
+    expect(folders.currentPath).toBe("/Users/demo/Desktop")
+    expect(folders.children[0].name).toBe("sample-app")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/external-targets/folders?path=%2FUsers%2Fdemo%2FDesktop",
+      {
+        cache: "no-store",
       },
     )
   })
