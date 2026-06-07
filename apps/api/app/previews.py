@@ -18,6 +18,12 @@ from app.models import Artifact, Preview, Task, TaskRun, Workspace, utc_now
 from app.models import Session as AgentHubSession
 from app.provider_evidence import provider_evidence_for_task_run
 from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
+from app.target_registry import (
+    DEMO_FRONTEND_TARGET_ID,
+    TargetProject,
+    TargetRegistryError,
+    get_target_for_workspace,
+)
 
 
 class PreviewError(ValueError):
@@ -131,14 +137,14 @@ class PreviewService:
             raise PreviewError(f"TaskRun not found: {task_run_id}")
         _ensure_preview_prerequisites(db, task_run)
 
-        demo_root = _demo_root_for_task_run(db, task_run)
-        if not demo_root.exists():
-            raise PreviewError(f"Vite React demo root does not exist: {demo_root}")
+        preview_root = _preview_root_for_task_run(db, task_run)
+        if not preview_root.exists():
+            raise PreviewError(f"Vite React preview root does not exist: {preview_root}")
 
         port = int(self.port_allocator())
         command = preview_command(port)
         url = f"http://127.0.0.1:{port}"
-        process = self.process_runner.start(command, demo_root)
+        process = self.process_runner.start(command, preview_root)
         checked_at = utc_now()
         healthy = self._wait_until_healthy(url)
         health_status = "healthy" if healthy else "unhealthy"
@@ -336,7 +342,7 @@ def reserve_preview_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def _demo_root_for_task_run(db: DbSession, task_run: TaskRun) -> Path:
+def _preview_root_for_task_run(db: DbSession, task_run: TaskRun) -> Path:
     task = db.get(Task, task_run.task_id)
     if task is None:
         raise PreviewError(f"Task not found for TaskRun: {task_run.id}")
@@ -346,7 +352,32 @@ def _demo_root_for_task_run(db: DbSession, task_run: TaskRun) -> Path:
     workspace = db.get(Workspace, session.workspace_id)
     if workspace is None:
         raise PreviewError(f"Workspace not found for Session: {session.id}")
-    return Path(session.worktree_path) / workspace.root_path
+
+    target_id = _target_id_for_task(task)
+    try:
+        target = get_target_for_workspace(db, workspace.id, target_id)
+    except TargetRegistryError as exc:
+        raise PreviewError(str(exc)) from exc
+    return _target_root_for_preview(target, task_run)
+
+
+def _target_id_for_task(task: Task) -> str:
+    try:
+        plan = json.loads(task.plan_json)
+    except json.JSONDecodeError:
+        plan = {}
+    if isinstance(plan, dict):
+        target_id = plan.get("targetId") or plan.get("frontendTargetId")
+        if isinstance(target_id, str) and target_id:
+            return target_id
+    return DEMO_FRONTEND_TARGET_ID
+
+
+def _target_root_for_preview(target: TargetProject, task_run: TaskRun) -> Path:
+    root = Path(target.root)
+    if root.is_absolute():
+        return root
+    return Path(task_run.worktree_path) / root
 
 
 def _ensure_preview_prerequisites(db: DbSession, task_run: TaskRun) -> None:

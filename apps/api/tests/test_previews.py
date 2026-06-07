@@ -11,6 +11,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
 from app.main import app, get_db, get_preview_service
+from app.external_workspaces import ExternalWorkspaceRegistration, register_external_project_target
 from app.models import Agent, Artifact, Preview, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.previews import PreviewError, PreviewProcess, PreviewService
 
@@ -112,6 +113,77 @@ def create_task_run_fixture(db: DbSession, worktree_path: Path) -> str:
     return task_run.id
 
 
+def create_external_task_run_fixture(
+    db: DbSession,
+    *,
+    workspace_worktree: Path,
+    external_root: Path,
+) -> str:
+    workspace = Workspace(
+        name="AgentHub Demo",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    db.add(workspace)
+    db.commit()
+    db.refresh(workspace)
+    register_external_project_target(
+        db,
+        workspace,
+        ExternalWorkspaceRegistration(
+            target_id="external-vite-app",
+            name="External Vite App",
+            root_path=str(external_root),
+            project_type="vite-react",
+            allowed_paths=["src", "package.json", "index.html"],
+            dev_command="pnpm dev --host 127.0.0.1 --port <port>",
+            check_command="pnpm check",
+            build_command="pnpm build",
+            preview_command="pnpm dev --host 127.0.0.1 --port <port>",
+            staging_output_dir="dist",
+            staging_serve_command=(
+                "python -m http.server <port> --bind 127.0.0.1 --directory dist"
+            ),
+            deploy_provider_ids=["local_staging"],
+            package_manager="pnpm",
+            detected_framework="vite-react",
+        ),
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="External preview session",
+        bound_branch="main",
+        worktree_path=str(workspace_worktree),
+    )
+    agent = Agent(
+        name="Frontend Agent",
+        role="frontend",
+        adapter_type="codex",
+        provider="local",
+    )
+    task = Task(
+        session_id=session.id,
+        title="Build external Vite app",
+        intent_type="frontend_change",
+        assigned_agent_id=agent.id,
+        plan_json=json.dumps({"targetId": "external-vite-app"}, separators=(",", ":")),
+    )
+    task_run = TaskRun(
+        task_id=task.id,
+        agent_id=agent.id,
+        state="completed",
+        worktree_path=str(external_root),
+    )
+    db.add(session)
+    db.add(agent)
+    db.add(task)
+    db.add(task_run)
+    db.commit()
+    db.refresh(task_run)
+    return task_run.id
+
+
 def test_start_preview_persists_vite_command_health_and_ready_event(
     db: DbSession,
     demo_worktree: Path,
@@ -161,6 +233,36 @@ def test_start_preview_persists_vite_command_health_and_ready_event(
     assert "install" not in runner.started[0].command
     assert health.checked_urls == ["http://127.0.0.1:4317"]
     assert json.loads(event.payload_json)["previewId"] == preview.id
+
+
+def test_start_preview_uses_external_target_root(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    external_root = tmp_path / "external-vite-app"
+    external_root.mkdir()
+    task_run_id = create_external_task_run_fixture(
+        db,
+        workspace_worktree=tmp_path / "session-worktree",
+        external_root=external_root,
+    )
+    runner = RecordingRunner()
+    service = PreviewService(
+        process_runner=runner,
+        health_checker=StaticHealthChecker(healthy=True),
+        port_allocator=lambda: 4323,
+        health_attempts=1,
+    )
+
+    stored = service.start_task_run_preview(db, task_run_id)
+
+    assert stored.health_status == "healthy"
+    assert runner.started == [
+        StartedCommand(
+            command=["pnpm", "dev", "--host", "127.0.0.1", "--port", "4323"],
+            cwd=external_root.resolve(),
+        )
+    ]
 
 
 def test_preview_api_starts_lists_and_stops_preview(
