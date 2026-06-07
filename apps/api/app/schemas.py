@@ -397,6 +397,7 @@ class SessionMissionTraceResponse(ApiModel):
     events: list[dict[str, Any]]
     artifacts: list[dict[str, Any]]
     blockers: list[dict[str, Any]]
+    pmo_evidence: list[dict[str, Any]] = Field(alias="pmoEvidence")
     next_actions: list[dict[str, Any]] = Field(alias="nextActions")
 
 

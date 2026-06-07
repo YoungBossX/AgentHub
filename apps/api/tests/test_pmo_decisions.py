@@ -430,3 +430,80 @@ def test_mission_trace_exposes_retry_fallback_and_approval_next_actions(
     assert "retry_with_explicit_fallback" in action_types
     assert "approve_task_run" in action_types
     assert "deny_task_run" in action_types
+
+
+def test_mission_trace_exposes_redacted_pmo_evidence(db: DbSession) -> None:
+    workspace = Workspace(
+        name="PMO workspace",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="PMO session",
+        bound_branch="main",
+        worktree_path=".worktrees/pmo-session",
+    )
+    decision_task = Task(
+        session_id=session.id,
+        title="Review decision",
+        intent_type="frontend_change",
+        status="pending",
+        priority=1,
+        plan_json=json.dumps(
+            apply_pmo_decision(
+                {"planner": "llm_v1"},
+                state="pending_review",
+                actor="orchestrator",
+                reason="Review before editing /Users/me/secrets/token.txt",
+                now=FIXED_TIME,
+            ),
+            separators=(",", ":"),
+        ),
+    )
+    conflict_task = Task(
+        session_id=session.id,
+        title="Conflict",
+        intent_type="frontend_change",
+        status="blocked",
+        priority=2,
+        plan_json=json.dumps(
+            {
+                "scheduler": {
+                    "state": "blocked",
+                    "reason": "Dirty file /Users/me/project/.env has SECRET_TOKEN=abc123",
+                    "conflictType": "dirty_worktree",
+                    "conflictingFiles": [
+                        "apps/demo/src/App.tsx",
+                        "/Users/me/project/.env",
+                        "/Users/me/secrets/token.txt",
+                    ],
+                },
+                "plannerFallback": {
+                    "reason": "task_plan_validation_failed",
+                    "errorSummary": "token=abc123 and /Users/me/secrets/token.txt",
+                    "providerId": "fake-llm-planner",
+                },
+            },
+            separators=(",", ":"),
+        ),
+    )
+    db.add(workspace)
+    db.add(session)
+    db.add(decision_task)
+    db.add(conflict_task)
+    db.commit()
+
+    trace = build_session_mission_trace(db, session.id).model_dump(by_alias=True)
+
+    evidence_json = json.dumps(trace["pmoEvidence"], sort_keys=True)
+    assert "plan_decision" in evidence_json
+    assert "blocker" in evidence_json
+    assert "fallback" in evidence_json
+    assert "dirty_worktree" in evidence_json
+    assert "SECRET_TOKEN" not in evidence_json
+    assert "abc123" not in evidence_json
+    assert ".env" not in evidence_json
+    assert "/Users/me/secrets" not in evidence_json
+    assert "apps/demo/src/App.tsx" in evidence_json

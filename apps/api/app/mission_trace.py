@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Any
 
 from sqlmodel import Session as DbSession
@@ -54,6 +55,7 @@ def build_session_mission_trace(
         events=[_event_trace(event) for event in events],
         artifacts=[_artifact_trace(artifact) for artifact in artifacts],
         blockers=blockers,
+        pmoEvidence=_pmo_evidence(tasks, blockers),
         nextActions=_next_actions(tasks, blockers, task_runs),
     )
 
@@ -202,6 +204,69 @@ def _planner_evidence(plan: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def _pmo_evidence(tasks: list[Task], blockers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    evidence: list[dict[str, Any]] = []
+    for task in tasks:
+        plan = _json_dict(task.plan_json)
+        decision = plan.get("pmoDecision")
+        if isinstance(decision, dict) and decision:
+            evidence.append(
+                _redact_pmo_value(
+                    {
+                        "type": "plan_decision",
+                        "taskId": task.id,
+                        "state": decision.get("state"),
+                        "actor": decision.get("actor"),
+                        "reason": decision.get("reason"),
+                        "createdAt": decision.get("createdAt"),
+                        "decidedAt": decision.get("decidedAt"),
+                        "nextActionSummary": decision.get("nextActionSummary"),
+                        "navigation": {"taskId": task.id},
+                    }
+                )
+            )
+        scheduler = plan.get("scheduler")
+        if isinstance(scheduler, dict):
+            state = scheduler.get("state")
+            if state in BLOCKING_SCHEDULER_STATES:
+                evidence.append(
+                    _redact_pmo_value(
+                        {
+                            "type": "blocker",
+                            "taskId": task.id,
+                            "state": state,
+                            "reason": scheduler.get("reason"),
+                            "targetId": scheduler.get("targetId"),
+                            "dependencyIds": scheduler.get("dependencyIds", []),
+                            "blockingDependencyIds": scheduler.get("blockingDependencyIds", []),
+                            "conflictType": scheduler.get("conflictType"),
+                            "conflictingTaskIds": scheduler.get("conflictingTaskIds", []),
+                            "conflictingFiles": scheduler.get("conflictingFiles", []),
+                            "navigation": {"taskId": task.id},
+                        }
+                    )
+                )
+        fallback = plan.get("plannerFallback")
+        if isinstance(fallback, dict) and fallback:
+            evidence.append(
+                _redact_pmo_value(
+                    {
+                        "type": "fallback",
+                        "taskId": task.id,
+                        "reason": fallback.get("reason"),
+                        "providerId": fallback.get("providerId"),
+                        "errorCode": fallback.get("errorCode"),
+                        "errorSummary": fallback.get("errorSummary"),
+                        "validationResult": fallback.get("validationResult"),
+                        "navigation": {"taskId": task.id},
+                    }
+                )
+            )
+    for blocker in blockers:
+        evidence.append(_redact_pmo_value({"type": "blocker_summary", **blocker}))
+    return evidence
+
+
 def _task_graph_readiness(tasks: list[Task]) -> dict[str, list[dict[str, Any]]]:
     groups: dict[str, list[dict[str, Any]]] = {
         "ready": [],
@@ -340,6 +405,54 @@ def _next_actions(
                 }
             )
     return actions
+
+
+def _redact_pmo_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _redact_pmo_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_redact_pmo_value(item) for item in value if not _is_sensitive_string(item)]
+    if isinstance(value, str):
+        return _redact_sensitive_text(value)
+    return value
+
+
+def _redact_sensitive_text(value: str) -> str:
+    if _is_sensitive_string(value):
+        return "[protected]"
+    redacted = re.sub(
+        r"(?i)(secret|token|password|api[_-]?key)\s*[:=]\s*[^\s;]+",
+        "[protected]",
+        value,
+    )
+    redacted = re.sub(
+        r"/[^\s]*?(?:\.env|/\.git|/node_modules|/\.venv|/secrets)(?:[^\s]*)?",
+        "[protected]",
+        redacted,
+    )
+    return redacted[:240] + ("..." if len(redacted) > 240 else "")
+
+
+def _is_sensitive_string(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    normalized = value.lower()
+    return any(
+        marker in normalized
+        for marker in (
+            "/.env",
+            ".env",
+            "/.git",
+            "node_modules",
+            "/.venv",
+            "/secrets",
+            "secret_",
+            "secret=",
+            "token=",
+            "password=",
+            "api_key=",
+        )
+    )
 
 
 def _json_dict(value: str) -> dict[str, Any]:
