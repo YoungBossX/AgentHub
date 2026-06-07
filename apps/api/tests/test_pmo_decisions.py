@@ -10,7 +10,7 @@ from sqlmodel import SQLModel, create_engine
 
 from app.main import app, get_db
 from app.mission_trace import build_session_mission_trace
-from app.models import Session, Task, Workspace
+from app.models import Agent, Session, Task, TaskRun, Workspace
 from app.pmo_decisions import (
     PMO_DECISION_KEY,
     PmoDecisionError,
@@ -262,3 +262,171 @@ def test_plan_decision_action_rejects_raw_plan_mutation_payload(
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "planJson"]
+
+
+def test_mission_trace_exposes_pmo_readiness_groups_and_next_actions(
+    db: DbSession,
+) -> None:
+    workspace = Workspace(
+        name="PMO workspace",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="PMO session",
+        bound_branch="main",
+        worktree_path=".worktrees/pmo-session",
+    )
+    ready = Task(
+        session_id=session.id,
+        title="Ready task",
+        intent_type="frontend_change",
+        status="pending",
+        priority=1,
+        plan_json=json.dumps(
+            {"scheduler": {"state": "ready", "runnable": True}},
+            separators=(",", ":"),
+        ),
+    )
+    waiting = Task(
+        session_id=session.id,
+        title="Waiting task",
+        intent_type="frontend_change",
+        status="waiting_dependency",
+        priority=2,
+        depends_on_task_ids=json.dumps([ready.id]),
+        plan_json=json.dumps(
+            {
+                "scheduler": {
+                    "state": "waiting_dependency",
+                    "reason": "Waiting for upstream dependencies to complete.",
+                    "dependencyIds": [ready.id],
+                    "blockingDependencyIds": [ready.id],
+                }
+            },
+            separators=(",", ":"),
+        ),
+    )
+    review = Task(
+        session_id=session.id,
+        title="Review me",
+        intent_type="frontend_change",
+        status="pending",
+        priority=3,
+        plan_json=json.dumps(
+            apply_pmo_decision(
+                {"planner": "llm_v1"},
+                state="pending_review",
+                actor="orchestrator",
+                reason="Needs PMO approval",
+                now=FIXED_TIME,
+            ),
+            separators=(",", ":"),
+        ),
+    )
+    db.add(workspace)
+    db.add(session)
+    db.add(ready)
+    db.add(waiting)
+    db.add(review)
+    db.commit()
+
+    trace = build_session_mission_trace(db, session.id)
+
+    groups = trace.model_dump(by_alias=True)["taskGraphReadiness"]
+    assert groups["ready"][0]["taskId"] == ready.id
+    assert groups["waitingDependency"][0]["taskId"] == waiting.id
+    assert groups["blocked"] == []
+    action_types = {action["type"] for action in trace.next_actions}
+    assert "start_ready_task" in action_types
+    assert any(
+        action["type"] == "inspect_blocker" and action["subtype"] == "dependency"
+        for action in trace.next_actions
+    )
+    assert "approve_plan" in action_types
+    assert "reject_plan" in action_types
+    assert "request_clarification" in action_types
+
+
+def test_mission_trace_exposes_retry_fallback_and_approval_next_actions(
+    db: DbSession,
+) -> None:
+    workspace = Workspace(
+        name="PMO workspace",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="PMO session",
+        bound_branch="main",
+        worktree_path=".worktrees/pmo-session",
+    )
+    agent = Agent(
+        name="Frontend Agent",
+        role="frontend",
+        adapter_type="codex",
+        provider="local",
+    )
+    retryable = Task(
+        session_id=session.id,
+        title="Retryable task",
+        intent_type="frontend_change",
+        status="failed",
+        priority=1,
+        plan_json=json.dumps(
+            {"scheduler": {"state": "retryable", "reason": "Adapter failed"}},
+            separators=(",", ":"),
+        ),
+    )
+    fallback = Task(
+        session_id=session.id,
+        title="Fallback task",
+        intent_type="frontend_change",
+        status="blocked",
+        priority=2,
+        plan_json=json.dumps(
+            {
+                "scheduler": {
+                    "state": "fallback_available",
+                    "reason": "Explicit fallback is available.",
+                }
+            },
+            separators=(",", ":"),
+        ),
+    )
+    approval = Task(
+        session_id=session.id,
+        title="Approval task",
+        intent_type="platform_maintenance",
+        status="waiting_approval",
+        priority=3,
+        plan_json=json.dumps({"scheduler": {"state": "blocked"}}, separators=(",", ":")),
+    )
+    db.add(workspace)
+    db.add(session)
+    db.add(agent)
+    db.add(retryable)
+    db.add(fallback)
+    db.add(approval)
+    db.commit()
+    run = TaskRun(
+        task_id=approval.id,
+        agent_id=agent.id,
+        state="waiting_approval",
+        worktree_path=session.worktree_path,
+    )
+    db.add(run)
+    db.commit()
+
+    trace = build_session_mission_trace(db, session.id)
+
+    actions = trace.next_actions
+    action_types = {action["type"] for action in actions}
+    assert "retry_task" in action_types
+    assert "retry_with_explicit_fallback" in action_types
+    assert "approve_task_run" in action_types
+    assert "deny_task_run" in action_types

@@ -392,6 +392,7 @@ class SessionMissionTraceResponse(ApiModel):
     current_goal: Optional[str] = Field(alias="currentGoal")
     memory_snapshot: Optional[dict[str, Any]] = Field(default=None, alias="memorySnapshot")
     tasks: list[dict[str, Any]]
+    task_graph_readiness: dict[str, list[dict[str, Any]]] = Field(alias="taskGraphReadiness")
     task_runs: list[dict[str, Any]] = Field(alias="taskRuns")
     events: list[dict[str, Any]]
     artifacts: list[dict[str, Any]]

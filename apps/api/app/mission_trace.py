@@ -19,6 +19,7 @@ BLOCKING_SCHEDULER_STATES = {
     "waiting_target_lock",
     "failed",
     "retryable",
+    "fallback_available",
 }
 
 
@@ -48,11 +49,12 @@ def build_session_mission_trace(
         currentGoal=ledger.current_goal,
         memorySnapshot=memory_snapshot_metadata(snapshot) or None,
         tasks=[_task_trace(task) for task in tasks],
+        taskGraphReadiness=_task_graph_readiness(tasks),
         taskRuns=[_task_run_trace(task_run) for task_run in task_runs],
         events=[_event_trace(event) for event in events],
         artifacts=[_artifact_trace(artifact) for artifact in artifacts],
         blockers=blockers,
-        nextActions=_next_actions(tasks, blockers),
+        nextActions=_next_actions(tasks, blockers, task_runs),
     )
 
 
@@ -200,14 +202,131 @@ def _planner_evidence(plan: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
-def _next_actions(tasks: list[Task], blockers: list[dict[str, Any]]) -> list[dict[str, str]]:
+def _task_graph_readiness(tasks: list[Task]) -> dict[str, list[dict[str, Any]]]:
+    groups: dict[str, list[dict[str, Any]]] = {
+        "ready": [],
+        "waitingDependency": [],
+        "waitingTargetLock": [],
+        "blocked": [],
+        "running": [],
+        "complete": [],
+    }
+    for task in tasks:
+        plan = _json_dict(task.plan_json)
+        scheduler = plan.get("scheduler")
+        scheduler_state = scheduler.get("state") if isinstance(scheduler, dict) else None
+        item = {
+            "taskId": task.id,
+            "title": task.title,
+            "state": scheduler_state or task.status,
+            "reason": scheduler.get("reason") if isinstance(scheduler, dict) else None,
+            "navigation": {"taskId": task.id},
+        }
+        if task.status in {"completed"} or scheduler_state == "completed":
+            groups["complete"].append(item)
+        elif task.status == "running":
+            groups["running"].append(item)
+        elif scheduler_state == "waiting_dependency" or task.status == "waiting_dependency":
+            groups["waitingDependency"].append(item)
+        elif scheduler_state == "waiting_target_lock" or task.status == "waiting_target_lock":
+            groups["waitingTargetLock"].append(item)
+        elif scheduler_state in {"blocked", "failed", "retryable", "fallback_available"} or task.status in {
+            "blocked",
+            "failed",
+            "waiting_approval",
+        }:
+            groups["blocked"].append(item)
+        else:
+            groups["ready"].append(item)
+    return groups
+
+
+def _next_actions(
+    tasks: list[Task],
+    blockers: list[dict[str, Any]],
+    task_runs: list[TaskRun],
+) -> list[dict[str, str]]:
     blocked_task_ids = {str(blocker["taskId"]) for blocker in blockers}
+    latest_runs_by_task_id: dict[str, TaskRun] = {}
+    for task_run in task_runs:
+        latest_runs_by_task_id[task_run.task_id] = task_run
+
     actions: list[dict[str, str]] = []
     for task in tasks:
+        plan = _json_dict(task.plan_json)
+        scheduler = plan.get("scheduler") if isinstance(plan.get("scheduler"), dict) else {}
+        scheduler_state = scheduler.get("state")
+        pmo_decision = plan.get("pmoDecision") if isinstance(plan.get("pmoDecision"), dict) else {}
+        if pmo_decision.get("state") == "pending_review":
+            actions.extend(
+                [
+                    {
+                        "type": "approve_plan",
+                        "taskId": task.id,
+                        "label": "Approve PMO-reviewed plan",
+                    },
+                    {
+                        "type": "reject_plan",
+                        "taskId": task.id,
+                        "label": "Reject PMO-reviewed plan",
+                    },
+                    {
+                        "type": "request_clarification",
+                        "taskId": task.id,
+                        "label": "Request clarification from the Main Agent",
+                    },
+                ]
+            )
+            continue
+        if scheduler_state == "retryable" or task.status == "failed":
+            actions.append(
+                {
+                    "type": "retry_task",
+                    "taskId": task.id,
+                    "label": "Retry failed task",
+                }
+            )
+        if scheduler_state == "fallback_available":
+            actions.append(
+                {
+                    "type": "retry_with_explicit_fallback",
+                    "taskId": task.id,
+                    "label": "Retry with explicit fallback",
+                }
+            )
+        latest_run = latest_runs_by_task_id.get(task.id)
+        if task.status == "waiting_approval" or (
+            latest_run is not None and latest_run.state == "waiting_approval"
+        ):
+            run_id = latest_run.id if latest_run is not None else ""
+            actions.extend(
+                [
+                    {
+                        "type": "approve_task_run",
+                        "taskId": task.id,
+                        "taskRunId": run_id,
+                        "label": "Approve waiting TaskRun",
+                    },
+                    {
+                        "type": "deny_task_run",
+                        "taskId": task.id,
+                        "taskRunId": run_id,
+                        "label": "Deny waiting TaskRun",
+                    },
+                ]
+            )
         if task.id in blocked_task_ids:
+            subtype = (
+                "dependency"
+                if scheduler_state == "waiting_dependency"
+                else "target_lock"
+                if scheduler_state == "waiting_target_lock"
+                else "generic"
+            )
             actions.append(
                 {
                     "type": "inspect_blocker",
+                    "subtype": subtype,
                     "taskId": task.id,
                     "label": "Inspect scheduler blocker",
                 }
@@ -215,7 +334,7 @@ def _next_actions(tasks: list[Task], blockers: list[dict[str, Any]]) -> list[dic
         elif task.status == "pending":
             actions.append(
                 {
-                    "type": "start_or_wait",
+                    "type": "start_ready_task",
                     "taskId": task.id,
                     "label": "Start when dependencies and target locks allow",
                 }
