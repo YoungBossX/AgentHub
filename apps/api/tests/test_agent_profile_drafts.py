@@ -34,6 +34,14 @@ def client() -> Iterator[TestClient]:
                 provider="local",
             )
         )
+        db.add(
+            Workspace(
+                name="Empty Workspace",
+                repo_url="local://apps/empty",
+                root_path="apps/empty",
+                default_branch="main",
+            )
+        )
         db.commit()
 
     def override_db() -> Iterator[DbSession]:
@@ -80,6 +88,36 @@ def test_safe_custom_agent_draft_is_review_only_metadata(client: TestClient) -> 
         and profile["status"] == "draft_only"
         for profile in registry_response.json()
     )
+
+
+def test_draft_list_is_workspace_scoped_and_empty_without_save(client: TestClient) -> None:
+    workspace_id = _workspace_id()
+    empty_workspace_id = _workspace_id_by_name("Empty Workspace")
+
+    before_response = client.get(f"/workspaces/{empty_workspace_id}/agent-profile-drafts")
+    create_response = client.post(
+        f"/workspaces/{workspace_id}/agent-profile-drafts",
+        json={
+            "displayName": "Read Only Auditor",
+            "role": "read_only_auditor",
+            "adapterType": "scripted_mock",
+            "providerId": "local-scripted-mock",
+            "capabilityTags": ["code_review"],
+            "supportedTargets": ["demo-frontend"],
+            "supportedModes": ["review", "read_only"],
+            "description": "Reviews evidence only.",
+        },
+    )
+    workspace_response = client.get(f"/workspaces/{workspace_id}/agent-profile-drafts")
+    after_empty_response = client.get(f"/workspaces/{empty_workspace_id}/agent-profile-drafts")
+
+    assert before_response.status_code == 200
+    assert before_response.json() == []
+    assert create_response.status_code == 201
+    assert [draft["displayName"] for draft in workspace_response.json()] == [
+        "Read Only Auditor"
+    ]
+    assert after_empty_response.json() == []
 
 
 def test_draft_rejects_write_enabled_profile(client: TestClient) -> None:
@@ -134,6 +172,10 @@ def test_draft_rejects_shell_commands_and_unsafe_permissions(client: TestClient)
     assert filesystem_response.status_code == 400
     assert "unrestricted filesystem" in filesystem_response.json()["detail"]
 
+    list_response = client.get(f"/workspaces/{_workspace_id()}/agent-profile-drafts")
+    assert list_response.status_code == 200
+    assert list_response.json() == []
+
 
 def test_draft_rejects_unknown_provider(client: TestClient) -> None:
     response = client.post(
@@ -155,6 +197,10 @@ def test_draft_rejects_unknown_provider(client: TestClient) -> None:
 
 
 def _workspace_id() -> str:
+    return _workspace_id_by_name("AgentHub Demo")
+
+
+def _workspace_id_by_name(name: str) -> str:
     with next(app.dependency_overrides[get_db]()) as db:
-        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        workspace = db.exec(select(Workspace).where(Workspace.name == name)).one()
         return workspace.id

@@ -39,6 +39,8 @@ def test_agent_directory_lists_builtins_drafts_runtime_selection_and_provider_st
         assert draft["available"] is False
         assert draft["safeForWrite"] is False
         assert draft["safeForReview"] is True
+        assert draft["compatibility"]["compatible"] is False
+        assert "draft profile is disabled" in " ".join(draft["compatibility"]["reasons"])
 
         serialized = str(response.json())
         forbidden = ["apiKey", "api_key", "secret", "token", "credential"]
