@@ -205,6 +205,32 @@ class ProviderConfigResponse(ApiModel):
     supported_modes: list[str] = Field(alias="supportedModes")
 
 
+class AgentDirectoryEntryResponse(ApiModel):
+    id: str
+    entry_type: str = Field(alias="entryType")
+    display_name: str = Field(alias="displayName")
+    avatar_initials: str = Field(alias="avatarInitials")
+    role: str
+    agent_profile_id: str = Field(alias="agentProfileId")
+    provider_id: str = Field(alias="providerId")
+    adapter_type: str = Field(alias="adapterType")
+    capability_tags: list[str] = Field(alias="capabilityTags")
+    supported_targets: list[str] = Field(alias="supportedTargets")
+    supported_modes: list[str] = Field(alias="supportedModes")
+    safe_for_write: bool = Field(alias="safeForWrite")
+    safe_for_review: bool = Field(alias="safeForReview")
+    status: str
+    auth_status: str = Field(alias="authStatus")
+    available: bool
+    runtime_selected_for_roles: list[str] = Field(alias="runtimeSelectedForRoles")
+    description: str
+
+
+class AgentDirectoryResponse(ApiModel):
+    workspace_id: str = Field(alias="workspaceId")
+    entries: list[AgentDirectoryEntryResponse]
+
+
 class RuntimeRoleConfigRequest(BaseModel):
     role: Optional[str] = None
     agent_profile_id: Optional[str] = Field(default=None, alias="agentProfileId")

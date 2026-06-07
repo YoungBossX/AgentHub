@@ -10,6 +10,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
+from app.agent_directory import AgentDirectoryEntry, build_agent_directory
 from app.agent_profile_drafts import (
     AgentProfileDraftError,
     AgentProfileDraftInput,
@@ -120,6 +121,8 @@ from app.target_registry import (
 )
 from app.schemas import (
     AgentContactResponse,
+    AgentDirectoryEntryResponse,
+    AgentDirectoryResponse,
     AgentProfileDraftCreateRequest,
     AgentProfileResponse,
     ApprovalDecisionRequest,
@@ -579,6 +582,48 @@ def provider_config_response(config: ProviderConfig) -> ProviderConfigResponse:
     )
 
 
+def agent_directory_entry_response(entry: AgentDirectoryEntry) -> AgentDirectoryEntryResponse:
+    return AgentDirectoryEntryResponse(
+        id=entry.id,
+        entryType=entry.entry_type,
+        displayName=entry.display_name,
+        avatarInitials=entry.avatar_initials,
+        role=entry.role,
+        agentProfileId=entry.agent_profile_id,
+        providerId=entry.provider_id,
+        adapterType=entry.adapter_type,
+        capabilityTags=entry.capability_tags,
+        supportedTargets=entry.supported_targets,
+        supportedModes=entry.supported_modes,
+        safeForWrite=entry.safe_for_write,
+        safeForReview=entry.safe_for_review,
+        status=entry.status,
+        authStatus=entry.auth_status,
+        available=entry.available,
+        runtimeSelectedForRoles=entry.runtime_selected_for_roles,
+        description=entry.description,
+    )
+
+
+def agent_directory_response(
+    workspace_id: str,
+    *,
+    profiles: list[AgentProfile],
+    providers: list[ProviderConfig],
+    runtime_config: RuntimeConfigSnapshot,
+) -> AgentDirectoryResponse:
+    directory = build_agent_directory(
+        workspace_id=workspace_id,
+        profiles=profiles,
+        providers=providers,
+        runtime_config=runtime_config,
+    )
+    return AgentDirectoryResponse(
+        workspaceId=directory.workspace_id,
+        entries=[agent_directory_entry_response(entry) for entry in directory.entries],
+    )
+
+
 def runtime_role_config_response(role_config: RuntimeRoleConfig) -> RuntimeRoleConfigResponse:
     return RuntimeRoleConfigResponse(
         role=role_config.role,
@@ -743,6 +788,24 @@ def read_workspace_agent_profiles(
             drafts=list_agent_profile_drafts(db, workspace_id=workspace_id),
         )
     ]
+
+
+@app.get(
+    "/workspaces/{workspace_id}/agent-directory",
+    response_model=AgentDirectoryResponse,
+)
+def read_workspace_agent_directory(
+    workspace_id: str,
+    db: DbSession = Depends(get_db),
+) -> AgentDirectoryResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return agent_directory_response(
+        workspace_id,
+        profiles=runtime_config_profiles_for_workspace(db, workspace_id),
+        providers=list_provider_configs(),
+        runtime_config=get_effective_runtime_config(db, workspace_id),
+    )
 
 
 @app.get(
