@@ -3,6 +3,35 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## P18c Status
+
+### P18c-1 Memory Compliance Harness
+
+P18c-1 completed on 2026-06-07.
+
+AgentHub now has a deterministic compliance harness for the P18c live Library
+Management App memory smoke. The harness defines the exact business-only user
+prompt, the six active memory rules under test, expected desktop rehearsal
+location, Vite + React + TypeScript stack, localStorage persistence,
+change-log requirement, platform boundary, provider evidence requirement, and
+snapshot consistency requirement.
+
+The checker reports:
+
+- `project_location_memory_violation`;
+- `frontend_stack_memory_violation`;
+- `persistence_memory_violation`;
+- `memory_compliance_violation`;
+- `target_boundary_violation`;
+- `provider_evidence_violation`;
+- `snapshot_consistency_violation`.
+
+P18c-1 does not run ClaudeCodeAdapter, CodexAdapter, or ScriptedMock. It does
+not implement the Library Management App and does not change runtime provider
+behavior, Target Registry, PlanValidator, or Guardrails. Later P18c tasks will
+create the fresh session, run the live provider smoke when available, and
+collect TaskRun/diff/build/review/preview evidence.
+
 ## P17 Status
 
 ### P17c Runtime Settings Page

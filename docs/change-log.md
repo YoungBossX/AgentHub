@@ -1,5 +1,30 @@
 # AgentHub Change Log
 
+## P18c-1 Memory Compliance Harness
+
+**Date:** 2026-06-07
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `apps/api/app/live_memory_compliance.py` | Added P18c Library Management App prompt constants, active memory rule definitions, memory-rule seeding helper, provider evidence model, compliance evidence model, compliance report output, and violation checker. |
+| `apps/api/tests/test_live_memory_compliance.py` | Added deterministic coverage for compliant evidence, missing change-log update, platform path modification, unexpected backend/database creation, wrong project location, missing frontend stack, missing provider evidence, snapshot mismatch, prompt boundary, and active canonical memory rule creation. |
+| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | Marked P18c-1 complete. |
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_live_memory_compliance.py -q` | Pass |
+| `pnpm check` | Pass |
+| `pnpm test` | Pass |
+| `pnpm demo:api:test` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-p18c-live-memory-compliance-library-app --strict` | Pass |
+
+---
+
 ## P18 Memory and Instruction Control Plane
 
 **Date:** 2026-06-04
