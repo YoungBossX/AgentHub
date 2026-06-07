@@ -1745,6 +1745,99 @@ def test_llm_assistant_reply_for_platform_request_does_not_fallback_to_frontend(
     assert "平台代码修改请求" in messages[-1].content_md
 
 
+def test_invalid_llm_task_plan_records_validation_failure_before_fallback(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "task_plan",
+                "reply": None,
+                "riskLevel": "medium",
+                "reason": "Coding request, but the target is wrong.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "pending",
+                "planDraft": {
+                    "planId": "plan-invalid-target",
+                    "planner": "llm_v1",
+                    "plannerMode": "llm_v1",
+                    "rationale": "This intentionally uses an invalid target for testing.",
+                    "acceptanceCriteria": ["Dashboard exists"],
+                    "validationExpectations": ["pnpm build"],
+                    "tasks": [
+                        {
+                            "title": "Build dashboard",
+                            "role": "frontend",
+                            "targetId": "missing-target",
+                            "intentType": "frontend_change",
+                            "plannedFiles": ["src/App.tsx"],
+                            "dependsOn": [],
+                            "expectedArtifactTypes": ["diff", "review"],
+                            "acceptanceCriteria": ["Dashboard cards render"],
+                            "validationExpectations": ["pnpm build"],
+                            "riskLevel": "medium",
+                            "requiresApproval": False,
+                        }
+                    ],
+                },
+            },
+        ),
+    )
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        project = tmp_path / "external-dashboard"
+        (project / "src").mkdir(parents=True)
+        (project / "src" / "App.tsx").write_text("export default function App() { return null }\n")
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-dashboard",
+                name="External Dashboard",
+                root_path=str(project),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        session.active_frontend_target_id = "external-dashboard"
+        db.add(session)
+        db.commit()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "build a dashboard page with cards"},
+    )
+
+    assert response.status_code == 201
+    task = client.get(f"/sessions/{session_id}/tasks").json()[0]
+
+    assert task["planJson"]["planner"] == "orchestrator_external_target_v1"
+    assert task["planJson"]["plannerSource"] == "fallback"
+    assert task["planJson"]["plannerFallback"]["reason"] == "task_plan_validation_failed"
+    assert task["planJson"]["plannerFallback"]["originalOutcomeType"] == "task_plan"
+    assert task["planJson"]["plannerFallback"]["validationResult"] == "failed"
+    assert task["planJson"]["plannerFallback"]["errorCode"] == "LLM_TASK_PLAN_VALIDATION_FAILED"
+    assert "unknown target" in task["planJson"]["plannerFallback"]["errorSummary"]
+    assert task["planJson"]["plannerEvidence"]["fallbackReason"] == "task_plan_validation_failed"
+    assert task["planJson"]["plannerEvidence"]["llmOutcomeType"] == "task_plan"
+    assert task["planJson"]["plannerEvidence"]["validationResult"] == "failed"
+
+
 def test_explicit_platform_mode_request_creates_approval_gated_platform_task(
     client: TestClient,
 ) -> None:

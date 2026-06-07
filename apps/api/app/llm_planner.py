@@ -81,6 +81,14 @@ def llm_planner_fallback_metadata(
                 "status": provider_result.status,
             }
         )
+        if provider_result.provider_preset_id:
+            metadata["providerPresetId"] = provider_result.provider_preset_id
+        if provider_result.protocol:
+            metadata["protocol"] = provider_result.protocol
+        if provider_result.model:
+            metadata["model"] = provider_result.model
+        if provider_result.base_url:
+            metadata["baseUrl"] = provider_result.base_url
         return metadata
     if provider is not None:
         metadata.update(

@@ -855,6 +855,10 @@ def test_llm_planner_fallback_metadata_records_failed_real_provider() -> None:
         "providerType": "openai_responses",
         "plannerSource": "real_llm",
         "status": "failed",
+        "providerPresetId": "openai_api",
+        "protocol": "openai_responses",
+        "model": "gpt-4.1-mini",
+        "baseUrl": "https://api.openai.com/v1",
     }
     assert "succeeded" not in json.dumps(metadata)
 

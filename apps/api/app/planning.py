@@ -235,6 +235,7 @@ def plan_for_message(
                 ),
             )
             if planner_provider.planner_source != "disabled":
+                conversation = None
                 try:
                     conversation = create_llm_conversation_outcome(
                         db,
@@ -276,12 +277,28 @@ def plan_for_message(
                         )
                         return llm_tasks
                 except LLMPlannerError as exc:
+                    outcome = conversation.outcome if conversation is not None else {}
+                    is_task_plan_validation_failure = outcome.get("outcomeType") == "task_plan"
                     llm_fallback = llm_planner_fallback_metadata(
-                        "provider_failed",
-                        provider=planner_provider,
+                        (
+                            "task_plan_validation_failed"
+                            if is_task_plan_validation_failure
+                            else "provider_failed"
+                        ),
+                        provider_result=(
+                            conversation.provider_result
+                            if conversation is not None
+                            else None
+                        ),
+                        provider=None if conversation is not None else planner_provider,
                     )
-                    llm_fallback["errorCode"] = "LLM_PLANNER_FAILED"
-                    llm_fallback["errorSummary"] = str(exc)
+                    if is_task_plan_validation_failure:
+                        llm_fallback["originalOutcomeType"] = "task_plan"
+                        llm_fallback["validationResult"] = "failed"
+                        llm_fallback["errorCode"] = "LLM_TASK_PLAN_VALIDATION_FAILED"
+                    else:
+                        llm_fallback["errorCode"] = "LLM_PLANNER_FAILED"
+                    llm_fallback["errorSummary"] = _safe_planner_error_summary(str(exc))
             else:
                 llm_fallback = llm_planner_fallback_metadata(
                     "provider_unavailable" if get_settings().llm_planner_enabled else "disabled",
@@ -1638,6 +1655,20 @@ def _safe_error_excerpt(value: str) -> str:
     return redacted[:240] + ("..." if len(redacted) > 240 else "")
 
 
+def _safe_planner_error_summary(value: str) -> str:
+    redacted = re.sub(
+        r"(?i)(secret|token|password|api[_-]?key)\s*[:=]\s*[^\s;]+",
+        "[protected]",
+        value,
+    )
+    redacted = re.sub(
+        r"/[^\s]*?(?:\.env|/\.git|/node_modules|/\.venv|/secrets)(?:[^\s]*)?",
+        "[protected]",
+        redacted,
+    )
+    return _safe_error_excerpt(redacted)
+
+
 def _is_explicit_platform_mode_request(content: str) -> bool:
     normalized = MENTION_PATTERN.sub("", content).lower()
     return (
@@ -1846,7 +1877,10 @@ def _planner_evidence_from_fallback(llm_fallback: dict) -> dict:
         "status": llm_fallback.get("status"),
         "llmOutcomeType": llm_fallback.get("originalOutcomeType"),
         "deterministicExecutable": llm_fallback.get("deterministicExecutable"),
-        "validationResult": llm_fallback.get("originalValidationResult"),
+        "validationResult": (
+            llm_fallback.get("validationResult")
+            or llm_fallback.get("originalValidationResult")
+        ),
         "errorCode": llm_fallback.get("errorCode"),
         "errorSummary": llm_fallback.get("errorSummary"),
     }
