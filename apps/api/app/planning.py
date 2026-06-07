@@ -1675,16 +1675,43 @@ def _fallback_tasks_for_non_task_llm_outcome(
         "non_task_coding_outcome",
         provider=planner_provider,
     )
+    llm_fallback["originalOutcomeType"] = str(outcome.get("outcomeType") or "")
+    llm_fallback["originalValidationResult"] = str(
+        outcome.get("validationResult") or ""
+    )
     llm_fallback["errorCode"] = "LLM_NON_TASK_CODING_OUTCOME"
     llm_fallback["errorSummary"] = (
         "LLM router returned assistant_reply for a safe external frontend coding request."
     )
-    return _create_orchestrator_external_frontend_task(
+    tasks = _create_orchestrator_external_frontend_task(
         db,
         message,
         active_frontend_target,
         llm_fallback=llm_fallback,
     )
+    _record_fallback_created_task_ids(db, tasks)
+    return tasks
+
+
+def _record_fallback_created_task_ids(db: DbSession, tasks: list[Task]) -> None:
+    created_task_ids = [task.id for task in tasks]
+    for task in tasks:
+        try:
+            plan = json.loads(task.plan_json)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(plan, dict):
+            continue
+        fallback = plan.get("plannerFallback")
+        if not isinstance(fallback, dict):
+            continue
+        fallback["createdTaskIds"] = created_task_ids
+        plan["plannerFallback"] = fallback
+        task.plan_json = json.dumps(plan, separators=(",", ":"))
+        db.add(task)
+    db.commit()
+    for task in tasks:
+        db.refresh(task)
 
 
 def _primary_allowed_path(target: TargetProject) -> str:

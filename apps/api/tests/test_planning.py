@@ -1658,6 +1658,9 @@ def test_llm_assistant_reply_for_safe_external_frontend_request_falls_back_to_ta
     assert task["status"] == "running"
     assert task["planJson"]["planner"] == "orchestrator_external_target_v1"
     assert task["planJson"]["plannerSource"] == "fallback"
+    assert task["planJson"]["plannerFallback"]["reason"] == "non_task_coding_outcome"
+    assert task["planJson"]["plannerFallback"]["originalOutcomeType"] == "assistant_reply"
+    assert task["planJson"]["plannerFallback"]["createdTaskIds"] == [task["id"]]
     assert task["planJson"]["plannerFallback"]["errorCode"] == "LLM_NON_TASK_CODING_OUTCOME"
     assert task["planJson"]["plannerFallback"]["providerId"] == "fake-llm-planner"
     assert task["planJson"]["targetId"] == "external-dashboard"
