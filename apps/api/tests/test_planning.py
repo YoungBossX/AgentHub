@@ -1667,6 +1667,75 @@ def test_llm_assistant_reply_for_safe_external_frontend_request_falls_back_to_ta
     assert task["planJson"]["autoStart"] is True
 
 
+def test_llm_assistant_reply_for_platform_request_does_not_fallback_to_frontend(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "assistant_reply",
+                "reply": "我先确认一下这个平台代码修改请求。",
+                "riskLevel": "low",
+                "reason": "Router misclassified a platform request as chat.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "not_required",
+            },
+        ),
+    )
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        project = tmp_path / "external-dashboard"
+        (project / "src").mkdir(parents=True)
+        (project / "src" / "App.tsx").write_text("export default function App() { return null }\n")
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-dashboard",
+                name="External Dashboard",
+                root_path=str(project),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        session.active_frontend_target_id = "external-dashboard"
+        db.add(session)
+        db.commit()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "modify apps/api app/main.py to change health metadata"},
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at)
+        ).all()
+
+    assert [message.sender_type for message in messages] == ["user", "orchestrator"]
+    assert "平台代码修改请求" in messages[-1].content_md
+
+
 def test_explicit_platform_mode_request_creates_approval_gated_platform_task(
     client: TestClient,
 ) -> None:
