@@ -548,7 +548,9 @@ export function WorkspaceShell({
               </div>
             ) : null}
 
-            {selectedSession ? <MissionPanel ledger={ledger} /> : null}
+            {selectedSession ? (
+              <MissionPanel ledger={ledger} selectedSession={selectedSession} />
+            ) : null}
 
             <ChatThread
               messages={visibleMessages}

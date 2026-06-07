@@ -71,10 +71,13 @@ const workspace = {
 
 const initialSessions = [
   {
+    activeBackendTargetId: "demo-backend",
+    activeFrontendTargetId: "demo-frontend",
     boundBranch: "main",
     createdAt: "2026-05-16T00:00:00Z",
     id: "session-1",
     lastMessageAt: "2026-05-16T00:00:00Z",
+    memorySnapshotId: "memory-snapshot-123456789",
     sessionType: "demo",
     status: "active",
     title: "Session 1",
@@ -87,10 +90,13 @@ const initialSessions = [
 const searchableSessions = [
   initialSessions[0],
   {
+    activeBackendTargetId: null,
+    activeFrontendTargetId: "external-library-app",
     boundBranch: "main",
     createdAt: "2026-05-16T01:00:00Z",
     id: "session-2",
     lastMessageAt: "2026-05-17T00:00:00Z",
+    memorySnapshotId: null,
     sessionType: "demo",
     status: "active",
     title: "Library app rehearsal",
@@ -99,10 +105,13 @@ const searchableSessions = [
     worktreePath: "/repo/.worktrees/session-2",
   },
   {
+    activeBackendTargetId: "external-backend-api",
+    activeFrontendTargetId: null,
     boundBranch: "main",
     createdAt: "2026-05-16T02:00:00Z",
     id: "session-3",
     lastMessageAt: null,
+    memorySnapshotId: null,
     sessionType: "demo",
     status: "active",
     title: "Backend API cleanup",
@@ -563,9 +572,13 @@ describe("WorkspaceShell", () => {
       expect(
         screen.getByText("@orchestrator build a login page for the demo app"),
       ).toBeTruthy()
-      expect(screen.getByText("Mock deploy ready")).toBeTruthy()
+      expect(screen.getByText("Deploy ready")).toBeTruthy()
       expect(screen.getByText("scripted_mock")).toBeTruthy()
       expect(screen.getByText("apps/demo/src/App.tsx")).toBeTruthy()
+      expect(screen.getByText("demo-frontend")).toBeTruthy()
+      expect(screen.getByText("demo-backend")).toBeTruthy()
+      expect(screen.getByText("memory-s")).toBeTruthy()
+      expect(screen.getByText("mock")).toBeTruthy()
     })
   })
 
