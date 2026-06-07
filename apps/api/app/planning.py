@@ -2,7 +2,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from sqlmodel import Session as DbSession
 from sqlmodel import select
@@ -242,6 +242,20 @@ def plan_for_message(
                         provider=planner_provider,
                     )
                     if conversation.outcome["outcomeType"] != "task_plan":
+                        fallback_tasks = _fallback_tasks_for_non_task_llm_outcome(
+                            db,
+                            message,
+                            content,
+                            conversation.outcome,
+                            planner_provider,
+                        )
+                        if fallback_tasks:
+                            _attach_planner_runtime_evidence(
+                                db,
+                                fallback_tasks,
+                                planner_runtime,
+                            )
+                            return fallback_tasks
                         _create_conversation_outcome_message(
                             db,
                             message,
@@ -1637,6 +1651,40 @@ def _is_explicit_platform_mode_request(content: str) -> bool:
 def _demo_backend_target_exists() -> bool:
     backend_target = get_target(DEMO_BACKEND_TARGET_ID)
     return (_repo_root() / backend_target.root / "app/main.py").exists()
+
+
+def _fallback_tasks_for_non_task_llm_outcome(
+    db: DbSession,
+    message: Message,
+    content: str,
+    outcome: dict[str, Any],
+    planner_provider,
+) -> list[Task]:
+    if str(outcome.get("outcomeType") or "") != "assistant_reply":
+        return []
+    if _is_pure_chat_request(content):
+        return []
+    if list_session_tasks(db, message.session_id):
+        return []
+    active_frontend_target = _active_external_target_for_role(db, message, "frontend")
+    if active_frontend_target is None:
+        return []
+    if not _is_safe_external_frontend_request(content):
+        return []
+    llm_fallback = llm_planner_fallback_metadata(
+        "non_task_coding_outcome",
+        provider=planner_provider,
+    )
+    llm_fallback["errorCode"] = "LLM_NON_TASK_CODING_OUTCOME"
+    llm_fallback["errorSummary"] = (
+        "LLM router returned assistant_reply for a safe external frontend coding request."
+    )
+    return _create_orchestrator_external_frontend_task(
+        db,
+        message,
+        active_frontend_target,
+        llm_fallback=llm_fallback,
+    )
 
 
 def _primary_allowed_path(target: TargetProject) -> str:
