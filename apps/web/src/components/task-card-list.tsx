@@ -322,6 +322,7 @@ export function TaskCardList({
               ) : null}
               <PlanReviewSummary
                 metadata={task.planReviewMetadata ?? planReviewMetadataFromPlan(task)}
+                plannerEvidence={plannerEvidenceFromPlan(task)}
               />
               <SchedulerSummary scheduler={scheduler} />
               <ArtifactChips
@@ -482,22 +483,38 @@ function ArtifactMessageCards({
   )
 }
 
-function PlanReviewSummary({ metadata }: { metadata: PlanReviewMetadata | null }) {
-  if (!metadata) {
+type PlannerEvidenceSummary = {
+  errorCode?: string
+  errorSummary?: string
+  fallbackReason?: string
+  plannerSource?: string
+  providerId?: string
+  validationResult?: string
+}
+
+function PlanReviewSummary({
+  metadata,
+  plannerEvidence,
+}: {
+  metadata: PlanReviewMetadata | null
+  plannerEvidence: PlannerEvidenceSummary | null
+}) {
+  if (!metadata && !plannerEvidence) {
     return null
   }
-  const plannedFiles = metadata.plannedFiles ?? []
-  const acceptanceCriteria = metadata.acceptanceCriteria ?? []
-  const validationExpectations = metadata.validationExpectations ?? []
-  const taskBreakdown = metadata.taskBreakdown ?? []
+  const plannedFiles = metadata?.plannedFiles ?? []
+  const acceptanceCriteria = metadata?.acceptanceCriteria ?? []
+  const validationExpectations = metadata?.validationExpectations ?? []
+  const taskBreakdown = metadata?.taskBreakdown ?? []
   const hasContent = Boolean(
-    metadata.plannerMode ||
-      metadata.rationale ||
-      metadata.targetId ||
+    metadata?.plannerMode ||
+      metadata?.rationale ||
+      metadata?.targetId ||
       plannedFiles.length ||
       acceptanceCriteria.length ||
       validationExpectations.length ||
-      taskBreakdown.length,
+      taskBreakdown.length ||
+      plannerEvidence,
   )
   if (!hasContent) {
     return null
@@ -507,27 +524,62 @@ function PlanReviewSummary({ metadata }: { metadata: PlanReviewMetadata | null }
     <section className="mt-3 rounded-lg border border-[var(--border)] bg-white p-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-bold text-slate-700">计划审阅</span>
-        {metadata.plannerMode ? (
+        {metadata?.plannerMode ? (
           <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-600">
             {metadata.plannerMode}
           </span>
         ) : null}
-        {metadata.targetId ? (
+        {metadata?.targetId ? (
           <span className="rounded-full bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
             {metadata.targetId}
           </span>
         ) : null}
-        {metadata.readOnly ? (
+        {metadata?.readOnly ? (
           <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
             read-only
           </span>
         ) : null}
+        {plannerEvidence?.plannerSource ? (
+          <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+            {plannerEvidence.plannerSource}
+          </span>
+        ) : null}
       </div>
-      {metadata.rationale ? (
+      {metadata?.rationale ? (
         <p className="mt-2 line-clamp-2 text-slate-600">{metadata.rationale}</p>
       ) : null}
+      {plannerEvidence ? (
+        <div className="mt-2 grid gap-1.5 rounded-md bg-purple-50 px-2.5 py-2 text-[11px] text-purple-900">
+          <p className="font-semibold">规划证据</p>
+          <div className="flex flex-wrap gap-1.5">
+            {plannerEvidence.providerId ? (
+              <span className="rounded bg-white/70 px-2 py-0.5 font-mono">
+                {plannerEvidence.providerId}
+              </span>
+            ) : null}
+            {plannerEvidence.validationResult ? (
+              <span className="rounded bg-white/70 px-2 py-0.5">
+                validation {plannerEvidence.validationResult}
+              </span>
+            ) : null}
+            {plannerEvidence.fallbackReason ? (
+              <span className="rounded bg-white/70 px-2 py-0.5">
+                fallback {plannerEvidence.fallbackReason}
+              </span>
+            ) : null}
+            {plannerEvidence.errorCode ? (
+              <span className="rounded bg-white/70 px-2 py-0.5">
+                {plannerEvidence.errorCode}
+              </span>
+            ) : null}
+          </div>
+          {plannerEvidence.errorSummary ? (
+            <p className="line-clamp-2">{plannerEvidence.errorSummary}</p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium text-slate-500">
-        {metadata.assignedRole ? (
+        {metadata?.assignedRole ? (
           <span className="rounded bg-slate-50 px-2 py-0.5">@{metadata.assignedRole}</span>
         ) : null}
         {taskBreakdown.length > 0 ? (
@@ -558,6 +610,25 @@ function PlanReviewSummary({ metadata }: { metadata: PlanReviewMetadata | null }
       </div>
     </section>
   )
+}
+
+function plannerEvidenceFromPlan(task: SessionTask): PlannerEvidenceSummary | null {
+  const plan = task.planJson
+  const evidence = objectValue(plan.plannerEvidence)
+  const fallback = objectValue(plan.plannerFallback)
+  const source = Object.keys(evidence).length > 0 ? evidence : fallback
+  if (Object.keys(source).length === 0) {
+    return null
+  }
+
+  return {
+    errorCode: stringValue(source.errorCode),
+    errorSummary: stringValue(source.errorSummary),
+    fallbackReason: stringValue(source.fallbackReason) || stringValue(source.reason),
+    plannerSource: stringValue(source.plannerSource),
+    providerId: stringValue(source.providerId),
+    validationResult: stringValue(source.validationResult),
+  }
 }
 
 function planReviewMetadataFromPlan(task: SessionTask): PlanReviewMetadata | null {

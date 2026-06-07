@@ -78,6 +78,16 @@ describe("TaskCardList", () => {
   it("renders read-only planner rationale and task review metadata", () => {
     const plannedTask: SessionTask = {
       ...baseTask,
+      planJson: {
+        plannerEvidence: {
+          errorCode: "LLM_TASK_PLAN_VALIDATION_FAILED",
+          errorSummary: "targetId was invalid before deterministic fallback.",
+          fallbackReason: "non_task_coding_outcome",
+          plannerSource: "fallback",
+          providerId: "deepseek-api-planner",
+          validationResult: "failed",
+        },
+      },
       planReviewMetadata: {
         plannerMode: "llm_v1",
         rationale: "Implement a game inside the registered frontend target.",
@@ -111,6 +121,13 @@ describe("TaskCardList", () => {
     expect(screen.getByText("acceptance 2")).toBeTruthy()
     expect(screen.getByText("validation 1")).toBeTruthy()
     expect(screen.getByText("read-only")).toBeTruthy()
+    expect(screen.getByText("规划证据")).toBeTruthy()
+    expect(screen.getByText("fallback")).toBeTruthy()
+    expect(screen.getByText("deepseek-api-planner")).toBeTruthy()
+    expect(screen.getByText("validation failed")).toBeTruthy()
+    expect(screen.getByText("fallback non_task_coding_outcome")).toBeTruthy()
+    expect(screen.getByText("LLM_TASK_PLAN_VALIDATION_FAILED")).toBeTruthy()
+    expect(screen.getByText("targetId was invalid before deterministic fallback.")).toBeTruthy()
   })
 
   it("renders run history and P0 run controls", () => {
