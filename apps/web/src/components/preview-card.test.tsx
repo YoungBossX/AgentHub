@@ -118,4 +118,95 @@ describe("PreviewCard", () => {
       screen.getByText("任务生成 Diff、评审、预览或部署证据后，可在这里查看详情。"),
     ).toBeTruthy()
   })
+
+  it("renders artifact workbench markdown content and version metadata", () => {
+    render(
+      createElement(PreviewPanel, {
+        artifactItems: [
+          {
+            artifact: {
+              artifactId: "artifact-doc-1",
+              artifactType: "markdown_document",
+              contentHash: "sha256:artifact",
+              createdAt: "2026-06-08T00:00:00Z",
+              editable: true,
+              rendererKind: "markdown_document",
+              safeMeta: { safePath: "docs/change-log.md" },
+              status: "ready",
+              taskRunId: "run-1",
+              title: "Release notes",
+              updatedAt: "2026-06-08T00:00:00Z",
+              version: 2,
+              versions: [
+                {
+                  artifactId: "artifact-doc-1",
+                  changedFiles: [],
+                  contentHash: "sha256:version",
+                  contentMd: "# Release notes",
+                  createdAt: "2026-06-08T00:00:00Z",
+                  editorSource: "user",
+                  gitBaseRef: null,
+                  gitHeadRef: null,
+                  id: "version-2",
+                  parentArtifactId: null,
+                  parentVersionId: "version-1",
+                  sourceTaskRunId: "run-1",
+                  summary: "Edited release notes.",
+                  version: 2,
+                },
+              ],
+            },
+            id: "workbench:artifact-doc-1",
+            kind: "workbench",
+            taskRunId: "run-1",
+            taskTitle: "Release notes",
+          },
+        ],
+        frameKey: 1,
+        selectedArtifactId: "workbench:artifact-doc-1",
+      }),
+    )
+
+    expect(screen.getByText("Artifact Workbench")).toBeTruthy()
+    expect(screen.getAllByText("Markdown 文档").length).toBeGreaterThan(0)
+    expect(screen.getByText("# Release notes")).toBeTruthy()
+    expect(screen.getAllByText("v2").length).toBeGreaterThan(0)
+    expect(screen.getByText("Edited release notes.")).toBeTruthy()
+  })
+
+  it("renders unknown artifact workbench fallback with safe metadata", () => {
+    render(
+      createElement(PreviewPanel, {
+        artifactItems: [
+          {
+            artifact: {
+              artifactId: "artifact-unknown-1",
+              artifactType: "custom_binary",
+              contentHash: "sha256:artifact",
+              createdAt: "2026-06-08T00:00:00Z",
+              editable: false,
+              rendererKind: "unknown",
+              safeMeta: { label: "opaque artifact" },
+              status: "ready",
+              taskRunId: "run-1",
+              title: "Opaque artifact",
+              updatedAt: "2026-06-08T00:00:00Z",
+              version: 1,
+              versions: [],
+            },
+            id: "workbench:artifact-unknown-1",
+            kind: "workbench",
+            taskRunId: "run-1",
+            taskTitle: "Opaque artifact",
+          },
+        ],
+        frameKey: 1,
+        selectedArtifactId: "workbench:artifact-unknown-1",
+      }),
+    )
+
+    expect(screen.getAllByText("未知类型").length).toBeGreaterThan(0)
+    expect(screen.getByText(/opaque artifact/)).toBeTruthy()
+    expect(screen.getByText("尚无版本记录")).toBeTruthy()
+  })
 })

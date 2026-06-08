@@ -15,6 +15,7 @@ import {
   forceCodexFailure,
   getAgentRuntimeConfig,
   getSessionLedger,
+  getSessionArtifactWorkbench,
   getBackendHealth,
   getDemoWorkspace,
   getWorkspaceAgentDirectory,
@@ -1206,6 +1207,64 @@ describe("task API", () => {
     )
     expect(diffs[0].changedFiles).toEqual(["apps/demo/src/App.tsx"])
     expect(diffs[0].stats.additions).toBe(2)
+  })
+
+  it("loads session artifact workbench metadata", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          sessionId: "session-1",
+          artifacts: [
+            {
+              artifactId: "artifact-doc-1",
+              taskRunId: "run-1",
+              artifactType: "markdown_document",
+              title: "Release notes",
+              status: "ready",
+              version: 2,
+              rendererKind: "markdown_document",
+              editable: true,
+              contentHash: "sha256:artifact",
+              safeMeta: { safePath: "docs/change-log.md" },
+              versions: [
+                {
+                  id: "version-2",
+                  artifactId: "artifact-doc-1",
+                  version: 2,
+                  parentVersionId: "version-1",
+                  sourceTaskRunId: "run-1",
+                  parentArtifactId: null,
+                  gitBaseRef: null,
+                  gitHeadRef: null,
+                  changedFiles: [],
+                  summary: "Edited artifact.",
+                  contentMd: "# Release notes",
+                  contentHash: "sha256:version",
+                  editorSource: "user",
+                  createdAt: "2026-06-08T00:00:00Z",
+                },
+              ],
+              createdAt: "2026-06-08T00:00:00Z",
+              updatedAt: "2026-06-08T00:00:00Z",
+            },
+          ],
+        }),
+        { status: 200 },
+      )
+    })
+
+    const workbench = await getSessionArtifactWorkbench(
+      "http://127.0.0.1:8000",
+      "session-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/sessions/session-1/artifact-workbench",
+      { cache: "no-store" },
+    )
+    expect(workbench.artifacts[0].rendererKind).toBe("markdown_document")
+    expect(workbench.artifacts[0].versions[0].contentMd).toBe("# Release notes")
   })
 
   it("creates and lists review artifacts for a task run", async () => {

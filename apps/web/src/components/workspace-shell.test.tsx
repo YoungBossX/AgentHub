@@ -17,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
   denyTaskRun: vi.fn(),
   forceCodexFailure: vi.fn(),
   getAgentRuntimeConfig: vi.fn(),
+  getSessionArtifactWorkbench: vi.fn(),
   getSessionLedger: vi.fn(),
   interruptTaskRun: vi.fn(),
   listSessionMessages: vi.fn(),
@@ -47,6 +48,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   denyTaskRun: apiMocks.denyTaskRun,
   forceCodexFailure: apiMocks.forceCodexFailure,
   getAgentRuntimeConfig: apiMocks.getAgentRuntimeConfig,
+  getSessionArtifactWorkbench: apiMocks.getSessionArtifactWorkbench,
   getSessionLedger: apiMocks.getSessionLedger,
   interruptTaskRun: apiMocks.interruptTaskRun,
   listSessionMessages: apiMocks.listSessionMessages,
@@ -319,6 +321,10 @@ describe("WorkspaceShell", () => {
       "http://127.0.0.1:8000/sessions/session-1/events?after=0&stream=true",
     )
     apiMocks.getSessionLedger.mockResolvedValue(null)
+    apiMocks.getSessionArtifactWorkbench.mockResolvedValue({
+      artifacts: [],
+      sessionId: "session-1",
+    })
     apiMocks.getAgentRuntimeConfig.mockResolvedValue(runtimeConfig)
     apiMocks.updateAgentRuntimeConfig.mockResolvedValue({
       ...runtimeConfig,

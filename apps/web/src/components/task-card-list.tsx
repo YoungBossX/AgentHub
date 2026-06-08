@@ -5,6 +5,7 @@ import {
   CircleAlert,
   Code2,
   FileDiff,
+  FileText,
   GitBranch,
   Monitor,
   Play,
@@ -1055,6 +1056,7 @@ function compareArtifactCards(a: ArtifactPanelItem, b: ArtifactPanelItem) {
     diff: 0,
     preview: 2,
     review: 1,
+    workbench: 4,
   }
   return order[a.kind] - order[b.kind]
 }
@@ -1099,6 +1101,23 @@ function artifactCardMeta(item: ArtifactPanelItem) {
     }
   }
 
+  if (item.kind === "workbench") {
+    const latestVersion =
+      item.artifact.versions.find((version) => version.version === item.artifact.version) ??
+      item.artifact.versions[item.artifact.versions.length - 1] ??
+      null
+    return {
+      rows: [
+        { label: "版本", value: `v${item.artifact.version}` },
+        { label: "渲染", value: item.artifact.rendererKind },
+        { label: "编辑", value: item.artifact.editable ? "可编辑" : "只读" },
+      ],
+      status: statusLabel(item.artifact.status),
+      summary: latestVersion?.summary || "Artifact Workbench 元数据产物。",
+      title: item.artifact.title,
+    }
+  }
+
   return {
     rows: [
       { label: "提供方", value: item.artifact.provider },
@@ -1117,6 +1136,7 @@ function artifactCardKindLabel(kind: ArtifactPanelItem["kind"]) {
     diff: "Diff",
     preview: "预览",
     review: "评审",
+    workbench: "文档",
   }
   return labels[kind]
 }
@@ -1127,6 +1147,7 @@ function artifactInspectLabel(kind: ArtifactPanelItem["kind"]) {
     diff: "查看 Diff",
     preview: "查看预览",
     review: "查看评审",
+    workbench: "查看文档",
   }
   return labels[kind]
 }
@@ -1141,6 +1162,9 @@ function ArtifactKindIcon({ kind }: { kind: ArtifactPanelItem["kind"] }) {
   if (kind === "review") {
     return <SearchCheck aria-hidden="true" size={17} />
   }
+  if (kind === "workbench") {
+    return <FileText aria-hidden="true" size={17} />
+  }
   return <FileDiff aria-hidden="true" size={17} />
 }
 
@@ -1150,6 +1174,7 @@ function artifactCardIconClass(kind: ArtifactPanelItem["kind"]) {
     diff: "bg-cyan-50 text-cyan-700",
     preview: "bg-green-50 text-green-700",
     review: "bg-amber-50 text-amber-700",
+    workbench: "bg-slate-100 text-slate-700",
   }
   return classes[kind]
 }
@@ -1160,6 +1185,7 @@ function artifactCardBorder(kind: ArtifactPanelItem["kind"]) {
     diff: "border-cyan-200",
     preview: "border-green-200",
     review: "border-amber-200",
+    workbench: "border-slate-200",
   }
   return classes[kind]
 }

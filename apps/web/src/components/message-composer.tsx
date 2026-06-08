@@ -110,6 +110,7 @@ function artifactContextLabel(item: ArtifactPanelItem) {
     diff: "Diff 产物",
     preview: "预览产物",
     review: "评审产物",
+    workbench: "工作台产物",
   }
   return labels[item.kind]
 }

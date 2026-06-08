@@ -36,6 +36,7 @@ import {
   decideTaskPlan,
   denyTaskRun,
   forceCodexFailure,
+  getSessionArtifactWorkbench,
   getSessionLedger,
   interruptTaskRun,
   listTaskRunPreviews,
@@ -46,6 +47,7 @@ import {
   sessionEventsUrl,
   startTaskRunPreview,
   stopPreview,
+  type ArtifactWorkbenchArtifact,
   type AgentContact,
   type ChatMessage,
   type PreviewArtifact,
@@ -81,7 +83,8 @@ export function WorkspaceShell({
   const [draft, setDraft] = useState("")
   const [lastEventSequence, setLastEventSequence] = useState(0)
   const [artifactRefreshVersion, setArtifactRefreshVersion] = useState(0)
-  const [artifactItems, setArtifactItems] = useState<ArtifactPanelItem[]>([])
+  const [evidenceArtifactItems, setEvidenceArtifactItems] = useState<ArtifactPanelItem[]>([])
+  const [workbenchArtifacts, setWorkbenchArtifacts] = useState<ArtifactWorkbenchArtifact[]>([])
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
   const [contextArtifactId, setContextArtifactId] = useState<string | null>(null)
   const [contextMessage, setContextMessage] = useState<ChatMessage | null>(null)
@@ -94,6 +97,10 @@ export function WorkspaceShell({
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedSessionId) ?? null,
     [selectedSessionId, sessions],
+  )
+  const artifactItems = useMemo(
+    () => mergeArtifactPanelItems(evidenceArtifactItems, workbenchArtifacts),
+    [evidenceArtifactItems, workbenchArtifacts],
   )
   const selectedArtifact =
     artifactItems.find((artifact) => artifact.id === selectedArtifactId) ?? null
@@ -182,13 +189,38 @@ export function WorkspaceShell({
     }
 
     let cancelled = false
+    getSessionArtifactWorkbench(backendUrl, selectedSessionId)
+      .then((workbench) => {
+        if (!cancelled) {
+          setWorkbenchArtifacts(workbench.artifacts)
+          setSyncError(null)
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          reportSyncError("无法加载产物工作台", error)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [artifactRefreshVersion, backendUrl, reportSyncError, selectedSessionId])
+
+  useEffect(() => {
+    if (!selectedSessionId) {
+      return
+    }
+
+    let cancelled = false
     listSessionTasks(backendUrl, selectedSessionId)
       .then((nextTasks) => {
         if (!cancelled) {
           setTasks(nextTasks)
           setSyncError(null)
           if (nextTasks.length === 0) {
-            setArtifactItems([])
+            setEvidenceArtifactItems([])
+            setWorkbenchArtifacts([])
             setSelectedArtifactId(null)
           }
         }
@@ -243,7 +275,8 @@ export function WorkspaceShell({
 
   function selectSession(sessionId: string) {
     setSyncError(null)
-    setArtifactItems([])
+    setEvidenceArtifactItems([])
+    setWorkbenchArtifacts([])
     setSelectedArtifactId(null)
     setLedger(null)
     const params = new URLSearchParams(searchParams.toString())
@@ -277,7 +310,8 @@ export function WorkspaceShell({
       await refreshLedger()
       setSyncError(null)
       if (nextTasks.length === 0) {
-        setArtifactItems([])
+        setEvidenceArtifactItems([])
+        setWorkbenchArtifacts([])
         setSelectedArtifactId(null)
       }
     } catch (error) {
@@ -441,7 +475,7 @@ export function WorkspaceShell({
   }
 
   const handleArtifactsChange = useCallback((artifacts: ArtifactPanelItem[]) => {
-    setArtifactItems(artifacts)
+    setEvidenceArtifactItems(artifacts)
     setSelectedArtifactId((current) => {
       if (current && artifacts.some((artifact) => artifact.id === current)) {
         return current
@@ -796,4 +830,26 @@ function DemoPipeline({
       </ol>
     </div>
   )
+}
+
+function mergeArtifactPanelItems(
+  evidenceItems: ArtifactPanelItem[],
+  workbenchArtifacts: ArtifactWorkbenchArtifact[],
+): ArtifactPanelItem[] {
+  const coveredArtifactIds = new Set(
+    evidenceItems.map((item) => item.artifact.artifactId),
+  )
+  const workbenchItems = workbenchArtifacts
+    .filter((artifact) => !coveredArtifactIds.has(artifact.artifactId))
+    .map(
+      (artifact): ArtifactPanelItem => ({
+        artifact,
+        id: `workbench:${artifact.artifactId}`,
+        kind: "workbench",
+        taskRunId: artifact.taskRunId,
+        taskTitle: artifact.title,
+      }),
+    )
+
+  return [...evidenceItems, ...workbenchItems]
 }

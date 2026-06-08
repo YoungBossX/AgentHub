@@ -489,6 +489,44 @@ export type DeploymentArtifact = {
   updatedAt: string
 }
 
+export type ArtifactWorkbenchVersion = {
+  id: string
+  artifactId: string
+  version: number
+  parentVersionId: string | null
+  sourceTaskRunId: string | null
+  parentArtifactId: string | null
+  gitBaseRef: string | null
+  gitHeadRef: string | null
+  changedFiles: string[]
+  summary: string
+  contentMd: string
+  contentHash: string
+  editorSource: string
+  createdAt: string
+}
+
+export type ArtifactWorkbenchArtifact = {
+  artifactId: string
+  taskRunId: string
+  artifactType: string
+  title: string
+  status: string
+  version: number
+  rendererKind: string
+  editable: boolean
+  contentHash: string
+  safeMeta: Record<string, unknown>
+  versions: ArtifactWorkbenchVersion[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type ArtifactWorkbenchSession = {
+  sessionId: string
+  artifacts: ArtifactWorkbenchArtifact[]
+}
+
 type Fetcher = typeof fetch
 
 function apiUrl(backendUrl: string, path: string) {
@@ -1205,6 +1243,25 @@ export async function listTaskRunDeployments(
   }
 
   return (await response.json()) as DeploymentArtifact[]
+}
+
+export async function getSessionArtifactWorkbench(
+  backendUrl: string,
+  sessionId: string,
+  fetcher: Fetcher = fetch,
+): Promise<ArtifactWorkbenchSession> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/sessions/${sessionId}/artifact-workbench`),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return { sessionId, artifacts: [] }
+  }
+
+  return (await response.json()) as ArtifactWorkbenchSession
 }
 
 async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {

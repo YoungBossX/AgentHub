@@ -1,11 +1,22 @@
 "use client"
 
-import { ExternalLink, Monitor, RefreshCw, Rocket, ShieldCheck, Square, X } from "lucide-react"
+import {
+  Code2,
+  ExternalLink,
+  FileText,
+  Monitor,
+  RefreshCw,
+  Rocket,
+  ShieldCheck,
+  Square,
+  X,
+} from "lucide-react"
 
 import { DeployCard } from "./deploy-card"
 import { DiffCard } from "./diff-card"
 import { Button } from "@/components/ui/button"
 import type {
+  ArtifactWorkbenchArtifact,
   DeploymentArtifact,
   DiffArtifact,
   PreviewArtifact,
@@ -62,6 +73,13 @@ export type ArtifactPanelItem =
       artifact: DeploymentArtifact
       id: string
       kind: "deployment"
+      taskRunId: string
+      taskTitle: string
+    }
+  | {
+      artifact: ArtifactWorkbenchArtifact
+      id: string
+      kind: "workbench"
       taskRunId: string
       taskTitle: string
     }
@@ -260,7 +278,7 @@ export function PreviewPanel({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-4 gap-1 rounded-full bg-[var(--surface-muted)] p-1">
+        <div className="mt-4 grid grid-cols-5 gap-1 rounded-full bg-[var(--surface-muted)] p-1">
           <ArtifactRailItem
             active={activeKind === "diff"}
             count={artifactItems.filter((item) => item.kind === "diff").length}
@@ -300,6 +318,17 @@ export function PreviewPanel({
             label="部署"
             onSelect={() => {
               const item = latestByKind("deployment")
+              if (item) {
+                onSelectArtifact?.(item.id)
+              }
+            }}
+          />
+          <ArtifactRailItem
+            active={activeKind === "workbench"}
+            count={artifactItems.filter((item) => item.kind === "workbench").length}
+            label="文档"
+            onSelect={() => {
+              const item = latestByKind("workbench")
               if (item) {
                 onSelectArtifact?.(item.id)
               }
@@ -423,6 +452,10 @@ function ArtifactDetail({
     return <ReviewCard review={item.artifact} />
   }
 
+  if (item.kind === "workbench") {
+    return <WorkbenchArtifactDetail artifact={item.artifact} />
+  }
+
   return (
     <div className="grid gap-3">
       <PreviewCard
@@ -486,6 +519,9 @@ function panelTitle(item: ArtifactPanelItem | null) {
   if (item.kind === "review") {
     return item.artifact.title
   }
+  if (item.kind === "workbench") {
+    return item.artifact.title
+  }
   return item.artifact.title
 }
 
@@ -496,6 +532,10 @@ function artifactKindLabel(kind: ArtifactPanelItem["kind"]) {
 
   if (kind === "preview") {
     return "预览产物"
+  }
+
+  if (kind === "workbench") {
+    return "工作台产物"
   }
 
   return kind === "review" ? "评审产物" : "Diff 产物"
@@ -532,12 +572,117 @@ function summaryRows(item: ArtifactPanelItem) {
     ]
   }
 
+  if (item.kind === "workbench") {
+    return [
+      { label: "渲染", value: rendererKindLabel(item.artifact.rendererKind) },
+      { label: "版本", value: `v${item.artifact.version}` },
+      { label: "可编辑", value: item.artifact.editable ? "是" : "否" },
+      { label: "历史", value: `${item.artifact.versions.length} 个版本` },
+    ]
+  }
+
   return [
     { label: "提供方", value: item.artifact.provider },
     { label: "状态", value: statusLabel(item.artifact.status) },
     { label: "环境", value: item.artifact.environment },
     { label: "URL", value: item.artifact.url ?? "mock://pending" },
   ]
+}
+
+function WorkbenchArtifactDetail({ artifact }: { artifact: ArtifactWorkbenchArtifact }) {
+  const latestVersion =
+    artifact.versions.find((version) => version.version === artifact.version) ??
+    artifact.versions[artifact.versions.length - 1] ??
+    null
+  const hasTextContent = Boolean(latestVersion?.contentMd)
+  const safeMeta = JSON.stringify(artifact.safeMeta, null, 2)
+  const isCode = artifact.rendererKind === "code_snippet"
+
+  return (
+    <article className="grid gap-3 rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
+            {isCode ? (
+              <Code2 aria-hidden="true" size={14} />
+            ) : (
+              <FileText aria-hidden="true" size={14} />
+            )}
+            Artifact Workbench
+          </p>
+          <h3 className="mt-1 truncate text-sm font-semibold">{artifact.title}</h3>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            {rendererKindLabel(artifact.rendererKind)} · {artifact.artifactType}
+          </p>
+        </div>
+        <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
+          {artifact.editable ? "可编辑" : "只读"}
+        </span>
+      </div>
+
+      <dl className="grid gap-2 text-xs sm:grid-cols-3">
+        <div>
+          <dt className="text-[var(--muted-foreground)]">版本</dt>
+          <dd className="mt-1 font-medium">v{artifact.version}</dd>
+        </div>
+        <div>
+          <dt className="text-[var(--muted-foreground)]">状态</dt>
+          <dd className="mt-1 font-medium">{statusLabel(artifact.status)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--muted-foreground)]">内容哈希</dt>
+          <dd className="mt-1 truncate font-mono font-medium">
+            {(latestVersion?.contentHash ?? artifact.contentHash).slice(0, 20)}
+          </dd>
+        </div>
+      </dl>
+
+      {hasTextContent ? (
+        <pre className="max-h-[420px] overflow-auto rounded-lg bg-slate-950 p-3 text-xs leading-6 text-slate-50">
+          <code>{latestVersion?.contentMd}</code>
+        </pre>
+      ) : (
+        <pre className="max-h-[320px] overflow-auto rounded-lg bg-[var(--surface-muted)] p-3 text-xs leading-6 text-slate-700">
+          <code>{safeMeta === "{}" ? "暂无可渲染正文，显示安全元数据 fallback。" : safeMeta}</code>
+        </pre>
+      )}
+
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
+            版本历史
+          </p>
+          <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+            {artifact.versions.length} 个版本
+          </span>
+        </div>
+        <ol className="mt-2 grid gap-1.5 text-xs">
+          {artifact.versions.length > 0 ? (
+            artifact.versions.map((version) => (
+              <li
+                className="grid gap-1 rounded-md bg-white px-2.5 py-2 text-slate-700"
+                key={version.id}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold">v{version.version}</span>
+                  <span className="font-mono text-[11px] text-slate-500">
+                    {version.contentHash.slice(0, 18)}
+                  </span>
+                </div>
+                <p className="line-clamp-2 text-slate-500">
+                  {version.summary || "Artifact workbench version"}
+                </p>
+              </li>
+            ))
+          ) : (
+            <li className="rounded-md bg-white px-2.5 py-2 text-slate-500">
+              尚无版本记录
+            </li>
+          )}
+        </ol>
+      </section>
+    </article>
+  )
 }
 
 function ReviewCard({ review }: { review: ReviewArtifact }) {
@@ -626,4 +771,18 @@ function riskLabel(riskLevel: string) {
     medium: "中",
   }
   return labels[riskLevel] ?? riskLevel
+}
+
+function rendererKindLabel(rendererKind: string) {
+  const labels: Record<string, string> = {
+    code_snippet: "代码片段",
+    deployment: "部署证据",
+    diff: "Diff 证据",
+    markdown_document: "Markdown 文档",
+    review: "评审证据",
+    text_document: "文本",
+    unknown: "未知类型",
+    web_preview: "网页预览",
+  }
+  return labels[rendererKind] ?? rendererKind
 }
