@@ -37,6 +37,15 @@ from app.artifact_versions import (
     StoredArtifactVersion,
     list_artifact_versions,
 )
+from app.artifact_workbench import (
+    ArtifactVersionWorkbenchMetadata,
+    ArtifactWorkbenchError,
+    ArtifactWorkbenchMetadata,
+    artifact_workbench_metadata_for_id,
+    artifact_workbench_version_for_id,
+    list_artifact_workbench_versions,
+    list_session_artifact_workbench,
+)
 from app.config import get_settings
 from app.claude_code_adapter import ClaudeCodeAdapter
 from app.codex_adapter import CodexAdapter
@@ -140,6 +149,9 @@ from app.schemas import (
     HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
+    ArtifactWorkbenchArtifactResponse,
+    ArtifactWorkbenchSessionResponse,
+    ArtifactWorkbenchVersionResponse,
     ArtifactVersionResponse,
     ExternalProjectAnalysisRequest,
     ExternalProjectAnalysisResponse,
@@ -1760,6 +1772,47 @@ def artifact_version_response(version: StoredArtifactVersion) -> ArtifactVersion
     )
 
 
+def artifact_workbench_version_response(
+    version: ArtifactVersionWorkbenchMetadata,
+) -> ArtifactWorkbenchVersionResponse:
+    return ArtifactWorkbenchVersionResponse(
+        id=version.id,
+        artifactId=version.artifact_id,
+        version=version.version,
+        sourceTaskRunId=version.source_task_run_id,
+        parentArtifactId=version.parent_artifact_id,
+        gitBaseRef=version.git_base_ref,
+        gitHeadRef=version.git_head_ref,
+        changedFiles=version.changed_files,
+        summary=version.summary,
+        contentHash=version.content_hash,
+        createdAt=version.created_at,
+    )
+
+
+def artifact_workbench_response(
+    metadata: ArtifactWorkbenchMetadata,
+) -> ArtifactWorkbenchArtifactResponse:
+    return ArtifactWorkbenchArtifactResponse(
+        artifactId=metadata.artifact_id,
+        taskRunId=metadata.task_run_id,
+        artifactType=metadata.artifact_type,
+        title=metadata.title,
+        status=metadata.status,
+        version=metadata.version,
+        rendererKind=metadata.renderer_kind,
+        editable=metadata.editable,
+        contentHash=metadata.content_hash,
+        safeMeta=metadata.safe_meta,
+        versions=[
+            artifact_workbench_version_response(version)
+            for version in metadata.versions
+        ],
+        createdAt=metadata.created_at,
+        updatedAt=metadata.updated_at,
+    )
+
+
 def review_response(review: StoredReviewArtifact) -> ReviewArtifactResponse:
     return ReviewArtifactResponse(
         id=review.id,
@@ -2206,6 +2259,78 @@ def read_task_run_diffs(
     if db.get(TaskRun, task_run_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
     return [diff_artifact_response(diff) for diff in list_task_run_diffs(db, task_run_id)]
+
+
+@app.get(
+    "/sessions/{session_id}/artifact-workbench",
+    response_model=ArtifactWorkbenchSessionResponse,
+)
+def read_session_artifact_workbench(
+    session_id: str,
+    db: DbSession = Depends(get_db),
+) -> ArtifactWorkbenchSessionResponse:
+    if db.get(AgentHubSession, session_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    try:
+        artifacts = list_session_artifact_workbench(db, session_id)
+    except ArtifactWorkbenchError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return ArtifactWorkbenchSessionResponse(
+        sessionId=session_id,
+        artifacts=[artifact_workbench_response(artifact) for artifact in artifacts],
+    )
+
+
+@app.get(
+    "/artifacts/{artifact_id}/workbench",
+    response_model=ArtifactWorkbenchArtifactResponse,
+)
+def read_artifact_workbench(
+    artifact_id: str,
+    db: DbSession = Depends(get_db),
+) -> ArtifactWorkbenchArtifactResponse:
+    try:
+        metadata = artifact_workbench_metadata_for_id(db, artifact_id)
+    except ArtifactWorkbenchError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return artifact_workbench_response(metadata)
+
+
+@app.get(
+    "/artifacts/{artifact_id}/workbench/versions",
+    response_model=list[ArtifactWorkbenchVersionResponse],
+)
+def read_artifact_workbench_versions(
+    artifact_id: str,
+    db: DbSession = Depends(get_db),
+) -> list[ArtifactWorkbenchVersionResponse]:
+    try:
+        versions = list_artifact_workbench_versions(db, artifact_id)
+        artifact = artifact_workbench_metadata_for_id(db, artifact_id)
+    except ArtifactWorkbenchError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    version_metadata = {version.id: version for version in artifact.versions}
+    return [
+        artifact_workbench_version_response(version_metadata[version.id])
+        for version in versions
+        if version.id in version_metadata
+    ]
+
+
+@app.get(
+    "/artifacts/{artifact_id}/workbench/versions/{version_id}",
+    response_model=ArtifactWorkbenchVersionResponse,
+)
+def read_artifact_workbench_version(
+    artifact_id: str,
+    version_id: str,
+    db: DbSession = Depends(get_db),
+) -> ArtifactWorkbenchVersionResponse:
+    try:
+        version = artifact_workbench_version_for_id(db, artifact_id, version_id)
+    except ArtifactWorkbenchError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return artifact_workbench_version_response(version)
 
 
 @app.get("/artifacts/{artifact_id}/versions", response_model=list[ArtifactVersionResponse])

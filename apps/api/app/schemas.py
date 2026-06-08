@@ -556,6 +556,41 @@ class ArtifactVersionResponse(ApiModel):
     created_at: datetime = Field(alias="createdAt")
 
 
+class ArtifactWorkbenchVersionResponse(ApiModel):
+    id: str
+    artifact_id: str = Field(alias="artifactId")
+    version: int
+    source_task_run_id: Optional[str] = Field(alias="sourceTaskRunId")
+    parent_artifact_id: Optional[str] = Field(alias="parentArtifactId")
+    git_base_ref: Optional[str] = Field(alias="gitBaseRef")
+    git_head_ref: Optional[str] = Field(alias="gitHeadRef")
+    changed_files: list[str] = Field(alias="changedFiles")
+    summary: str
+    content_hash: str = Field(alias="contentHash")
+    created_at: datetime = Field(alias="createdAt")
+
+
+class ArtifactWorkbenchArtifactResponse(ApiModel):
+    artifact_id: str = Field(alias="artifactId")
+    task_run_id: str = Field(alias="taskRunId")
+    artifact_type: str = Field(alias="artifactType")
+    title: str
+    status: str
+    version: int
+    renderer_kind: str = Field(alias="rendererKind")
+    editable: bool
+    content_hash: str = Field(alias="contentHash")
+    safe_meta: dict[str, Any] = Field(alias="safeMeta")
+    versions: list[ArtifactWorkbenchVersionResponse]
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class ArtifactWorkbenchSessionResponse(ApiModel):
+    session_id: str = Field(alias="sessionId")
+    artifacts: list[ArtifactWorkbenchArtifactResponse]
+
+
 class ReviewArtifactResponse(ApiModel):
     id: str
     artifact_id: str = Field(alias="artifactId")

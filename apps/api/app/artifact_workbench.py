@@ -8,7 +8,13 @@ from typing import Any, Optional
 
 from app.artifact_versions import StoredArtifactVersion
 from app.canonical_context import filter_protected_values
-from app.models import Artifact
+from app.models import Artifact, ArtifactVersion, Task, TaskRun
+from sqlmodel import Session as DbSession
+from sqlmodel import select
+
+
+class ArtifactWorkbenchError(ValueError):
+    pass
 
 ArtifactRendererKind = str
 
@@ -114,6 +120,88 @@ def artifact_workbench_metadata(
     )
 
 
+def list_session_artifact_workbench(
+    db: DbSession,
+    session_id: str,
+) -> list[ArtifactWorkbenchMetadata]:
+    task_ids = [
+        task.id
+        for task in db.exec(select(Task).where(Task.session_id == session_id)).all()
+    ]
+    if not task_ids:
+        return []
+    task_run_ids = [
+        task_run.id
+        for task_run in db.exec(select(TaskRun).where(TaskRun.task_id.in_(task_ids))).all()
+    ]
+    if not task_run_ids:
+        return []
+    artifacts = db.exec(
+        select(Artifact)
+        .where(Artifact.task_run_id.in_(task_run_ids))
+        .order_by(Artifact.created_at, Artifact.id)
+    ).all()
+    return [artifact_workbench_metadata_for_id(db, artifact.id) for artifact in artifacts]
+
+
+def artifact_workbench_metadata_for_id(
+    db: DbSession,
+    artifact_id: str,
+) -> ArtifactWorkbenchMetadata:
+    artifact = db.get(Artifact, artifact_id)
+    if artifact is None:
+        raise ArtifactWorkbenchError(f"Artifact not found: {artifact_id}")
+    return artifact_workbench_metadata(
+        artifact,
+        versions=list_artifact_workbench_versions(db, artifact_id),
+    )
+
+
+def list_artifact_workbench_versions(
+    db: DbSession,
+    artifact_id: str,
+) -> list[StoredArtifactVersion]:
+    artifact = db.get(Artifact, artifact_id)
+    if artifact is None:
+        raise ArtifactWorkbenchError(f"Artifact not found: {artifact_id}")
+    records = db.exec(
+        select(ArtifactVersion)
+        .where(ArtifactVersion.artifact_id == artifact_id)
+        .order_by(
+            ArtifactVersion.version,
+            ArtifactVersion.created_at,
+            ArtifactVersion.id,
+        )
+    ).all()
+    return [
+        StoredArtifactVersion(
+            id=record.id,
+            artifact_id=record.artifact_id,
+            version=record.version,
+            source_task_run_id=record.source_task_run_id,
+            parent_artifact_id=record.parent_artifact_id,
+            git_base_ref=record.git_base_ref,
+            git_head_ref=record.git_head_ref,
+            changed_files=_json_list(record.changed_files_json),
+            summary=record.summary,
+            created_at=record.created_at,
+        )
+        for record in records
+    ]
+
+
+def artifact_workbench_version_for_id(
+    db: DbSession,
+    artifact_id: str,
+    version_id: str,
+) -> ArtifactVersionWorkbenchMetadata:
+    metadata = artifact_workbench_metadata_for_id(db, artifact_id)
+    for version in metadata.versions:
+        if version.id == version_id:
+            return version
+    raise ArtifactWorkbenchError(f"Artifact version not found: {version_id}")
+
+
 def classify_artifact_renderer(artifact_type: str) -> ArtifactRendererKind:
     normalized = artifact_type.strip().lower()
     if normalized in WEB_PREVIEW_TYPES:
@@ -200,3 +288,13 @@ def _artifact_content_hash(
 def _hash_payload(payload: dict[str, Any]) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def _json_list(value: str) -> list[str]:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    return [item for item in parsed if isinstance(item, str)]
