@@ -1,6 +1,6 @@
 "use client"
 
-import { Rocket } from "lucide-react"
+import { ExternalLink, Rocket } from "lucide-react"
 
 import type { DeploymentArtifact } from "@/lib/api"
 
@@ -10,6 +10,8 @@ type DeployCardProps = {
 
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
+    blocked: "已阻止",
+    handoff: "待人工处理",
     pending: "等待中",
     ready: "就绪",
     failed: "失败",
@@ -21,7 +23,18 @@ function deploymentTitle(title: string) {
   return title === "Mock deploy" ? "模拟部署" : title
 }
 
+function providerTypeLabel(providerType: string | null) {
+  const labels: Record<string, string> = {
+    external_static: "第三方静态托管",
+    local_staging: "本地预发",
+    manual_handoff: "人工交接",
+    mock: "模拟",
+  }
+  return providerType ? (labels[providerType] ?? providerType) : "未标记"
+}
+
 export function DeployCard({ deployment }: DeployCardProps) {
+  const canOpenUrl = Boolean(deployment.url)
   return (
     <article className="rounded-md border border-[var(--border)] bg-white p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -33,6 +46,9 @@ export function DeployCard({ deployment }: DeployCardProps) {
           <h3 className="mt-1 truncate text-sm font-semibold">
             {deploymentTitle(deployment.title)}
           </h3>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            {providerTypeLabel(deployment.providerType)} · {deployment.provider}
+          </p>
         </div>
         <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
           {statusLabel(deployment.status)}
@@ -43,7 +59,7 @@ export function DeployCard({ deployment }: DeployCardProps) {
         <div>
           <dt className="text-[var(--muted-foreground)]">提供方</dt>
           <dd className="mt-1 font-medium">
-            {deployment.providerType ?? deployment.provider}
+            {deployment.provider}
           </dd>
         </div>
         <div>
@@ -62,12 +78,20 @@ export function DeployCard({ deployment }: DeployCardProps) {
             <dd className="mt-1 truncate font-medium">{deployment.targetId}</dd>
           </div>
         ) : null}
+        {deployment.sourcePreviewId ? (
+          <div className="min-w-0">
+            <dt className="text-[var(--muted-foreground)]">预览来源</dt>
+            <dd className="mt-1 truncate font-medium">{deployment.sourcePreviewId}</dd>
+          </div>
+        ) : null}
       </dl>
 
       <dl className="mt-3 grid gap-2 text-xs">
         <div className="min-w-0">
           <dt className="text-[var(--muted-foreground)]">URL</dt>
-          <dd className="mt-1 truncate font-medium">{deployment.url ?? "mock://pending"}</dd>
+          <dd className="mt-1 truncate font-medium">
+            {deployment.url ?? "未生成 URL"}
+          </dd>
         </div>
         <div className="min-w-0">
           <dt className="text-[var(--muted-foreground)]">部署日志</dt>
@@ -90,6 +114,18 @@ export function DeployCard({ deployment }: DeployCardProps) {
           </div>
         ) : null}
       </dl>
+
+      {canOpenUrl ? (
+        <a
+          className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          href={deployment.url ?? undefined}
+          rel="noreferrer"
+          target="_blank"
+        >
+          <ExternalLink aria-hidden="true" size={14} />
+          打开 URL
+        </a>
+      ) : null}
 
       {deployment.statusHistory.length > 0 ? (
         <ol className="mt-3 grid gap-1 text-xs text-[var(--muted-foreground)]">
