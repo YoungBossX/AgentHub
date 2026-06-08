@@ -1045,6 +1045,17 @@ function ArtifactMessageCard({
             </Button>
           </>
         ) : null}
+        {item.kind === "deployment" ? (
+          <Button
+            className="h-8 px-3 text-xs"
+            disabled={!onUseArtifactContext}
+            onClick={() => onUseArtifactContext?.(item)}
+            type="button"
+            variant="secondary"
+          >
+            作为上下文
+          </Button>
+        ) : null}
       </div>
     </article>
   )
@@ -1122,7 +1133,7 @@ function artifactCardMeta(item: ArtifactPanelItem) {
     rows: [
       { label: "提供方", value: item.artifact.provider },
       { label: "环境", value: item.artifact.environment },
-      { label: "URL", value: item.artifact.url ?? "mock://pending" },
+      { label: "URL", value: item.artifact.url ?? "未生成 URL" },
     ],
     status: statusLabel(item.artifact.status),
     summary: "本地部署证据卡片，不代表生产发布。",

@@ -289,14 +289,31 @@ def _latest_deployment_context(
     ).first()
     if deployment is None:
         return None
+    meta = _json_dict(artifact.meta_json)
+    source = meta.get("source") if isinstance(meta.get("source"), dict) else {}
     return {
         "artifactId": artifact.id,
         "taskRunId": artifact.task_run_id,
         "deploymentId": deployment.id,
         "status": deployment.status,
         "provider": deployment.provider,
+        "providerType": meta.get("providerType"),
         "environment": deployment.environment,
         "url": deployment.url,
+        "targetId": meta.get("targetId"),
+        "source": filter_protected_values(
+            {
+                "previewId": source.get("previewId") or meta.get("previewId"),
+                "previewArtifactId": source.get("previewArtifactId")
+                or meta.get("previewArtifactId"),
+                "diffArtifactId": source.get("diffArtifactId"),
+                "reviewArtifactId": source.get("reviewArtifactId"),
+            }
+        ),
+        "logsSummary": filter_protected_values(_limited_string_list(meta.get("logs"), 5)),
+        "statusHistory": filter_protected_values(
+            _limited_status_history(meta.get("statusHistory"), 8),
+        ),
     }
 
 
@@ -365,7 +382,11 @@ def _selected_artifact_context(
             "reason": "Selected artifact does not belong to this session.",
         }
     meta = _json_dict(artifact.meta_json)
-    filtered_meta = filter_protected_values(meta)
+    filtered_meta = (
+        _selected_deployment_meta(db, artifact, meta)
+        if artifact.artifact_type == "deployment"
+        else filter_protected_values(meta)
+    )
     return {
         "artifactId": artifact.id,
         "versionId": version_id,
@@ -381,6 +402,40 @@ def _selected_artifact_context(
 
 def _selected_artifact_id(context: dict[str, Any]) -> Optional[str]:
     return selected_artifact_id(context)
+
+
+def _selected_deployment_meta(
+    db: DbSession,
+    artifact: Artifact,
+    meta: dict[str, Any],
+) -> dict[str, Any]:
+    deployment = db.exec(
+        select(Deployment).where(Deployment.artifact_id == artifact.id)
+    ).first()
+    source = meta.get("source") if isinstance(meta.get("source"), dict) else {}
+    return {
+        "provider": deployment.provider if deployment is not None else meta.get("provider"),
+        "providerType": meta.get("providerType"),
+        "environment": (
+            deployment.environment if deployment is not None else meta.get("environment")
+        ),
+        "status": deployment.status if deployment is not None else artifact.status,
+        "url": deployment.url if deployment is not None else meta.get("url"),
+        "targetId": meta.get("targetId"),
+        "source": filter_protected_values(
+            {
+                "previewId": source.get("previewId") or meta.get("previewId"),
+                "previewArtifactId": source.get("previewArtifactId")
+                or meta.get("previewArtifactId"),
+                "diffArtifactId": source.get("diffArtifactId"),
+                "reviewArtifactId": source.get("reviewArtifactId"),
+            }
+        ),
+        "logsSummary": filter_protected_values(_limited_string_list(meta.get("logs"), 5)),
+        "statusHistory": filter_protected_values(
+            _limited_status_history(meta.get("statusHistory"), 8),
+        ),
+    }
 
 
 def _message_context_for_task(db: DbSession, task: Task) -> dict[str, Any]:
@@ -571,6 +626,62 @@ def _json_list(value: str) -> list[str]:
     if not isinstance(parsed, list):
         return []
     return [item for item in parsed if isinstance(item, str)]
+
+
+def _limited_string_list(value: Any, limit: int) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    result: list[str] = []
+    for item in value[:limit]:
+        safe = _safe_context_string(item)
+        if safe:
+            result.append(safe)
+    return result
+
+
+def _limited_status_history(value: Any, limit: int) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        return []
+    history: list[dict[str, str]] = []
+    for item in value[:limit]:
+        if not isinstance(item, dict):
+            continue
+        entry: dict[str, str] = {}
+        status = item.get("status")
+        message = item.get("message")
+        safe_status = _safe_context_string(status)
+        safe_message = _safe_context_string(message)
+        if safe_status:
+            entry["status"] = safe_status
+        if safe_message:
+            entry["message"] = safe_message
+        if entry:
+            history.append(entry)
+    return history
+
+
+def _safe_context_string(value: Any) -> Optional[str]:
+    if not isinstance(value, str) or not value:
+        return None
+    normalized = value.replace("\\", "/").lower()
+    if normalized.startswith("/") or any(
+        marker in normalized
+        for marker in [
+            ".env",
+            ".git",
+            "node_modules",
+            ".venv",
+            "secrets/",
+            "/secrets",
+            "secret",
+            "token",
+            "password",
+            "api_key",
+            "apikey",
+        ]
+    ):
+        return "[redacted]"
+    return value[:500]
 
 
 def _truncate(value: str, limit: int) -> str:

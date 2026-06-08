@@ -1278,6 +1278,79 @@ def test_artifact_reference_context_supports_preview_review_and_deploy(
     assert all(reference["valid"] is True for reference in references)
 
 
+def test_deployment_artifact_reference_context_includes_safe_metadata(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task_run = create_task_run(db, task.id)
+        transition_task_run(db, task_run.id, "completed")
+        deploy_artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="deployment",
+            title="Blocked Vercel deployment",
+            status="blocked",
+            meta_json=json.dumps(
+                {
+                    "provider": "vercel",
+                    "providerType": "external_static",
+                    "targetId": "demo-frontend",
+                    "environment": "external",
+                    "source": {
+                        "previewId": "preview-1",
+                        "previewArtifactId": "artifact-preview-1",
+                        "diffArtifactId": "artifact-diff-1",
+                        "reviewArtifactId": "artifact-review-1",
+                    },
+                    "logs": [
+                        "Vercel provider missing config.",
+                        "api_key=sk-test-secret should not leak",
+                    ],
+                    "statusHistory": [
+                        {"status": "queued", "message": "Deploy queued."},
+                        {"status": "blocked", "message": "api_key missing"},
+                    ],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(deploy_artifact)
+        db.commit()
+        db.refresh(deploy_artifact)
+        deployment = Deployment(
+            artifact_id=deploy_artifact.id,
+            provider="vercel",
+            environment="external",
+            url=None,
+            status="blocked",
+        )
+        db.add(deployment)
+        db.commit()
+
+        context = build_session_context_pack(
+            db,
+            task,
+            plan_context={"selectedArtifactId": deploy_artifact.id},
+        )
+
+    reference = context["artifactReferences"][0]
+    serialized = json.dumps(context)
+    assert reference["artifact_type"] == "deployment"
+    assert reference["valid"] is True
+    assert reference["metadata"]["provider"] == "vercel"
+    assert reference["metadata"]["providerType"] == "external_static"
+    assert reference["metadata"]["source"]["previewId"] == "preview-1"
+    assert reference["metadata"]["source"]["diffArtifactId"] == "artifact-diff-1"
+    assert reference["metadata"]["logsSummary"][0] == "Vercel provider missing config."
+    assert "[redacted]" in reference["metadata"]["logsSummary"]
+    assert "sk-test-secret" not in serialized
+    assert "api_key" not in serialized
+    assert context["latestDeployment"]["provider"] == "vercel"
+    assert context["latestDeployment"]["providerType"] == "external_static"
+    assert context["latestDeployment"]["source"]["reviewArtifactId"] == "artifact-review-1"
+    assert "[redacted]" in context["latestDeployment"]["logsSummary"]
+
+
 def test_artifact_reference_context_rejects_unsupported_artifact_type(
     client: TestClient,
 ) -> None:
