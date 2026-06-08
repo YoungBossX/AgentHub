@@ -367,6 +367,9 @@ describe("WorkspaceShell", () => {
     expect(screen.getByText("联系人设置").closest("a")?.getAttribute("href")).toBe(
       "/settings/contacts",
     )
+    expect(screen.getByText("Agent 目录").closest("a")?.getAttribute("href")).toBe(
+      "/settings/agents",
+    )
     expect(screen.getByText("运行设置").closest("a")?.getAttribute("href")).toBe(
       "/settings/runtime",
     )

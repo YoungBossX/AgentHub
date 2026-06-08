@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { type ReactNode, useMemo, useState } from "react"
 import {
+  Bot,
   ChevronRight,
   GitBranch,
   Brain,
@@ -85,6 +86,12 @@ export function SessionSidebar({
             icon={<Users aria-hidden="true" size={17} />}
             label="联系人设置"
             meta={`${agents.length} 个`}
+          />
+          <SidebarSettingsLink
+            href="/settings/agents"
+            icon={<Bot aria-hidden="true" size={17} />}
+            label="Agent 目录"
+            meta="能力 / 状态"
           />
           <SidebarSettingsLink
             href="/settings/runtime"

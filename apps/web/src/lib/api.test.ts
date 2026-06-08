@@ -16,6 +16,7 @@ import {
   getSessionLedger,
   getBackendHealth,
   getDemoWorkspace,
+  getWorkspaceAgentDirectory,
   interruptTaskRun,
   listWorkspaceMemory,
   listExternalTargetFolders,
@@ -482,6 +483,61 @@ describe("workspace and session API", () => {
     })
     expect(configs[0].providerId).toBe("local-claude-code-cli")
     expect(configs[0].authStatus).toBe("unchecked")
+  })
+
+  it("reads the workspace agent directory with compatibility metadata", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          workspaceId: "workspace-1",
+          entries: [
+            {
+              adapterType: "codex",
+              agentProfileId: "agent-frontend",
+              authStatus: "unchecked",
+              available: true,
+              avatarInitials: "FE",
+              capabilityTags: ["code_write"],
+              compatibility: {
+                compatible: true,
+                mode: "frontend",
+                reasons: [],
+                requiredCapabilities: [],
+                role: "frontend",
+                targetId: null,
+                warnings: [],
+              },
+              description: "Frontend work.",
+              displayName: "Frontend Agent",
+              entryType: "built_in",
+              id: "agent-frontend",
+              providerId: "local-codex-cli",
+              role: "frontend",
+              runtimeSelectedForRoles: ["frontend"],
+              safeForReview: false,
+              safeForWrite: true,
+              status: "available",
+              supportedModes: ["frontend"],
+              supportedTargets: ["demo-frontend"],
+            },
+          ],
+        }),
+        { status: 200 },
+      )
+    })
+
+    const directory = await getWorkspaceAgentDirectory(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/agent-directory",
+      { cache: "no-store" },
+    )
+    expect(directory?.entries[0].compatibility.compatible).toBe(true)
+    expect(directory?.entries[0].runtimeSelectedForRoles).toEqual(["frontend"])
   })
 
   it("reads and updates agent runtime config for a workspace", async () => {

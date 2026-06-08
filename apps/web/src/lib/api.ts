@@ -156,6 +156,43 @@ export type ProviderConfig = {
   supportedModes: string[]
 }
 
+export type AgentCompatibility = {
+  compatible: boolean
+  reasons: string[]
+  warnings: string[]
+  role: string | null
+  targetId: string | null
+  mode: string | null
+  requiredCapabilities: string[]
+}
+
+export type AgentDirectoryEntry = {
+  id: string
+  entryType: "built_in" | "draft" | string
+  displayName: string
+  avatarInitials: string
+  role: string
+  agentProfileId: string
+  providerId: string
+  adapterType: string
+  capabilityTags: string[]
+  supportedTargets: string[]
+  supportedModes: string[]
+  safeForWrite: boolean
+  safeForReview: boolean
+  status: string
+  authStatus: string
+  available: boolean
+  runtimeSelectedForRoles: string[]
+  compatibility: AgentCompatibility
+  description: string
+}
+
+export type AgentDirectory = {
+  workspaceId: string
+  entries: AgentDirectoryEntry[]
+}
+
 export type RuntimeRoleConfig = {
   role: string
   agentProfileId: string | null
@@ -670,6 +707,25 @@ export async function listProviderConfigs(
   }
 
   return (await response.json()) as ProviderConfig[]
+}
+
+export async function getWorkspaceAgentDirectory(
+  backendUrl: string,
+  workspaceId: string,
+  fetcher: Fetcher = fetch,
+): Promise<AgentDirectory | null> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/agent-directory`),
+    {
+      cache: "no-store",
+    },
+  )
+
+  if (!response.ok) {
+    return null
+  }
+
+  return (await response.json()) as AgentDirectory
 }
 
 export async function getAgentRuntimeConfig(
