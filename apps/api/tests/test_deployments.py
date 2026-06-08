@@ -16,7 +16,9 @@ from app.deployments import (
     DeployProviderResult,
     DeployService,
     LocalStagingDeployProvider,
+    ManualExternalDeployProvider,
     MockDeployProvider,
+    UnavailableExternalDeployProvider,
     StagingServerProcess,
     StaticDirectoryServer,
 )
@@ -348,6 +350,51 @@ def test_deploy_service_rejects_failed_provider_result_without_success_artifact(
         assert artifacts == []
 
 
+def test_manual_external_provider_persists_handoff_evidence(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
+        service = DeployService(providers=(ManualExternalDeployProvider(),))
+
+        stored = service.create_deployment(db, preview_id, provider_id="manual_external")
+        artifact = db.get(Artifact, stored.artifact_id)
+
+        assert stored.provider == "manual_external"
+        assert stored.provider_type == "manual_handoff"
+        assert stored.status == "handoff"
+        assert stored.url is None
+        assert artifact is not None
+        metadata = json.loads(artifact.meta_json)
+        assert metadata["statusHistory"][-1]["status"] == "handoff"
+        assert "No third-party deploy was executed" in "\n".join(metadata["logs"])
+
+
+def test_unavailable_external_provider_persists_blocked_evidence(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
+        service = DeployService(
+            providers=(
+                UnavailableExternalDeployProvider(
+                    provider_id="vercel",
+                    display_name="Vercel",
+                    reason="Missing VERCEL_TOKEN.",
+                ),
+            ),
+        )
+
+        stored = service.create_deployment(db, preview_id, provider_id="vercel")
+        artifact = db.get(Artifact, stored.artifact_id)
+
+        assert stored.provider == "vercel"
+        assert stored.provider_type == "external_static"
+        assert stored.status == "blocked"
+        assert stored.url is None
+        assert artifact is not None
+        metadata = json.loads(artifact.meta_json)
+        assert metadata["statusHistory"][-1]["status"] == "blocked"
+        assert "Missing VERCEL_TOKEN" in "\n".join(metadata["logs"])
+        assert "ready" not in [item["status"] for item in metadata["statusHistory"]]
+
+
 def test_local_staging_provider_builds_serves_and_persists_ready_artifact(
     tmp_path: Path,
 ) -> None:
@@ -525,6 +572,32 @@ def test_deploy_api_can_select_local_staging_provider(tmp_path: Path) -> None:
         assert response.json()["sourcePreviewId"] == preview_id
         assert response.json()["logs"]
         assert response.json()["statusHistory"][-1]["status"] == "ready"
+
+
+def test_deploy_api_creates_blocked_external_provider_card(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
+
+        def override_db() -> Iterator[DbSession]:
+            yield db
+
+        app.dependency_overrides[get_db] = override_db
+        try:
+            client = TestClient(app)
+            response = client.post(
+                f"/previews/{preview_id}/deploy",
+                json={"providerId": "vercel"},
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 201
+        assert response.json()["provider"] == "vercel"
+        assert response.json()["providerType"] == "external_static"
+        assert response.json()["status"] == "blocked"
+        assert response.json()["url"] is None
+        assert response.json()["statusHistory"][-1]["status"] == "blocked"
+        assert "third-party production deploy" in "\n".join(response.json()["logs"])
 
 
 def test_local_staging_deploy_blocks_failed_review(tmp_path: Path) -> None:

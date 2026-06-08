@@ -182,6 +182,86 @@ class MockDeployProvider:
         )
 
 
+class ManualExternalDeployProvider:
+    provider_id = "manual_external"
+    provider_type = "manual_handoff"
+
+    def deploy(
+        self,
+        *,
+        db: DbSession,
+        preview: Preview,
+        preview_artifact: Artifact,
+        task_run: TaskRun,
+        deployment_id: str,
+    ) -> DeployProviderResult:
+        return DeployProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            target_id=_target_id_for_task_run_id(db, task_run),
+            build_command=None,
+            deploy_command=None,
+            output_url=None,
+            status="handoff",
+            logs=(
+                f"Manual external deploy handoff created for preview {preview.id}.",
+                "No third-party deploy was executed by AgentHub.",
+                "Use this card as context for provider setup or manual deploy follow-up.",
+            ),
+            status_history=(
+                {"status": "queued", "message": "Manual external deploy handoff requested."},
+                {"status": "handoff", "message": "Manual handoff card is ready."},
+            ),
+            environment="external",
+            persist_failed=True,
+        )
+
+
+class UnavailableExternalDeployProvider:
+    provider_type = "external_static"
+
+    def __init__(
+        self,
+        *,
+        provider_id: str,
+        display_name: str,
+        reason: str,
+    ) -> None:
+        self.provider_id = provider_id
+        self.display_name = display_name
+        self.reason = reason
+
+    def deploy(
+        self,
+        *,
+        db: DbSession,
+        preview: Preview,
+        preview_artifact: Artifact,
+        task_run: TaskRun,
+        deployment_id: str,
+    ) -> DeployProviderResult:
+        return DeployProviderResult(
+            provider_id=self.provider_id,
+            provider_type=self.provider_type,
+            target_id=_target_id_for_task_run_id(db, task_run),
+            build_command=None,
+            deploy_command=None,
+            output_url=None,
+            status="blocked",
+            logs=(
+                f"{self.display_name} deploy request was blocked.",
+                self.reason,
+                "AgentHub did not execute a third-party production deploy.",
+            ),
+            status_history=(
+                {"status": "queued", "message": f"{self.display_name} deploy requested."},
+                {"status": "blocked", "message": self.reason},
+            ),
+            environment="external",
+            persist_failed=True,
+        )
+
+
 class LocalStagingDeployProvider:
     provider_id = "local_staging"
     provider_type = "local_staging"
@@ -322,7 +402,26 @@ class DeployService:
         configured_providers = (
             tuple(providers)
             if providers is not None
-            else (MockDeployProvider(), LocalStagingDeployProvider())
+            else (
+                MockDeployProvider(),
+                LocalStagingDeployProvider(),
+                ManualExternalDeployProvider(),
+                UnavailableExternalDeployProvider(
+                    provider_id="vercel",
+                    display_name="Vercel",
+                    reason="Vercel provider execution is not configured in P24.",
+                ),
+                UnavailableExternalDeployProvider(
+                    provider_id="netlify",
+                    display_name="Netlify",
+                    reason="Netlify provider execution is not configured in P24.",
+                ),
+                UnavailableExternalDeployProvider(
+                    provider_id="custom_static_host",
+                    display_name="Custom static host",
+                    reason="Custom static host execution is not configured in P24.",
+                ),
+            )
         )
         self._providers = {
             str(provider.provider_id): provider for provider in configured_providers
@@ -407,7 +506,7 @@ class DeployService:
         artifact = Artifact(
             task_run_id=task_run.id,
             artifact_type="deployment",
-            title="Mock deploy" if provider_result.provider_id == "mock" else "Staging deploy",
+            title=_deployment_title(provider_result),
             status=provider_result.status,
             meta_json=json.dumps(
                 {
@@ -563,6 +662,11 @@ def _target_id_for_task(task: Task) -> str:
     return DEMO_FRONTEND_TARGET_ID
 
 
+def _target_id_for_task_run_id(db: DbSession, task_run: TaskRun) -> str:
+    task = db.get(Task, task_run.task_id)
+    return _target_id_for_task(task) if task is not None else DEMO_FRONTEND_TARGET_ID
+
+
 def _target_root_for_task_run(target: TargetProject, task_run: TaskRun) -> Path:
     root = Path(target.root)
     if root.is_absolute():
@@ -672,6 +776,18 @@ def _status_history_for_provider_result(
     if provider_result.status_history:
         return [dict(item) for item in provider_result.status_history]
     return [{"status": provider_result.status, "message": provider_result.status}]
+
+
+def _deployment_title(provider_result: DeployProviderResult) -> str:
+    if provider_result.provider_id == "mock":
+        return "Mock deploy"
+    if provider_result.provider_type == "local_staging":
+        return "Staging deploy"
+    if provider_result.status == "handoff":
+        return "Manual deploy handoff"
+    if provider_result.status == "blocked":
+        return "Blocked deployment request"
+    return "Deployment request"
 
 
 def _metadata_for_artifact(artifact: Artifact) -> dict[str, object]:
