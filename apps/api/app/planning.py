@@ -8,6 +8,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.config import get_settings
+from app.context_items import normalize_context_items
 from app.llm_planner import (
     LLMPlannerError,
     create_llm_conversation_outcome,
@@ -172,12 +173,51 @@ def _attach_planner_runtime_evidence(
         if snapshot_metadata:
             planner_evidence["memorySnapshot"] = snapshot_metadata
             plan["memorySnapshot"] = snapshot_metadata
+        context_handoff = _context_handoff_for_task(db, task)
+        if context_handoff["itemCount"] > 0:
+            planner_evidence["contextHandoff"] = context_handoff
+            plan["contextHandoff"] = context_handoff
         plan["plannerEvidence"] = planner_evidence
         task.plan_json = json.dumps(plan, separators=(",", ":"))
         db.add(task)
     db.commit()
     for task in tasks:
         db.refresh(task)
+
+
+def _context_handoff_for_task(db: DbSession, task: Task) -> dict[str, Any]:
+    if task.created_by_message_id is None:
+        return {"itemCount": 0, "items": [], "redacted": False}
+    message = db.get(Message, task.created_by_message_id)
+    if message is None:
+        return {"itemCount": 0, "items": [], "redacted": False}
+    try:
+        context = json.loads(message.context_json)
+    except json.JSONDecodeError:
+        context = {}
+    if not isinstance(context, dict):
+        context = {}
+    items = normalize_context_items(context)
+    evidence_items = [
+        {
+            "id": item.get("id"),
+            "kind": item.get("kind"),
+            "valid": item.get("valid"),
+            "artifactId": item.get("artifactId"),
+            "artifactVersionId": item.get("artifactVersionId"),
+            "messageId": item.get("messageId"),
+            "deploymentId": item.get("deploymentId"),
+            "redacted": item.get("redacted"),
+            "source": item.get("source"),
+        }
+        for item in items
+    ]
+    return {
+        "itemCount": len(items),
+        "itemKinds": [str(item.get("kind")) for item in items],
+        "items": evidence_items,
+        "redacted": any(bool(item.get("redacted")) for item in items),
+    }
 
 
 def plan_for_message(

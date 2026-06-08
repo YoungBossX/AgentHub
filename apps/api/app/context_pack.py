@@ -15,6 +15,7 @@ from app.canonical_context import (
     filter_protected_values,
     provider_visible_context,
 )
+from app.context_items import normalize_context_items
 from app.handoffs import handoff_context_for_task
 from app.ledger import (
     active_agents_for_ledger,
@@ -82,6 +83,7 @@ def build_session_context_pack(
     latest_command_evidence = _latest_command_evidence_context(db, task_runs)
     original_request = _original_request_for_task(db, task, merged_context)
     selected_artifact = _selected_artifact_context(db, task.session_id, merged_context)
+    context_items = normalize_context_items(merged_context)
     artifact_reference = selected_artifact_reference(
         db,
         session_id=task.session_id,
@@ -137,6 +139,7 @@ def build_session_context_pack(
         "latestDeployment": latest_deployment,
         "latestCommandEvidence": latest_command_evidence,
         "selectedArtifact": selected_artifact,
+        "contextItems": context_items,
         "artifactReferences": [artifact_reference] if artifact_reference else [],
         "appContract": app_contract,
         "handoffNotes": handoff_notes,

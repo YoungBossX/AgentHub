@@ -1428,6 +1428,18 @@ def test_artifact_reference_context_supports_workbench_version_context(
     assert reference["safe_summary"] == "Edited notes"
     assert "apiToken" not in json.dumps(reference)
     assert context["selectedArtifact"]["versionId"] == "version-2"
+    assert context["contextItems"][0]["kind"] == "artifact"
+    assert context["contextItems"][0]["artifactId"] == artifact.id
+    assert context["contextItems"][0]["artifactVersionId"] == "version-2"
+    assert context["contextItems"][0]["selectedText"] == "## Selected section"
+    relevant_artifacts = context["canonicalContext"]["fields"]["relevantArtifacts"]["value"]
+    assert relevant_artifacts["contextItems"][0]["artifactId"] == artifact.id
+    assert (
+        context["providerVisibleContext"]["canonicalContext"]["fields"]["relevantArtifacts"][
+            "value"
+        ]["contextItems"][0]["artifactVersionId"]
+        == "version-2"
+    )
 
 
 def test_session_mission_trace_exposes_tasks_artifacts_and_blockers(

@@ -737,7 +737,18 @@ def test_no_mention_message_uses_configured_llm_planner_provider(
 
     response = client.post(
         f"/sessions/{session_id}/messages",
-        json={"contentMd": "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏"},
+        json={
+            "contentMd": "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏",
+            "context": {
+                "contextItems": [
+                    {
+                        "id": "note:acceptance",
+                        "kind": "note",
+                        "content": "Keep keyboard controls visible.",
+                    }
+                ]
+            },
+        },
     )
 
     assert response.status_code == 201
@@ -750,7 +761,19 @@ def test_no_mention_message_uses_configured_llm_planner_provider(
     assert task["planJson"]["planner"] == "llm_v1"
     assert task["planJson"]["plannerProviderId"] == "fake-llm-planner"
     assert task["planJson"]["plannerEvidence"]["plannerSource"] == "fake_test"
+    assert task["planJson"]["contextHandoff"]["itemCount"] == 1
+    assert task["planJson"]["contextHandoff"]["itemKinds"] == ["note"]
+    assert (
+        task["planJson"]["plannerEvidence"]["contextHandoff"]["items"][0]["id"]
+        == "note:acceptance"
+    )
     assert task["planJson"]["originalRequest"] == "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏"
+
+    trace = client.get(f"/sessions/{session_id}/mission-trace").json()
+    assert trace["tasks"][0]["contextHandoff"]["itemCount"] == 1
+    assert trace["tasks"][0]["plannerEvidence"]["contextHandoff"]["itemKinds"] == [
+        "note"
+    ]
 
 
 def test_llm_task_plan_bypasses_legacy_signal_gates(
