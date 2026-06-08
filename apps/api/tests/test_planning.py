@@ -635,6 +635,52 @@ def test_disabled_llm_router_returns_friendly_chat_fallback_without_task(
     assert "LLM 路由" in messages[-1].content_md or "有什么我可以帮你的" in messages[-1].content_md
 
 
+def test_pure_chat_with_context_items_does_not_create_task(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=False,
+            llm_planner_provider="disabled",
+        ),
+    )
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={
+            "contentMd": "你好",
+            "context": {
+                "contextItems": [
+                    {
+                        "id": "note:hello",
+                        "kind": "note",
+                        "content": "This is just context for chat.",
+                    }
+                ]
+            },
+        },
+    )
+
+    assert response.status_code == 201
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+
+    with next(db_from_override()) as db:
+        messages = db.exec(
+            select(Message)
+            .where(Message.session_id == session_id)
+            .order_by(Message.created_at)
+        ).all()
+
+    assert [message.sender_type for message in messages] == ["user", "orchestrator"]
+
+
 def test_failed_llm_router_exposes_error_summary_in_chat_fallback(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

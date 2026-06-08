@@ -827,6 +827,9 @@ describe("TaskCardList", () => {
     fireEvent.click(screen.getByRole("button", { name: "打开预览" }))
     fireEvent.click(screen.getByRole("button", { name: "查看部署" }))
     fireEvent.click(screen.getAllByRole("button", { name: "作为上下文" })[2])
+    fireEvent.click(screen.getAllByRole("button", { name: "询问此项" })[0])
+    fireEvent.click(screen.getAllByRole("button", { name: "基于此修改" })[0])
+    fireEvent.click(screen.getAllByRole("button", { name: "交给 Agent" })[2])
 
     expect(onSelectArtifact).toHaveBeenNthCalledWith(1, `diff:${sampleDiffArtifact.id}`)
     expect(onUseArtifactContext).toHaveBeenCalledWith(
@@ -849,6 +852,27 @@ describe("TaskCardList", () => {
         id: `deployment:${sampleDeploymentArtifact.id}`,
         kind: "deployment",
       }),
+    )
+    expect(onUseArtifactContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: `diff:${sampleDiffArtifact.id}`,
+        kind: "diff",
+      }),
+      "ask",
+    )
+    expect(onUseArtifactContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: `diff:${sampleDiffArtifact.id}`,
+        kind: "diff",
+      }),
+      "revise",
+    )
+    expect(onUseArtifactContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: `deployment:${sampleDeploymentArtifact.id}`,
+        kind: "deployment",
+      }),
+      "send_to_agent",
     )
   })
 

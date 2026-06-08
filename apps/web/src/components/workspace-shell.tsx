@@ -31,7 +31,7 @@ import {
 import { MissionPanel } from "@/components/mission-panel"
 import { type ArtifactPanelItem } from "@/components/preview-card"
 import { SessionSidebar } from "@/components/session-sidebar"
-import { TaskCardList } from "@/components/task-card-list"
+import { type ArtifactContextIntent, TaskCardList } from "@/components/task-card-list"
 import {
   approveTaskRun,
   createPreviewDeployment,
@@ -506,9 +506,15 @@ export function WorkspaceShell({
     )
   }, [])
 
-  function handleUseArtifactContext(artifact: ArtifactPanelItem) {
+  function handleUseArtifactContext(
+    artifact: ArtifactPanelItem,
+    intent?: ArtifactContextIntent,
+  ) {
     setContextItems((current) => appendContextItem(current, contextItemFromArtifact(artifact)))
     setSelectedArtifactId(artifact.id)
+    if (intent) {
+      setDraft(contextIntentDraft(intent))
+    }
   }
 
   function handleQuoteMessage(message: ChatMessage) {
@@ -908,4 +914,13 @@ function moveContextItem(
   const [item] = next.splice(index, 1)
   next.splice(targetIndex, 0, item)
   return next
+}
+
+function contextIntentDraft(intent: ArtifactContextIntent) {
+  const drafts: Record<ArtifactContextIntent, string> = {
+    ask: "请解释这个上下文的关键内容、当前状态和下一步建议。",
+    revise: "请基于这个上下文继续修改，并说明需要执行的任务。",
+    send_to_agent: "@orchestrator 请基于这个上下文安排后续处理。",
+  }
+  return drafts[intent]
 }

@@ -36,6 +36,8 @@ import {
   type TaskRun,
 } from "../lib/api"
 
+export type ArtifactContextIntent = "ask" | "revise" | "send_to_agent"
+
 type TaskCardListProps = {
   tasks: SessionTask[]
   artifactRefreshKey?: number
@@ -60,7 +62,10 @@ type TaskCardListProps = {
   onSelectArtifact?: (artifactId: string) => void
   onStartPreview?: (taskRunId: string) => void
   onStopPreview?: (previewId: string) => void
-  onUseArtifactContext?: (artifact: ArtifactPanelItem) => void
+  onUseArtifactContext?: (
+    artifact: ArtifactPanelItem,
+    intent?: ArtifactContextIntent,
+  ) => void
   selectedArtifactId?: string | null
 }
 
@@ -456,7 +461,10 @@ function ArtifactMessageCards({
   onCreateReview?: (taskRunId: string) => void
   onOpenPreview?: (preview: PreviewArtifact) => void
   onSelectArtifact?: (artifactId: string) => void
-  onUseArtifactContext?: (artifact: ArtifactPanelItem) => void
+  onUseArtifactContext?: (
+    artifact: ArtifactPanelItem,
+    intent?: ArtifactContextIntent,
+  ) => void
   reviews: ReviewArtifact[]
   selectedArtifactId: string | null
   taskArtifactItems: ArtifactPanelItem[]
@@ -913,7 +921,10 @@ function ArtifactMessageCard({
   onCreateReview?: (taskRunId: string) => void
   onOpenPreview?: (preview: PreviewArtifact) => void
   onSelectArtifact?: (artifactId: string) => void
-  onUseArtifactContext?: (artifact: ArtifactPanelItem) => void
+  onUseArtifactContext?: (
+    artifact: ArtifactPanelItem,
+    intent?: ArtifactContextIntent,
+  ) => void
   reviews: ReviewArtifact[]
   selected: boolean
 }) {
@@ -990,15 +1001,7 @@ function ArtifactMessageCard({
         </Button>
         {item.kind === "diff" ? (
           <>
-            <Button
-              className="h-8 px-3 text-xs"
-              disabled={!onUseArtifactContext}
-              onClick={() => onUseArtifactContext?.(item)}
-              type="button"
-              variant="secondary"
-            >
-              作为上下文
-            </Button>
+            <ContextActionButtons item={item} onUseArtifactContext={onUseArtifactContext} />
             <Button
               className="h-8 px-3 text-xs"
               disabled={!onCreateReview || reviewed}
@@ -1011,15 +1014,7 @@ function ArtifactMessageCard({
           </>
         ) : null}
         {item.kind === "review" ? (
-          <Button
-            className="h-8 px-3 text-xs"
-            disabled={!onUseArtifactContext}
-            onClick={() => onUseArtifactContext?.(item)}
-            type="button"
-            variant="secondary"
-          >
-            作为上下文
-          </Button>
+          <ContextActionButtons item={item} onUseArtifactContext={onUseArtifactContext} />
         ) : null}
         {item.kind === "preview" ? (
           <>
@@ -1046,18 +1041,63 @@ function ArtifactMessageCard({
           </>
         ) : null}
         {item.kind === "deployment" ? (
-          <Button
-            className="h-8 px-3 text-xs"
-            disabled={!onUseArtifactContext}
-            onClick={() => onUseArtifactContext?.(item)}
-            type="button"
-            variant="secondary"
-          >
-            作为上下文
-          </Button>
+          <ContextActionButtons item={item} onUseArtifactContext={onUseArtifactContext} />
         ) : null}
       </div>
     </article>
+  )
+}
+
+function ContextActionButtons({
+  item,
+  onUseArtifactContext,
+}: {
+  item: ArtifactPanelItem
+  onUseArtifactContext?: (
+    artifact: ArtifactPanelItem,
+    intent?: ArtifactContextIntent,
+  ) => void
+}) {
+  const disabled = !onUseArtifactContext
+  return (
+    <>
+      <Button
+        className="h-8 px-3 text-xs"
+        disabled={disabled}
+        onClick={() => onUseArtifactContext?.(item)}
+        type="button"
+        variant="secondary"
+      >
+        作为上下文
+      </Button>
+      <Button
+        className="h-8 px-3 text-xs"
+        disabled={disabled}
+        onClick={() => onUseArtifactContext?.(item, "ask")}
+        type="button"
+        variant="secondary"
+      >
+        询问此项
+      </Button>
+      <Button
+        className="h-8 px-3 text-xs"
+        disabled={disabled}
+        onClick={() => onUseArtifactContext?.(item, "revise")}
+        type="button"
+        variant="secondary"
+      >
+        基于此修改
+      </Button>
+      <Button
+        className="h-8 px-3 text-xs"
+        disabled={disabled}
+        onClick={() => onUseArtifactContext?.(item, "send_to_agent")}
+        type="button"
+        variant="secondary"
+      >
+        交给 Agent
+      </Button>
+    </>
   )
 }
 
