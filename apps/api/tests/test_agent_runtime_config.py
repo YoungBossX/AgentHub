@@ -194,8 +194,8 @@ def test_runtime_config_validate_does_not_persist_candidate() -> None:
                 "roles": {
                     "frontend": {
                         "agentProfileId": profiles["frontend"]["id"],
-                        "providerId": "local-claude-code-cli",
-                        "adapterType": "claude_code",
+                        "providerId": "local-codex-cli",
+                        "adapterType": "codex",
                         "mode": "frontend",
                         "enabled": True,
                     }
@@ -236,8 +236,8 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
                     },
                     "frontend": {
                         "agentProfileId": profiles["frontend"]["id"],
-                        "providerId": "local-claude-code-cli",
-                        "adapterType": "claude_code",
+                        "providerId": "local-codex-cli",
+                        "adapterType": "codex",
                         "mode": "frontend",
                         "enabled": True,
                         "fallbackPolicy": "explicit_only",
@@ -272,7 +272,7 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
         assert payload["roles"]["planner"]["timeoutSeconds"] == 45
         assert payload["roles"]["planner"]["apiKeyEnv"] == "DEEPSEEK_API_KEY"
         assert payload["roles"]["planner"]["availability"] == "missing_key"
-        assert payload["roles"]["frontend"]["providerId"] == "local-claude-code-cli"
+        assert payload["roles"]["frontend"]["providerId"] == "local-codex-cli"
         assert payload["roles"]["backend"]["providerId"] == "local-codex-cli"
 
 
@@ -459,7 +459,7 @@ def test_runtime_config_api_rejects_invalid_profile_provider_role_combo() -> Non
 
         assert response.status_code == 400
         errors = response.json()["detail"]["errors"]
-        assert any("not supported by agent profile" in error for error in errors)
+        assert any("is incompatible: role `frontend` is not supported" in error for error in errors)
         assert any("write-safe" in error for error in errors)
 
 
@@ -490,6 +490,89 @@ def test_runtime_config_api_rejects_backend_platform_maintenance_mode() -> None:
             "cannot use mode `platform_maintenance`" in error
             for error in payload["errors"]
         )
+
+
+def test_runtime_config_api_rejects_draft_directory_entry_until_validated() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        create_response = client.post(
+            f"/workspaces/{workspace_id}/agent-profile-drafts",
+            json={
+                "displayName": "Draft Reviewer",
+                "role": "review",
+                "adapterType": "scripted_mock",
+                "providerId": "local-scripted-mock",
+                "capabilityTags": ["code_review"],
+                "supportedTargets": ["demo-frontend"],
+                "supportedModes": ["review", "read_only"],
+                "description": "Review-only draft.",
+            },
+        )
+        assert create_response.status_code == 201
+        draft_profile = create_response.json()
+
+        response = client.put(
+            f"/workspaces/{workspace_id}/runtime-config",
+            json={
+                "roles": {
+                    "review": {
+                        "agentProfileId": draft_profile["id"],
+                        "providerId": "local-scripted-mock",
+                        "adapterType": "scripted_mock",
+                        "mode": "review",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 400
+        errors = response.json()["detail"]["errors"]
+        assert any("draft profile is disabled until validated" in error for error in errors)
+
+
+def test_runtime_config_validate_uses_directory_compatibility_without_persisting() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        create_response = client.post(
+            f"/workspaces/{workspace_id}/agent-profile-drafts",
+            json={
+                "displayName": "Draft Reviewer",
+                "role": "review",
+                "adapterType": "scripted_mock",
+                "providerId": "local-scripted-mock",
+                "capabilityTags": ["code_review"],
+                "supportedTargets": ["demo-frontend"],
+                "supportedModes": ["review", "read_only"],
+                "description": "Review-only draft.",
+            },
+        )
+        draft_profile = create_response.json()
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/validate",
+            json={
+                "roles": {
+                    "review": {
+                        "agentProfileId": draft_profile["id"],
+                        "providerId": "local-scripted-mock",
+                        "adapterType": "scripted_mock",
+                        "mode": "review",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+        persisted = client.get(f"/workspaces/{workspace_id}/runtime-config")
+
+        assert response.status_code == 200
+        assert response.json()["valid"] is False
+        assert any(
+            "draft profile is disabled until validated" in error
+            for error in response.json()["errors"]
+        )
+        assert persisted.json()["configSource"] == "default"
+        assert persisted.json()["roles"]["review"]["enabled"] is False
 
 
 def test_runtime_config_provider_check_reports_missing_planner_api_key(

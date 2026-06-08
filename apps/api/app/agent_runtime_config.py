@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 
+from app.agent_directory import check_agent_compatibility
 from app.agent_profiles import AgentProfile
 from sqlmodel import Session as DbSession
 from sqlmodel import select
@@ -263,37 +264,44 @@ def validate_runtime_config(
             )
             continue
 
-        if not provider.available:
-            errors.append(
-                f"Runtime config role `{role}` references unavailable provider `{provider.provider_id}`."
-            )
         if not _mode_allowed_for_runtime_role(role, role_config.mode):
             errors.append(
                 f"Runtime config role `{role}` cannot use mode `{role_config.mode}`."
             )
-        if role_config.adapter_type != provider.adapter_type:
-            errors.append(
-                f"Runtime config role `{role}` adapter `{role_config.adapter_type}` does not match provider `{provider.adapter_type}`."
+        if role == "planner":
+            _validate_planner_runtime_role_config(
+                role_config=role_config,
+                profile=profile,
+                provider=provider,
+                errors=errors,
+                warnings=warnings,
             )
-        if role_config.mode not in provider.supported_modes:
+            continue
+        if role_config.adapter_type != profile.adapter_type:
             errors.append(
-                f"Runtime config role `{role}` mode `{role_config.mode}` is not supported by provider `{provider.provider_id}`."
+                f"Runtime config role `{role}` adapter `{role_config.adapter_type}` does not match agent profile `{profile.adapter_type}`."
             )
-        if role_config.mode not in profile.supported_modes:
-            errors.append(
-                f"Runtime config role `{role}` mode `{role_config.mode}` is not supported by agent profile `{profile.id}`."
-            )
-        if not _profile_supports_runtime_role(profile, role):
+            continue
+        required_capabilities = _required_capabilities_for_runtime_role(role)
+        compatibility = check_agent_compatibility(
+            profile=profile,
+            provider=provider,
+            role=_compatibility_role_for_runtime_role(role, profile),
+            target_id=None,
+            mode=role_config.mode,
+            required_capabilities=required_capabilities,
+        )
+        errors.extend(
+            f"Runtime config role `{role}` is incompatible: {reason}"
+            for reason in compatibility.reasons
+        )
+        warnings.extend(
+            f"Runtime config role `{role}` warning: {warning}"
+            for warning in compatibility.warnings
+        )
+        if role == "planner" and not _profile_supports_runtime_role(profile, role):
             errors.append(
                 f"Runtime config role `{role}` is not supported by agent profile `{profile.id}`."
-            )
-        if role in {"frontend", "backend"} and not profile.safe_for_write:
-            errors.append(
-                f"Runtime config role `{role}` requires a write-safe agent profile."
-            )
-        if role in {"planner", "review"} and not profile.safe_for_review:
-            errors.append(
-                f"Runtime config role `{role}` requires a review-safe agent profile."
             )
         if role not in provider.default_for_roles:
             warnings.append(
@@ -345,6 +353,42 @@ def _validate_planner_api_runtime_role(
     if key_resolution.availability == "missing_key":
         warnings.append(
             f"Planner provider preset `{preset.preset_id}` availability is missing_key for env `{api_key_env}`."
+        )
+
+
+def _validate_planner_runtime_role_config(
+    *,
+    role_config: RuntimeRoleConfig,
+    profile: AgentProfile,
+    provider: ProviderConfig,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    if not provider.available:
+        errors.append(
+            f"Runtime config role `planner` references unavailable provider `{provider.provider_id}`."
+        )
+    if role_config.adapter_type != provider.adapter_type:
+        errors.append(
+            f"Runtime config role `planner` adapter `{role_config.adapter_type}` does not match provider `{provider.adapter_type}`."
+        )
+    if role_config.mode not in provider.supported_modes:
+        errors.append(
+            f"Runtime config role `planner` mode `{role_config.mode}` is not supported by provider `{provider.provider_id}`."
+        )
+    if role_config.mode not in profile.supported_modes:
+        errors.append(
+            f"Runtime config role `planner` mode `{role_config.mode}` is not supported by agent profile `{profile.id}`."
+        )
+    if not _profile_supports_runtime_role(profile, "planner"):
+        errors.append(
+            f"Runtime config role `planner` is not supported by agent profile `{profile.id}`."
+        )
+    if not profile.safe_for_review:
+        errors.append("Runtime config role `planner` requires a review-safe agent profile.")
+    if "planner" not in provider.default_for_roles:
+        warnings.append(
+            f"Provider `{provider.provider_id}` is not a default provider for role `planner`."
         )
 
 
@@ -445,6 +489,25 @@ def _profile_supports_runtime_role(profile: AgentProfile, role: str) -> bool:
         "qa" if role == "review" else role,
     }
     return bool(accepted_roles.intersection(profile.supported_roles))
+
+
+def _compatibility_role_for_runtime_role(role: str, profile: AgentProfile) -> str:
+    if role == "planner" and role not in profile.supported_roles:
+        if "orchestrator" in profile.supported_roles:
+            return "orchestrator"
+        if "manager" in profile.supported_roles:
+            return "manager"
+    if role == "review" and role not in profile.supported_roles and "qa" in profile.supported_roles:
+        return "qa"
+    return role
+
+
+def _required_capabilities_for_runtime_role(role: str) -> list[str]:
+    return {
+        "frontend": ["code_write"],
+        "backend": ["code_write"],
+        "review": ["code_review"],
+    }.get(role, [])
 
 
 def _mode_allowed_for_runtime_role(role: str, mode: Optional[str]) -> bool:

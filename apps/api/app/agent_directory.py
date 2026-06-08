@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from app.agent_profiles import AgentProfile
-from app.agent_runtime_config import RuntimeConfigSnapshot
 from app.provider_configs import ProviderConfig
+
+if TYPE_CHECKING:
+    from app.agent_runtime_config import RuntimeConfigSnapshot
 
 
 @dataclass(frozen=True)
