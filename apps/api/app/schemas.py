@@ -413,6 +413,7 @@ class MessageCreateRequest(BaseModel):
     message_kind: str = Field(default="chat", alias="messageKind")
     parent_message_id: Optional[str] = Field(default=None, alias="parentMessageId")
     stream_state: str = Field(default="complete", alias="streamState")
+    context: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(populate_by_name=True)
 

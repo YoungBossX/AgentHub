@@ -1268,6 +1268,7 @@ def create_message(
         message_kind=request.message_kind,
         parent_message_id=request.parent_message_id,
         stream_state=request.stream_state,
+        context_json=json.dumps(request.context, separators=(",", ":")),
     )
     created = create_session_message(db, session, message)
     if created.sender_type == "user":

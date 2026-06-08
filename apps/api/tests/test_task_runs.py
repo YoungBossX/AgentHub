@@ -1303,7 +1303,58 @@ def test_artifact_reference_context_rejects_unsupported_artifact_type(
     reference = context["artifactReferences"][0]
     assert reference["artifact_type"] == "command_evidence"
     assert reference["valid"] is False
-    assert "not supported in P12" in reference["reason"]
+    assert "not supported in P23" in reference["reason"]
+
+
+def test_artifact_reference_context_supports_workbench_version_context(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task_run = create_task_run(db, task.id)
+        artifact = Artifact(
+            task_run_id=task_run.id,
+            artifact_type="markdown_document",
+            title="Release notes",
+            status="ready",
+            meta_json='{"safeSummary":"Edited notes","apiToken":"sk-secret"}',
+        )
+        db.add(artifact)
+        db.commit()
+        db.refresh(artifact)
+        message = Message(
+            session_id=task.session_id,
+            sender_type="user",
+            content_md="请参考这个产物继续修改",
+            context_json=json.dumps(
+                {
+                    "selectedArtifactId": artifact.id,
+                    "selectedArtifactVersionId": "version-2",
+                    "selectedArtifact": {
+                        "artifactId": artifact.id,
+                        "selectedText": "## Selected section",
+                        "versionId": "version-2",
+                    },
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(message)
+        db.commit()
+        db.refresh(message)
+        task.created_by_message_id = message.id
+        db.add(task)
+        db.commit()
+        context = build_session_context_pack(db, task)
+
+    reference = context["artifactReferences"][0]
+    assert reference["artifact_id"] == artifact.id
+    assert reference["artifact_type"] == "markdown_document"
+    assert reference["version_id"] == "version-2"
+    assert reference["selected_text"] == "## Selected section"
+    assert reference["safe_summary"] == "Edited notes"
+    assert "apiToken" not in json.dumps(reference)
+    assert context["selectedArtifact"]["versionId"] == "version-2"
 
 
 def test_session_mission_trace_exposes_tasks_artifacts_and_blockers(

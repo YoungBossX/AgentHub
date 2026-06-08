@@ -523,7 +523,13 @@ export function WorkspaceShell({
     const content = draft.trim()
     setDraft("")
     runClientAction(async () => {
-      const created = await createSessionMessage(backendUrl, selectedSessionId, content)
+      const created = await createSessionMessage(
+        backendUrl,
+        selectedSessionId,
+        content,
+        fetch,
+        buildMessageContext(contextArtifact, contextMessage),
+      )
       const [nextMessages, nextTasks] = await Promise.all([
         listSessionMessages(backendUrl, selectedSessionId),
         listSessionTasks(backendUrl, selectedSessionId),
@@ -866,4 +872,40 @@ function mergeArtifactPanelItems(
     )
 
   return [...evidenceItems, ...workbenchItems]
+}
+
+function buildMessageContext(
+  contextArtifact: ArtifactPanelItem | null,
+  contextMessage: ChatMessage | null,
+) {
+  const context: Record<string, unknown> = {}
+  if (contextArtifact) {
+    const latestVersion =
+      contextArtifact.kind === "workbench"
+        ? (
+            contextArtifact.artifact.versions.find(
+              (version) => version.version === contextArtifact.artifact.version,
+            ) ?? contextArtifact.artifact.versions[contextArtifact.artifact.versions.length - 1]
+          )
+        : null
+    context.selectedArtifactId = contextArtifact.artifact.artifactId
+    context.selectedArtifactVersionId = latestVersion?.id ?? null
+    context.selectedArtifact = {
+      artifactId: contextArtifact.artifact.artifactId,
+      kind: contextArtifact.kind,
+      safeSummary:
+        latestVersion?.summary || contextArtifact.taskTitle || contextArtifact.artifact.title,
+      title: contextArtifact.artifact.title,
+      type: contextArtifact.artifact.artifactType,
+      versionId: latestVersion?.id ?? null,
+    }
+  }
+  if (contextMessage) {
+    context.quotedMessage = {
+      contentMd: contextMessage.contentMd,
+      messageId: contextMessage.id,
+      senderType: contextMessage.senderType,
+    }
+  }
+  return context
 }

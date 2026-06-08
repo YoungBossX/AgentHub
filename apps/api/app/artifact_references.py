@@ -4,9 +4,18 @@ from typing import Any, Optional
 
 from sqlmodel import Session as DbSession
 
+from app.canonical_context import filter_protected_values
 from app.models import Artifact, Task, TaskRun
 
-SUPPORTED_ARTIFACT_REFERENCE_TYPES = {"diff", "review", "preview", "deployment"}
+SUPPORTED_ARTIFACT_REFERENCE_TYPES = {
+    "code_snippet",
+    "deployment",
+    "diff",
+    "markdown_document",
+    "preview",
+    "review",
+    "text_document",
+}
 
 
 @dataclass(frozen=True)
@@ -18,6 +27,9 @@ class ArtifactReference:
     status: str
     valid: bool
     reason: Optional[str] = None
+    version_id: Optional[str] = None
+    selected_text: Optional[str] = None
+    safe_summary: Optional[str] = None
     metadata: Optional[dict[str, Any]] = None
 
     def to_context(self) -> dict[str, Any]:
@@ -29,6 +41,8 @@ def artifact_reference_for_id(
     *,
     session_id: str,
     artifact_id: str,
+    version_id: Optional[str] = None,
+    selected_text: Optional[str] = None,
 ) -> ArtifactReference:
     artifact = db.get(Artifact, artifact_id)
     if artifact is None:
@@ -40,6 +54,8 @@ def artifact_reference_for_id(
             status="missing",
             valid=False,
             reason="Selected artifact was not found.",
+            version_id=version_id,
+            selected_text=selected_text,
             metadata={},
         )
 
@@ -54,6 +70,8 @@ def artifact_reference_for_id(
             status=artifact.status,
             valid=False,
             reason="Selected artifact does not belong to this session.",
+            version_id=version_id,
+            selected_text=selected_text,
             metadata={},
         )
 
@@ -67,11 +85,14 @@ def artifact_reference_for_id(
             valid=False,
             reason=(
                 f"Artifact references for `{artifact.artifact_type}` are not "
-                "supported in P12."
+                "supported in P23."
             ),
+            version_id=version_id,
+            selected_text=selected_text,
             metadata={},
         )
 
+    metadata = _safe_metadata(_json_dict(artifact.meta_json))
     return ArtifactReference(
         artifact_id=artifact.id,
         artifact_type=artifact.artifact_type,
@@ -79,7 +100,10 @@ def artifact_reference_for_id(
         title=artifact.title,
         status=artifact.status,
         valid=True,
-        metadata=_json_dict(artifact.meta_json),
+        version_id=version_id,
+        selected_text=selected_text,
+        safe_summary=_safe_summary(artifact, metadata),
+        metadata=metadata,
     )
 
 
@@ -96,6 +120,8 @@ def selected_artifact_reference(
         db,
         session_id=session_id,
         artifact_id=artifact_id,
+        version_id=selected_artifact_version_id(context),
+        selected_text=selected_artifact_text(context),
     ).to_context()
 
 
@@ -109,6 +135,42 @@ def selected_artifact_id(context: dict[str, Any]) -> Optional[str]:
         if isinstance(nested, str) and nested:
             return nested
     return None
+
+
+def selected_artifact_version_id(context: dict[str, Any]) -> Optional[str]:
+    value = context.get("selectedArtifactVersionId")
+    if isinstance(value, str) and value:
+        return value
+    selected = context.get("selectedArtifact")
+    if isinstance(selected, dict):
+        nested = selected.get("versionId") or selected.get("artifactVersionId")
+        if isinstance(nested, str) and nested:
+            return nested
+    return None
+
+
+def selected_artifact_text(context: dict[str, Any]) -> Optional[str]:
+    value = context.get("selectedText")
+    if isinstance(value, str) and value:
+        return value
+    selected = context.get("selectedArtifact")
+    if isinstance(selected, dict):
+        nested = selected.get("selectedText") or selected.get("sectionText")
+        if isinstance(nested, str) and nested:
+            return nested
+    return None
+
+
+def _safe_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    filtered = filter_protected_values(metadata)
+    return filtered if isinstance(filtered, dict) else {}
+
+
+def _safe_summary(artifact: Artifact, metadata: dict[str, Any]) -> str:
+    summary = metadata.get("summary") or metadata.get("safeSummary")
+    if isinstance(summary, str) and summary.strip():
+        return summary.strip()
+    return f"{artifact.title} ({artifact.artifact_type})"
 
 
 def _json_dict(value: str) -> dict[str, Any]:

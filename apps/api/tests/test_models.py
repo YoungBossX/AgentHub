@@ -143,6 +143,7 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "message_kind",
             "parent_message_id",
             "stream_state",
+            "context_json",
             "created_at",
         },
         Agent: {
@@ -599,6 +600,7 @@ def test_message_create_request_populates_by_alias() -> None:
     data = req.model_dump(by_alias=True)
     assert data["contentMd"] == "@orchestrator build a login page"
     assert data["senderType"] == "user"
+    assert data["context"] == {}
 
 
 def test_message_create_request_defaults_are_preserved() -> None:
@@ -608,6 +610,7 @@ def test_message_create_request_defaults_are_preserved() -> None:
     assert req.sender_type == "user"
     assert req.message_kind == "chat"
     assert req.stream_state == "complete"
+    assert req.context == {}
 
 
 def test_task_run_response_uses_camelcase_aliases() -> None:

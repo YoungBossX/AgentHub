@@ -945,6 +945,52 @@ describe("message and event API", () => {
     )
   })
 
+  it("creates messages with artifact context", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          id: "message-2",
+          sessionId: "session-1",
+          senderType: "user",
+          senderId: null,
+          contentMd: "请参考这个产物继续修改",
+          messageKind: "chat",
+          parentMessageId: null,
+          streamState: "complete",
+          createdAt: "2026-05-14T00:00:00Z",
+        }),
+        { status: 201 },
+      )
+    })
+
+    await createSessionMessage(
+      "http://127.0.0.1:8000",
+      "session-1",
+      "请参考这个产物继续修改",
+      fetchMock,
+      {
+        selectedArtifactId: "artifact-doc-1",
+        selectedArtifactVersionId: "version-2",
+      },
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/sessions/session-1/messages",
+      {
+        body: JSON.stringify({
+          contentMd: "请参考这个产物继续修改",
+          senderType: "user",
+          context: {
+            selectedArtifactId: "artifact-doc-1",
+            selectedArtifactVersionId: "version-2",
+          },
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    )
+  })
+
   it("builds an SSE subscription URL for a selected session", () => {
     expect(sessionEventsUrl("http://127.0.0.1:8000", "session-1", 4)).toBe(
       "http://127.0.0.1:8000/sessions/session-1/events?after=4&stream=true",

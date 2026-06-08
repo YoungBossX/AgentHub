@@ -115,6 +115,7 @@ class Message(SQLModel, table=True):
     message_kind: str = "chat"
     parent_message_id: Optional[str] = Field(default=None, foreign_key="message.id")
     stream_state: str = "complete"
+    context_json: str = "{}"
     created_at: datetime = Field(default_factory=utc_now)
 
 

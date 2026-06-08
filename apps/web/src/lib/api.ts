@@ -533,6 +533,8 @@ export type ArtifactWorkbenchEditInput = {
   editorSource?: string
 }
 
+export type MessageContextInput = Record<string, unknown>
+
 type Fetcher = typeof fetch
 
 function apiUrl(backendUrl: string, path: string) {
@@ -982,12 +984,17 @@ export async function createSessionMessage(
   sessionId: string,
   contentMd: string,
   fetcher: Fetcher = fetch,
+  context?: MessageContextInput,
 ): Promise<ChatMessage> {
+  const body: Record<string, unknown> = {
+    contentMd,
+    senderType: "user",
+  }
+  if (context && Object.keys(context).length > 0) {
+    body.context = context
+  }
   const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
-    body: JSON.stringify({
-      contentMd,
-      senderType: "user",
-    }),
+    body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },
     method: "POST",
   })

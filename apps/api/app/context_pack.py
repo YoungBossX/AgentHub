@@ -7,6 +7,8 @@ from sqlmodel import select
 from app.artifact_references import (
     selected_artifact_id,
     selected_artifact_reference,
+    selected_artifact_text,
+    selected_artifact_version_id,
 )
 from app.canonical_context import (
     build_canonical_shared_context,
@@ -59,7 +61,9 @@ def build_session_context_pack(
     recent_message_limit: int = RECENT_MESSAGE_LIMIT,
 ) -> dict[str, Any]:
     plan = _json_dict(task.plan_json)
-    merged_context = dict(plan)
+    message_context = _message_context_for_task(db, task)
+    merged_context = dict(message_context)
+    merged_context.update(plan)
     if plan_context:
         merged_context.update(plan_context)
 
@@ -339,10 +343,14 @@ def _selected_artifact_context(
     if artifact_id is None:
         return None
 
+    version_id = selected_artifact_version_id(context)
+    selected_text = selected_artifact_text(context)
     artifact = db.get(Artifact, artifact_id)
     if artifact is None:
         return {
             "artifactId": artifact_id,
+            "versionId": version_id,
+            "selectedText": selected_text,
             "valid": False,
             "reason": "Selected artifact was not found.",
         }
@@ -351,22 +359,37 @@ def _selected_artifact_context(
     if task is None or task.session_id != session_id:
         return {
             "artifactId": artifact_id,
+            "versionId": version_id,
+            "selectedText": selected_text,
             "valid": False,
             "reason": "Selected artifact does not belong to this session.",
         }
+    meta = _json_dict(artifact.meta_json)
+    filtered_meta = filter_protected_values(meta)
     return {
         "artifactId": artifact.id,
+        "versionId": version_id,
         "artifactType": artifact.artifact_type,
         "taskRunId": artifact.task_run_id,
         "title": artifact.title,
         "status": artifact.status,
+        "selectedText": selected_text,
         "valid": True,
-        "meta": _json_dict(artifact.meta_json),
+        "meta": filtered_meta if isinstance(filtered_meta, dict) else {},
     }
 
 
 def _selected_artifact_id(context: dict[str, Any]) -> Optional[str]:
     return selected_artifact_id(context)
+
+
+def _message_context_for_task(db: DbSession, task: Task) -> dict[str, Any]:
+    if task.created_by_message_id is None:
+        return {}
+    message = db.get(Message, task.created_by_message_id)
+    if message is None:
+        return {}
+    return _json_dict(message.context_json)
 
 
 def _app_contract_context(context: dict[str, Any]) -> Optional[dict[str, Any]]:

@@ -40,6 +40,15 @@ def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
         db_engine,
         inspector,
         table_names,
+        "message",
+        {
+            "context_json": "TEXT NOT NULL DEFAULT '{}'",
+        },
+    )
+    _ensure_table_columns(
+        db_engine,
+        inspector,
+        table_names,
         "session",
         {
             "active_frontend_target_id": "TEXT",
