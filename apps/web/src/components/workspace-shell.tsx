@@ -21,7 +21,13 @@ import {
 
 import { ArtifactPanel } from "@/components/artifact-panel"
 import { ChatThread } from "@/components/chat-thread"
-import { MessageComposer } from "@/components/message-composer"
+import {
+  buildComposerMessageContext,
+  contextItemFromArtifact,
+  contextItemFromMessage,
+  type ComposerContextItem,
+  MessageComposer,
+} from "@/components/message-composer"
 import { MissionPanel } from "@/components/mission-panel"
 import { type ArtifactPanelItem } from "@/components/preview-card"
 import { SessionSidebar } from "@/components/session-sidebar"
@@ -87,8 +93,7 @@ export function WorkspaceShell({
   const [evidenceArtifactItems, setEvidenceArtifactItems] = useState<ArtifactPanelItem[]>([])
   const [workbenchArtifacts, setWorkbenchArtifacts] = useState<ArtifactWorkbenchArtifact[]>([])
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
-  const [contextArtifactId, setContextArtifactId] = useState<string | null>(null)
-  const [contextMessage, setContextMessage] = useState<ChatMessage | null>(null)
+  const [contextItems, setContextItems] = useState<ComposerContextItem[]>([])
   const [conversationMode, setConversationMode] = useState<"direct" | "group">("group")
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
   const [syncError, setSyncError] = useState<string | null>(null)
@@ -105,8 +110,6 @@ export function WorkspaceShell({
   )
   const selectedArtifact =
     artifactItems.find((artifact) => artifact.id === selectedArtifactId) ?? null
-  const contextArtifact =
-    artifactItems.find((artifact) => artifact.id === contextArtifactId) ?? null
   const selectedPreview =
     selectedArtifact?.kind === "preview" ? selectedArtifact.artifact : null
   const visibleMessages = selectedSessionId ? messages : []
@@ -496,22 +499,20 @@ export function WorkspaceShell({
 
       return artifacts[artifacts.length - 1]?.id ?? null
     })
-    setContextArtifactId((current) => {
-      if (current && artifacts.some((artifact) => artifact.id === current)) {
-        return current
-      }
-
-      return null
-    })
+    setContextItems((current) =>
+      current.filter(
+        (item) => !item.artifact || artifacts.some((artifact) => artifact.id === item.id),
+      ),
+    )
   }, [])
 
   function handleUseArtifactContext(artifact: ArtifactPanelItem) {
-    setContextArtifactId(artifact.id)
+    setContextItems((current) => appendContextItem(current, contextItemFromArtifact(artifact)))
     setSelectedArtifactId(artifact.id)
   }
 
   function handleQuoteMessage(message: ChatMessage) {
-    setContextMessage(message)
+    setContextItems((current) => appendContextItem(current, contextItemFromMessage(message)))
   }
 
   function handleSendMessage(event: FormEvent<HTMLFormElement>) {
@@ -528,7 +529,7 @@ export function WorkspaceShell({
         selectedSessionId,
         content,
         fetch,
-        buildMessageContext(contextArtifact, contextMessage),
+        buildComposerMessageContext(contextItems),
       )
       const [nextMessages, nextTasks] = await Promise.all([
         listSessionMessages(backendUrl, selectedSessionId),
@@ -546,8 +547,7 @@ export function WorkspaceShell({
             : session,
         ),
       )
-      setContextArtifactId(null)
-      setContextMessage(null)
+      setContextItems([])
       setSyncError(null)
     }, "无法发送消息")
   }
@@ -694,15 +694,17 @@ export function WorkspaceShell({
 
             {selectedSession ? (
               <MessageComposer
-                contextArtifact={contextArtifact}
-                contextMessage={contextMessage}
+                contextItems={contextItems}
                 draft={draft}
                 isPending={isPending}
-                onClearContext={() => {
-                  setContextArtifactId(null)
-                  setContextMessage(null)
-                }}
+                onClearContext={() => setContextItems([])}
                 onDraftChange={setDraft}
+                onMoveContextItem={(itemId, direction) =>
+                  setContextItems((current) => moveContextItem(current, itemId, direction))
+                }
+                onRemoveContextItem={(itemId) =>
+                  setContextItems((current) => removeContextItem(current, itemId))
+                }
                 onSubmit={handleSendMessage}
               />
             ) : null}
@@ -874,38 +876,36 @@ function mergeArtifactPanelItems(
   return [...evidenceItems, ...workbenchItems]
 }
 
-function buildMessageContext(
-  contextArtifact: ArtifactPanelItem | null,
-  contextMessage: ChatMessage | null,
+function appendContextItem(
+  items: ComposerContextItem[],
+  nextItem: ComposerContextItem,
 ) {
-  const context: Record<string, unknown> = {}
-  if (contextArtifact) {
-    const latestVersion =
-      contextArtifact.kind === "workbench"
-        ? (
-            contextArtifact.artifact.versions.find(
-              (version) => version.version === contextArtifact.artifact.version,
-            ) ?? contextArtifact.artifact.versions[contextArtifact.artifact.versions.length - 1]
-          )
-        : null
-    context.selectedArtifactId = contextArtifact.artifact.artifactId
-    context.selectedArtifactVersionId = latestVersion?.id ?? null
-    context.selectedArtifact = {
-      artifactId: contextArtifact.artifact.artifactId,
-      kind: contextArtifact.kind,
-      safeSummary:
-        latestVersion?.summary || contextArtifact.taskTitle || contextArtifact.artifact.title,
-      title: contextArtifact.artifact.title,
-      type: contextArtifact.artifact.artifactType,
-      versionId: latestVersion?.id ?? null,
-    }
+  const withoutDuplicate = items.filter((item) => item.id !== nextItem.id)
+  return [...withoutDuplicate, nextItem]
+}
+
+function removeContextItem(
+  items: ComposerContextItem[],
+  itemId: string,
+) {
+  return items.filter((item) => item.id !== itemId)
+}
+
+function moveContextItem(
+  items: ComposerContextItem[],
+  itemId: string,
+  direction: "up" | "down",
+) {
+  const index = items.findIndex((item) => item.id === itemId)
+  if (index < 0) {
+    return items
   }
-  if (contextMessage) {
-    context.quotedMessage = {
-      contentMd: contextMessage.contentMd,
-      messageId: contextMessage.id,
-      senderType: contextMessage.senderType,
-    }
+  const targetIndex = direction === "up" ? index - 1 : index + 1
+  if (targetIndex < 0 || targetIndex >= items.length) {
+    return items
   }
-  return context
+  const next = [...items]
+  const [item] = next.splice(index, 1)
+  next.splice(targetIndex, 0, item)
+  return next
 }

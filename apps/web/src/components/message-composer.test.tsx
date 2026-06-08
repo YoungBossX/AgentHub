@@ -1,7 +1,12 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { MessageComposer } from "./message-composer"
+import {
+  buildComposerMessageContext,
+  contextItemFromArtifact,
+  contextItemFromMessage,
+  MessageComposer,
+} from "./message-composer"
 import type { ArtifactPanelItem } from "@/components/preview-card"
 import type { ChatMessage } from "@/lib/api"
 
@@ -50,12 +55,13 @@ describe("MessageComposer", () => {
 
     render(
       <MessageComposer
-        contextArtifact={null}
-        contextMessage={contextMessage}
+        contextItems={[contextItemFromMessage(contextMessage)]}
         draft="继续"
         isPending={false}
         onClearContext={onClearContext}
         onDraftChange={vi.fn()}
+        onMoveContextItem={vi.fn()}
+        onRemoveContextItem={vi.fn()}
         onSubmit={vi.fn()}
       />,
     )
@@ -72,18 +78,82 @@ describe("MessageComposer", () => {
   it("shows artifact context before send", () => {
     render(
       <MessageComposer
-        contextArtifact={contextArtifact}
-        contextMessage={null}
+        contextItems={[contextItemFromArtifact(contextArtifact)]}
         draft="检查这个 diff"
         isPending={false}
         onClearContext={vi.fn()}
         onDraftChange={vi.fn()}
+        onMoveContextItem={vi.fn()}
+        onRemoveContextItem={vi.fn()}
         onSubmit={vi.fn()}
       />,
     )
 
     expect(screen.getByText("待发送上下文")).toBeTruthy()
     expect(screen.getByText(/Diff 产物/)).toBeTruthy()
-    expect(screen.getByText(/实现登录页/)).toBeTruthy()
+    expect(screen.getAllByText(/实现登录页/).length).toBeGreaterThan(0)
+  })
+
+  it("lets users remove and reorder multiple context items", () => {
+    const onMoveContextItem = vi.fn()
+    const onRemoveContextItem = vi.fn()
+
+    render(
+      <MessageComposer
+        contextItems={[
+          contextItemFromMessage(contextMessage),
+          contextItemFromArtifact(contextArtifact),
+        ]}
+        draft="继续"
+        isPending={false}
+        onClearContext={vi.fn()}
+        onDraftChange={vi.fn()}
+        onMoveContextItem={onMoveContextItem}
+        onRemoveContextItem={onRemoveContextItem}
+        onSubmit={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText("引用消息 · 用户")).toBeTruthy()
+    expect(screen.getByText(/Diff 产物/)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "下移上下文 用户" }))
+    fireEvent.click(screen.getByRole("button", { name: "移除上下文 Git Diff" }))
+
+    expect(onMoveContextItem).toHaveBeenCalledWith("message:message-1", "down")
+    expect(onRemoveContextItem).toHaveBeenCalledWith("diff:diff-1")
+  })
+
+  it("builds contextItems payload while preserving legacy context fields", () => {
+    const payload = buildComposerMessageContext([
+      contextItemFromArtifact(contextArtifact),
+      contextItemFromMessage(contextMessage),
+    ])
+
+    expect(payload.contextItems).toEqual([
+      {
+        artifactId: "artifact-diff-1",
+        artifactVersionId: null,
+        id: "diff:diff-1",
+        kind: "artifact",
+        selectedText: null,
+        summary: "实现登录页",
+        title: "Git Diff",
+        type: "diff",
+      },
+      {
+        id: "message:message-1",
+        kind: "message",
+        messageId: "message-1",
+        summary: "请基于这个登录需求继续完善。",
+        title: "用户",
+      },
+    ])
+    expect(payload.selectedArtifactId).toBe("artifact-diff-1")
+    expect(payload.quotedMessage).toEqual({
+      contentMd: "请基于这个登录需求继续完善。",
+      messageId: "message-1",
+      senderType: "user",
+    })
   })
 })
