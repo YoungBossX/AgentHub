@@ -33,6 +33,7 @@ export default async function AgentDirectorySettingsPage() {
         </header>
 
         <AgentDirectorySettingsPageClient
+          backendUrl={backendUrl}
           directory={directory}
           workspace={workspace}
         />

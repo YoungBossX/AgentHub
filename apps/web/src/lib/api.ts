@@ -193,6 +193,19 @@ export type AgentDirectory = {
   entries: AgentDirectoryEntry[]
 }
 
+export type AgentProfileDraftInput = {
+  displayName: string
+  role: string
+  adapterType: string
+  providerId: string
+  capabilityTags: string[]
+  supportedTargets: string[]
+  supportedModes: string[]
+  safeForWrite: boolean
+  safeForReview: boolean
+  description: string
+}
+
 export type RuntimeRoleConfig = {
   role: string
   agentProfileId: string | null
@@ -726,6 +739,37 @@ export async function getWorkspaceAgentDirectory(
   }
 
   return (await response.json()) as AgentDirectory
+}
+
+export async function createAgentProfileDraft(
+  backendUrl: string,
+  workspaceId: string,
+  input: AgentProfileDraftInput,
+  fetcher: Fetcher = fetch,
+): Promise<AgentProfile> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/agent-profile-drafts`),
+    {
+      body: JSON.stringify(input),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  )
+
+  if (!response.ok) {
+    let detail = "Could not create agent profile draft"
+    try {
+      const payload = (await response.json()) as { detail?: unknown }
+      if (typeof payload.detail === "string") {
+        detail = payload.detail
+      }
+    } catch {
+      detail = "Could not create agent profile draft"
+    }
+    throw new Error(detail)
+  }
+
+  return (await response.json()) as AgentProfile
 }
 
 export async function getAgentRuntimeConfig(

@@ -4,6 +4,7 @@ import {
   analyzeExternalProject,
   approveTaskRun,
   checkAgentRuntimeProvider,
+  createAgentProfileDraft,
   createExternalProjectTarget,
   createSessionMessage,
   createTaskRun,
@@ -538,6 +539,101 @@ describe("workspace and session API", () => {
     )
     expect(directory?.entries[0].compatibility.compatible).toBe(true)
     expect(directory?.entries[0].runtimeSelectedForRoles).toEqual(["frontend"])
+  })
+
+  it("creates a safe agent profile draft without unsafe execution fields", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          adapterType: "scripted_mock",
+          avatarInitials: "UR",
+          capabilityTags: ["code_review"],
+          description: "Review only.",
+          displayName: "UI Reviewer",
+          id: "draft-ui-reviewer",
+          providerId: "local-scripted-mock",
+          role: "ui_review",
+          safeForReview: true,
+          safeForWrite: false,
+          status: "draft_only",
+          supportedModes: ["review", "read_only"],
+          supportedRoles: ["ui_review"],
+          supportedTargets: ["demo-frontend"],
+        }),
+        { status: 201 },
+      )
+    })
+
+    const draft = await createAgentProfileDraft(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      {
+        adapterType: "scripted_mock",
+        capabilityTags: ["code_review"],
+        description: "Review only.",
+        displayName: "UI Reviewer",
+        providerId: "local-scripted-mock",
+        role: "ui_review",
+        safeForReview: true,
+        safeForWrite: false,
+        supportedModes: ["review", "read_only"],
+        supportedTargets: ["demo-frontend"],
+      },
+      fetchMock,
+    )
+
+    expect(draft.status).toBe("draft_only")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/agent-profile-drafts",
+      {
+        body: JSON.stringify({
+          adapterType: "scripted_mock",
+          capabilityTags: ["code_review"],
+          description: "Review only.",
+          displayName: "UI Reviewer",
+          providerId: "local-scripted-mock",
+          role: "ui_review",
+          safeForReview: true,
+          safeForWrite: false,
+          supportedModes: ["review", "read_only"],
+          supportedTargets: ["demo-frontend"],
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    )
+    const body = JSON.stringify(fetchMock.mock.calls)
+    expect(body).not.toContain("shellCommands")
+    expect(body).not.toContain("toolPermissions")
+  })
+
+  it("surfaces agent profile draft validation errors", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({ detail: "Draft agents cannot define shell commands." }),
+        { status: 400 },
+      )
+    })
+
+    await expect(
+      createAgentProfileDraft(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        {
+          adapterType: "scripted_mock",
+          capabilityTags: ["code_review"],
+          description: "Review only.",
+          displayName: "Unsafe Reviewer",
+          providerId: "local-scripted-mock",
+          role: "unsafe_review",
+          safeForReview: true,
+          safeForWrite: false,
+          supportedModes: ["review", "read_only"],
+          supportedTargets: ["demo-frontend"],
+        },
+        fetchMock,
+      ),
+    ).rejects.toThrow("Draft agents cannot define shell commands.")
   })
 
   it("reads and updates agent runtime config for a workspace", async () => {

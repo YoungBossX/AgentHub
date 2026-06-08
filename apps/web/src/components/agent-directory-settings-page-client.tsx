@@ -3,10 +3,17 @@
 import { useMemo, useState } from "react"
 import { Search, ShieldCheck, Users } from "lucide-react"
 
-import type { AgentDirectory, AgentDirectoryEntry, Workspace } from "@/lib/api"
+import {
+  createAgentProfileDraft,
+  type AgentDirectory,
+  type AgentDirectoryEntry,
+  type AgentProfile,
+  type Workspace,
+} from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 type AgentDirectorySettingsPageClientProps = {
+  backendUrl?: string
   directory: AgentDirectory | null
   workspace: Workspace | null
 }
@@ -22,11 +29,19 @@ const FILTERS: Array<{ key: FilterKey; label: string }> = [
 ]
 
 export function AgentDirectorySettingsPageClient({
+  backendUrl = "http://127.0.0.1:8000",
   directory,
   workspace,
 }: AgentDirectorySettingsPageClientProps) {
-  const entries = useMemo(() => directory?.entries ?? [], [directory])
+  const [entries, setEntries] = useState<AgentDirectoryEntry[]>(
+    directory?.entries ?? [],
+  )
   const [query, setQuery] = useState("")
+  const [draftName, setDraftName] = useState("")
+  const [draftRole, setDraftRole] = useState("")
+  const [draftDescription, setDraftDescription] = useState("")
+  const [draftStatus, setDraftStatus] = useState<"idle" | "saving">("idle")
+  const [draftError, setDraftError] = useState<string | null>(null)
   const [filters, setFilters] = useState<Record<FilterKey, string>>({
     capability: "all",
     provider: "all",
@@ -109,6 +124,108 @@ export function AgentDirectorySettingsPageClient({
         </div>
       </div>
 
+      <form
+        className="grid gap-3 rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm"
+        onSubmit={async (event) => {
+          event.preventDefault()
+          if (!workspace) {
+            setDraftError("请先选择工作区。")
+            return
+          }
+          const displayName = draftName.trim()
+          const role = draftRole.trim()
+          if (!displayName || !role) {
+            setDraftError("请填写草稿名称和角色。")
+            return
+          }
+          setDraftError(null)
+          setDraftStatus("saving")
+          try {
+            const profile = await createAgentProfileDraft(backendUrl, workspace.id, {
+              adapterType: "scripted_mock",
+              capabilityTags: ["code_review", "diff_analysis"],
+              description: draftDescription.trim(),
+              displayName,
+              providerId: "local-scripted-mock",
+              role,
+              safeForReview: true,
+              safeForWrite: false,
+              supportedModes: ["review", "read_only"],
+              supportedTargets: ["demo-frontend"],
+            })
+            setEntries((current) => [...current, entryFromDraftProfile(profile)])
+            resetDraftForm()
+          } catch (error) {
+            setDraftError(error instanceof Error ? error.message : "保存草稿失败。")
+          } finally {
+            setDraftStatus("idle")
+          }
+        }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-950">安全草稿 Agent</p>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+              草稿默认只读/评审，不会进入执行调度。
+            </p>
+          </div>
+          <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600">
+            metadata-only
+          </span>
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-3">
+          <label className="grid gap-1 text-xs font-semibold text-slate-700">
+            草稿名称
+            <input
+              className="min-h-10 rounded-md border border-[var(--border)] bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-[var(--primary-border)]"
+              onChange={(event) => setDraftName(event.target.value)}
+              value={draftName}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-slate-700">
+            草稿角色
+            <input
+              className="min-h-10 rounded-md border border-[var(--border)] bg-white px-3 font-mono text-sm text-slate-900 outline-none transition focus:border-[var(--primary-border)]"
+              onChange={(event) => setDraftRole(event.target.value)}
+              placeholder="ui_review"
+              value={draftRole}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-slate-700">
+            草稿描述
+            <input
+              className="min-h-10 rounded-md border border-[var(--border)] bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-[var(--primary-border)]"
+              onChange={(event) => setDraftDescription(event.target.value)}
+              value={draftDescription}
+            />
+          </label>
+        </div>
+
+        {draftError ? (
+          <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">
+            {draftError}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            className="min-h-10 rounded-md border border-[var(--border)] bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-[var(--primary-border)]"
+            onClick={resetDraftForm}
+            type="button"
+          >
+            取消
+          </button>
+          <button
+            className="min-h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
+            disabled={draftStatus === "saving"}
+            type="submit"
+          >
+            保存草稿
+          </button>
+        </div>
+      </form>
+
       <div className="grid gap-3 lg:grid-cols-2">
         {filteredEntries.map((entry) => (
           <AgentDirectoryCard entry={entry} key={entry.id} />
@@ -122,6 +239,13 @@ export function AgentDirectorySettingsPageClient({
       ) : null}
     </section>
   )
+
+  function resetDraftForm() {
+    setDraftName("")
+    setDraftRole("")
+    setDraftDescription("")
+    setDraftError(null)
+  }
 }
 
 function AgentDirectoryCard({ entry }: { entry: AgentDirectoryEntry }) {
@@ -275,6 +399,38 @@ function sortedUnique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
     a.localeCompare(b),
   )
+}
+
+function entryFromDraftProfile(profile: AgentProfile): AgentDirectoryEntry {
+  return {
+    adapterType: profile.adapterType,
+    agentProfileId: profile.id,
+    authStatus: "not_required",
+    available: false,
+    avatarInitials: profile.avatarInitials,
+    capabilityTags: profile.capabilityTags,
+    compatibility: {
+      compatible: false,
+      mode: profile.supportedModes[0] ?? null,
+      reasons: ["draft profile is disabled until validated"],
+      requiredCapabilities: [],
+      role: profile.role,
+      targetId: null,
+      warnings: [],
+    },
+    description: profile.description,
+    displayName: profile.displayName,
+    entryType: "draft",
+    id: profile.id,
+    providerId: profile.providerId,
+    role: profile.role,
+    runtimeSelectedForRoles: [],
+    safeForReview: profile.safeForReview,
+    safeForWrite: false,
+    status: profile.status,
+    supportedModes: profile.supportedModes,
+    supportedTargets: profile.supportedTargets,
+  }
 }
 
 function statusLabel(status: string) {
