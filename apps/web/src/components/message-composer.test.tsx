@@ -7,6 +7,7 @@ import {
   contextItemFromMessage,
   MessageComposer,
 } from "./message-composer"
+import { sampleDeploymentArtifact } from "./__fixtures__/sample-deployment"
 import type { ArtifactPanelItem } from "@/components/preview-card"
 import type { ChatMessage } from "@/lib/api"
 
@@ -47,6 +48,53 @@ const contextArtifact: ArtifactPanelItem = {
   kind: "diff",
   taskRunId: "run-123456789",
   taskTitle: "实现登录页",
+}
+
+const deploymentContextArtifact: ArtifactPanelItem = {
+  artifact: sampleDeploymentArtifact,
+  id: `deployment:${sampleDeploymentArtifact.id}`,
+  kind: "deployment",
+  taskRunId: sampleDeploymentArtifact.taskRunId,
+  taskTitle: "部署演示应用",
+}
+
+const workbenchContextArtifact: ArtifactPanelItem = {
+  artifact: {
+    artifactId: "artifact-doc-1",
+    artifactType: "markdown_document",
+    contentHash: "hash-v2",
+    createdAt: "2026-06-08T00:00:00Z",
+    editable: true,
+    rendererKind: "markdown",
+    safeMeta: {},
+    status: "ready",
+    taskRunId: "run-doc-123456",
+    title: "发布说明",
+    updatedAt: "2026-06-08T00:00:00Z",
+    version: 2,
+    versions: [
+      {
+        artifactId: "artifact-doc-1",
+        changedFiles: [],
+        contentHash: "hash-v2",
+        contentMd: "## 发布说明",
+        createdAt: "2026-06-08T00:00:00Z",
+        editorSource: "user_edit",
+        gitBaseRef: null,
+        gitHeadRef: null,
+        id: "version-2",
+        parentArtifactId: null,
+        parentVersionId: "version-1",
+        sourceTaskRunId: "run-doc-123456",
+        summary: "用户选中的文档段落",
+        version: 2,
+      },
+    ],
+  },
+  id: "workbench:artifact-doc-1",
+  kind: "workbench",
+  taskRunId: "run-doc-123456",
+  taskTitle: "编辑发布说明",
 }
 
 describe("MessageComposer", () => {
@@ -155,5 +203,47 @@ describe("MessageComposer", () => {
       messageId: "message-1",
       senderType: "user",
     })
+  })
+
+  it("rehearses combined context payload for freeze review", () => {
+    const payload = buildComposerMessageContext([
+      contextItemFromArtifact(deploymentContextArtifact),
+      contextItemFromArtifact(contextArtifact),
+      contextItemFromArtifact(workbenchContextArtifact),
+      contextItemFromMessage(contextMessage),
+    ])
+
+    expect(payload.contextItems).toEqual([
+      expect.objectContaining({
+        artifactId: sampleDeploymentArtifact.artifactId,
+        id: `deployment:${sampleDeploymentArtifact.id}`,
+        kind: "deployment",
+        title: sampleDeploymentArtifact.title,
+        type: "deployment",
+      }),
+      expect.objectContaining({
+        artifactId: "artifact-diff-1",
+        id: "diff:diff-1",
+        kind: "artifact",
+        type: "diff",
+      }),
+      expect.objectContaining({
+        artifactId: "artifact-doc-1",
+        artifactVersionId: "version-2",
+        id: "workbench:artifact-doc-1",
+        kind: "artifact",
+        summary: "用户选中的文档段落",
+        type: "markdown_document",
+      }),
+      expect.objectContaining({
+        id: "message:message-1",
+        kind: "message",
+        messageId: "message-1",
+      }),
+    ])
+    expect(payload.selectedArtifactId).toBe(sampleDeploymentArtifact.artifactId)
+    expect(payload.quotedMessage).toEqual(
+      expect.objectContaining({ messageId: "message-1" }),
+    )
   })
 })
