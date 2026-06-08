@@ -44,6 +44,7 @@ import {
   listSessionTasks,
   retryTaskRun,
   retryTaskRunWithFallback,
+  saveArtifactWorkbenchEdit,
   sessionEventsUrl,
   startTaskRunPreview,
   stopPreview,
@@ -474,6 +475,18 @@ export function WorkspaceShell({
     }, "无法停止预览")
   }
 
+  function handleSaveArtifactEdit(artifactId: string, contentMd: string, summary: string) {
+    runClientAction(async () => {
+      await saveArtifactWorkbenchEdit(backendUrl, artifactId, {
+        contentMd,
+        summary,
+      })
+      refreshArtifacts()
+      setSelectedArtifactId(`workbench:${artifactId}`)
+      setSyncError(null)
+    }, "无法保存产物版本")
+  }
+
   const handleArtifactsChange = useCallback((artifacts: ArtifactPanelItem[]) => {
     setEvidenceArtifactItems(artifacts)
     setSelectedArtifactId((current) => {
@@ -698,6 +711,7 @@ export function WorkspaceShell({
           onCreateDeploy={handleCreateDeployment}
           onOpenPreview={handleOpenPreview}
           onRefresh={handleRefreshPreviews}
+          onSaveArtifactEdit={handleSaveArtifactEdit}
           onSelectArtifact={setSelectedArtifactId}
           onStopPreview={handleStopPreview}
           selectedArtifactId={selectedArtifactId}

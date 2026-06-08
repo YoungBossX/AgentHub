@@ -527,6 +527,12 @@ export type ArtifactWorkbenchSession = {
   artifacts: ArtifactWorkbenchArtifact[]
 }
 
+export type ArtifactWorkbenchEditInput = {
+  contentMd: string
+  summary?: string
+  editorSource?: string
+}
+
 type Fetcher = typeof fetch
 
 function apiUrl(backendUrl: string, path: string) {
@@ -1262,6 +1268,28 @@ export async function getSessionArtifactWorkbench(
   }
 
   return (await response.json()) as ArtifactWorkbenchSession
+}
+
+export async function saveArtifactWorkbenchEdit(
+  backendUrl: string,
+  artifactId: string,
+  input: ArtifactWorkbenchEditInput,
+  fetcher: Fetcher = fetch,
+): Promise<ArtifactWorkbenchVersion> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/artifacts/${artifactId}/workbench/edits`),
+    {
+      body: JSON.stringify(input),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error("Could not save artifact edit")
+  }
+
+  return (await response.json()) as ArtifactWorkbenchVersion
 }
 
 async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {

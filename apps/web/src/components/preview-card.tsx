@@ -11,6 +11,7 @@ import {
   Square,
   X,
 } from "lucide-react"
+import { type ChangeEvent, useState } from "react"
 
 import { DeployCard } from "./deploy-card"
 import { DiffCard } from "./diff-card"
@@ -42,6 +43,7 @@ type PreviewPanelProps = {
   onCreateDeploy?: (previewId: string) => void
   onOpenPreview?: (preview: PreviewArtifact) => void
   onRefresh?: (taskRunId: string) => void
+  onSaveArtifactEdit?: (artifactId: string, contentMd: string, summary: string) => void
   onSelectArtifact?: (artifactId: string) => void
   onStopPreview?: (previewId: string) => void
   selectedArtifactId: string | null
@@ -220,6 +222,7 @@ export function PreviewPanel({
   onCreateDeploy,
   onOpenPreview,
   onRefresh,
+  onSaveArtifactEdit,
   onSelectArtifact,
   onStopPreview,
   selectedArtifactId,
@@ -372,6 +375,7 @@ export function PreviewPanel({
             onCreateDeploy={onCreateDeploy}
             onOpenPreview={onOpenPreview}
             onRefresh={onRefresh}
+            onSaveArtifactEdit={onSaveArtifactEdit}
             onStopPreview={onStopPreview}
           />
         ) : (
@@ -430,6 +434,7 @@ function ArtifactDetail({
   onCreateDeploy,
   onOpenPreview,
   onRefresh,
+  onSaveArtifactEdit,
   onStopPreview,
 }: {
   busy: boolean
@@ -438,6 +443,7 @@ function ArtifactDetail({
   onCreateDeploy?: (previewId: string) => void
   onOpenPreview?: (preview: PreviewArtifact) => void
   onRefresh?: (taskRunId: string) => void
+  onSaveArtifactEdit?: (artifactId: string, contentMd: string, summary: string) => void
   onStopPreview?: (previewId: string) => void
 }) {
   if (item.kind === "diff") {
@@ -453,7 +459,13 @@ function ArtifactDetail({
   }
 
   if (item.kind === "workbench") {
-    return <WorkbenchArtifactDetail artifact={item.artifact} />
+    return (
+      <WorkbenchArtifactDetail
+        artifact={item.artifact}
+        busy={busy}
+        onSaveArtifactEdit={onSaveArtifactEdit}
+      />
+    )
   }
 
   return (
@@ -589,7 +601,15 @@ function summaryRows(item: ArtifactPanelItem) {
   ]
 }
 
-function WorkbenchArtifactDetail({ artifact }: { artifact: ArtifactWorkbenchArtifact }) {
+function WorkbenchArtifactDetail({
+  artifact,
+  busy,
+  onSaveArtifactEdit,
+}: {
+  artifact: ArtifactWorkbenchArtifact
+  busy: boolean
+  onSaveArtifactEdit?: (artifactId: string, contentMd: string, summary: string) => void
+}) {
   const latestVersion =
     artifact.versions.find((version) => version.version === artifact.version) ??
     artifact.versions[artifact.versions.length - 1] ??
@@ -597,6 +617,29 @@ function WorkbenchArtifactDetail({ artifact }: { artifact: ArtifactWorkbenchArti
   const hasTextContent = Boolean(latestVersion?.contentMd)
   const safeMeta = JSON.stringify(artifact.safeMeta, null, 2)
   const isCode = artifact.rendererKind === "code_snippet"
+  const [isEditing, setIsEditing] = useState(false)
+  const [draftContent, setDraftContent] = useState(latestVersion?.contentMd ?? "")
+  const [draftSummary, setDraftSummary] = useState("Artifact workbench edit.")
+
+  function startEditing() {
+    setDraftContent(latestVersion?.contentMd ?? "")
+    setDraftSummary("Artifact workbench edit.")
+    setIsEditing(true)
+  }
+
+  function cancelEditing() {
+    setDraftContent(latestVersion?.contentMd ?? "")
+    setDraftSummary("Artifact workbench edit.")
+    setIsEditing(false)
+  }
+
+  function saveEdit() {
+    if (!draftContent.trim()) {
+      return
+    }
+    onSaveArtifactEdit?.(artifact.artifactId, draftContent, draftSummary)
+    setIsEditing(false)
+  }
 
   return (
     <article className="grid gap-3 rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm">
@@ -620,6 +663,31 @@ function WorkbenchArtifactDetail({ artifact }: { artifact: ArtifactWorkbenchArti
         </span>
       </div>
 
+      {artifact.editable ? (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            className="h-8 px-3 text-xs"
+            disabled={busy || !onSaveArtifactEdit || isEditing}
+            onClick={startEditing}
+            type="button"
+            variant="secondary"
+          >
+            编辑版本
+          </Button>
+          {isEditing ? (
+            <Button
+              className="h-8 px-3 text-xs"
+              disabled={busy}
+              onClick={cancelEditing}
+              type="button"
+              variant="secondary"
+            >
+              取消
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
       <dl className="grid gap-2 text-xs sm:grid-cols-3">
         <div>
           <dt className="text-[var(--muted-foreground)]">版本</dt>
@@ -637,7 +705,49 @@ function WorkbenchArtifactDetail({ artifact }: { artifact: ArtifactWorkbenchArti
         </div>
       </dl>
 
-      {hasTextContent ? (
+      {isEditing ? (
+        <section className="grid gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3">
+          <label className="grid gap-1 text-xs font-semibold text-slate-700">
+            编辑内容
+            <textarea
+              className="min-h-48 resize-y rounded-lg border border-[var(--border)] bg-white p-3 font-mono text-xs leading-6 outline-none focus:border-slate-400"
+              onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                setDraftContent(event.target.value)
+              }
+              value={draftContent}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-slate-700">
+            版本摘要
+            <input
+              className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-xs outline-none focus:border-slate-400"
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                setDraftSummary(event.target.value)
+              }
+              value={draftSummary}
+            />
+          </label>
+          <div className="flex justify-end gap-2">
+            <Button
+              className="h-8 px-3 text-xs"
+              disabled={busy}
+              onClick={cancelEditing}
+              type="button"
+              variant="secondary"
+            >
+              取消
+            </Button>
+            <Button
+              className="h-8 px-3 text-xs"
+              disabled={busy || !draftContent.trim()}
+              onClick={saveEdit}
+              type="button"
+            >
+              保存版本
+            </Button>
+          </div>
+        </section>
+      ) : hasTextContent ? (
         <pre className="max-h-[420px] overflow-auto rounded-lg bg-slate-950 p-3 text-xs leading-6 text-slate-50">
           <code>{latestVersion?.contentMd}</code>
         </pre>

@@ -35,6 +35,7 @@ import {
   listWorkspaceSessions,
   retryTaskRun,
   retryTaskRunWithFallback,
+  saveArtifactWorkbenchEdit,
   sessionEventsUrl,
   startTaskRunPreview,
   stopPreview,
@@ -1265,6 +1266,51 @@ describe("task API", () => {
     )
     expect(workbench.artifacts[0].rendererKind).toBe("markdown_document")
     expect(workbench.artifacts[0].versions[0].contentMd).toBe("# Release notes")
+  })
+
+  it("saves artifact workbench edits as a new version", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          id: "version-3",
+          artifactId: "artifact-doc-1",
+          version: 3,
+          parentVersionId: "version-2",
+          sourceTaskRunId: "run-1",
+          parentArtifactId: null,
+          gitBaseRef: null,
+          gitHeadRef: null,
+          changedFiles: [],
+          summary: "Edited in the workbench.",
+          contentMd: "# Updated",
+          contentHash: "sha256:version-3",
+          editorSource: "user",
+          createdAt: "2026-06-08T00:00:00Z",
+        }),
+        { status: 201 },
+      )
+    })
+
+    const version = await saveArtifactWorkbenchEdit(
+      "http://127.0.0.1:8000",
+      "artifact-doc-1",
+      { contentMd: "# Updated", summary: "Edited in the workbench." },
+      fetchMock,
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/artifacts/artifact-doc-1/workbench/edits",
+      {
+        body: JSON.stringify({
+          contentMd: "# Updated",
+          summary: "Edited in the workbench.",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      },
+    )
+    expect(version.version).toBe(3)
+    expect(version.parentVersionId).toBe("version-2")
   })
 
   it("creates and lists review artifacts for a task run", async () => {

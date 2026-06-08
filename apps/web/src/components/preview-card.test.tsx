@@ -120,6 +120,7 @@ describe("PreviewCard", () => {
   })
 
   it("renders artifact workbench markdown content and version metadata", () => {
+    const onSaveArtifactEdit = vi.fn()
     render(
       createElement(PreviewPanel, {
         artifactItems: [
@@ -163,6 +164,7 @@ describe("PreviewCard", () => {
           },
         ],
         frameKey: 1,
+        onSaveArtifactEdit,
         selectedArtifactId: "workbench:artifact-doc-1",
       }),
     )
@@ -172,6 +174,80 @@ describe("PreviewCard", () => {
     expect(screen.getByText("# Release notes")).toBeTruthy()
     expect(screen.getAllByText("v2").length).toBeGreaterThan(0)
     expect(screen.getByText("Edited release notes.")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "编辑版本" }))
+    const editor = screen.getByLabelText("编辑内容")
+    fireEvent.change(editor, { target: { value: "# Updated release notes" } })
+    fireEvent.change(screen.getByLabelText("版本摘要"), {
+      target: { value: "Updated from UI." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "保存版本" }))
+
+    expect(onSaveArtifactEdit).toHaveBeenCalledWith(
+      "artifact-doc-1",
+      "# Updated release notes",
+      "Updated from UI.",
+    )
+  })
+
+  it("cancels artifact workbench edits without saving", () => {
+    const onSaveArtifactEdit = vi.fn()
+    render(
+      createElement(PreviewPanel, {
+        artifactItems: [
+          {
+            artifact: {
+              artifactId: "artifact-doc-1",
+              artifactType: "text_document",
+              contentHash: "sha256:artifact",
+              createdAt: "2026-06-08T00:00:00Z",
+              editable: true,
+              rendererKind: "text_document",
+              safeMeta: {},
+              status: "ready",
+              taskRunId: "run-1",
+              title: "Notes",
+              updatedAt: "2026-06-08T00:00:00Z",
+              version: 1,
+              versions: [
+                {
+                  artifactId: "artifact-doc-1",
+                  changedFiles: [],
+                  contentHash: "sha256:version",
+                  contentMd: "Original notes",
+                  createdAt: "2026-06-08T00:00:00Z",
+                  editorSource: "system",
+                  gitBaseRef: null,
+                  gitHeadRef: null,
+                  id: "version-1",
+                  parentArtifactId: null,
+                  parentVersionId: null,
+                  sourceTaskRunId: "run-1",
+                  summary: "Original.",
+                  version: 1,
+                },
+              ],
+            },
+            id: "workbench:artifact-doc-1",
+            kind: "workbench",
+            taskRunId: "run-1",
+            taskTitle: "Notes",
+          },
+        ],
+        frameKey: 1,
+        onSaveArtifactEdit,
+        selectedArtifactId: "workbench:artifact-doc-1",
+      }),
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "编辑版本" }))
+    fireEvent.change(screen.getByLabelText("编辑内容"), {
+      target: { value: "Changed notes" },
+    })
+    fireEvent.click(screen.getAllByRole("button", { name: "取消" })[0])
+
+    expect(onSaveArtifactEdit).not.toHaveBeenCalled()
+    expect(screen.getByText("Original notes")).toBeTruthy()
   })
 
   it("renders unknown artifact workbench fallback with safe metadata", () => {
@@ -208,5 +284,6 @@ describe("PreviewCard", () => {
     expect(screen.getAllByText("未知类型").length).toBeGreaterThan(0)
     expect(screen.getByText(/opaque artifact/)).toBeTruthy()
     expect(screen.getByText("尚无版本记录")).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "编辑版本" })).toBeNull()
   })
 })
