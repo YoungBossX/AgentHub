@@ -269,9 +269,16 @@ function RuntimeRoleSelector({
             const profile = config.availableProfiles.find(
               (item) => item.id === event.target.value,
             )
+            const defaultProvider = config.availableProviders.find(
+              (item) => item.providerId === profile?.providerId,
+            )
             patchRole({
+              adapterType: defaultProvider?.adapterType ?? profile?.adapterType ?? null,
               agentProfileId: profile?.id ?? null,
-              enabled: true,
+              availability: null,
+              enabled: Boolean(profile),
+              mode,
+              providerId: defaultProvider?.providerId ?? profile?.providerId ?? null,
             })
           }}
           value={draftRole.agentProfileId ?? ""}
@@ -295,6 +302,7 @@ function RuntimeRoleSelector({
             )
             patchRole({
               adapterType: provider?.adapterType ?? null,
+              availability: null,
               enabled: true,
               mode,
               providerId: provider?.providerId ?? null,

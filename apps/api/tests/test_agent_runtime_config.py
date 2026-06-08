@@ -276,6 +276,60 @@ def test_runtime_config_api_persists_valid_workspace_config() -> None:
         assert payload["roles"]["backend"]["providerId"] == "local-codex-cli"
 
 
+def test_runtime_config_api_allows_runtime_provider_override_for_role_profile() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.put(
+            f"/workspaces/{workspace_id}/runtime-config",
+            json={
+                "roles": {
+                    "frontend": {
+                        "agentProfileId": profiles["frontend"]["id"],
+                        "providerId": "local-claude-code-cli",
+                        "adapterType": "claude_code",
+                        "mode": "frontend",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["validation"]["valid"] is True
+        assert payload["roles"]["frontend"]["agentProfileId"] == profiles["frontend"]["id"]
+        assert payload["roles"]["frontend"]["providerId"] == "local-claude-code-cli"
+        assert payload["roles"]["frontend"]["adapterType"] == "claude_code"
+
+
+def test_runtime_config_api_rejects_stale_adapter_for_selected_provider() -> None:
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+
+        response = client.post(
+            f"/workspaces/{workspace_id}/runtime-config/validate",
+            json={
+                "roles": {
+                    "frontend": {
+                        "agentProfileId": profiles["frontend"]["id"],
+                        "providerId": "local-claude-code-cli",
+                        "adapterType": "codex",
+                        "mode": "frontend",
+                        "enabled": True,
+                    }
+                }
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["valid"] is False
+        assert any("does not match provider `claude_code`" in error for error in payload["errors"])
+
+
 def test_runtime_config_put_allows_browser_cors_preflight() -> None:
     with _client() as client:
         workspace_id = _workspace_id(client)

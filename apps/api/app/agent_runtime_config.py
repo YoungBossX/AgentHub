@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 from app.agent_directory import check_agent_compatibility
@@ -277,16 +277,21 @@ def validate_runtime_config(
                 warnings=warnings,
             )
             continue
-        if role_config.adapter_type != profile.adapter_type:
+        if role_config.adapter_type != provider.adapter_type:
             errors.append(
-                f"Runtime config role `{role}` adapter `{role_config.adapter_type}` does not match agent profile `{profile.adapter_type}`."
+                f"Runtime config role `{role}` adapter `{role_config.adapter_type}` does not match provider `{provider.adapter_type}`."
             )
             continue
         required_capabilities = _required_capabilities_for_runtime_role(role)
+        runtime_profile = replace(
+            profile,
+            adapter_type=provider.adapter_type,
+            provider_id=provider.provider_id,
+        )
         compatibility = check_agent_compatibility(
-            profile=profile,
+            profile=runtime_profile,
             provider=provider,
-            role=_compatibility_role_for_runtime_role(role, profile),
+            role=_compatibility_role_for_runtime_role(role, runtime_profile),
             target_id=None,
             mode=role_config.mode,
             required_capabilities=required_capabilities,

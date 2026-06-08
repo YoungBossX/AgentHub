@@ -108,6 +108,15 @@ const runtimeConfig: AgentRuntimeConfig = {
       providerId: "local-codex-cli",
       supportedModes: ["frontend", "backend", "debug"],
     },
+    {
+      adapterType: "claude_code",
+      authStatus: "available",
+      available: true,
+      defaultForRoles: ["frontend", "backend"],
+      displayName: "Claude Code CLI",
+      providerId: "local-claude-code-cli",
+      supportedModes: ["frontend", "backend", "review", "debug"],
+    },
   ],
   configSource: "default",
   roles: {
@@ -596,6 +605,38 @@ describe("RuntimeSettingsPageClient", () => {
     await waitFor(() => {
       expect(screen.getByText("运行设置已保存。")).toBeTruthy()
     })
+  })
+
+  it("saves a frontend role profile with a selected Claude Code provider adapter", async () => {
+    render(
+      <RuntimeSettingsPageClient
+        backendUrl="http://127.0.0.1:8000"
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("前端 Agent")).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getAllByLabelText("Agent 档案")[1], {
+      target: { value: "agent-frontend" },
+    })
+    fireEvent.change(screen.getAllByLabelText("提供方")[1], {
+      target: { value: "local-claude-code-cli" },
+    })
+    fireEvent.click(screen.getByText("保存"))
+
+    await waitFor(() => {
+      expect(apiMocks.updateAgentRuntimeConfig).toHaveBeenCalled()
+    })
+
+    const [, workspaceId, roles] = apiMocks.updateAgentRuntimeConfig.mock.calls[0]
+    expect(workspaceId).toBe("workspace-1")
+    expect(roles.frontend.agentProfileId).toBe("agent-frontend")
+    expect(roles.frontend.providerId).toBe("local-claude-code-cli")
+    expect(roles.frontend.adapterType).toBe("claude_code")
+    expect(roles.frontend.mode).toBe("frontend")
   })
 
   it("presents provider status with user-facing labels instead of raw internal values", async () => {
