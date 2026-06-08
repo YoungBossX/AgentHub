@@ -45,6 +45,7 @@ from app.artifact_workbench import (
     artifact_workbench_version_for_id,
     list_artifact_workbench_versions,
     list_session_artifact_workbench,
+    save_artifact_workbench_edit,
 )
 from app.config import get_settings
 from app.claude_code_adapter import ClaudeCodeAdapter
@@ -150,6 +151,7 @@ from app.schemas import (
     DeploymentResponse,
     DiffArtifactResponse,
     ArtifactWorkbenchArtifactResponse,
+    ArtifactWorkbenchEditRequest,
     ArtifactWorkbenchSessionResponse,
     ArtifactWorkbenchVersionResponse,
     ArtifactVersionResponse,
@@ -1779,13 +1781,16 @@ def artifact_workbench_version_response(
         id=version.id,
         artifactId=version.artifact_id,
         version=version.version,
+        parentVersionId=version.parent_version_id,
         sourceTaskRunId=version.source_task_run_id,
         parentArtifactId=version.parent_artifact_id,
         gitBaseRef=version.git_base_ref,
         gitHeadRef=version.git_head_ref,
         changedFiles=version.changed_files,
         summary=version.summary,
+        contentMd=version.content_md,
         contentHash=version.content_hash,
+        editorSource=version.editor_source,
         createdAt=version.created_at,
     )
 
@@ -2330,6 +2335,34 @@ def read_artifact_workbench_version(
         version = artifact_workbench_version_for_id(db, artifact_id, version_id)
     except ArtifactWorkbenchError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return artifact_workbench_version_response(version)
+
+
+@app.post(
+    "/artifacts/{artifact_id}/workbench/edits",
+    response_model=ArtifactWorkbenchVersionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def save_artifact_workbench_edit_route(
+    artifact_id: str,
+    request: ArtifactWorkbenchEditRequest,
+    db: DbSession = Depends(get_db),
+) -> ArtifactWorkbenchVersionResponse:
+    try:
+        version = save_artifact_workbench_edit(
+            db,
+            artifact_id,
+            content_md=request.content_md,
+            summary=request.summary,
+            editor_source=request.editor_source,
+        )
+    except ArtifactWorkbenchError as exc:
+        status_code = (
+            status.HTTP_404_NOT_FOUND
+            if str(exc).startswith("Artifact not found")
+            else status.HTTP_400_BAD_REQUEST
+        )
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     return artifact_workbench_version_response(version)
 
 

@@ -25,6 +25,10 @@ class StoredArtifactVersion:
     changed_files: list[str]
     summary: str
     created_at: datetime
+    parent_version_id: Optional[str] = None
+    content_md: str = ""
+    content_hash: str = ""
+    editor_source: str = "system"
 
 
 def record_artifact_version(
@@ -32,11 +36,15 @@ def record_artifact_version(
     artifact: Artifact,
     *,
     source_task_run_id: Optional[str] = None,
+    parent_version_id: Optional[str] = None,
     parent_artifact_id: Optional[str] = None,
     git_base_ref: Optional[str] = None,
     git_head_ref: Optional[str] = None,
     changed_files: Optional[list[str]] = None,
     summary: str = "",
+    content_md: str = "",
+    content_hash: str = "",
+    editor_source: str = "system",
     version: Optional[int] = None,
 ) -> StoredArtifactVersion:
     existing = db.exec(
@@ -51,12 +59,16 @@ def record_artifact_version(
     record = ArtifactVersion(
         artifact_id=artifact.id,
         version=version or artifact.version,
+        parent_version_id=parent_version_id,
         source_task_run_id=source_task_run_id or artifact.task_run_id,
         parent_artifact_id=parent_artifact_id,
         git_base_ref=git_base_ref,
         git_head_ref=git_head_ref,
         changed_files_json=json.dumps(changed_files or [], separators=(",", ":")),
         summary=summary,
+        content_md=content_md,
+        content_hash=content_hash,
+        editor_source=editor_source,
     )
     db.add(record)
     db.commit()
@@ -84,6 +96,7 @@ def _to_stored_artifact_version(record: ArtifactVersion) -> StoredArtifactVersio
         id=record.id,
         artifact_id=record.artifact_id,
         version=record.version,
+        parent_version_id=record.parent_version_id,
         source_task_run_id=record.source_task_run_id,
         parent_artifact_id=record.parent_artifact_id,
         git_base_ref=record.git_base_ref,
@@ -91,6 +104,9 @@ def _to_stored_artifact_version(record: ArtifactVersion) -> StoredArtifactVersio
         changed_files=_json_list(record.changed_files_json),
         summary=record.summary,
         created_at=record.created_at,
+        content_md=record.content_md,
+        content_hash=record.content_hash,
+        editor_source=record.editor_source,
     )
 
 

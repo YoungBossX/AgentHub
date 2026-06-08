@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Optional
 
-from app.artifact_versions import StoredArtifactVersion
+from app.artifact_versions import StoredArtifactVersion, record_artifact_version
 from app.canonical_context import filter_protected_values
-from app.models import Artifact, ArtifactVersion, Task, TaskRun
+from app.models import Artifact, ArtifactVersion, Task, TaskRun, utc_now
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
@@ -30,13 +30,16 @@ class ArtifactVersionWorkbenchMetadata:
     id: str
     artifact_id: str
     version: int
+    parent_version_id: Optional[str]
     source_task_run_id: Optional[str]
     parent_artifact_id: Optional[str]
     git_base_ref: Optional[str]
     git_head_ref: Optional[str]
     changed_files: list[str]
     summary: str
+    content_md: str
     content_hash: str
+    editor_source: str
     created_at: datetime
 
     def to_payload(self) -> dict[str, Any]:
@@ -44,13 +47,16 @@ class ArtifactVersionWorkbenchMetadata:
             "id": self.id,
             "artifactId": self.artifact_id,
             "version": self.version,
+            "parentVersionId": self.parent_version_id,
             "sourceTaskRunId": self.source_task_run_id,
             "parentArtifactId": self.parent_artifact_id,
             "gitBaseRef": self.git_base_ref,
             "gitHeadRef": self.git_head_ref,
             "changedFiles": self.changed_files,
             "summary": self.summary,
+            "contentMd": self.content_md,
             "contentHash": self.content_hash,
+            "editorSource": self.editor_source,
             "createdAt": self.created_at.isoformat(),
         }
 
@@ -178,12 +184,16 @@ def list_artifact_workbench_versions(
             id=record.id,
             artifact_id=record.artifact_id,
             version=record.version,
+            parent_version_id=record.parent_version_id,
             source_task_run_id=record.source_task_run_id,
             parent_artifact_id=record.parent_artifact_id,
             git_base_ref=record.git_base_ref,
             git_head_ref=record.git_head_ref,
             changed_files=_json_list(record.changed_files_json),
             summary=record.summary,
+            content_md=record.content_md,
+            content_hash=record.content_hash,
+            editor_source=record.editor_source,
             created_at=record.created_at,
         )
         for record in records
@@ -200,6 +210,59 @@ def artifact_workbench_version_for_id(
         if version.id == version_id:
             return version
     raise ArtifactWorkbenchError(f"Artifact version not found: {version_id}")
+
+
+def save_artifact_workbench_edit(
+    db: DbSession,
+    artifact_id: str,
+    *,
+    content_md: str,
+    summary: str = "",
+    editor_source: str = "user",
+) -> ArtifactVersionWorkbenchMetadata:
+    artifact = db.get(Artifact, artifact_id)
+    if artifact is None:
+        raise ArtifactWorkbenchError(f"Artifact not found: {artifact_id}")
+    if not is_artifact_editable(artifact.artifact_type):
+        raise ArtifactWorkbenchError(
+            f"Artifact type '{artifact.artifact_type}' is not editable"
+        )
+    if not content_md:
+        raise ArtifactWorkbenchError("Artifact edit content cannot be empty")
+
+    existing_versions = list_artifact_workbench_versions(db, artifact_id)
+    latest = existing_versions[-1] if existing_versions else None
+    next_version = (latest.version if latest is not None else artifact.version) + 1
+    content_hash = _hash_payload(
+        {
+            "artifactId": artifact.id,
+            "version": next_version,
+            "contentMd": content_md,
+            "editorSource": editor_source,
+        }
+    )
+    stored = record_artifact_version(
+        db,
+        artifact,
+        source_task_run_id=artifact.task_run_id,
+        parent_version_id=latest.id if latest is not None else None,
+        changed_files=[],
+        summary=summary or "Artifact workbench edit.",
+        content_md=content_md,
+        content_hash=content_hash,
+        editor_source=editor_source,
+        version=next_version,
+    )
+    artifact.version = next_version
+    artifact.updated_at = utc_now()
+    db.add(artifact)
+    db.commit()
+    db.refresh(artifact)
+    return _version_metadata(
+        stored,
+        artifact=artifact,
+        safe_meta=safe_artifact_meta(artifact),
+    )
 
 
 def classify_artifact_renderer(artifact_type: str) -> ArtifactRendererKind:
@@ -244,18 +307,22 @@ def _version_metadata(
         id=version.id,
         artifact_id=version.artifact_id,
         version=version.version,
+        parent_version_id=version.parent_version_id,
         source_task_run_id=version.source_task_run_id,
         parent_artifact_id=version.parent_artifact_id,
         git_base_ref=version.git_base_ref,
         git_head_ref=version.git_head_ref,
         changed_files=version.changed_files,
         summary=version.summary,
-        content_hash=_hash_payload(
+        content_md=version.content_md,
+        content_hash=version.content_hash
+        or _hash_payload(
             {
                 "artifactId": version.artifact_id,
                 "version": version.version,
                 "summary": version.summary,
                 "changedFiles": version.changed_files,
+                "contentMd": version.content_md,
                 "artifactContentHash": _artifact_content_hash(
                     artifact,
                     safe_meta=safe_meta,
@@ -263,6 +330,7 @@ def _version_metadata(
                 ),
             }
         ),
+        editor_source=version.editor_source,
         created_at=version.created_at,
     )
 

@@ -245,12 +245,16 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "id",
             "artifact_id",
             "version",
+            "parent_version_id",
             "source_task_run_id",
             "parent_artifact_id",
             "git_base_ref",
             "git_head_ref",
             "changed_files_json",
             "summary",
+            "content_md",
+            "content_hash",
+            "editor_source",
             "created_at",
         },
         Diff: {
@@ -404,6 +408,74 @@ def test_sqlite_schema_compatibility_adds_external_target_staging_columns() -> N
     assert targets[0].staging_output_dir is None
     assert targets[0].staging_serve_command is None
     assert targets[0].deploy_provider_ids_json == "[]"
+
+
+def test_sqlite_schema_compatibility_adds_artifact_version_edit_columns() -> None:
+    legacy_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    with legacy_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE artifactversion (
+                    id VARCHAR NOT NULL PRIMARY KEY,
+                    artifact_id VARCHAR NOT NULL,
+                    version INTEGER NOT NULL,
+                    source_task_run_id VARCHAR,
+                    parent_artifact_id VARCHAR,
+                    git_base_ref VARCHAR,
+                    git_head_ref VARCHAR,
+                    changed_files_json VARCHAR NOT NULL,
+                    summary VARCHAR NOT NULL,
+                    created_at DATETIME NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO artifactversion (
+                    id,
+                    artifact_id,
+                    version,
+                    changed_files_json,
+                    summary,
+                    created_at
+                ) VALUES (
+                    'legacy-version-row',
+                    'artifact-1',
+                    1,
+                    '[]',
+                    'Legacy version',
+                    '2026-06-08 00:00:00.000000'
+                )
+                """
+            )
+        )
+
+    _ensure_sqlite_demo_schema_columns(legacy_engine)
+
+    with legacy_engine.connect() as connection:
+        columns = {
+            row[1]
+            for row in connection.execute(text("PRAGMA table_info(artifactversion)"))
+        }
+        row = connection.execute(
+            text(
+                """
+                SELECT parent_version_id, content_md, content_hash, editor_source
+                FROM artifactversion
+                WHERE id = 'legacy-version-row'
+                """
+            )
+        ).one()
+
+    assert {"parent_version_id", "content_md", "content_hash", "editor_source"} <= columns
+    assert row == (None, "", "", "system")
 
 
 def test_seed_records_are_queryable() -> None:

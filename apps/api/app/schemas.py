@@ -560,14 +560,25 @@ class ArtifactWorkbenchVersionResponse(ApiModel):
     id: str
     artifact_id: str = Field(alias="artifactId")
     version: int
+    parent_version_id: Optional[str] = Field(alias="parentVersionId")
     source_task_run_id: Optional[str] = Field(alias="sourceTaskRunId")
     parent_artifact_id: Optional[str] = Field(alias="parentArtifactId")
     git_base_ref: Optional[str] = Field(alias="gitBaseRef")
     git_head_ref: Optional[str] = Field(alias="gitHeadRef")
     changed_files: list[str] = Field(alias="changedFiles")
     summary: str
+    content_md: str = Field(alias="contentMd")
     content_hash: str = Field(alias="contentHash")
+    editor_source: str = Field(alias="editorSource")
     created_at: datetime = Field(alias="createdAt")
+
+
+class ArtifactWorkbenchEditRequest(BaseModel):
+    content_md: str = Field(alias="contentMd", min_length=1)
+    summary: str = ""
+    editor_source: str = Field(default="user", alias="editorSource")
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ArtifactWorkbenchArtifactResponse(ApiModel):

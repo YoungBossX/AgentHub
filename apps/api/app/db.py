@@ -62,6 +62,18 @@ def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
         db_engine,
         inspector,
         table_names,
+        "artifactversion",
+        {
+            "parent_version_id": "TEXT",
+            "content_md": "TEXT NOT NULL DEFAULT ''",
+            "content_hash": "TEXT NOT NULL DEFAULT ''",
+            "editor_source": "TEXT NOT NULL DEFAULT 'system'",
+        },
+    )
+    _ensure_table_columns(
+        db_engine,
+        inspector,
+        table_names,
         "taskrun",
         {
             "runner_id": "TEXT",
