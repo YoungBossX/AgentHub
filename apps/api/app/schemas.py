@@ -659,6 +659,23 @@ class DeploymentResponse(ApiModel):
     updated_at: datetime = Field(alias="updatedAt")
 
 
+class DeploymentProviderResponse(ApiModel):
+    provider_id: str = Field(alias="providerId")
+    display_name: str = Field(alias="displayName")
+    provider_type: str = Field(alias="providerType")
+    supported_artifact_kinds: list[str] = Field(alias="supportedArtifactKinds")
+    supported_target_types: list[str] = Field(alias="supportedTargetTypes")
+    auth_status: str = Field(alias="authStatus")
+    available: bool
+    requires_approval: bool = Field(alias="requiresApproval")
+    secret_env_vars: list[str] = Field(alias="secretEnvVars")
+    description: str
+
+
+class DeploymentProviderRegistryResponse(ApiModel):
+    providers: list[DeploymentProviderResponse]
+
+
 class DeploymentCreateRequest(BaseModel):
     provider_id: str = Field(default="mock", alias="providerId")
     environment: str = "preview"

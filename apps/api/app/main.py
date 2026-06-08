@@ -53,6 +53,7 @@ from app.codex_adapter import CodexAdapter
 from app.context_pack import build_session_context_pack
 from app.db import engine, init_database
 from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
+from app.deployment_providers import list_deployment_providers
 from app.diffs import DiffCollectionError, StoredDiffArtifact, collect_task_run_diff, list_task_run_diffs
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
 from app.external_workspaces import (
@@ -147,6 +148,8 @@ from app.schemas import (
     CommandEvidenceCreateRequest,
     CommandEvidenceResponse,
     DeploymentCreateRequest,
+    DeploymentProviderRegistryResponse,
+    DeploymentProviderResponse,
     HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
@@ -603,6 +606,21 @@ def provider_config_response(config: ProviderConfig) -> ProviderConfigResponse:
     )
 
 
+def deployment_provider_response(provider) -> DeploymentProviderResponse:
+    return DeploymentProviderResponse(
+        providerId=provider.provider_id,
+        displayName=provider.display_name,
+        providerType=provider.provider_type,
+        supportedArtifactKinds=list(provider.supported_artifact_kinds),
+        supportedTargetTypes=list(provider.supported_target_types),
+        authStatus=provider.auth_status,
+        available=provider.available,
+        requiresApproval=provider.requires_approval,
+        secretEnvVars=list(provider.secret_env_vars),
+        description=provider.description,
+    )
+
+
 def agent_directory_entry_response(entry: AgentDirectoryEntry) -> AgentDirectoryEntryResponse:
     return AgentDirectoryEntryResponse(
         id=entry.id,
@@ -787,6 +805,16 @@ def runtime_config_profiles_for_workspace(
 @app.get("/provider-configs", response_model=list[ProviderConfigResponse])
 def read_provider_configs() -> list[ProviderConfigResponse]:
     return [provider_config_response(config) for config in list_provider_configs()]
+
+
+@app.get("/deployment-providers", response_model=DeploymentProviderRegistryResponse)
+def read_deployment_providers() -> DeploymentProviderRegistryResponse:
+    return DeploymentProviderRegistryResponse(
+        providers=[
+            deployment_provider_response(provider)
+            for provider in list_deployment_providers()
+        ],
+    )
 
 
 @app.get(
