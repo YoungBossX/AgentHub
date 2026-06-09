@@ -1,9 +1,9 @@
 ## 1. OpenSpec 与范围确认
 
-- [ ] 1.1 创建 V2.2 Provider Gateway OpenSpec，定义范围、非目标、验收和风险。
-- [ ] 1.2 明确 Provider Gateway 只服务 coding adapters，不混入 Planner provider。
-- [ ] 1.3 标记 V2.2 不新增 adapter、provider marketplace、Codex API/cloud wrapper、Docker sandbox、WebSocket 或生产部署。
-- [ ] 1.4 验证 `git diff --check` 和 `openspec validate agenthub-v2-2-provider-gateway --strict`。
+- [x] 1.1 创建 V2.2 Provider Gateway OpenSpec，定义范围、非目标、验收和风险。
+- [x] 1.2 明确 Provider Gateway 只服务 coding adapters，不混入 Planner provider。
+- [x] 1.3 标记 V2.2 不新增 adapter、provider marketplace、Codex API/cloud wrapper、Docker sandbox、WebSocket 或生产部署。
+- [x] 1.4 验证 `git diff --check` 和 `openspec validate agenthub-v2-2-provider-gateway --strict`。
 
 ## 2. Gateway 合同与数据模型
 
