@@ -178,6 +178,28 @@ def test_classifier_returns_unknown_for_legacy_failed_run_without_evidence(clien
     assert diagnostics.summary.evidence_status == "limited"
 
 
+def test_delivery_review_required_event_appears_in_validation_timeline(client: TestClient) -> None:
+    with _db() as db:
+        run = _run(db, state="completed")
+        append_task_run_event(
+            db,
+            task_run_id=run.id,
+            event_type="delivery.review_required",
+            payload_json=json.dumps(
+                {
+                    "state": "review_required",
+                    "reason": "Delivery validation found failed evidence.",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        diagnostics = build_task_run_diagnostics(db, run)
+
+    item = next(item for item in diagnostics.timeline if item.phase == "validation")
+    assert item.status == "failed"
+    assert item.title == "Validation"
+
+
 def test_timeline_covers_successful_run_with_artifact_references(client: TestClient) -> None:
     with _db() as db:
         run = _run(db, state="completed")

@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## V2.6-5 Transactional Delivery Evidence Integration
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added a helper to persist delivery decision events as TaskRunEvents.
+- Updated Run Diagnostics phase mapping so `delivery.review_required` appears
+  under validation and rollback events appear under recovery.
+- Added tests for delivery event persistence and diagnostics timeline mapping.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py tests/test_run_diagnostics.py -q` | Pass, 21 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-6-transactional-delivery --strict` | Pass |
+
 ## V2.6-4 Delivery Accept Rollback Retry
 
 **Date:** 2026-06-09

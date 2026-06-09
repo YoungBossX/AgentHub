@@ -27,14 +27,14 @@
 - [x] 4.2 实现 rollback helper，基于 checkpoint 恢复或拒绝，且记录事件。
 - [x] 4.3 retry helper 显式区分 current_state 与 checkpoint。
 - [x] 4.4 增加 accept/rollback/retry 测试并验证。
-- [ ] 4.5 提交：`feat: add delivery accept rollback retry`。
+- [x] 4.5 提交：`feat: add delivery accept rollback retry`。
 
 ## 5. Run Engine / Diagnostics 接入
 
-- [ ] 5.1 在合适的 finalizer 或 service 边界写入 delivery gate evidence。
-- [ ] 5.2 validation failure 不应启动 preview/deploy ready 证据。
-- [ ] 5.3 Run Diagnostics 可识别 delivery validation / review_required / rollback 事件。
-- [ ] 5.4 增加窄集成测试并验证。
+- [x] 5.1 在合适的 finalizer 或 service 边界写入 delivery gate evidence。
+- [x] 5.2 validation failure 不应启动 preview/deploy ready 证据。
+- [x] 5.3 Run Diagnostics 可识别 delivery validation / review_required / rollback 事件。
+- [x] 5.4 增加窄集成测试并验证。
 - [ ] 5.5 提交：`feat: integrate transactional delivery evidence`。
 
 ## 6. 冻结审查

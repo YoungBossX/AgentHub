@@ -22,6 +22,10 @@ Accept and rollback helpers now record artifact-state evidence and checkpoint
 restore intent. They still do not perform real worktree restoration; actual
 Run Engine / recovery integration remains the next V2.6 step.
 
+Delivery decisions can now be recorded as TaskRunEvents, and Run Diagnostics
+maps delivery validation events into the validation timeline. This integration
+adds evidence visibility without changing Run Engine finalizer behavior.
+
 ## V2.5 Policy Engine Status
 
 V2.5 started on 2026-06-09. The current slice adds a standalone Policy Engine

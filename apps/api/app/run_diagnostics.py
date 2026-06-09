@@ -784,6 +784,12 @@ def _phase_for_event(event_type: str, payload: dict[str, Any]) -> str:
         return "worker_claim"
     if event_type == "task.stale" or event_type == "recovery.action":
         return "recovery"
+    if event_type.startswith("delivery."):
+        if event_type in {"delivery.rolled_back", "delivery.rollback_refused"}:
+            return "recovery"
+        if event_type in {"delivery.accepted"}:
+            return "finalize"
+        return "validation"
     if event_type == "approval.requested" or state == "waiting_approval":
         return "approval_wait"
     if event_type.startswith("artifact.diff"):
@@ -817,7 +823,7 @@ def _phase_for_event(event_type: str, payload: dict[str, Any]) -> str:
 
 def _status_for_event(event_type: str, payload: dict[str, Any]) -> str:
     status_text = " ".join(_compact_strings([payload.get("status"), payload.get("state"), payload.get("healthStatus"), event_type])).lower()
-    if any(term in status_text for term in ("failed", "error", "denied", "timeout", "blocked")):
+    if any(term in status_text for term in ("failed", "error", "denied", "timeout", "blocked", "review_required")):
         return "failed"
     if any(term in status_text for term in ("stale", "warning", "degraded", "interrupted")):
         return "warning"

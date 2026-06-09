@@ -1,5 +1,10 @@
 import json
 
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session as DbSession
+from sqlmodel import SQLModel, create_engine, select
+
+from app.models import TaskRunEvent
 from app.models import TaskRun
 from app.transactional_delivery import (
     DeliveryEvidenceKind,
@@ -14,6 +19,7 @@ from app.transactional_delivery import (
     retry_mode_decision,
     rollback_decision,
     rollback_preflight_decision,
+    record_delivery_decision_event,
 )
 
 
@@ -133,6 +139,38 @@ def test_rollback_decision_refuses_without_checkpoint() -> None:
     decision = rollback_decision(_task_run(metrics={}), actor="user")
 
     assert decision.state == DeliveryState.ROLLBACK_REFUSED
+
+
+def test_record_delivery_decision_event_persists_payload() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    with DbSession(engine) as db:
+        task_run = _task_run(metrics={})
+        db.add(task_run)
+        db.commit()
+        decision = evaluate_delivery_validation(
+            task_run,
+            [
+                DeliveryValidationEvidence(
+                    kind=DeliveryEvidenceKind.POLICY,
+                    status="denied",
+                    summary="Target path denied",
+                )
+            ],
+        )
+
+        record_delivery_decision_event(db, decision)
+
+        event = db.exec(select(TaskRunEvent)).one()
+        payload = json.loads(event.payload_json)
+
+    assert event.event_type == "delivery.review_required"
+    assert payload["state"] == "review_required"
+    assert payload["evidence"]["failures"][0]["kind"] == "policy"
 
 
 def test_delivery_validation_passes_clean_evidence() -> None:

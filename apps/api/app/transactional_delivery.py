@@ -3,6 +3,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
 
+from sqlmodel import Session as DbSession
+
+from app.events import append_task_run_event
 from app.models import TaskRun
 
 
@@ -211,6 +214,19 @@ def rollback_decision(
             "actor": actor,
             "restoredPaths": list(checkpoint.planned_files),
         },
+    )
+
+
+def record_delivery_decision_event(
+    db: DbSession,
+    decision: DeliveryDecision,
+) -> None:
+    event_type = str(decision.evidence.get("eventType") or f"delivery.{decision.state.value}")
+    append_task_run_event(
+        db,
+        task_run_id=decision.task_run_id,
+        event_type=event_type,
+        payload_json=json.dumps(decision.to_event_payload(), separators=(",", ":")),
     )
 
 
