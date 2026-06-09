@@ -38,12 +38,12 @@
 - [x] 5.3 保证 LLM task_plan 仍直接进入 PlanValidator，profile 不绕过 target/path/role 验证。
 - [x] 5.4 增加 planner/instruction builder 窄测试。
 - [x] 5.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
-- [ ] 5.6 提交：`feat: include project profile context in planning`。
+- [x] 5.6 提交：`feat: include project profile context in planning`。
 
 ## 6. 冻结审查
 
-- [ ] 6.1 更新 `docs/change-log.md` 和 `docs/project-state.md`，记录 V2.4 实现范围和限制。
-- [ ] 6.2 创建 `docs/v2-4-project-profile-boundary-freeze-review.md`，记录 profile 合同、测试、验证结果和未完成能力。
-- [ ] 6.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-4-project-profile-boundary --strict`。
-- [ ] 6.4 标记 V2.4 tasks 完成并停止，不自动开始 V2.5。
+- [x] 6.1 更新 `docs/change-log.md` 和 `docs/project-state.md`，记录 V2.4 实现范围和限制。
+- [x] 6.2 创建 `docs/v2-4-project-profile-boundary-freeze-review.md`，记录 profile 合同、测试、验证结果和未完成能力。
+- [x] 6.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-4-project-profile-boundary --strict`。
+- [x] 6.4 标记 V2.4 tasks 完成并停止，不自动开始 V2.5。
 - [ ] 6.5 提交：`test: freeze v2.4 project profile boundary`。

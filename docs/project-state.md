@@ -16,6 +16,11 @@ new database column, and it does not change execution behavior. Target Registry,
 PlanValidator, Guardrails, Provider Gateway, and existing command policy remain
 the hard execution boundaries.
 
+V2.4 also added command-policy coverage for project/profile commands and injects
+profile id, status, preview strategy, and configured profile commands into
+coding-agent target instructions. Generic repos remain conservative: no
+unconfigured shell commands are allowed.
+
 ## V2.7 Run Diagnostics Backend Status
 
 V2.7 backend diagnostics were added on 2026-06-09 as a projection layer over
