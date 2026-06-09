@@ -43,4 +43,4 @@
 - [x] 6.2 创建 `docs/v2-6-transactional-delivery-freeze-review.md`。
 - [x] 6.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-6-transactional-delivery --strict`。
 - [x] 6.4 标记 V2.6 tasks 完成并停止。
-- [ ] 6.5 提交：`test: freeze v2.6 transactional delivery`。
+- [x] 6.5 提交：`test: freeze v2.6 transactional delivery`。

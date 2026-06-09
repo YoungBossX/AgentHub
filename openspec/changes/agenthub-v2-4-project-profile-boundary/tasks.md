@@ -46,4 +46,4 @@
 - [x] 6.2 创建 `docs/v2-4-project-profile-boundary-freeze-review.md`，记录 profile 合同、测试、验证结果和未完成能力。
 - [x] 6.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-4-project-profile-boundary --strict`。
 - [x] 6.4 标记 V2.4 tasks 完成并停止，不自动开始 V2.5。
-- [ ] 6.5 提交：`test: freeze v2.4 project profile boundary`。
+- [x] 6.5 提交：`test: freeze v2.4 project profile boundary`。

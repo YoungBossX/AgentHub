@@ -38,4 +38,4 @@
 - [x] 5.2 创建 `docs/v2-5-policy-engine-freeze-review.md`。
 - [x] 5.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-5-policy-engine --strict`。
 - [x] 5.4 标记 V2.5 tasks 完成并停止，不自动开始 V2.6。
-- [ ] 5.5 提交：`test: freeze v2.5 policy engine`。
+- [x] 5.5 提交：`test: freeze v2.5 policy engine`。
