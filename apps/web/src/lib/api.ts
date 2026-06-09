@@ -401,6 +401,9 @@ export type TaskRun = {
   errorCode: string | null
   errorMessage: string | null
   metricsJson: Record<string, unknown>
+  sessionQueue?: Record<string, unknown> | null
+  targetLock?: Record<string, unknown> | null
+  previewDeployJobs?: Array<Record<string, unknown>>
   approvalRequest?: ApprovalRequest | null
   createdAt: string
   updatedAt: string

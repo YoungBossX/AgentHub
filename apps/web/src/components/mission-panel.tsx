@@ -24,15 +24,13 @@ export function MissionPanel({ ledger, selectedSession, tasks = [] }: WorkspaceC
   const adapter = ledger?.lastSuccessfulAdapter ?? "未完成"
   const latestFiles = ledger?.latestChangedFiles.slice(0, 2).join(", ") || "无"
   const pmoSummary = summarizePmo(tasks)
+  const diagnostics = summarizeRunDiagnostics(tasks)
 
   return (
     <section className="mx-auto w-full max-w-4xl rounded-lg border border-[var(--border)] bg-white px-4 py-3 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-            Workspace Context
-          </p>
-          <p className="mt-1 truncate text-sm font-semibold text-slate-950">
+          <p className="truncate text-sm font-semibold text-slate-950">
             {ledger?.currentGoal ?? "等待用户需求"}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -61,6 +59,7 @@ export function MissionPanel({ ledger, selectedSession, tasks = [] }: WorkspaceC
             label="部署"
             value={ledger?.latestDeploymentProvider ?? ledger?.latestDeploymentStatus ?? "无"}
           />
+          <ContextRow label="诊断" value={diagnostics.summary} />
           {tasks.length > 0 ? (
             <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
               <p className="font-bold text-slate-700">PMO 状态</p>
@@ -152,6 +151,34 @@ function summarizePmo(tasks: SessionTask[]) {
     actions.add("等待下一步")
   }
   return { actions: Array.from(actions).slice(0, 3), blocked, ready, waiting }
+}
+
+function summarizeRunDiagnostics(tasks: SessionTask[]) {
+  const runs = tasks.flatMap((task) => task.taskRuns)
+  const latest = runs[runs.length - 1] ?? null
+  if (!latest) {
+    return { summary: "暂无运行" }
+  }
+  const gateway = objectValue(latest.metricsJson.providerGateway)
+  const resolution = objectValue(gateway.resolution)
+  const health = objectValue(gateway.health)
+  const queue = objectValue(latest.sessionQueue)
+  const lock = objectValue(latest.targetLock)
+  const jobs = Array.isArray(latest.previewDeployJobs) ? latest.previewDeployJobs : []
+  const provider = stringValue(resolution.selectedProviderId) ?? stringValue(health.providerId)
+  const providerStatus = stringValue(health.status)
+  const queueState = stringValue(queue.state)
+  const lockState = stringValue(lock.state)
+  const latestJob = objectValue(jobs[jobs.length - 1])
+  const jobState = stringValue(latestJob.state)
+  const parts = [
+    provider ? `provider ${providerStatus ? `${provider}:${providerStatus}` : provider}` : null,
+    queueState ? `queue ${queueState}` : null,
+    lockState ? `lock ${lockState}` : null,
+    jobState ? `job ${jobState}` : null,
+    latest.errorCode ? `error ${latest.errorCode}` : null,
+  ].filter(Boolean)
+  return { summary: parts.join(" / ") || latest.state }
 }
 
 function objectValue(value: unknown): Record<string, unknown> {

@@ -42,17 +42,17 @@
 
 ## 6. 前端 Run Diagnostics UI
 
-- [ ] 6.1 在 Task card / task run detail 中显示诊断摘要、失败分类、severity、retryability 和下一步。
-- [ ] 6.2 在右侧 panel 或 mission panel 中展示 Run Timeline，支持快速扫描各 phase 状态。
-- [ ] 6.3 展示 provider、queue、lock、preview、deploy health summary。
-- [ ] 6.4 将 preview/deploy 失败卡片链接到同一个诊断视图，不覆盖编码 run 的主失败原因。
-- [ ] 6.5 为建议动作接入已有重试、打开设置、打开 artifact、请求审批、选择 fallback 或 manual handoff 入口；未实现动作必须禁用并说明原因。
-- [ ] 6.6 添加前端测试覆盖 provider quota/auth、timeout、worktree dirty、lock timeout、validation failed、approval denied、preview failed、deploy blocked/failed 的渲染。
-- [ ] 6.7 验证相关 web 测试、`pnpm check` 或更窄等效命令、`git diff --check`。
+- [x] 6.1 在 Task card / task run detail 中显示诊断摘要、失败分类、severity、retryability 和下一步。
+- [x] 6.2 在右侧 panel 或 mission panel 中展示 Run Timeline，支持快速扫描各 phase 状态。
+- [x] 6.3 展示 provider、queue、lock、preview、deploy health summary。
+- [x] 6.4 将 preview/deploy 失败卡片链接到同一个诊断视图，不覆盖编码 run 的主失败原因。
+- [x] 6.5 为建议动作接入已有重试、打开设置、打开 artifact、请求审批、选择 fallback 或 manual handoff 入口；未实现动作必须禁用并说明原因。
+- [x] 6.6 添加前端测试覆盖 provider quota/auth、timeout、worktree dirty、lock timeout、validation failed、approval denied、preview failed、deploy blocked/failed 的渲染。
+- [x] 6.7 验证相关 web 测试、`pnpm check` 或更窄等效命令、`git diff --check`。
 
 ## 7. 冻结审查与文档
 
 - [x] 7.1 更新 `docs/change-log.md` 和 `docs/project-state.md`，记录 V2.7 实现范围和真实限制。
-- [ ] 7.2 创建 `docs/v2-7-run-diagnostics-freeze-review.md`，记录诊断分类、UI/API 行为、脱敏策略、测试结果和后续工作。
-- [ ] 7.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-7-run-diagnostics --strict`。
-- [ ] 7.4 标记 V2.7 tasks 完成并停止，不自动开始 V2.8 或其他平台能力。
+- [x] 7.2 创建 `docs/v2-7-run-diagnostics-freeze-review.md`，记录诊断分类、UI/API 行为、脱敏策略、测试结果和后续工作。
+- [x] 7.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-7-run-diagnostics --strict`。
+- [x] 7.4 标记 V2.7 tasks 完成并停止，不自动开始 V2.8 或其他平台能力。

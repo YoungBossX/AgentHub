@@ -54,7 +54,36 @@ const tasks: SessionTask[] = [
     priority: 1,
     sessionId: "session-1",
     status: "pending",
-    taskRuns: [],
+    taskRuns: [
+      {
+        adapterRunId: null,
+        adapterType: "codex",
+        agentId: "agent-frontend",
+        approvalRequest: null,
+        baseRef: null,
+        createdAt: "2026-06-08T00:00:00Z",
+        endedAt: null,
+        errorCode: null,
+        errorMessage: null,
+        headRef: null,
+        id: "run-1",
+        metricsJson: {
+          providerGateway: {
+            health: { providerId: "local-codex-cli", status: "healthy" },
+            resolution: { selectedProviderId: "local-codex-cli" },
+          },
+        },
+        previewDeployJobs: [{ state: "completed" }],
+        sessionId: "session-1",
+        sessionQueue: { state: "running" },
+        startedAt: "2026-06-08T00:00:00Z",
+        state: "streaming",
+        targetLock: { state: "held" },
+        taskId: "task-ready",
+        updatedAt: "2026-06-08T00:00:00Z",
+        worktreePath: ".worktrees/session",
+      },
+    ],
     title: "Ready task",
     updatedAt: "2026-06-08T00:00:00Z",
   },
@@ -91,5 +120,6 @@ describe("MissionPanel", () => {
     expect(screen.getByText("建议")).toBeTruthy()
     expect(screen.getByText("启动可运行任务")).toBeTruthy()
     expect(screen.getByText("检查阻塞任务")).toBeTruthy()
+    expect(screen.getByText("provider local-codex-cli:healthy / queue running / lock held / job completed")).toBeTruthy()
   })
 })
