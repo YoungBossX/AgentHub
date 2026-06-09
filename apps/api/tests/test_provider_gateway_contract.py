@@ -15,7 +15,9 @@ from app.provider_gateway import (
     ProviderCandidateDecision,
     ProviderConcurrencyLimiter,
     ProviderErrorClassification,
+    ProviderErrorClassifier,
     ProviderFallbackEvidence,
+    FallbackPolicy,
     ProviderGatewayResult,
     ProviderGatewayStatus,
     ProviderHealthResult,
@@ -28,6 +30,8 @@ from app.provider_gateway import (
     is_coding_adapter_type,
     record_provider_capacity_event,
     record_provider_circuit_event,
+    record_provider_error_classification,
+    record_provider_fallback_selected,
     record_provider_health_check,
     record_provider_rate_limit_status,
     record_provider_resolution,
@@ -528,6 +532,162 @@ def test_provider_capacity_circuit_and_rate_limit_events_update_metrics() -> Non
     assert metrics["providerGateway"]["capacity"]["acquired"] is True
     assert metrics["providerGateway"]["circuit"]["state"] == "open"
     assert metrics["providerGateway"]["rateLimit"]["limited"] is True
+
+
+def test_provider_error_classifier_maps_categories_and_redacts_evidence() -> None:
+    classifier = ProviderErrorClassifier()
+
+    auth = classifier.classify(
+        provider_id="local-codex-cli",
+        error_code="AUTH_FAILED",
+        message="Unauthorized token=secret",
+    )
+    guardrail = classifier.classify(
+        provider_id="local-codex-cli",
+        message="Guardrail protected path denied",
+    )
+    dirty = classifier.classify(
+        provider_id="local-codex-cli",
+        stderr="dirty worktree has uncommitted files",
+    )
+    unknown = classifier.classify(provider_id="local-codex-cli", message="boom")
+
+    assert auth.category == "auth"
+    assert auth.fallback_eligible is True
+    assert auth.circuit_breaker_eligible is True
+    assert auth.to_evidence()["safeEvidence"]["message"] == "Unauthorized token=[redacted]"
+    assert guardrail.category == "guardrail"
+    assert guardrail.fallback_eligible is False
+    assert guardrail.circuit_breaker_eligible is False
+    assert dirty.category == "dirty_worktree"
+    assert dirty.fallback_eligible is False
+    assert unknown.category == "unknown"
+
+
+def test_fallback_policy_selects_mock_without_overwriting_original_failure() -> None:
+    registry = ProviderRegistry(
+        providers=[
+            _provider(
+                provider_id="local-codex-cli",
+                adapter_type="codex",
+                is_real_provider=True,
+            ),
+            _provider(
+                provider_id="local-scripted-mock",
+                adapter_type="scripted_mock",
+                is_real_provider=False,
+                is_mock_provider=True,
+                is_fallback_provider=True,
+            ),
+        ]
+    )
+    resolution = ProviderResolutionPlan(
+        selected_provider_id="local-codex-cli",
+        selected_adapter_type="codex",
+        selection_reason="Runtime coding provider configuration is compatible.",
+        selected_is_real_provider=True,
+        fallback_candidates=(
+            ProviderCandidateDecision(
+                provider_id="local-scripted-mock",
+                adapter_type="scripted_mock",
+                accepted=True,
+                reason="Fallback compatible.",
+            ),
+        ),
+    )
+    classification = ProviderErrorClassifier().classify(
+        provider_id="local-codex-cli",
+        message="quota exceeded",
+    )
+
+    fallback = FallbackPolicy().choose(
+        context=_context(role="frontend", fallback_policy="scripted_mock"),
+        resolution=resolution,
+        classification=classification,
+        registry=registry,
+    )
+    blocked = FallbackPolicy().choose(
+        context=_context(role="frontend", fallback_policy="none"),
+        resolution=resolution,
+        classification=classification,
+        registry=registry,
+    )
+
+    assert fallback is not None
+    assert fallback.original_provider_id == "local-codex-cli"
+    assert fallback.fallback_provider_id == "local-scripted-mock"
+    assert fallback.trigger_category == "quota"
+    assert fallback.mock is True
+    assert fallback.completed is False
+    assert blocked is None
+
+
+def test_provider_error_and_fallback_events_are_recorded_honestly() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    classification = ProviderErrorClassifier().classify(
+        provider_id="local-codex-cli",
+        message="rate limit token=secret",
+    )
+    fallback = ProviderFallbackEvidence(
+        original_provider_id="local-codex-cli",
+        fallback_provider_id="local-scripted-mock",
+        trigger_category=classification.category,
+        reason=classification.user_message,
+        mock=True,
+    )
+
+    with DbSession(engine) as db:
+        task_run = TaskRun(
+            task_id="task-1",
+            agent_id="agent-1",
+            state="failed",
+            worktree_path=".worktrees/session",
+            error_code="PROVIDER_RATE_LIMIT",
+            metrics_json="{}",
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        record_provider_error_classification(
+            db,
+            task_run_id=task_run.id,
+            classification=classification,
+        )
+        record_provider_fallback_selected(
+            db,
+            task_run_id=task_run.id,
+            fallback=fallback,
+        )
+        record_provider_fallback_selected(
+            db,
+            task_run_id=task_run.id,
+            fallback=fallback,
+            completed=True,
+        )
+
+        events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .order_by(TaskRunEvent.created_at, TaskRunEvent.id)
+        ).all()
+        stored = db.get(TaskRun, task_run.id)
+        metrics = json.loads(stored.metrics_json)
+
+    assert [event.event_type for event in events] == [
+        "provider.error_classified",
+        "provider.fallback_selected",
+        "provider.fallback_completed",
+    ]
+    assert metrics["providerGateway"]["error"]["category"] == "rate_limit"
+    assert metrics["providerGateway"]["fallbackChain"][0]["mock"] is True
+    assert metrics["providerGateway"]["fallbackChain"][1]["completed"] is True
+    assert stored.error_code == "PROVIDER_RATE_LIMIT"
 
 
 def _context(

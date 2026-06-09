@@ -43,13 +43,13 @@
 
 ## 6. Error Taxonomy 与 Fallback Policy
 
-- [ ] 6.1 实现 ProviderErrorClassifier，覆盖 auth、quota、rate_limit、timeout、format、tool、guardrail、dirty_worktree、unavailable、unknown。
-- [ ] 6.2 实现 FallbackPolicy，基于 taxonomy、health、capacity、circuit 和配置决定是否 fallback。
-- [ ] 6.3 确保 ScriptedMock fallback 明确记录为 mock/fallback evidence。
-- [ ] 6.4 确保 fallback 完成不覆盖原始 Claude/Codex 失败，不伪造真实 provider 成功。
-- [ ] 6.5 添加测试覆盖各错误分类、fallback eligible/non-eligible、fallback chain evidence、无 fallback 时的诚实失败。
-- [ ] 6.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 6.7 单独提交：`feat: classify provider failures and record fallback evidence`。
+- [x] 6.1 实现 ProviderErrorClassifier，覆盖 auth、quota、rate_limit、timeout、format、tool、guardrail、dirty_worktree、unavailable、unknown。
+- [x] 6.2 实现 FallbackPolicy，基于 taxonomy、health、capacity、circuit 和配置决定是否 fallback。
+- [x] 6.3 确保 ScriptedMock fallback 明确记录为 mock/fallback evidence。
+- [x] 6.4 确保 fallback 完成不覆盖原始 Claude/Codex 失败，不伪造真实 provider 成功。
+- [x] 6.5 添加测试覆盖各错误分类、fallback eligible/non-eligible、fallback chain evidence、无 fallback 时的诚实失败。
+- [x] 6.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 6.7 单独提交：`feat: classify provider failures and record fallback evidence`。
 
 ## 7. Durable Run Engine 集成
 

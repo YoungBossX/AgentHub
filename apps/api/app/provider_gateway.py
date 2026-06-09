@@ -630,6 +630,109 @@ class ProviderCircuitBreaker:
         return self.snapshot(provider_id, now=now)
 
 
+class ProviderErrorClassifier:
+    CATEGORY_KEYWORDS: tuple[tuple[ProviderErrorCategory, tuple[str, ...]], ...] = (
+        ("quota", ("quota", "usage limit", "billing", "payment required")),
+        ("rate_limit", ("rate limit", "too many requests", "429")),
+        ("auth", ("auth", "unauthorized", "forbidden", "api key", "token", "login", "401", "403")),
+        ("timeout", ("timeout", "timed out", "deadline", "max runtime", "idle")),
+        ("format", ("invalid json", "schema", "parse", "format")),
+        ("tool", ("tool failed", "command failed", "subprocess", "non-zero", "exit code")),
+        ("guardrail", ("guardrail", "protected path", "permission denied", "command denied")),
+        ("dirty_worktree", ("dirty worktree", "uncommitted", "git status")),
+        ("unavailable", ("not found", "missing", "unavailable", "connection refused", "binary")),
+    )
+    RETRYABLE: frozenset[ProviderErrorCategory] = frozenset(
+        {"quota", "rate_limit", "timeout", "tool", "unavailable", "unknown"}
+    )
+    FALLBACK_ELIGIBLE: frozenset[ProviderErrorCategory] = frozenset(
+        {"auth", "quota", "rate_limit", "timeout", "format", "tool", "unavailable", "unknown"}
+    )
+    CIRCUIT_ELIGIBLE: frozenset[ProviderErrorCategory] = frozenset(
+        {"auth", "quota", "rate_limit", "timeout", "format", "tool", "unavailable", "unknown"}
+    )
+
+    def classify(
+        self,
+        *,
+        provider_id: str,
+        error_code: Optional[str] = None,
+        message: Optional[str] = None,
+        stderr: Optional[str] = None,
+        exit_code: Optional[int] = None,
+    ) -> ProviderErrorClassification:
+        raw = " ".join(
+            part
+            for part in [
+                error_code or "",
+                message or "",
+                stderr or "",
+                str(exit_code) if exit_code is not None else "",
+            ]
+            if part
+        )
+        category = self._category_for(raw)
+        return ProviderErrorClassification(
+            provider_id=provider_id,
+            category=category,
+            retryable=category in self.RETRYABLE,
+            fallback_eligible=category in self.FALLBACK_ELIGIBLE,
+            circuit_breaker_eligible=category in self.CIRCUIT_ELIGIBLE,
+            user_message=_provider_user_message(category),
+            safe_evidence={
+                "errorCode": error_code,
+                "message": message,
+                "stderr": stderr,
+                "exitCode": exit_code,
+            },
+        )
+
+    def _category_for(self, raw: str) -> ProviderErrorCategory:
+        normalized = raw.lower()
+        for category, keywords in self.CATEGORY_KEYWORDS:
+            if any(keyword in normalized for keyword in keywords):
+                return category
+        return "unknown"
+
+
+class FallbackPolicy:
+    def choose(
+        self,
+        *,
+        context: CodingRunContext,
+        resolution: ProviderResolutionPlan,
+        classification: Optional[ProviderErrorClassification] = None,
+        registry: Optional[ProviderRegistry] = None,
+    ) -> Optional[ProviderFallbackEvidence]:
+        if not _fallback_allowed(context.fallback_policy):
+            return None
+        if classification is not None and not classification.fallback_eligible:
+            return None
+        accepted = next(
+            (
+                candidate
+                for candidate in resolution.fallback_candidates
+                if candidate.accepted
+            ),
+            None,
+        )
+        if accepted is None:
+            return None
+        provider = registry.get(accepted.provider_id) if registry is not None else None
+        return ProviderFallbackEvidence(
+            original_provider_id=resolution.selected_provider_id or "unknown",
+            fallback_provider_id=accepted.provider_id,
+            trigger_category=classification.category if classification is not None else None,
+            reason=(
+                classification.user_message
+                if classification is not None
+                else "Fallback selected by provider resolution policy."
+            ),
+            mock=provider.is_mock_provider if provider is not None else accepted.adapter_type == "scripted_mock",
+            completed=False,
+        )
+
+
 @dataclass(frozen=True)
 class ProviderCandidateDecision:
     provider_id: str
@@ -1001,6 +1104,63 @@ def record_provider_rate_limit_status(
     _merge_provider_gateway_metric(db, task_run_id, "rateLimit", evidence)
 
 
+def record_provider_error_classification(
+    db: DbSession,
+    *,
+    task_run_id: str,
+    classification: ProviderErrorClassification,
+) -> None:
+    evidence = classification.to_evidence()
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type="provider.error_classified",
+        payload_json=json.dumps(evidence, separators=(",", ":")),
+    )
+    _merge_provider_gateway_metric(db, task_run_id, "error", evidence)
+
+
+def record_provider_fallback_selected(
+    db: DbSession,
+    *,
+    task_run_id: str,
+    fallback: ProviderFallbackEvidence,
+    completed: bool = False,
+) -> None:
+    evidence = ProviderFallbackEvidence(
+        original_provider_id=fallback.original_provider_id,
+        fallback_provider_id=fallback.fallback_provider_id,
+        trigger_category=fallback.trigger_category,
+        reason=fallback.reason,
+        fallback=fallback.fallback,
+        mock=fallback.mock,
+        completed=completed,
+    ).to_evidence()
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type="provider.fallback_completed" if completed else "provider.fallback_selected",
+        payload_json=json.dumps(evidence, separators=(",", ":")),
+    )
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        return
+    metrics = _json_dict(task_run.metrics_json)
+    provider_gateway = metrics.get("providerGateway")
+    if not isinstance(provider_gateway, dict):
+        provider_gateway = {}
+    chain = provider_gateway.get("fallbackChain")
+    if not isinstance(chain, list):
+        chain = []
+    chain.append(evidence)
+    provider_gateway["fallbackChain"] = chain
+    metrics["providerGateway"] = provider_gateway
+    task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
+    task_run.updated_at = utc_now()
+    db.add(task_run)
+    db.commit()
+
+
 def _merge_provider_gateway_metric(
     db: DbSession,
     task_run_id: str,
@@ -1020,6 +1180,22 @@ def _merge_provider_gateway_metric(
     task_run.updated_at = utc_now()
     db.add(task_run)
     db.commit()
+
+
+def _provider_user_message(category: ProviderErrorCategory) -> str:
+    messages: dict[ProviderErrorCategory, str] = {
+        "auth": "Provider authentication failed.",
+        "quota": "Provider quota or usage limit was reached.",
+        "rate_limit": "Provider rate limit was reached.",
+        "timeout": "Provider execution timed out.",
+        "format": "Provider returned output AgentHub could not parse safely.",
+        "tool": "Provider tool or command execution failed.",
+        "guardrail": "AgentHub guardrails blocked the request.",
+        "dirty_worktree": "Dirty worktree state blocked safe execution.",
+        "unavailable": "Provider is unavailable.",
+        "unknown": "Provider failed for an unknown reason.",
+    }
+    return messages[category]
 
 
 def _coding_provider_from_config(
