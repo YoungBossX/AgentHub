@@ -539,6 +539,110 @@ class TaskRunResponse(ApiModel):
     updated_at: datetime = Field(alias="updatedAt")
 
 
+class RunDiagnosticsFailureResponse(ApiModel):
+    category: str
+    reason: str
+    severity: str
+    retryable: bool
+    raw_error_code: Optional[str] = Field(default=None, alias="rawErrorCode")
+    source: str
+    occurred_at: Optional[datetime] = Field(default=None, alias="occurredAt")
+    evidence: dict[str, Any] = Field(default_factory=dict)
+
+
+class RunDiagnosticsSummaryResponse(ApiModel):
+    state: str
+    status_label: str = Field(alias="statusLabel")
+    severity: str
+    retryable: bool
+    primary_category: str = Field(alias="primaryCategory")
+    description: str
+    evidence_status: str = Field(alias="evidenceStatus")
+    fallback_used: bool = Field(default=False, alias="fallbackUsed")
+
+
+class RunDiagnosticsArtifactReferenceResponse(ApiModel):
+    artifact_id: str = Field(alias="artifactId")
+    artifact_type: str = Field(alias="artifactType")
+    title: str
+    status: str
+    target_id: Optional[str] = Field(default=None, alias="targetId")
+
+
+class RunDiagnosticsTimelineItemResponse(ApiModel):
+    id: str
+    timestamp: datetime
+    phase: str
+    status: str
+    title: str
+    description: str
+    source: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    artifact_reference: Optional[RunDiagnosticsArtifactReferenceResponse] = Field(
+        default=None,
+        alias="artifactReference",
+    )
+
+
+class RunDiagnosticsSuggestionResponse(ApiModel):
+    action_id: str = Field(alias="actionId")
+    label: str
+    description: str
+    kind: str
+    enabled: bool
+    disabled_reason: Optional[str] = Field(default=None, alias="disabledReason")
+    target: Optional[dict[str, Any]] = None
+
+
+class RunDiagnosticsHealthSummaryResponse(ApiModel):
+    provider: dict[str, Any]
+    queue: dict[str, Any]
+    lock: dict[str, Any]
+    preview: dict[str, Any]
+    deploy: dict[str, Any]
+
+
+class RunDiagnosticsResponse(ApiModel):
+    task_run_id: str = Field(alias="taskRunId")
+    task_id: str = Field(alias="taskId")
+    session_id: str = Field(alias="sessionId")
+    summary: RunDiagnosticsSummaryResponse
+    primary_failure: Optional[RunDiagnosticsFailureResponse] = Field(
+        default=None,
+        alias="primaryFailure",
+    )
+    contributing_factors: list[RunDiagnosticsFailureResponse] = Field(
+        default_factory=list,
+        alias="contributingFactors",
+    )
+    downstream_impact: list[dict[str, Any]] = Field(
+        default_factory=list,
+        alias="downstreamImpact",
+    )
+    timeline: list[RunDiagnosticsTimelineItemResponse]
+    health_summary: RunDiagnosticsHealthSummaryResponse = Field(alias="healthSummary")
+    suggestions: list[RunDiagnosticsSuggestionResponse]
+
+
+class SessionRunDiagnosticsItemResponse(ApiModel):
+    task_run_id: str = Field(alias="taskRunId")
+    task_id: str = Field(alias="taskId")
+    state: str
+    primary_category: str = Field(alias="primaryCategory")
+    severity: str
+    retryable: bool
+    summary: str
+    updated_at: datetime = Field(alias="updatedAt")
+
+
+class SessionRunDiagnosticsSummaryResponse(ApiModel):
+    session_id: str = Field(alias="sessionId")
+    total_runs: int = Field(alias="totalRuns")
+    states: dict[str, int]
+    categories: dict[str, int]
+    runs: list[SessionRunDiagnosticsItemResponse]
+
+
 class DiffArtifactResponse(ApiModel):
     id: str
     artifact_id: str = Field(alias="artifactId")

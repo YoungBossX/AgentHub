@@ -126,6 +126,10 @@ from app.reviews import (
     create_scripted_review_for_task_run,
     list_task_run_reviews,
 )
+from app.run_diagnostics import (
+    build_session_run_diagnostics_summary,
+    build_task_run_diagnostics,
+)
 from app.run_engine import (
     adapter_for_type,
     agent_run_request_for,
@@ -190,9 +194,11 @@ from app.schemas import (
     RuntimeProviderCheckRequest,
     RuntimeProviderCheckResponse,
     RuntimeRoleConfigResponse,
+    RunDiagnosticsResponse,
     SessionCreateRequest,
     SessionExecutionLedgerResponse,
     SessionMissionTraceResponse,
+    SessionRunDiagnosticsSummaryResponse,
     SessionResponse,
     SessionTargetSelectionRequest,
     SessionUpdateRequest,
@@ -1438,6 +1444,19 @@ def read_session_mission_trace(
     return build_session_mission_trace(db, session_id)
 
 
+@app.get(
+    "/sessions/{session_id}/run-diagnostics-summary",
+    response_model=SessionRunDiagnosticsSummaryResponse,
+)
+def read_session_run_diagnostics_summary(
+    session_id: str,
+    db: DbSession = Depends(get_db),
+) -> SessionRunDiagnosticsSummaryResponse:
+    if get_session(db, session_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return build_session_run_diagnostics_summary(db, session_id)
+
+
 def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
     from app.preview_deploy_jobs import job_diagnostics_for_task_run
     from app.session_queue import queue_diagnostics_for_task_run
@@ -1893,6 +1912,20 @@ async def force_codex_failure_for_task(
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return task_run_response(db, task_run)
+
+
+@app.get(
+    "/task-runs/{task_run_id}/diagnostics",
+    response_model=RunDiagnosticsResponse,
+)
+def read_task_run_diagnostics(
+    task_run_id: str,
+    db: DbSession = Depends(get_db),
+) -> RunDiagnosticsResponse:
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    return build_task_run_diagnostics(db, task_run)
 
 
 @app.post("/task-runs/{task_run_id}/interrupt", response_model=TaskRunResponse)
