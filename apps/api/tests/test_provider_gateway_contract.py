@@ -17,11 +17,13 @@ from app.provider_gateway import (
     ProviderGatewayResult,
     ProviderGatewayStatus,
     ProviderHealthResult,
+    ProviderHealthProbe,
     ProviderRegistry,
     ProviderResolver,
     ProviderResolutionPlan,
     coding_provider_ids_from_configs,
     is_coding_adapter_type,
+    record_provider_health_check,
     record_provider_resolution,
     redact_provider_evidence,
 )
@@ -280,6 +282,124 @@ def test_record_provider_resolution_event_updates_task_run_metrics() -> None:
     )
 
 
+def test_provider_health_probe_reports_healthy_cli_without_leaking_path() -> None:
+    provider = ProviderRegistry().get("local-codex-cli")
+    probe = ProviderHealthProbe(
+        command_lookup=lambda command: "/Users/demo/.env/bin/codex",
+        version_runner=lambda executable: (
+            True,
+            {"output": "codex 1.0 token=secret-value", "executable": executable},
+        ),
+    )
+
+    health = probe.check_provider(provider)
+    evidence = health.to_evidence()
+
+    assert health.status == "healthy"
+    assert health.available is True
+    assert evidence["safeDetails"]["command"] == "codex"
+    assert "secret-value" not in evidence["safeDetails"]["output"]
+    assert "/Users/demo/.env/bin/codex" not in json.dumps(evidence)
+
+
+def test_provider_health_probe_reports_unavailable_cli() -> None:
+    provider = ProviderRegistry().get("local-claude-code-cli")
+    probe = ProviderHealthProbe(command_lookup=lambda command: None)
+
+    health = probe.check_provider(provider)
+
+    assert health.status == "unavailable"
+    assert health.available is False
+    assert health.safe_details["fallbackDoesNotImplyHealthy"] is True
+
+
+def test_provider_health_probe_reports_unknown_for_unhandled_provider() -> None:
+    provider = _provider(
+        provider_id="local-custom",
+        adapter_type="codex",
+        is_real_provider=True,
+    )
+    object.__setattr__(provider, "adapter_type", "custom")
+    probe = ProviderHealthProbe()
+
+    health = probe.check_provider(provider)
+
+    assert health.status == "unknown"
+    assert health.available is False
+
+
+def test_provider_health_probe_checks_scripted_mock_demo_boundary(tmp_path) -> None:
+    provider = ProviderRegistry().get("local-scripted-mock")
+    app_path = tmp_path / "apps/demo/src/App.tsx"
+    app_path.parent.mkdir(parents=True)
+    app_path.write_text("export default function App() { return null }")
+    probe = ProviderHealthProbe()
+
+    healthy = probe.check_provider(
+        provider,
+        context=_context(role="frontend", worktree_path=str(tmp_path)),
+    )
+    missing = probe.check_provider(
+        provider,
+        context=_context(role="frontend", worktree_path=str(tmp_path / "missing")),
+    )
+    unknown = probe.check_provider(provider)
+
+    assert healthy.status == "healthy"
+    assert healthy.available is True
+    assert healthy.to_evidence()["safeDetails"]["demoBoundary"] == (
+        "apps/demo/src/App.tsx"
+    )
+    assert str(tmp_path) not in json.dumps(healthy.to_evidence())
+    assert missing.status == "unavailable"
+    assert unknown.status == "unknown"
+
+
+def test_record_provider_health_check_event_updates_task_run_metrics() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    health = ProviderHealthResult(
+        provider_id="local-codex-cli",
+        adapter_type="codex",
+        status="unavailable",
+        available=False,
+        reason="CLI missing",
+        safe_details={"stderr": "api_key=secret"},
+    )
+
+    with DbSession(engine) as db:
+        task_run = TaskRun(
+            task_id="task-1",
+            agent_id="agent-1",
+            state="queued",
+            worktree_path=".worktrees/session",
+            metrics_json="{}",
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        record_provider_health_check(db, task_run_id=task_run.id, health=health)
+
+        event = db.exec(
+            select(TaskRunEvent).where(
+                TaskRunEvent.task_run_id == task_run.id,
+                TaskRunEvent.event_type == "provider.health_checked",
+            )
+        ).one()
+        stored = db.get(TaskRun, task_run.id)
+        metrics = json.loads(stored.metrics_json)
+        payload = json.loads(event.payload_json)
+
+    assert payload["status"] == "unavailable"
+    assert payload["safeDetails"]["stderr"] == "api_key=[redacted]"
+    assert metrics["providerGateway"]["health"]["providerId"] == "local-codex-cli"
+
+
 def _context(
     *,
     role: str,
@@ -287,6 +407,7 @@ def _context(
     runtime_provider_id: Optional[str] = None,
     runtime_adapter_type: Optional[str] = None,
     fallback_policy: str = "environment_default",
+    worktree_path: Optional[str] = None,
 ) -> CodingRunContext:
     return CodingRunContext(
         workspace_id="workspace-1",
@@ -296,6 +417,7 @@ def _context(
         role=role,
         mode="write",
         required_capabilities=("file_edit",),
+        worktree_path=worktree_path,
         requested_provider_id=requested_provider_id,
         runtime_provider_id=runtime_provider_id,
         runtime_adapter_type=runtime_adapter_type,

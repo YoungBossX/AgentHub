@@ -24,12 +24,12 @@
 
 ## 4. Health Probe 与 Launch Path 对齐
 
-- [ ] 4.1 实现 provider health/probe helper，使健康状态贴近 Claude/Codex/ScriptedMock 实际启动路径。
-- [ ] 4.2 确保 health 结果不泄露 secrets、API key、token 或受保护 host path。
-- [ ] 4.3 记录 health checked evidence，不因 fallback 可用而把真实 provider 标为 healthy。
-- [ ] 4.4 添加测试覆盖 healthy、unavailable、unknown、redaction、ScriptedMock demo boundary。
-- [ ] 4.5 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 4.6 单独提交：`feat: add coding provider health probes`。
+- [x] 4.1 实现 provider health/probe helper，使健康状态贴近 Claude/Codex/ScriptedMock 实际启动路径。
+- [x] 4.2 确保 health 结果不泄露 secrets、API key、token 或受保护 host path。
+- [x] 4.3 记录 health checked evidence，不因 fallback 可用而把真实 provider 标为 healthy。
+- [x] 4.4 添加测试覆盖 healthy、unavailable、unknown、redaction、ScriptedMock demo boundary。
+- [x] 4.5 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 4.6 单独提交：`feat: add coding provider health probes`。
 
 ## 5. Concurrency、Rate Limit Placeholder 与 Circuit Breaker
 

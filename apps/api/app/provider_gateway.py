@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import re
 import json
+import os
+import shutil
+import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Literal, Optional
+from pathlib import Path
+from typing import Any, Callable, Literal, Optional
 
 from sqlmodel import Session as DbSession
 
@@ -48,6 +52,14 @@ SAFE_LAUNCH_SUMMARY_BY_ADAPTER: dict[str, str] = {
     "claude_code": "local Claude Code CLI launch path",
     "codex": "local Codex CLI launch path",
     "scripted_mock": "local scripted mock demo boundary",
+}
+CLI_ENV_BY_ADAPTER: dict[str, str] = {
+    "claude_code": "CLAUDE_CODE_CLI_PATH",
+    "codex": "CODEX_CLI_PATH",
+}
+DEFAULT_CLI_COMMAND_BY_ADAPTER: dict[str, str] = {
+    "claude_code": "claude",
+    "codex": "/Applications/Codex.app/Contents/Resources/codex",
 }
 CAPABILITIES_BY_ADAPTER: dict[str, tuple[str, ...]] = {
     "claude_code": ("file_edit", "shell_command", "diff_artifact", "preview_artifact"),
@@ -113,6 +125,7 @@ class CodingRunContext:
     target_id: Optional[str] = None
     mode: str = "write"
     required_capabilities: tuple[str, ...] = ("file_edit",)
+    worktree_path: Optional[str] = None
     requested_provider_id: Optional[str] = None
     runtime_provider_id: Optional[str] = None
     runtime_adapter_type: Optional[str] = None
@@ -129,6 +142,7 @@ class CodingRunContext:
                 "targetId": self.target_id,
                 "mode": self.mode,
                 "requiredCapabilities": list(self.required_capabilities),
+                "worktreePath": self.worktree_path,
                 "requestedProviderId": self.requested_provider_id,
                 "runtimeProviderId": self.runtime_provider_id,
                 "runtimeAdapterType": self.runtime_adapter_type,
@@ -328,6 +342,118 @@ class ProviderResolver:
             if provider.is_real_provider and provider not in providers:
                 providers.append(provider)
         return providers
+
+
+class ProviderHealthProbe:
+    def __init__(
+        self,
+        *,
+        command_lookup: Optional[Callable[[str], Optional[str]]] = None,
+        version_runner: Optional[Callable[[str], tuple[bool, dict[str, Any]]]] = None,
+    ) -> None:
+        self._command_lookup = command_lookup or _default_command_lookup
+        self._version_runner = version_runner or _run_version_probe
+
+    def check_provider(
+        self,
+        provider: CodingProviderMetadata,
+        *,
+        context: Optional[CodingRunContext] = None,
+    ) -> ProviderHealthResult:
+        if provider.adapter_type == "scripted_mock":
+            return self._check_scripted_mock(provider, context=context)
+        if provider.adapter_type in {"claude_code", "codex"}:
+            return self._check_cli_provider(provider)
+        return ProviderHealthResult(
+            provider_id=provider.provider_id,
+            adapter_type=provider.adapter_type,
+            status="unknown",
+            available=False,
+            reason="Provider has no coding health probe.",
+        )
+
+    def _check_cli_provider(
+        self,
+        provider: CodingProviderMetadata,
+    ) -> ProviderHealthResult:
+        command = _configured_cli_command(provider.adapter_type)
+        executable = self._command_lookup(command)
+        safe_command = _safe_command_summary(command)
+        if executable is None:
+            return ProviderHealthResult(
+                provider_id=provider.provider_id,
+                adapter_type=provider.adapter_type,
+                status="unavailable",
+                available=False,
+                reason="CLI executable was not found on the configured launch path.",
+                safe_details={
+                    "command": safe_command,
+                    "probe": "which",
+                    "fallbackDoesNotImplyHealthy": True,
+                },
+            )
+
+        ok, details = self._version_runner(executable)
+        safe_details = {
+            "command": safe_command,
+            "probe": "version",
+            "executable": _safe_command_summary(executable),
+            **details,
+        }
+        if not ok:
+            return ProviderHealthResult(
+                provider_id=provider.provider_id,
+                adapter_type=provider.adapter_type,
+                status="unavailable",
+                available=False,
+                reason="CLI executable was found but the startup probe failed.",
+                safe_details=safe_details,
+            )
+        return ProviderHealthResult(
+            provider_id=provider.provider_id,
+            adapter_type=provider.adapter_type,
+            status="healthy",
+            available=True,
+            reason="CLI executable and startup probe are available.",
+            safe_details=safe_details,
+        )
+
+    def _check_scripted_mock(
+        self,
+        provider: CodingProviderMetadata,
+        *,
+        context: Optional[CodingRunContext],
+    ) -> ProviderHealthResult:
+        if context is None or not context.worktree_path:
+            return ProviderHealthResult(
+                provider_id=provider.provider_id,
+                adapter_type=provider.adapter_type,
+                status="unknown",
+                available=False,
+                reason="ScriptedMock health requires a session worktree path.",
+                safe_details={
+                    "demoBoundary": "apps/demo/src/App.tsx",
+                    "mock": True,
+                },
+            )
+        app_path = Path(context.worktree_path) / "apps/demo/src/App.tsx"
+        exists = app_path.exists()
+        return ProviderHealthResult(
+            provider_id=provider.provider_id,
+            adapter_type=provider.adapter_type,
+            status="healthy" if exists else "unavailable",
+            available=exists,
+            reason=(
+                "ScriptedMock demo app boundary is available."
+                if exists
+                else "ScriptedMock demo app boundary is missing."
+            ),
+            safe_details={
+                "demoBoundary": "apps/demo/src/App.tsx",
+                "mock": True,
+                "path": str(app_path),
+            },
+        )
 
 
 @dataclass(frozen=True)
@@ -621,6 +747,34 @@ def record_provider_resolution(
     db.commit()
 
 
+def record_provider_health_check(
+    db: DbSession,
+    *,
+    task_run_id: str,
+    health: ProviderHealthResult,
+) -> None:
+    evidence = health.to_evidence()
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type="provider.health_checked",
+        payload_json=json.dumps(evidence, separators=(",", ":")),
+    )
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        return
+    metrics = _json_dict(task_run.metrics_json)
+    provider_gateway = metrics.get("providerGateway")
+    if not isinstance(provider_gateway, dict):
+        provider_gateway = {}
+    provider_gateway["health"] = evidence
+    metrics["providerGateway"] = provider_gateway
+    task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
+    task_run.updated_at = utc_now()
+    db.add(task_run)
+    db.commit()
+
+
 def _coding_provider_from_config(
     provider: ProviderConfig,
 ) -> CodingProviderMetadata:
@@ -801,6 +955,56 @@ def _json_dict(raw: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _configured_cli_command(adapter_type: str) -> str:
+    env_name = CLI_ENV_BY_ADAPTER.get(adapter_type)
+    if env_name:
+        configured = os.environ.get(env_name, "").strip()
+        if configured:
+            return configured
+    return DEFAULT_CLI_COMMAND_BY_ADAPTER.get(adapter_type, adapter_type)
+
+
+def _default_command_lookup(command: str) -> Optional[str]:
+    path = Path(command)
+    if path.is_absolute():
+        return str(path) if path.exists() else None
+    return shutil.which(command)
+
+
+def _run_version_probe(executable: str) -> tuple[bool, dict[str, Any]]:
+    try:
+        completed = subprocess.run(
+            [executable, "--version"],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=3,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return (
+            False,
+            {
+                "error": str(exc),
+                "rawRedacted": True,
+            },
+        )
+    output = (completed.stdout or completed.stderr or "").strip()
+    return (
+        completed.returncode == 0,
+        {
+            "exitCode": completed.returncode,
+            "output": output[:200],
+            "rawRedacted": True,
+        },
+    )
+
+
+def _safe_command_summary(command: str) -> str:
+    if "/" not in command and "\\" not in command:
+        return command
+    return Path(command).name or "[command]"
 
 
 def redact_provider_evidence(value: Any) -> Any:

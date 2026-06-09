@@ -1,5 +1,30 @@
 # AgentHub Change Log
 
+## V2.2-4 Provider Health Probes
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added ProviderHealthProbe for coding providers, checking Claude Code/Codex CLI
+  launch paths with safe `--version` probes and ScriptedMock's Vite demo app
+  boundary.
+- Added `provider.health_checked` event and TaskRun metrics recording helper.
+- Ensured health evidence is redacted and ScriptedMock availability does not
+  make real providers appear healthy.
+- Expanded Provider Gateway tests for healthy, unavailable, unknown, redaction,
+  ScriptedMock demo boundary, and health evidence persistence.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py -q` | Pass, 13 tests |
+| `pnpm check` | Pass |
+| `pnpm demo:api:test` | Pass, 5 tests |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-2-provider-gateway --strict` | Pass |
+
 ## V2.7 Run Diagnostics Backend Projection
 
 **Date:** 2026-06-09
