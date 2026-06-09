@@ -19,14 +19,14 @@
 - [x] 3.2 validation failed 进入 review_required，不得宣称 completed delivery。
 - [x] 3.3 记录 `delivery.review_required` / `delivery.validation_failed` evidence。
 - [x] 3.4 增加 validation/review gate 测试并验证。
-- [ ] 3.5 提交：`feat: gate delivery validation`。
+- [x] 3.5 提交：`feat: gate delivery validation`。
 
 ## 4. Accept / Rollback / Retry
 
-- [ ] 4.1 实现 accept helper，记录 diff/review/command evidence artifact state。
-- [ ] 4.2 实现 rollback helper，基于 checkpoint 恢复或拒绝，且记录事件。
-- [ ] 4.3 retry helper 显式区分 current_state 与 checkpoint。
-- [ ] 4.4 增加 accept/rollback/retry 测试并验证。
+- [x] 4.1 实现 accept helper，记录 diff/review/command evidence artifact state。
+- [x] 4.2 实现 rollback helper，基于 checkpoint 恢复或拒绝，且记录事件。
+- [x] 4.3 retry helper 显式区分 current_state 与 checkpoint。
+- [x] 4.4 增加 accept/rollback/retry 测试并验证。
 - [ ] 4.5 提交：`feat: add delivery accept rollback retry`。
 
 ## 5. Run Engine / Diagnostics 接入

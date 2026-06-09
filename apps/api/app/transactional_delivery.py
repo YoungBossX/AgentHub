@@ -88,6 +88,22 @@ class DeliveryValidationEvidence:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class DeliveryArtifactState:
+    diff_artifact_ids: tuple[str, ...] = ()
+    review_artifact_ids: tuple[str, ...] = ()
+    command_evidence_ids: tuple[str, ...] = ()
+    policy_evidence_ids: tuple[str, ...] = ()
+
+    def to_payload(self) -> dict[str, list[str]]:
+        return {
+            "diffArtifactIds": list(self.diff_artifact_ids),
+            "reviewArtifactIds": list(self.review_artifact_ids),
+            "commandEvidenceIds": list(self.command_evidence_ids),
+            "policyEvidenceIds": list(self.policy_evidence_ids),
+        }
+
+
 def checkpoint_evidence_for_task_run(
     task_run: TaskRun,
 ) -> Optional[DeliveryCheckpointEvidence]:
@@ -153,6 +169,48 @@ def retry_mode_decision(
         task_run_id=task_run.id,
         checkpoint=checkpoint_evidence_for_task_run(task_run),
         evidence={"retryMode": mode.value},
+    )
+
+
+def accept_delivery_decision(
+    task_run: TaskRun,
+    *,
+    artifact_state: DeliveryArtifactState,
+    accepted_by: str,
+    accepted_at: str,
+) -> DeliveryDecision:
+    return DeliveryDecision(
+        state=DeliveryState.ACCEPTED,
+        reason="Delivery artifact state accepted.",
+        task_run_id=task_run.id,
+        checkpoint=checkpoint_evidence_for_task_run(task_run),
+        evidence={
+            "eventType": "delivery.accepted",
+            "acceptedBy": accepted_by,
+            "acceptedAt": accepted_at,
+            **artifact_state.to_payload(),
+        },
+    )
+
+
+def rollback_decision(
+    task_run: TaskRun,
+    *,
+    actor: str,
+) -> DeliveryDecision:
+    checkpoint = checkpoint_evidence_for_task_run(task_run)
+    if checkpoint is None:
+        return rollback_preflight_decision(task_run)
+    return DeliveryDecision(
+        state=DeliveryState.ROLLED_BACK,
+        reason="Delivery rollback recorded from checkpoint.",
+        task_run_id=task_run.id,
+        checkpoint=checkpoint,
+        evidence={
+            "eventType": "delivery.rolled_back",
+            "actor": actor,
+            "restoredPaths": list(checkpoint.planned_files),
+        },
     )
 
 

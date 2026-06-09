@@ -3,13 +3,16 @@ import json
 from app.models import TaskRun
 from app.transactional_delivery import (
     DeliveryEvidenceKind,
+    DeliveryArtifactState,
     DeliveryRetryMode,
     DeliveryState,
     DeliveryValidationEvidence,
     checkpoint_evidence_for_task_run,
+    accept_delivery_decision,
     evaluate_delivery_validation,
     pending_validation_decision,
     retry_mode_decision,
+    rollback_decision,
     rollback_preflight_decision,
 )
 
@@ -87,6 +90,49 @@ def test_retry_mode_decision_is_explicit() -> None:
     assert current.evidence["retryMode"] == "current_state"
     assert checkpoint.state == DeliveryState.RETRY_FROM_CHECKPOINT
     assert checkpoint.evidence["retryMode"] == "checkpoint"
+
+
+def test_accept_delivery_records_artifact_state() -> None:
+    decision = accept_delivery_decision(
+        _task_run(metrics={"preRunCheckpoint": {"targetId": "external-vite"}}),
+        artifact_state=DeliveryArtifactState(
+            diff_artifact_ids=("diff-1",),
+            review_artifact_ids=("review-1",),
+            command_evidence_ids=("command-1",),
+            policy_evidence_ids=("policy-1",),
+        ),
+        accepted_by="user",
+        accepted_at="2026-06-09T00:00:00Z",
+    )
+
+    assert decision.state == DeliveryState.ACCEPTED
+    assert decision.evidence["eventType"] == "delivery.accepted"
+    assert decision.evidence["diffArtifactIds"] == ["diff-1"]
+    assert decision.evidence["acceptedBy"] == "user"
+
+
+def test_rollback_decision_records_restored_paths_from_checkpoint() -> None:
+    decision = rollback_decision(
+        _task_run(
+            metrics={
+                "preRunCheckpoint": {
+                    "targetId": "external-vite",
+                    "plannedFiles": ["src/App.tsx"],
+                }
+            }
+        ),
+        actor="user",
+    )
+
+    assert decision.state == DeliveryState.ROLLED_BACK
+    assert decision.evidence["eventType"] == "delivery.rolled_back"
+    assert decision.evidence["restoredPaths"] == ["src/App.tsx"]
+
+
+def test_rollback_decision_refuses_without_checkpoint() -> None:
+    decision = rollback_decision(_task_run(metrics={}), actor="user")
+
+    assert decision.state == DeliveryState.ROLLBACK_REFUSED
 
 
 def test_delivery_validation_passes_clean_evidence() -> None:

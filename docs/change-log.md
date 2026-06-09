@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## V2.6-4 Delivery Accept Rollback Retry
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added delivery artifact state, accept decision, rollback decision, and explicit
+  retry mode evidence helpers.
+- Added tests proving accept records diff/review/command/policy evidence ids,
+  rollback records checkpoint paths, and rollback refuses missing checkpoints.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py -q` | Pass, 12 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-6-transactional-delivery --strict` | Pass |
+
 ## V2.6-3 Delivery Validation Gate
 
 **Date:** 2026-06-09

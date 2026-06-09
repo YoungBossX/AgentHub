@@ -18,6 +18,10 @@ Delivery validation helpers can now turn failed command evidence, high-risk
 review evidence, or denied policy evidence into `review_required`. This still
 does not rewire Run Engine finalization; integration is a later V2.6 task.
 
+Accept and rollback helpers now record artifact-state evidence and checkpoint
+restore intent. They still do not perform real worktree restoration; actual
+Run Engine / recovery integration remains the next V2.6 step.
+
 ## V2.5 Policy Engine Status
 
 V2.5 started on 2026-06-09. The current slice adds a standalone Policy Engine
