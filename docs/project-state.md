@@ -26,6 +26,10 @@ Delivery decisions can now be recorded as TaskRunEvents, and Run Diagnostics
 maps delivery validation events into the validation timeline. This integration
 adds evidence visibility without changing Run Engine finalizer behavior.
 
+V2.6 freeze preserves this boundary: transactional delivery is now represented
+as evidence and diagnostics, while actual destructive rollback execution and
+hard finalizer gating remain follow-up work.
+
 ## V2.5 Policy Engine Status
 
 V2.5 started on 2026-06-09. The current slice adds a standalone Policy Engine

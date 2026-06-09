@@ -35,12 +35,12 @@
 - [x] 5.2 validation failure 不应启动 preview/deploy ready 证据。
 - [x] 5.3 Run Diagnostics 可识别 delivery validation / review_required / rollback 事件。
 - [x] 5.4 增加窄集成测试并验证。
-- [ ] 5.5 提交：`feat: integrate transactional delivery evidence`。
+- [x] 5.5 提交：`feat: integrate transactional delivery evidence`。
 
 ## 6. 冻结审查
 
-- [ ] 6.1 更新 `docs/change-log.md` 和 `docs/project-state.md`。
-- [ ] 6.2 创建 `docs/v2-6-transactional-delivery-freeze-review.md`。
-- [ ] 6.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-6-transactional-delivery --strict`。
-- [ ] 6.4 标记 V2.6 tasks 完成并停止。
+- [x] 6.1 更新 `docs/change-log.md` 和 `docs/project-state.md`。
+- [x] 6.2 创建 `docs/v2-6-transactional-delivery-freeze-review.md`。
+- [x] 6.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-6-transactional-delivery --strict`。
+- [x] 6.4 标记 V2.6 tasks 完成并停止。
 - [ ] 6.5 提交：`test: freeze v2.6 transactional delivery`。
