@@ -46,13 +46,13 @@
 
 ## 6. 恢复扫描与 Stale Run 处理
 
-- [ ] 6.1 在服务启动或 worker 启动时扫描 queued/active/waiting/terminal TaskRuns。
-- [ ] 6.2 queued run 可重新 claim；waiting approval 不自动执行；terminal run 不重复执行。
-- [ ] 6.3 active run lease 过期时记录 stale recovery 事件，并诚实失败化或进入受控 retry 状态。
-- [ ] 6.4 与现有 `mark_stale_task_runs` / recovery helpers 兼容，不破坏 scheduler refresh。
-- [ ] 6.5 添加测试覆盖服务重启后的 queued 恢复、active stale failed、approval 不执行、terminal 不重复。
-- [ ] 6.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 6.7 单独提交：`feat: recover stale durable task runs`。
+- [x] 6.1 在服务启动或 worker 启动时扫描 queued/active/waiting/terminal TaskRuns。
+- [x] 6.2 queued run 可重新 claim；waiting approval 不自动执行；terminal run 不重复执行。
+- [x] 6.3 active run lease 过期时记录 stale recovery 事件，并诚实失败化或进入受控 retry 状态。
+- [x] 6.4 与现有 `mark_stale_task_runs` / recovery helpers 兼容，不破坏 scheduler refresh。
+- [x] 6.5 添加测试覆盖服务重启后的 queued 恢复、active stale failed、approval 不执行、terminal 不重复。
+- [x] 6.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 6.7 单独提交：`feat: recover stale durable task runs`。
 
 ## 7. Artifact Collector 与 Finalizer 幂等
 

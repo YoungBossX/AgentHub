@@ -31,6 +31,7 @@ from app.task_runs import (
     claim_task_run_for_worker,
     create_task_run,
     list_task_runs,
+    mark_stale_task_runs,
     metrics_for_run,
     refresh_task_run_heartbeat,
     transition_task_run,
@@ -71,6 +72,15 @@ class RunWorker:
             worker_id=self.worker_id,
         )
         return db.get(TaskRun, task_run.id)
+
+    def recover_stale_runs(self, db: DbSession, *, reason: str = "worker_startup") -> dict[str, Any]:
+        marked = mark_stale_task_runs(db, reason=reason)
+        return {
+            "workerId": self.worker_id,
+            "reason": reason,
+            "staleRunIds": [run.id for run in marked],
+            "staleRunCount": len(marked),
+        }
 
 
 def next_queued_task_run(db: DbSession) -> Optional[TaskRun]:

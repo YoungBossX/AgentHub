@@ -3065,6 +3065,37 @@ def test_run_worker_ignores_when_no_queued_task_run(client: TestClient) -> None:
         assert executed is None
 
 
+def test_run_worker_recovery_marks_only_expired_active_runs(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        queued = create_task_run(db, task_id())
+        active = create_task_run(db, task_id())
+        transition_task_run(db, active.id, "streaming")
+        active.lease_expires_at = utc_now() - timedelta(minutes=1)
+        db.add(active)
+        terminal = create_task_run(db, task_id())
+        transition_task_run(db, terminal.id, "completed")
+        db.commit()
+        queued_id = queued.id
+        active_id = active.id
+        terminal_id = terminal.id
+
+        summary = run_engine_module.RunWorker(worker_id="worker:test").recover_stale_runs(
+            db,
+            reason="worker_startup_test",
+        )
+
+        assert summary["workerId"] == "worker:test"
+        assert summary["staleRunIds"] == [active_id]
+        assert summary["staleRunCount"] == 1
+        assert db.get(TaskRun, queued_id).state == "queued"
+        assert db.get(TaskRun, active_id).state == "failed"
+        assert db.get(TaskRun, active_id).error_code == "TASK_RUN_STALE"
+        assert db.get(TaskRun, active_id).stale_reason == "worker_startup_test"
+        assert db.get(TaskRun, terminal_id).state == "completed"
+
+
 def test_retry_blocks_external_target_dirty_worktree_outside_checkpoint(
     client: TestClient,
     tmp_path: Path,
