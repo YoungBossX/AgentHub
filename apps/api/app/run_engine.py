@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from fastapi import BackgroundTasks
 from sqlmodel import Session as DbSession
+from sqlmodel import select
 
 from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
 from app.claude_code_adapter import ClaudeCodeAdapter
@@ -49,14 +50,34 @@ def get_deploy_service() -> DeployService:
 
 def schedule_task_run_execution(
     background_tasks: BackgroundTasks,
-    task_run_id: str,
-    adapter_type: str,
 ) -> None:
-    background_tasks.add_task(
-        _background_execute_task_run,
-        task_run_id,
-        adapter_type,
-    )
+    background_tasks.add_task(_background_run_worker_once)
+
+
+class RunWorker:
+    def __init__(self, *, worker_id: Optional[str] = None) -> None:
+        self.worker_id = worker_id or _new_worker_id()
+
+    async def run_once(self, db: DbSession) -> Optional[TaskRun]:
+        task_run = next_queued_task_run(db)
+        if task_run is None:
+            return None
+        adapter_type = adapter_type_for_run(db, task_run)
+        await execute_task_run_background(
+            db,
+            task_run.id,
+            adapter_type,
+            worker_id=self.worker_id,
+        )
+        return db.get(TaskRun, task_run.id)
+
+
+def next_queued_task_run(db: DbSession) -> Optional[TaskRun]:
+    return db.exec(
+        select(TaskRun)
+        .where(TaskRun.state == "queued")
+        .order_by(TaskRun.created_at, TaskRun.id)
+    ).first()
 
 
 def agent_run_request_for(
@@ -323,6 +344,13 @@ async def _background_execute_task_run(
 
     with DbSession(db_engine) as db:
         await execute_task_run_background(db, task_run_id, adapter_type)
+
+
+async def _background_run_worker_once() -> None:
+    from app.db import engine as db_engine
+
+    with DbSession(db_engine) as db:
+        await RunWorker().run_once(db)
 
 
 async def execute_task_run_background(

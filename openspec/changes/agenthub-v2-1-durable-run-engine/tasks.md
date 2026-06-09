@@ -25,13 +25,13 @@
 
 ## 4. Durable Worker Loop 与 BackgroundTasks 替换
 
-- [ ] 4.1 实现 RunWorker 轮询 queued run 并执行的最小 loop。
-- [ ] 4.2 将 message auto-start、manual run、retry run 从直接 BackgroundTasks 执行改为 durable queue/worker 入口。
-- [ ] 4.3 保证 `waiting_approval`、blocked scheduler、unsafe request 不会被 worker 执行。
-- [ ] 4.4 保证 completed/failed/interrupted terminal run 不会重复执行。
-- [ ] 4.5 添加测试覆盖 endpoint 创建 run 后进入 worker claim 路径，而非直接绑定请求生命周期。
-- [ ] 4.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 4.7 单独提交：`feat: execute task runs through durable worker`。
+- [x] 4.1 实现 RunWorker 轮询 queued run 并执行的最小 loop。
+- [x] 4.2 将 message auto-start、manual run、retry run 从直接 BackgroundTasks 执行改为 durable queue/worker 入口。
+- [x] 4.3 保证 `waiting_approval`、blocked scheduler、unsafe request 不会被 worker 执行。
+- [x] 4.4 保证 completed/failed/interrupted terminal run 不会重复执行。
+- [x] 4.5 添加测试覆盖 endpoint 创建 run 后进入 worker claim 路径，而非直接绑定请求生命周期。
+- [x] 4.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 4.7 单独提交：`feat: execute task runs through durable worker`。
 
 ## 5. RunSupervisor 中断与超时
 

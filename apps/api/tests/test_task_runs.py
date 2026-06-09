@@ -2650,14 +2650,12 @@ def test_retry_failed_run_schedules_background_execution(
         )
         original_id = original.id
 
-    scheduled: list[tuple[str, str]] = []
+    scheduled: list[str] = []
 
     def fake_schedule_task_run_execution(
         background_tasks,
-        task_run_id: str,
-        adapter_type: str,
     ) -> None:
-        scheduled.append((task_run_id, adapter_type))
+        scheduled.append("worker")
 
     monkeypatch.setattr(
         main_module,
@@ -2670,21 +2668,19 @@ def test_retry_failed_run_schedules_background_execution(
     assert response.status_code == 201
     retried = response.json()
     assert retried["state"] == "queued"
-    assert scheduled == [(retried["id"], "codex")]
+    assert scheduled == ["worker"]
 
 
 def test_run_endpoints_use_shared_execution_scheduler(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    scheduled: list[tuple[str, str]] = []
+    scheduled: list[str] = []
 
     def fake_schedule_task_run_execution(
         background_tasks,
-        task_run_id: str,
-        adapter_type: str,
     ) -> None:
-        scheduled.append((task_run_id, adapter_type))
+        scheduled.append("worker")
 
     monkeypatch.setattr(
         main_module,
@@ -2696,7 +2692,7 @@ def test_run_endpoints_use_shared_execution_scheduler(
 
     assert response.status_code == 201
     manual = response.json()
-    assert scheduled == [(manual["id"], "codex")]
+    assert scheduled == ["worker"]
 
     with db_from_override() as db:
         transition_task_run(
@@ -2710,8 +2706,8 @@ def test_run_endpoints_use_shared_execution_scheduler(
     retry_response = client.post(f"/task-runs/{manual['id']}/retry")
 
     assert retry_response.status_code == 201
-    retried = retry_response.json()
-    assert scheduled[-1] == (retried["id"], "codex")
+    assert retry_response.json()["state"] == "queued"
+    assert scheduled == ["worker", "worker"]
 
 
 def test_execute_task_run_registers_with_supervisor(client: TestClient) -> None:
@@ -2861,6 +2857,79 @@ def test_background_execution_claims_and_refreshes_lease(
         assert stored.lease_expires_at > stored.last_heartbeat_at
         assert "run.claimed" in event_types
         assert "task.heartbeat" in event_types
+
+
+def test_run_worker_executes_next_queued_task_run(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        first = create_task_run(db, task_id())
+        first_id = first.id
+
+    class FailingBeforeStreamAdapter:
+        def getCapabilities(self) -> AdapterCapabilities:
+            return AdapterCapabilities(
+                supportsStreaming=True,
+                supportsInterrupt=True,
+                supportsApproval=False,
+                supportsFileEdit=False,
+                supportsShellCommand=False,
+                supportsDiffArtifact=False,
+                supportsPreviewArtifact=False,
+                supportsNetwork=False,
+            )
+
+        async def createRun(self, request):
+            raise RuntimeError("stop after claim")
+
+        async def streamEvents(self, adapter_run_id):
+            if False:
+                yield {}
+
+        async def interrupt(self, adapter_run_id):
+            return None
+
+        async def approve(self, adapter_run_id, approval):
+            return None
+
+        async def collectArtifacts(self, adapter_run_id):
+            return []
+
+        async def cleanup(self, adapter_run_id):
+            return None
+
+    monkeypatch.setattr(
+        run_engine_module,
+        "CodexAdapter",
+        lambda: FailingBeforeStreamAdapter(),
+    )
+
+    import asyncio
+
+    with db_from_override() as db:
+        executed = asyncio.run(
+            run_engine_module.RunWorker(worker_id="worker:test").run_once(db)
+        )
+
+        stored = db.get(TaskRun, first_id)
+        assert executed.id == first_id
+        assert stored.state == "failed"
+        assert stored.runner_id == "worker:test"
+
+
+def test_run_worker_ignores_when_no_queued_task_run(client: TestClient) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+        transition_task_run(db, run.id, "completed")
+
+        import asyncio
+
+        executed = asyncio.run(
+            run_engine_module.RunWorker(worker_id="worker:test").run_once(db)
+        )
+
+        assert executed is None
 
 
 def test_retry_blocks_external_target_dirty_worktree_outside_checkpoint(

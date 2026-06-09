@@ -1340,8 +1340,7 @@ def auto_start_safe_tasks(
         if not decision.runnable:
             continue
         task_run = create_task_run(db, task.id)
-        adapter_type = adapter_type_for_run(db, task_run)
-        schedule_task_run_execution(background_tasks, task_run.id, adapter_type)
+        schedule_task_run_execution(background_tasks)
 
 
 def _should_auto_start_task(db: DbSession, task: Task, plan: dict[str, Any]) -> bool:
@@ -1857,10 +1856,9 @@ async def create_task_run_for_task(
 ) -> TaskRunResponse:
     try:
         task_run = create_task_run(db, task_id)
-        adapter_type = adapter_type_for_run(db, task_run)
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    schedule_task_run_execution(background_tasks, task_run.id, adapter_type)
+    schedule_task_run_execution(background_tasks)
     return task_run_response(db, task_run)
 
 
@@ -1912,10 +1910,9 @@ def retry_existing_task_run(
 ) -> TaskRunResponse:
     try:
         task_run = retry_task_run(db, task_run_id)
-        adapter_type = adapter_type_for_run(db, task_run)
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    schedule_task_run_execution(background_tasks, task_run.id, adapter_type)
+    schedule_task_run_execution(background_tasks)
     return task_run_response(db, task_run)
 
 
