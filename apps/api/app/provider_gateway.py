@@ -6,7 +6,7 @@ import os
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Literal, Optional
@@ -456,6 +456,180 @@ class ProviderHealthProbe:
         )
 
 
+class ProviderConcurrencyLimiter:
+    def __init__(
+        self,
+        *,
+        provider_limits: Optional[dict[str, int]] = None,
+        global_limit: int = 2,
+    ) -> None:
+        self._provider_limits = provider_limits or {
+            "local-claude-code-cli": 1,
+            "local-codex-cli": 1,
+            "local-scripted-mock": 2,
+        }
+        self._global_limit = global_limit
+        self._leases: dict[str, tuple[str, str]] = {}
+
+    def acquire(self, provider_id: str, task_run_id: str) -> ProviderCapacityDecision:
+        existing = self._leases.get(task_run_id)
+        provider_limit = self._provider_limits.get(provider_id, 1)
+        provider_running = self._provider_running(provider_id)
+        global_running = len(self._leases)
+        if existing is not None:
+            lease_id, existing_provider_id = existing
+            return ProviderCapacityDecision(
+                provider_id=provider_id,
+                status="available",
+                acquired=True,
+                provider_running=self._provider_running(existing_provider_id),
+                provider_limit=self._provider_limits.get(existing_provider_id, 1),
+                global_running=global_running,
+                global_limit=self._global_limit,
+                lease_id=lease_id,
+                reason="Existing provider capacity lease reused.",
+            )
+        if global_running >= self._global_limit:
+            return ProviderCapacityDecision(
+                provider_id=provider_id,
+                status="exhausted",
+                acquired=False,
+                provider_running=provider_running,
+                provider_limit=provider_limit,
+                global_running=global_running,
+                global_limit=self._global_limit,
+                reason="Global coding provider capacity is exhausted.",
+            )
+        if provider_running >= provider_limit:
+            return ProviderCapacityDecision(
+                provider_id=provider_id,
+                status="exhausted",
+                acquired=False,
+                provider_running=provider_running,
+                provider_limit=provider_limit,
+                global_running=global_running,
+                global_limit=self._global_limit,
+                reason="Provider coding capacity is exhausted.",
+            )
+        lease_id = f"provider-lease:{task_run_id}:{provider_id}"
+        self._leases[task_run_id] = (lease_id, provider_id)
+        return ProviderCapacityDecision(
+            provider_id=provider_id,
+            status="available",
+            acquired=True,
+            provider_running=provider_running + 1,
+            provider_limit=provider_limit,
+            global_running=global_running + 1,
+            global_limit=self._global_limit,
+            lease_id=lease_id,
+            reason="Provider capacity acquired.",
+        )
+
+    def release(self, task_run_id: str) -> ProviderCapacityDecision:
+        existing = self._leases.pop(task_run_id, None)
+        if existing is None:
+            return ProviderCapacityDecision(
+                provider_id="unknown",
+                status="available",
+                acquired=False,
+                provider_running=0,
+                provider_limit=0,
+                global_running=len(self._leases),
+                global_limit=self._global_limit,
+                reason="Provider capacity lease was already released.",
+            )
+        lease_id, provider_id = existing
+        return ProviderCapacityDecision(
+            provider_id=provider_id,
+            status="available",
+            acquired=False,
+            provider_running=self._provider_running(provider_id),
+            provider_limit=self._provider_limits.get(provider_id, 1),
+            global_running=len(self._leases),
+            global_limit=self._global_limit,
+            lease_id=lease_id,
+            reason="Provider capacity released.",
+        )
+
+    def _provider_running(self, provider_id: str) -> int:
+        return sum(1 for _, active_provider_id in self._leases.values() if active_provider_id == provider_id)
+
+
+class ProviderCircuitBreaker:
+    def __init__(
+        self,
+        *,
+        threshold: int = 3,
+        cooldown_seconds: int = 1800,
+    ) -> None:
+        self.threshold = threshold
+        self.cooldown_seconds = cooldown_seconds
+        self._states: dict[str, ProviderCircuitSnapshot] = {}
+
+    def snapshot(self, provider_id: str, *, now: Optional[datetime] = None) -> ProviderCircuitSnapshot:
+        timestamp = now or utc_now()
+        current = self._states.get(provider_id)
+        if current is None:
+            return ProviderCircuitSnapshot(provider_id=provider_id)
+        if (
+            current.state == "open"
+            and current.cooldown_until is not None
+            and current.cooldown_until <= timestamp
+        ):
+            half_open = ProviderCircuitSnapshot(
+                provider_id=provider_id,
+                state="half_open",
+                reason=current.reason,
+                failure_count=current.failure_count,
+                opened_at=current.opened_at,
+                cooldown_until=current.cooldown_until,
+            )
+            self._states[provider_id] = half_open
+            return half_open
+        return current
+
+    def record_success(self, provider_id: str) -> ProviderCircuitSnapshot:
+        snapshot = ProviderCircuitSnapshot(provider_id=provider_id, state="closed")
+        self._states[provider_id] = snapshot
+        return snapshot
+
+    def record_failure(
+        self,
+        classification: ProviderErrorClassification,
+        *,
+        now: Optional[datetime] = None,
+    ) -> ProviderCircuitSnapshot:
+        timestamp = now or utc_now()
+        current = self.snapshot(classification.provider_id, now=timestamp)
+        if not classification.circuit_breaker_eligible:
+            return current
+        failure_count = current.failure_count + 1
+        if failure_count >= self.threshold or classification.category in {"auth", "quota", "rate_limit", "unavailable"}:
+            snapshot = ProviderCircuitSnapshot(
+                provider_id=classification.provider_id,
+                state="open",
+                reason=classification.category,
+                failure_count=failure_count,
+                opened_at=timestamp,
+                cooldown_until=timestamp + timedelta(seconds=self.cooldown_seconds),
+            )
+            self._states[classification.provider_id] = snapshot
+            return snapshot
+        snapshot = ProviderCircuitSnapshot(
+            provider_id=classification.provider_id,
+            state=current.state,
+            reason=classification.category,
+            failure_count=failure_count,
+            opened_at=current.opened_at,
+            cooldown_until=current.cooldown_until,
+        )
+        self._states[classification.provider_id] = snapshot
+        return snapshot
+
+    def allow(self, provider_id: str, *, now: Optional[datetime] = None) -> ProviderCircuitSnapshot:
+        return self.snapshot(provider_id, now=now)
+
+
 @dataclass(frozen=True)
 class ProviderCandidateDecision:
     provider_id: str
@@ -768,6 +942,79 @@ def record_provider_health_check(
     if not isinstance(provider_gateway, dict):
         provider_gateway = {}
     provider_gateway["health"] = evidence
+    metrics["providerGateway"] = provider_gateway
+    task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
+    task_run.updated_at = utc_now()
+    db.add(task_run)
+    db.commit()
+
+
+def record_provider_capacity_event(
+    db: DbSession,
+    *,
+    task_run_id: str,
+    capacity: ProviderCapacityDecision,
+    released: bool = False,
+) -> None:
+    evidence = capacity.to_evidence()
+    event_type = "provider.capacity_released" if released else "provider.capacity_acquired"
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type=event_type,
+        payload_json=json.dumps(evidence, separators=(",", ":")),
+    )
+    _merge_provider_gateway_metric(db, task_run_id, "capacity", evidence)
+
+
+def record_provider_circuit_event(
+    db: DbSession,
+    *,
+    task_run_id: str,
+    circuit: ProviderCircuitSnapshot,
+    blocked: bool = False,
+) -> None:
+    evidence = circuit.to_evidence()
+    event_type = "provider.circuit_blocked" if blocked else "provider.circuit_opened"
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type=event_type,
+        payload_json=json.dumps(evidence, separators=(",", ":")),
+    )
+    _merge_provider_gateway_metric(db, task_run_id, "circuit", evidence)
+
+
+def record_provider_rate_limit_status(
+    db: DbSession,
+    *,
+    task_run_id: str,
+    rate_limit: ProviderRateLimitStatus,
+) -> None:
+    evidence = rate_limit.to_evidence()
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type="provider.rate_limit_checked",
+        payload_json=json.dumps(evidence, separators=(",", ":")),
+    )
+    _merge_provider_gateway_metric(db, task_run_id, "rateLimit", evidence)
+
+
+def _merge_provider_gateway_metric(
+    db: DbSession,
+    task_run_id: str,
+    key: str,
+    evidence: dict[str, Any],
+) -> None:
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        return
+    metrics = _json_dict(task_run.metrics_json)
+    provider_gateway = metrics.get("providerGateway")
+    if not isinstance(provider_gateway, dict):
+        provider_gateway = {}
+    provider_gateway[key] = evidence
     metrics["providerGateway"] = provider_gateway
     task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
     task_run.updated_at = utc_now()

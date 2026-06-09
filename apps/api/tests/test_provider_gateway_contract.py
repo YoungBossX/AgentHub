@@ -11,7 +11,9 @@ from app.provider_gateway import (
     PROVIDER_GATEWAY_EVENT_TYPES,
     CodingProviderMetadata,
     CodingRunContext,
+    ProviderCircuitBreaker,
     ProviderCandidateDecision,
+    ProviderConcurrencyLimiter,
     ProviderErrorClassification,
     ProviderFallbackEvidence,
     ProviderGatewayResult,
@@ -19,11 +21,15 @@ from app.provider_gateway import (
     ProviderHealthResult,
     ProviderHealthProbe,
     ProviderRegistry,
+    ProviderRateLimitStatus,
     ProviderResolver,
     ProviderResolutionPlan,
     coding_provider_ids_from_configs,
     is_coding_adapter_type,
+    record_provider_capacity_event,
+    record_provider_circuit_event,
     record_provider_health_check,
+    record_provider_rate_limit_status,
     record_provider_resolution,
     redact_provider_evidence,
 )
@@ -398,6 +404,130 @@ def test_record_provider_health_check_event_updates_task_run_metrics() -> None:
     assert payload["status"] == "unavailable"
     assert payload["safeDetails"]["stderr"] == "api_key=[redacted]"
     assert metrics["providerGateway"]["health"]["providerId"] == "local-codex-cli"
+
+
+def test_provider_concurrency_limiter_exhausts_and_releases_idempotently() -> None:
+    limiter = ProviderConcurrencyLimiter(
+        provider_limits={"local-codex-cli": 1},
+        global_limit=1,
+    )
+
+    first = limiter.acquire("local-codex-cli", "run-1")
+    duplicate = limiter.acquire("local-codex-cli", "run-1")
+    exhausted = limiter.acquire("local-codex-cli", "run-2")
+    released = limiter.release("run-1")
+    released_again = limiter.release("run-1")
+    second = limiter.acquire("local-codex-cli", "run-2")
+
+    assert first.acquired is True
+    assert duplicate.acquired is True
+    assert duplicate.lease_id == first.lease_id
+    assert exhausted.acquired is False
+    assert exhausted.status == "exhausted"
+    assert released.reason == "Provider capacity released."
+    assert released_again.reason == "Provider capacity lease was already released."
+    assert second.acquired is True
+
+
+def test_provider_circuit_breaker_opens_half_opens_and_ignores_guardrails() -> None:
+    breaker = ProviderCircuitBreaker(threshold=3, cooldown_seconds=1)
+    auth_failure = ProviderErrorClassification(
+        provider_id="local-codex-cli",
+        category="auth",
+        retryable=False,
+        fallback_eligible=True,
+        circuit_breaker_eligible=True,
+        user_message="Auth failed.",
+    )
+    guardrail_failure = ProviderErrorClassification(
+        provider_id="local-codex-cli",
+        category="guardrail",
+        retryable=False,
+        fallback_eligible=False,
+        circuit_breaker_eligible=False,
+        user_message="Guardrail blocked.",
+    )
+
+    opened = breaker.record_failure(auth_failure)
+    ignored = breaker.record_failure(guardrail_failure)
+    half_open = breaker.allow(
+        "local-codex-cli",
+        now=opened.cooldown_until,
+    )
+    closed = breaker.record_success("local-codex-cli")
+
+    assert opened.state == "open"
+    assert opened.reason == "auth"
+    assert ignored.state == "open"
+    assert half_open.state == "half_open"
+    assert closed.state == "closed"
+
+
+def test_provider_capacity_circuit_and_rate_limit_events_update_metrics() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    capacity = ProviderConcurrencyLimiter(global_limit=1).acquire("local-codex-cli", "run-1")
+    circuit = ProviderCircuitBreaker().record_failure(
+        ProviderErrorClassification(
+            provider_id="local-codex-cli",
+            category="quota",
+            retryable=True,
+            fallback_eligible=True,
+            circuit_breaker_eligible=True,
+            user_message="Quota exhausted.",
+        )
+    )
+    rate_limit = ProviderRateLimitStatus(
+        provider_id="local-codex-cli",
+        limited=True,
+        window_summary="placeholder",
+        reason="Provider reported rate limit.",
+    )
+
+    with DbSession(engine) as db:
+        task_run = TaskRun(
+            task_id="task-1",
+            agent_id="agent-1",
+            state="queued",
+            worktree_path=".worktrees/session",
+            metrics_json="{}",
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        record_provider_capacity_event(db, task_run_id=task_run.id, capacity=capacity)
+        record_provider_circuit_event(
+            db,
+            task_run_id=task_run.id,
+            circuit=circuit,
+            blocked=True,
+        )
+        record_provider_rate_limit_status(
+            db,
+            task_run_id=task_run.id,
+            rate_limit=rate_limit,
+        )
+
+        events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .order_by(TaskRunEvent.created_at, TaskRunEvent.id)
+        ).all()
+        metrics = json.loads(db.get(TaskRun, task_run.id).metrics_json)
+
+    assert [event.event_type for event in events] == [
+        "provider.capacity_acquired",
+        "provider.circuit_blocked",
+        "provider.rate_limit_checked",
+    ]
+    assert metrics["providerGateway"]["capacity"]["acquired"] is True
+    assert metrics["providerGateway"]["circuit"]["state"] == "open"
+    assert metrics["providerGateway"]["rateLimit"]["limited"] is True
 
 
 def _context(

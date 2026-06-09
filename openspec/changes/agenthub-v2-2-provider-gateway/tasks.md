@@ -33,13 +33,13 @@
 
 ## 5. Concurrency、Rate Limit Placeholder 与 Circuit Breaker
 
-- [ ] 5.1 实现 provider/global coding run concurrency acquire/release，确保 release 幂等。
-- [ ] 5.2 添加 rate limit placeholder 结构和事件，先不实现完整外部配额系统。
-- [ ] 5.3 实现 circuit breaker 最小状态 closed/open/half_open 与 cooldown evidence。
-- [ ] 5.4 确保 auth/quota/rate/unavailable 等 provider 失败可打开 circuit，guardrail/dirty_worktree 不误开 provider circuit。
-- [ ] 5.5 添加测试覆盖 capacity exhausted、release on terminal、circuit open blocked、cooldown evidence、half-open 恢复路径。
-- [ ] 5.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 5.7 单独提交：`feat: guard coding providers with limits and circuit breaker`。
+- [x] 5.1 实现 provider/global coding run concurrency acquire/release，确保 release 幂等。
+- [x] 5.2 添加 rate limit placeholder 结构和事件，先不实现完整外部配额系统。
+- [x] 5.3 实现 circuit breaker 最小状态 closed/open/half_open 与 cooldown evidence。
+- [x] 5.4 确保 auth/quota/rate/unavailable 等 provider 失败可打开 circuit，guardrail/dirty_worktree 不误开 provider circuit。
+- [x] 5.5 添加测试覆盖 capacity exhausted、release on terminal、circuit open blocked、cooldown evidence、half-open 恢复路径。
+- [x] 5.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 5.7 单独提交：`feat: guard coding providers with limits and circuit breaker`。
 
 ## 6. Error Taxonomy 与 Fallback Policy
 
