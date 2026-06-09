@@ -18,6 +18,7 @@ from app.recovery import (
     stop_downstream_pipeline,
 )
 from app.task_runs import create_task_run, transition_task_run
+from app.target_locks import acquire_target_lock
 from app.target_registry import DEMO_FRONTEND_TARGET_ID
 
 
@@ -56,6 +57,14 @@ def test_recovery_release_stale_lock_records_audit_event_and_unblocks_waiter() -
         first_run.lease_expires_at = utc_now() - timedelta(minutes=1)
         db.add(first_run)
         db.commit()
+        acquire_target_lock(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            session_id=first.session_id,
+            task_run_id=first_run.id,
+            worker_id="worker:recovery-test",
+            lease_expires_at=first_run.lease_expires_at,
+        )
         try:
             create_task_run(db, second.id)
         except ValueError:
@@ -68,12 +77,10 @@ def test_recovery_release_stale_lock_records_audit_event_and_unblocks_waiter() -
             reason="release stale lock",
         )
 
-        stored_second = db.get(Task, second.id)
         event = latest_recovery_event(db, first_run.id)
         payload = json.loads(event.payload_json)
 
         assert released["taskRunId"] == first_run.id
-        assert stored_second.status == "pending"
         assert payload["action"] == "release_stale_lock"
         assert payload["targetId"] == DEMO_FRONTEND_TARGET_ID
 

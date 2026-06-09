@@ -63,8 +63,8 @@
 
 ## 8. 文档、诊断与冻结审查
 
-- [ ] 8.1 更新 `docs/change-log.md` 和 `docs/project-state.md`，记录 V2.2 Provider Gateway 实施结果。
-- [ ] 8.2 创建 V2.2 freeze review，记录范围、验证、真实限制和 V2.3/V2.7 后续依赖。
-- [ ] 8.3 确认 provider evidence 不泄露 secrets、tokens、受保护 host paths 或 raw dangerous logs。
-- [ ] 8.4 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-2-provider-gateway --strict`。
-- [ ] 8.5 单独提交：`test: freeze v2.2 provider gateway`。
+- [x] 8.1 更新 `docs/change-log.md` 和 `docs/project-state.md`，记录 V2.2 Provider Gateway 实施结果。
+- [x] 8.2 创建 V2.2 freeze review，记录范围、验证、真实限制和 V2.3/V2.7 后续依赖。
+- [x] 8.3 确认 provider evidence 不泄露 secrets、tokens、受保护 host paths 或 raw dangerous logs。
+- [x] 8.4 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-2-provider-gateway --strict`。
+- [x] 8.5 单独提交：`test: freeze v2.2 provider gateway`。
