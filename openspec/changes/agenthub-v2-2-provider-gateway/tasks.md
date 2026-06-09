@@ -53,13 +53,13 @@
 
 ## 7. Durable Run Engine 集成
 
-- [ ] 7.1 将 coding adapter 执行入口改为 Durable Run Engine 调用 ProviderGateway。
-- [ ] 7.2 保持 RunSupervisor 负责 interrupt、timeout、terminate、kill，Gateway 负责 provider 选择和分类。
-- [ ] 7.3 将 gateway result、provider events、fallback evidence 接入 TaskRunEvent、metrics/evidence 和 MissionTrace。
-- [ ] 7.4 确保 preview/diff/review/deploy 后处理仍由 ArtifactCollector/Finalizer 处理，不被 gateway 扩大范围。
-- [ ] 7.5 添加集成测试覆盖 Claude/Codex 失败后 fallback、capacity block、circuit block、真实 provider 成功路径、mock fallback 证据。
-- [ ] 7.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 7.7 单独提交：`feat: execute coding runs through provider gateway`。
+- [x] 7.1 将 coding adapter 执行入口改为 Durable Run Engine 调用 ProviderGateway。
+- [x] 7.2 保持 RunSupervisor 负责 interrupt、timeout、terminate、kill，Gateway 负责 provider 选择和分类。
+- [x] 7.3 将 gateway result、provider events、fallback evidence 接入 TaskRunEvent、metrics/evidence 和 MissionTrace。
+- [x] 7.4 确保 preview/diff/review/deploy 后处理仍由 ArtifactCollector/Finalizer 处理，不被 gateway 扩大范围。
+- [x] 7.5 添加集成测试覆盖 Claude/Codex 失败后 fallback、capacity block、circuit block、真实 provider 成功路径、mock fallback 证据。
+- [x] 7.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 7.7 单独提交：`feat: execute coding runs through provider gateway`。
 
 ## 8. 文档、诊断与冻结审查
 

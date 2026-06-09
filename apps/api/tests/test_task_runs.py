@@ -3136,6 +3136,7 @@ def test_background_execution_claims_and_refreshes_lease(
             .order_by(TaskRunEvent.sequence)
         ).all()
         event_types = [event.event_type for event in events]
+        metrics = json.loads(stored.metrics_json)
 
         assert stored.state == "failed"
         assert stored.runner_id == "worker:test"
@@ -3143,6 +3144,16 @@ def test_background_execution_claims_and_refreshes_lease(
         assert stored.lease_expires_at > stored.last_heartbeat_at
         assert "run.claimed" in event_types
         assert "task.heartbeat" in event_types
+        assert "provider.resolved" in event_types
+        assert "provider.health_checked" in event_types
+        assert "provider.capacity_acquired" in event_types
+        assert "provider.capacity_released" in event_types
+        assert metrics["providerGateway"]["resolution"]["selectedProviderId"] == (
+            "local-codex-cli"
+        )
+        assert metrics["providerGateway"]["capacity"]["reason"] == (
+            "Provider capacity released."
+        )
 
 
 def test_background_execution_waits_for_target_lock_without_starting_adapter(

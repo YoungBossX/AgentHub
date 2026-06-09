@@ -20,6 +20,15 @@ from app.models import Agent, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
 from app.previews import PreviewError, PreviewService
+from app.provider_gateway import (
+    CodingRunContext,
+    ProviderConcurrencyLimiter,
+    ProviderHealthProbe,
+    ProviderResolver,
+    record_provider_capacity_event,
+    record_provider_health_check,
+    record_provider_resolution,
+)
 from app.repositories import list_session_tasks
 from app.reviews import create_scripted_review_for_task_run, list_task_run_reviews
 from app.run_supervisor import RunSupervisor, default_run_supervisor
@@ -46,6 +55,9 @@ from app.task_runs import (
 
 _preview_service = PreviewService()
 _deploy_service = DeployService()
+_provider_resolver = ProviderResolver()
+_provider_health_probe = ProviderHealthProbe()
+_provider_capacity_limiter = ProviderConcurrencyLimiter()
 DEFAULT_RUN_WORKER_ID_PREFIX = "worker"
 
 
@@ -440,12 +452,6 @@ async def execute_task_run_background(
     worker_id: Optional[str] = None,
 ) -> bool:
     worker_id = worker_id or _new_worker_id()
-    adapter = adapter_for_type(
-        adapter_type,
-        codex_adapter=CodexAdapter(),
-        claude_code_adapter=ClaudeCodeAdapter(),
-        scripted_mock_adapter=ScriptedMockAdapter(),
-    )
     task_run = db.get(TaskRun, task_run_id)
     if task_run is None:
         return False
@@ -462,6 +468,14 @@ async def execute_task_run_background(
             db,
             task_run.id,
             runner_id=task_run.runner_id,
+        )
+        gateway = _resolve_provider_gateway_for_run(db, task_run, adapter_type)
+        adapter_type = gateway["adapter_type"]
+        adapter = adapter_for_type(
+            adapter_type,
+            codex_adapter=CodexAdapter(),
+            claude_code_adapter=ClaudeCodeAdapter(),
+            scripted_mock_adapter=ScriptedMockAdapter(),
         )
         await execute_task_run(
             db,
@@ -484,6 +498,8 @@ async def execute_task_run_background(
             except Exception:
                 pass
         return True
+    finally:
+        _release_provider_capacity(db, task_run_id)
 
 
 def _prepare_claimed_task_run_for_adapter(
@@ -527,6 +543,88 @@ def _prepare_claimed_task_run_for_adapter(
         return False
     mark_task_run_running(db, task_run.id, "Target write lock acquired.")
     return True
+
+
+def _resolve_provider_gateway_for_run(
+    db: DbSession,
+    task_run: TaskRun,
+    fallback_adapter_type: str,
+) -> dict[str, str]:
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        raise TaskRunLifecycleError(f"Task not found: {task_run.task_id}")
+    session = db.get(AgentHubSession, task.session_id)
+    if session is None:
+        raise TaskRunLifecycleError(f"Session not found: {task.session_id}")
+    target_id = target_id_for_task(task, db)
+    context = CodingRunContext(
+        workspace_id=session.workspace_id,
+        session_id=session.id,
+        task_id=task.id,
+        task_run_id=task_run.id,
+        role=_role_for_task_run(db, task_run),
+        target_id=target_id,
+        mode="write" if write_lock_required_for_task(task) else "review",
+        required_capabilities=("file_edit",)
+        if write_lock_required_for_task(task)
+        else ("review",),
+        worktree_path=task_run.worktree_path,
+        runtime_adapter_type=fallback_adapter_type,
+        fallback_policy="scripted_mock",
+    )
+    plan = _provider_resolver.resolve(context)
+    record_provider_resolution(db, task_run_id=task_run.id, plan=plan)
+    if plan.selected_provider_id is None or plan.selected_adapter_type is None:
+        transition_task_run(
+            db,
+            task_run.id,
+            "failed",
+            error_code="PROVIDER_RESOLUTION_FAILED",
+            error_message=plan.selection_reason,
+        )
+        raise TaskRunLifecycleError(plan.selection_reason)
+    provider = _provider_resolver.registry.get(plan.selected_provider_id)
+    if provider is not None:
+        health = _provider_health_probe.check_provider(provider, context=context)
+        record_provider_health_check(db, task_run_id=task_run.id, health=health)
+        if not health.available and provider.is_real_provider:
+            transition_task_run(
+                db,
+                task_run.id,
+                "failed",
+                error_code="PROVIDER_UNAVAILABLE",
+                error_message=health.reason,
+            )
+            raise TaskRunLifecycleError(health.reason)
+    capacity = _provider_capacity_limiter.acquire(plan.selected_provider_id, task_run.id)
+    record_provider_capacity_event(db, task_run_id=task_run.id, capacity=capacity)
+    if not capacity.acquired:
+        transition_task_run(
+            db,
+            task_run.id,
+            "failed",
+            error_code="PROVIDER_CAPACITY_EXHAUSTED",
+            error_message=capacity.reason or "Provider capacity is exhausted.",
+        )
+        raise TaskRunLifecycleError(capacity.reason or "Provider capacity is exhausted.")
+    return {"adapter_type": plan.selected_adapter_type}
+
+
+def _release_provider_capacity(db: DbSession, task_run_id: str) -> None:
+    release = _provider_capacity_limiter.release(task_run_id)
+    if release.provider_id == "unknown":
+        return
+    record_provider_capacity_event(
+        db,
+        task_run_id=task_run_id,
+        capacity=release,
+        released=True,
+    )
+
+
+def _role_for_task_run(db: DbSession, task_run: TaskRun) -> str:
+    agent = db.get(Agent, task_run.agent_id)
+    return agent.role if agent is not None else "frontend"
 
 
 def _new_worker_id() -> str:
