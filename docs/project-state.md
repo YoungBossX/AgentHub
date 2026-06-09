@@ -14,6 +14,10 @@ rewire Run Engine finalization.
 The implementation remains a delivery/evidence layer. V2.1 Durable Run Engine,
 V2.3 queue/target locks, V2.5 Policy Engine, and V2.7 Diagnostics remain intact.
 
+Delivery validation helpers can now turn failed command evidence, high-risk
+review evidence, or denied policy evidence into `review_required`. This still
+does not rewire Run Engine finalization; integration is a later V2.6 task.
+
 ## V2.5 Policy Engine Status
 
 V2.5 started on 2026-06-09. The current slice adds a standalone Policy Engine

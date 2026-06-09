@@ -11,14 +11,14 @@
 - [x] 2.2 复用 TaskRun metrics / checkpoint 信息生成 delivery checkpoint evidence。
 - [x] 2.3 缺少 checkpoint 时 rollback 必须拒绝。
 - [x] 2.4 增加 checkpoint / state 合同测试并验证。
-- [ ] 2.5 提交：`feat: add transactional delivery contract`。
+- [x] 2.5 提交：`feat: add transactional delivery contract`。
 
 ## 3. Validation 与 Review Gate
 
-- [ ] 3.1 实现 validation gate helper，检查 command evidence、diff/review evidence 和 policy decision。
-- [ ] 3.2 validation failed 进入 review_required，不得宣称 completed delivery。
-- [ ] 3.3 记录 `delivery.review_required` / `delivery.validation_failed` evidence。
-- [ ] 3.4 增加 validation/review gate 测试并验证。
+- [x] 3.1 实现 validation gate helper，检查 command evidence、diff/review evidence 和 policy decision。
+- [x] 3.2 validation failed 进入 review_required，不得宣称 completed delivery。
+- [x] 3.3 记录 `delivery.review_required` / `delivery.validation_failed` evidence。
+- [x] 3.4 增加 validation/review gate 测试并验证。
 - [ ] 3.5 提交：`feat: gate delivery validation`。
 
 ## 4. Accept / Rollback / Retry

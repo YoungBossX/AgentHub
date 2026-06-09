@@ -16,6 +16,13 @@ class DeliveryState(str, Enum):
     RETRY_FROM_CHECKPOINT = "retry_from_checkpoint"
 
 
+class DeliveryEvidenceKind(str, Enum):
+    COMMAND = "command"
+    DIFF = "diff"
+    REVIEW = "review"
+    POLICY = "policy"
+
+
 class DeliveryRetryMode(str, Enum):
     CURRENT_STATE = "current_state"
     CHECKPOINT = "checkpoint"
@@ -69,6 +76,16 @@ class DeliveryDecision:
         if self.checkpoint is not None:
             payload["checkpoint"] = self.checkpoint.to_payload()
         return payload
+
+
+@dataclass(frozen=True)
+class DeliveryValidationEvidence:
+    kind: DeliveryEvidenceKind
+    status: str
+    artifact_id: Optional[str] = None
+    summary: str = ""
+    risk_level: Optional[str] = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def checkpoint_evidence_for_task_run(
@@ -139,12 +156,56 @@ def retry_mode_decision(
     )
 
 
+def evaluate_delivery_validation(
+    task_run: TaskRun,
+    evidence: list[DeliveryValidationEvidence],
+) -> DeliveryDecision:
+    failures = [
+        item
+        for item in evidence
+        if item.status in {"failed", "blocked", "denied"}
+        or item.risk_level in {"high", "critical"}
+    ]
+    if failures:
+        return DeliveryDecision(
+            state=DeliveryState.REVIEW_REQUIRED,
+            reason="Delivery validation found failed or high-risk evidence.",
+            task_run_id=task_run.id,
+            checkpoint=checkpoint_evidence_for_task_run(task_run),
+            evidence={
+                "eventType": "delivery.review_required",
+                "failures": [_validation_item_payload(item) for item in failures],
+            },
+        )
+    return DeliveryDecision(
+        state=DeliveryState.PENDING_VALIDATION,
+        reason="Delivery validation passed available evidence.",
+        task_run_id=task_run.id,
+        checkpoint=checkpoint_evidence_for_task_run(task_run),
+        evidence={
+            "eventType": "delivery.validation_passed",
+            "checkedEvidence": [_validation_item_payload(item) for item in evidence],
+        },
+    )
+
+
 def _metrics_dict(task_run: TaskRun) -> dict[str, Any]:
     try:
         parsed = json.loads(task_run.metrics_json)
     except json.JSONDecodeError:
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _validation_item_payload(item: DeliveryValidationEvidence) -> dict[str, Any]:
+    return {
+        "kind": item.kind.value,
+        "status": item.status,
+        "artifactId": item.artifact_id,
+        "summary": item.summary,
+        "riskLevel": item.risk_level,
+        "metadata": dict(item.metadata),
+    }
 
 
 def _string_list(value: Any) -> list[str]:

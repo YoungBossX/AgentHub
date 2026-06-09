@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## V2.6-3 Delivery Validation Gate
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added delivery validation evidence and gate helpers that classify failed
+  command, diff/review, or policy evidence as `review_required`.
+- Added tests proving clean evidence passes while failed command evidence,
+  high-risk review evidence, and denied policy evidence require review.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py -q` | Pass, 9 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-6-transactional-delivery --strict` | Pass |
+
 ## V2.6-2 Transactional Delivery Contract
 
 **Date:** 2026-06-09

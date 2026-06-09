@@ -2,9 +2,12 @@ import json
 
 from app.models import TaskRun
 from app.transactional_delivery import (
+    DeliveryEvidenceKind,
     DeliveryRetryMode,
     DeliveryState,
+    DeliveryValidationEvidence,
     checkpoint_evidence_for_task_run,
+    evaluate_delivery_validation,
     pending_validation_decision,
     retry_mode_decision,
     rollback_preflight_decision,
@@ -84,6 +87,80 @@ def test_retry_mode_decision_is_explicit() -> None:
     assert current.evidence["retryMode"] == "current_state"
     assert checkpoint.state == DeliveryState.RETRY_FROM_CHECKPOINT
     assert checkpoint.evidence["retryMode"] == "checkpoint"
+
+
+def test_delivery_validation_passes_clean_evidence() -> None:
+    decision = evaluate_delivery_validation(
+        _task_run(metrics={}),
+        [
+            DeliveryValidationEvidence(
+                kind=DeliveryEvidenceKind.COMMAND,
+                status="passed",
+                artifact_id="command-1",
+            ),
+            DeliveryValidationEvidence(
+                kind=DeliveryEvidenceKind.REVIEW,
+                status="passed",
+                artifact_id="review-1",
+                risk_level="low",
+            ),
+        ],
+    )
+
+    assert decision.state == DeliveryState.PENDING_VALIDATION
+    assert decision.evidence["eventType"] == "delivery.validation_passed"
+
+
+def test_delivery_validation_requires_review_for_failed_command() -> None:
+    decision = evaluate_delivery_validation(
+        _task_run(metrics={}),
+        [
+            DeliveryValidationEvidence(
+                kind=DeliveryEvidenceKind.COMMAND,
+                status="failed",
+                artifact_id="command-1",
+                summary="pnpm build failed",
+            )
+        ],
+    )
+
+    assert decision.state == DeliveryState.REVIEW_REQUIRED
+    assert decision.evidence["eventType"] == "delivery.review_required"
+    assert decision.evidence["failures"][0]["summary"] == "pnpm build failed"
+
+
+def test_delivery_validation_requires_review_for_high_risk_review() -> None:
+    decision = evaluate_delivery_validation(
+        _task_run(metrics={}),
+        [
+            DeliveryValidationEvidence(
+                kind=DeliveryEvidenceKind.REVIEW,
+                status="passed",
+                artifact_id="review-1",
+                risk_level="high",
+                summary="Protected path concern",
+            )
+        ],
+    )
+
+    assert decision.state == DeliveryState.REVIEW_REQUIRED
+    assert decision.evidence["failures"][0]["kind"] == "review"
+
+
+def test_delivery_validation_requires_review_for_policy_denial() -> None:
+    decision = evaluate_delivery_validation(
+        _task_run(metrics={}),
+        [
+            DeliveryValidationEvidence(
+                kind=DeliveryEvidenceKind.POLICY,
+                status="denied",
+                summary="Target path denied",
+            )
+        ],
+    )
+
+    assert decision.state == DeliveryState.REVIEW_REQUIRED
+    assert decision.evidence["failures"][0]["kind"] == "policy"
 
 
 def _task_run(*, metrics: dict) -> TaskRun:
