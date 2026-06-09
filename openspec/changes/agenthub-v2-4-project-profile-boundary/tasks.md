@@ -29,15 +29,15 @@
 - [x] 4.3 记录命令允许/拒绝原因，方便 Run Diagnostics 和 mission trace 展示。
 - [x] 4.4 增加 command policy 测试，覆盖匹配、不匹配、缺失、generic 显式命令和未知命令类型。
 - [x] 4.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
-- [ ] 4.6 提交：`feat: derive command policy from project profiles`。
+- [x] 4.6 提交：`feat: derive command policy from project profiles`。
 
 ## 5. Planner / Instruction 上下文
 
-- [ ] 5.1 在 planner target summary 或 instruction target context 中加入 profile 摘要。
-- [ ] 5.2 确保 profile 摘要不包含 secrets、受保护 host path 或未授权命令。
-- [ ] 5.3 保证 LLM task_plan 仍直接进入 PlanValidator，profile 不绕过 target/path/role 验证。
-- [ ] 5.4 增加 planner/instruction builder 窄测试。
-- [ ] 5.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
+- [x] 5.1 在 planner target summary 或 instruction target context 中加入 profile 摘要。
+- [x] 5.2 确保 profile 摘要不包含 secrets、受保护 host path 或未授权命令。
+- [x] 5.3 保证 LLM task_plan 仍直接进入 PlanValidator，profile 不绕过 target/path/role 验证。
+- [x] 5.4 增加 planner/instruction builder 窄测试。
+- [x] 5.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
 - [ ] 5.6 提交：`feat: include project profile context in planning`。
 
 ## 6. 冻结审查

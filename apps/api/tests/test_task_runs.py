@@ -1971,6 +1971,9 @@ def test_external_target_context_reaches_instruction_builder(
     assert f"root: {external_root.resolve()}" in request.instruction
     assert "packageManager: pnpm" in request.instruction
     assert "detectedFramework: vite-react" in request.instruction
+    assert "projectProfileId: vite-react" in request.instruction
+    assert "previewStrategy: vite-dev-server" in request.instruction
+    assert "projectProfileCommands: check=pnpm check, dev=pnpm dev, test=pnpm test" in request.instruction
     assert "registered external AgentHub target" in request.instruction
     assert "Do not assume apps/demo" in request.instruction
 
@@ -2029,6 +2032,8 @@ def test_external_backend_instruction_uses_external_target_metadata(
     assert "allowedPaths: app, tests" in request.instruction
     assert "checkCommand: python -m compileall ." in request.instruction
     assert "testCommand: pytest" in request.instruction
+    assert "projectProfileId: fastapi-python" in request.instruction
+    assert "previewStrategy: python-api" in request.instruction
     assert "Do not edit AgentHub platform backend `apps/api`" in request.instruction
     assert "safe demo backend target" not in request.instruction
 

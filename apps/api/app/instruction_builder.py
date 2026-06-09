@@ -13,6 +13,7 @@ from app.target_registry import (
     get_related_backend_target,
     get_target,
 )
+from app.project_profiles import build_project_profile
 
 
 def build_role_instruction(
@@ -389,6 +390,8 @@ def _target_section(
         lines.append(f"- projectType: {target.project_type}")
     if target.analysis_status:
         lines.append(f"- analysisStatus: {target.analysis_status}")
+    if target.project_profile is not None:
+        lines.extend(_project_profile_lines(target))
     if target.requires_platform_mode:
         lines.append("- requiresPlatformMode: true")
     if target.requires_approval:
@@ -401,6 +404,24 @@ def _target_section(
             lines.append(f"- relatedBackendBaseUrl: {backend_target.base_url}")
 
     return "\n".join(lines)
+
+
+def _project_profile_lines(target: TargetProject) -> list[str]:
+    profile = target.project_profile
+    if profile is None:
+        return []
+    lines = [
+        f"- projectProfileId: {profile.profile_id}",
+        f"- projectProfileStatus: {profile.status}",
+        f"- previewStrategy: {profile.preview_strategy}",
+    ]
+    commands = profile.commands.as_dict()
+    if commands:
+        command_text = ", ".join(
+            f"{name}={command}" for name, command in sorted(commands.items())
+        )
+        lines.append(f"- projectProfileCommands: {command_text}")
+    return lines
 
 
 def _context_section(context_pack: dict[str, Any]) -> str:
@@ -570,13 +591,19 @@ def _target_from_context_pack(
 
 
 def _target_from_context(value: dict[str, Any]) -> TargetProject:
+    project_type = _string_value(value.get("projectType")) or "unknown"
+    detected_framework = _string_value(value.get("detectedFramework")) or project_type
+    package_manager = _string_value(value.get("packageManager")) or "unknown"
+    allowed_paths = tuple(_string_list(value.get("allowedPaths")))
+    denied_paths = tuple(_string_list(value.get("deniedPaths")))
+    analysis_status = _string_value(value.get("analysisStatus")) or "manual"
     return TargetProject(
         target_id=str(value.get("targetId") or ""),
         name=str(value.get("name") or "External Target"),
         type=str(value.get("type") or "frontend"),
         root=str(value.get("root") or ""),
-        allowed_paths=tuple(_string_list(value.get("allowedPaths"))),
-        denied_paths=tuple(_string_list(value.get("deniedPaths"))),
+        allowed_paths=allowed_paths,
+        denied_paths=denied_paths,
         allowed_agents=tuple(_string_list(value.get("allowedAgents"))),
         dev_command=_string_value(value.get("devCommand")),
         test_command=_string_value(value.get("testCommand")),
@@ -584,10 +611,25 @@ def _target_from_context(value: dict[str, Any]) -> TargetProject:
         build_command=_string_value(value.get("buildCommand")),
         preview_command=_string_value(value.get("previewCommand")),
         base_url=_string_value(value.get("baseUrl")),
-        package_manager=_string_value(value.get("packageManager")),
-        detected_framework=_string_value(value.get("detectedFramework")),
-        project_type=_string_value(value.get("projectType")),
-        analysis_status=_string_value(value.get("analysisStatus")),
+        package_manager=package_manager,
+        detected_framework=detected_framework,
+        project_type=project_type,
+        analysis_status=analysis_status,
+        project_profile=build_project_profile(
+            project_type=project_type,
+            detected_framework=detected_framework,
+            package_manager=package_manager,
+            allowed_paths=allowed_paths,
+            denied_paths=denied_paths,
+            dev_command=_string_value(value.get("devCommand")),
+            test_command=_string_value(value.get("testCommand")),
+            check_command=_string_value(value.get("checkCommand")),
+            build_command=_string_value(value.get("buildCommand")),
+            preview_command=_string_value(value.get("previewCommand")),
+            analysis_status=analysis_status,
+            analysis_warnings=(),
+            confidence="high" if analysis_status in {"manual", "ready"} else "low",
+        ),
         requires_platform_mode=bool(value.get("requiresPlatformMode")),
         requires_approval=bool(value.get("requiresApproval")),
         related_target_ids=tuple(_string_list(value.get("relatedTargetIds"))),

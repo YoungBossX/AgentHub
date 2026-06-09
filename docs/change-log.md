@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## V2.4-5 ProjectProfile Instruction Context
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added ProjectProfile metadata to coding-agent target instruction context,
+  including profile id, status, preview strategy, and configured profile
+  commands.
+- Rebuilt profile context from target summaries without exposing secrets or
+  changing PlanValidator/Target Registry enforcement.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_external_target_context_reaches_instruction_builder tests/test_task_runs.py::test_external_backend_instruction_uses_external_target_metadata -q` | Pass, 2 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | Pass |
+
 ## V2.4-4 Profile Command Policy Coverage
 
 **Date:** 2026-06-09
