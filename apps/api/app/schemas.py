@@ -65,6 +65,7 @@ class ExternalProjectAnalysisResponse(ApiModel):
     analysis_status: str = Field(alias="analysisStatus")
     analysis_warnings: list[str] = Field(alias="analysisWarnings")
     confidence: str
+    project_profile: dict[str, Any] = Field(alias="projectProfile")
 
 
 class LocalFolderEntryResponse(ApiModel):
@@ -104,6 +105,7 @@ class TargetProjectResponse(ApiModel):
     detected_framework: Optional[str] = Field(alias="detectedFramework")
     project_type: Optional[str] = Field(alias="projectType")
     analysis_status: Optional[str] = Field(alias="analysisStatus")
+    project_profile: Optional[dict[str, Any]] = Field(default=None, alias="projectProfile")
     allowed_agents: list[str] = Field(alias="allowedAgents")
     requires_platform_mode: bool = Field(alias="requiresPlatformMode")
     requires_approval: bool = Field(alias="requiresApproval")

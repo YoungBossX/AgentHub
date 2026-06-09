@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from app.external_workspaces import DEFAULT_EXTERNAL_DENIED_PATHS
+from app.project_profiles import ProjectProfile, build_project_profile
 
 
 PROJECT_TYPES = {
@@ -32,6 +33,7 @@ class ProjectAnalysisResult:
     analysis_status: str
     analysis_warnings: tuple[str, ...]
     confidence: str
+    project_profile: ProjectProfile
 
 
 def analyze_external_project(root_path: str) -> ProjectAnalysisResult:
@@ -85,6 +87,21 @@ def analyze_external_project(root_path: str) -> ProjectAnalysisResult:
         analysis_status=status,
         analysis_warnings=tuple(warnings),
         confidence=confidence,
+        project_profile=build_project_profile(
+            project_type=project_type,
+            detected_framework=framework,
+            package_manager=package_manager,
+            allowed_paths=tuple(allowed_paths),
+            denied_paths=DEFAULT_EXTERNAL_DENIED_PATHS,
+            dev_command=commands.get("dev"),
+            test_command=commands.get("test"),
+            check_command=commands.get("check"),
+            build_command=commands.get("build"),
+            preview_command=commands.get("preview"),
+            analysis_status=status,
+            analysis_warnings=tuple(warnings),
+            confidence=confidence,
+        ),
     )
 
 
@@ -287,4 +304,14 @@ def _unknown_result(
         analysis_status="needs_confirmation",
         analysis_warnings=warnings,
         confidence="low",
+        project_profile=build_project_profile(
+            project_type="unknown",
+            detected_framework="unknown",
+            package_manager="unknown",
+            allowed_paths=(),
+            denied_paths=DEFAULT_EXTERNAL_DENIED_PATHS,
+            analysis_status="needs_confirmation",
+            analysis_warnings=warnings,
+            confidence="low",
+        ),
     )

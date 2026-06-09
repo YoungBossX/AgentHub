@@ -1,5 +1,28 @@
 # AgentHub Change Log
 
+## V2.4-2 ProjectProfile Contract
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added a ProjectProfile contract that normalizes project type, framework,
+  package manager, allowed/denied paths, commands, preview strategy, confidence,
+  status, and warnings.
+- Extended the external project analyzer to attach a project profile summary
+  while keeping existing analysis fields compatible.
+- Added analysis API output for `projectProfile` so later target registration,
+  planning, and command policy work can consume one canonical profile shape.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_project_profiles.py tests/test_project_analyzer.py -q` | Pass, 11 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | Pass |
+
 ## V2.2-4 Provider Health Probes
 
 **Date:** 2026-06-09

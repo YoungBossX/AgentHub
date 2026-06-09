@@ -363,6 +363,7 @@ def external_project_analysis_response(
         analysisStatus=analysis.analysis_status,
         analysisWarnings=list(analysis.analysis_warnings),
         confidence=analysis.confidence,
+        projectProfile=analysis.project_profile.summary(),
     )
 
 

@@ -74,6 +74,9 @@ def test_analyzer_detects_vite_react_project(tmp_path: Path) -> None:
     assert analysis.check_command == "pnpm check"
     assert analysis.build_command == "pnpm build"
     assert analysis.preview_command == "pnpm dev"
+    assert analysis.project_profile.profile_id == "vite-react"
+    assert analysis.project_profile.preview_strategy == "vite-dev-server"
+    assert analysis.project_profile.commands.build == "pnpm build"
     assert "node_modules" in analysis.denied_paths
     assert "dist" in analysis.denied_paths
 
@@ -98,6 +101,8 @@ def test_analyzer_detects_nextjs_project(tmp_path: Path) -> None:
     assert analysis.analysis_status == "ready"
     assert analysis.project_type == "nextjs"
     assert analysis.package_manager == "npm"
+    assert analysis.project_profile.profile_id == "nextjs-react"
+    assert analysis.project_profile.preview_strategy == "next-dev-server"
     assert analysis.allowed_paths == ("app", "components")
     assert analysis.dev_command == "npm run dev"
     assert analysis.test_command == "npm run test"
@@ -118,6 +123,8 @@ def test_analyzer_detects_fastapi_project(tmp_path: Path) -> None:
     assert analysis.analysis_status == "ready"
     assert analysis.project_type == "fastapi"
     assert analysis.package_manager == "pip"
+    assert analysis.project_profile.profile_id == "fastapi-python"
+    assert analysis.project_profile.preview_strategy == "python-api"
     assert analysis.allowed_paths == ("app", "tests")
     assert analysis.dev_command == (
         "uvicorn app.main:app --reload --host 127.0.0.1 --port <port>"
@@ -144,6 +151,7 @@ def test_analyzer_detects_node_api_project(tmp_path: Path) -> None:
 
     assert analysis.analysis_status == "ready"
     assert analysis.project_type == "node-api"
+    assert analysis.project_profile.profile_id == "generic-repo"
     assert analysis.package_manager == "npm"
     assert analysis.allowed_paths == ("src",)
     assert analysis.dev_command == "npm run dev"
@@ -161,6 +169,7 @@ def test_analyzer_detects_python_package_project(tmp_path: Path) -> None:
 
     assert analysis.analysis_status == "ready"
     assert analysis.project_type == "python-package"
+    assert analysis.project_profile.profile_id == "generic-repo"
     assert analysis.package_manager == "uv"
     assert analysis.allowed_paths == ("src", "tests")
     assert analysis.test_command == "pytest"
@@ -179,6 +188,8 @@ def test_analyzer_marks_unknown_project_as_needing_confirmation(
     assert analysis.analysis_status == "needs_confirmation"
     assert analysis.project_type == "unknown"
     assert analysis.package_manager == "unknown"
+    assert analysis.project_profile.profile_id == "generic-repo"
+    assert analysis.project_profile.status == "needs_confirmation"
     assert analysis.allowed_paths == ()
     assert analysis.confidence == "low"
     assert "Project type could not be inferred from known markers." in analysis.analysis_warnings
@@ -213,3 +224,5 @@ def test_analyzer_api_returns_analysis_result(
     assert body["analysisStatus"] == "ready"
     assert body["allowedPaths"] == ["src", "tests"]
     assert body["testCommand"] == "npm run test"
+    assert body["projectProfile"]["profileId"] == "vite-react"
+    assert body["projectProfile"]["previewStrategy"] == "vite-dev-server"

@@ -1,16 +1,16 @@
 ## 1. OpenSpec 与边界确认
 
-- [ ] 1.1 创建 V2.4 Project Profile Boundary OpenSpec，定义中文范围、非目标、profile 合同、命令策略和安全约束。
-- [ ] 1.2 审查现有 Project Analyzer、External Workspace、Target Registry、PlanValidator、Project Command Policy 和 Preview 接入点。
-- [ ] 1.3 明确 V2.4 只做 target-scoped ProjectProfile 边界，不新增任意 shell agent、不绕过 PlanValidator、不实现生产部署。
-- [ ] 1.4 验证 `git diff --check` 和 `openspec validate agenthub-v2-4-project-profile-boundary --strict`。
+- [x] 1.1 创建 V2.4 Project Profile Boundary OpenSpec，定义中文范围、非目标、profile 合同、命令策略和安全约束。
+- [x] 1.2 审查现有 Project Analyzer、External Workspace、Target Registry、PlanValidator、Project Command Policy 和 Preview 接入点。
+- [x] 1.3 明确 V2.4 只做 target-scoped ProjectProfile 边界，不新增任意 shell agent、不绕过 PlanValidator、不实现生产部署。
+- [x] 1.4 验证 `git diff --check` 和 `openspec validate agenthub-v2-4-project-profile-boundary --strict`。
 
 ## 2. ProjectProfile 合同
 
-- [ ] 2.1 新增或扩展 ProjectProfile 数据结构，覆盖 profile id、project type、framework、package manager、allowed/denied paths、commands、preview strategy、confidence、status 和 warnings。
-- [ ] 2.2 将 analyzer 输出规范化为 ProjectProfile，保持现有 API 字段向后兼容。
-- [ ] 2.3 增加 Vite/React、Next.js/React、FastAPI/Python、Generic Repo profile 测试。
-- [ ] 2.4 验证相关 API 单元测试、`pnpm check` 或更窄等效命令、`git diff --check`。
+- [x] 2.1 新增或扩展 ProjectProfile 数据结构，覆盖 profile id、project type、framework、package manager、allowed/denied paths、commands、preview strategy、confidence、status 和 warnings。
+- [x] 2.2 将 analyzer 输出规范化为 ProjectProfile，保持现有 API 字段向后兼容。
+- [x] 2.3 增加 Vite/React、Next.js/React、FastAPI/Python、Generic Repo profile 测试。
+- [x] 2.4 验证相关 API 单元测试、`pnpm check` 或更窄等效命令、`git diff --check`。
 - [ ] 2.5 提交：`feat: add project profile contract`。
 
 ## 3. Target Registry 与 External Target 接入
