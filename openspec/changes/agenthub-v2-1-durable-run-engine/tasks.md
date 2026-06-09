@@ -66,9 +66,9 @@
 
 ## 8. Mission Trace、诊断证据与冻结审查
 
-- [ ] 8.1 在 TaskRun metrics/evidence 或 MissionTrace 中暴露 worker id、claim、heartbeat、lease、interrupt、timeout、stale recovery、finalizer 结果。
-- [ ] 8.2 确保证据不泄露 secrets、API key、受保护 host paths。
-- [ ] 8.3 更新 `docs/change-log.md` 和 `docs/project-state.md`。
-- [ ] 8.4 创建 `docs/v2-1-durable-run-engine-freeze-review.md`，记录实现范围、验证、真实限制和后续 V2.2/V2.3 依赖。
-- [ ] 8.5 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-1-durable-run-engine --strict`。
-- [ ] 8.6 单独提交：`test: freeze v2.1 durable run engine`。
+- [x] 8.1 在 TaskRun metrics/evidence 或 MissionTrace 中暴露 worker id、claim、heartbeat、lease、interrupt、timeout、stale recovery、finalizer 结果。
+- [x] 8.2 确保证据不泄露 secrets、API key、受保护 host paths。
+- [x] 8.3 更新 `docs/change-log.md` 和 `docs/project-state.md`。
+- [x] 8.4 创建 `docs/v2-1-durable-run-engine-freeze-review.md`，记录实现范围、验证、真实限制和后续 V2.2/V2.3 依赖。
+- [x] 8.5 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-1-durable-run-engine --strict`。
+- [x] 8.6 单独提交：`test: freeze v2.1 durable run engine`。

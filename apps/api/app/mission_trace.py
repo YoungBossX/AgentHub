@@ -120,6 +120,26 @@ def _task_run_trace(task_run: TaskRun) -> dict[str, Any]:
         "providerAssignment": metrics.get("providerAssignment"),
         "runtimeConfigResolution": metrics.get("runtimeConfigResolution"),
         "memorySnapshot": metrics.get("memorySnapshot"),
+        "durableRun": {
+            "runnerId": task_run.runner_id,
+            "adapterRunId": task_run.adapter_run_id,
+            "startedAt": task_run.started_at.isoformat()
+            if task_run.started_at is not None
+            else None,
+            "endedAt": task_run.ended_at.isoformat()
+            if task_run.ended_at is not None
+            else None,
+            "lastHeartbeatAt": task_run.last_heartbeat_at.isoformat()
+            if task_run.last_heartbeat_at is not None
+            else None,
+            "leaseExpiresAt": task_run.lease_expires_at.isoformat()
+            if task_run.lease_expires_at is not None
+            else None,
+            "staleDetectedAt": task_run.stale_detected_at.isoformat()
+            if task_run.stale_detected_at is not None
+            else None,
+            "staleReason": task_run.stale_reason,
+        },
         "errorCode": task_run.error_code,
         "errorMessage": task_run.error_message,
         "navigation": {

@@ -767,6 +767,10 @@ def test_provider_assignment_is_visible_in_mission_trace(
     run_trace = next(run for run in trace["taskRuns"] if run["id"] == run_id)
     assert run_trace["adapterType"] == "claude_code"
     assert run_trace["providerAssignment"]["providerId"] == "local-claude-code-cli"
+    assert run_trace["durableRun"]["runnerId"]
+    assert run_trace["durableRun"]["lastHeartbeatAt"]
+    assert run_trace["durableRun"]["leaseExpiresAt"]
+    assert "worktree" not in run_trace["durableRun"]
 
 
 def test_runtime_config_resolution_is_visible_in_mission_trace(
