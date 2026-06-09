@@ -19,6 +19,10 @@ Policy evidence helpers now serialize decisions into stable, redacted
 `policy.decision` payloads. Approval timeout decisions default to deny; AgentHub
 must not treat missing frontend/SSE approval as implicit approval.
 
+V2.5 remains a contract/helper layer. Execution paths are intentionally not
+fully rewired yet; that belongs to V2.6 transactional delivery and later
+integration passes.
+
 Policy Engine remains a decision/evidence layer; Target Registry,
 PlanValidator, Guardrails, Project Command Policy, and Provider Gateway remain
 the hard safety boundaries.

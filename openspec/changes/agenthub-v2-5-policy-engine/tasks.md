@@ -30,12 +30,12 @@
 - [x] 4.2 输出 requestedAction、approvalType、riskLevel、reason 和 safeMetadata。
 - [x] 4.3 确保 policy evidence 可进入 Run Diagnostics / MissionTrace，但不要求本阶段大改 UI。
 - [x] 4.4 增加 timeout 和 evidence 脱敏测试并验证。
-- [ ] 4.5 提交：`feat: record policy evidence decisions`。
+- [x] 4.5 提交：`feat: record policy evidence decisions`。
 
 ## 5. 冻结审查
 
-- [ ] 5.1 更新 `docs/change-log.md` 和 `docs/project-state.md`，记录 V2.5 实现范围和限制。
-- [ ] 5.2 创建 `docs/v2-5-policy-engine-freeze-review.md`。
-- [ ] 5.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-5-policy-engine --strict`。
-- [ ] 5.4 标记 V2.5 tasks 完成并停止，不自动开始 V2.6。
+- [x] 5.1 更新 `docs/change-log.md` 和 `docs/project-state.md`，记录 V2.5 实现范围和限制。
+- [x] 5.2 创建 `docs/v2-5-policy-engine-freeze-review.md`。
+- [x] 5.3 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-5-policy-engine --strict`。
+- [x] 5.4 标记 V2.5 tasks 完成并停止，不自动开始 V2.6。
 - [ ] 5.5 提交：`test: freeze v2.5 policy engine`。
