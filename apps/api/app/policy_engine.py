@@ -342,6 +342,36 @@ def evaluate_platform_maintenance_policy(
     )
 
 
+def approval_timeout_decision(
+    *,
+    category: PolicyCategory,
+    requested_action: str,
+    reason: str = "Approval timed out without user confirmation.",
+    target_id: Optional[str] = None,
+    command_type: Optional[str] = None,
+    metadata: Optional[dict[str, Any]] = None,
+) -> PolicyDecision:
+    return deny(
+        category,
+        reason,
+        risk_level=RiskLevel.HIGH,
+        target_id=target_id,
+        command_type=command_type,
+        requested_action=requested_action,
+        metadata={
+            "approvalTimedOut": True,
+            **(metadata or {}),
+        },
+    )
+
+
+def policy_evidence_event_payload(decision: PolicyDecision) -> dict[str, Any]:
+    return {
+        "eventType": "policy.decision",
+        "decision": decision.to_evidence(),
+    }
+
+
 def redact_policy_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     return {
         str(key): _redact_value(str(key), value)

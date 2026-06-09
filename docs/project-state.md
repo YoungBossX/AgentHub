@@ -15,6 +15,10 @@ deploy, and platform maintenance decisions. These helpers reuse existing
 Target Registry, Guardrails, and Project Command Policy semantics, but execution
 paths have not yet been rewired to depend on them.
 
+Policy evidence helpers now serialize decisions into stable, redacted
+`policy.decision` payloads. Approval timeout decisions default to deny; AgentHub
+must not treat missing frontend/SSE approval as implicit approval.
+
 Policy Engine remains a decision/evidence layer; Target Registry,
 PlanValidator, Guardrails, Project Command Policy, and Provider Gateway remain
 the hard safety boundaries.

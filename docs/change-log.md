@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## V2.5-4 Policy Evidence And Timeout
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added an approval timeout decision helper that defaults to deny and preserves
+  safe policy metadata.
+- Added a stable policy evidence event payload helper for future MissionTrace and
+  Run Diagnostics integration.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py -q` | Pass, 12 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-5-policy-engine --strict` | Pass |
+
 ## V2.5-3 Runtime Policy Evaluation Helpers
 
 **Date:** 2026-06-09

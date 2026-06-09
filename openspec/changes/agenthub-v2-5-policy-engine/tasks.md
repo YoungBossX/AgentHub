@@ -22,14 +22,14 @@
 - [x] 3.4 deploy policy 保留 mock/local staging/manual/blocked 行为，不新增生产部署。
 - [x] 3.5 platform maintenance 返回高级审批，不能被普通 approval 绕过。
 - [x] 3.6 增加适配测试并验证。
-- [ ] 3.7 提交：`feat: evaluate runtime policies`。
+- [x] 3.7 提交：`feat: evaluate runtime policies`。
 
 ## 4. Approval Timeout 与 Evidence
 
-- [ ] 4.1 增加 approval timeout helper，超时默认 deny。
-- [ ] 4.2 输出 requestedAction、approvalType、riskLevel、reason 和 safeMetadata。
-- [ ] 4.3 确保 policy evidence 可进入 Run Diagnostics / MissionTrace，但不要求本阶段大改 UI。
-- [ ] 4.4 增加 timeout 和 evidence 脱敏测试并验证。
+- [x] 4.1 增加 approval timeout helper，超时默认 deny。
+- [x] 4.2 输出 requestedAction、approvalType、riskLevel、reason 和 safeMetadata。
+- [x] 4.3 确保 policy evidence 可进入 Run Diagnostics / MissionTrace，但不要求本阶段大改 UI。
+- [x] 4.4 增加 timeout 和 evidence 脱敏测试并验证。
 - [ ] 4.5 提交：`feat: record policy evidence decisions`。
 
 ## 5. 冻结审查

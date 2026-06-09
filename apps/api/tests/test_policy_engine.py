@@ -15,6 +15,8 @@ from app.policy_engine import (
     evaluate_network_policy,
     evaluate_path_policy,
     evaluate_platform_maintenance_policy,
+    approval_timeout_decision,
+    policy_evidence_event_payload,
 )
 from app.project_profiles import build_project_profile
 from app.target_registry import AGENTHUB_PLATFORM_TARGET_ID, get_target, TargetProject
@@ -182,6 +184,39 @@ def test_policy_engine_platform_maintenance_requires_elevated_approval() -> None
 
     assert denied.outcome == PolicyOutcome.REQUIRE_ELEVATED_APPROVAL
     assert approved.outcome == PolicyOutcome.ALLOW
+
+
+def test_policy_engine_approval_timeout_defaults_to_deny() -> None:
+    decision = approval_timeout_decision(
+        category=PolicyCategory.NETWORK,
+        requested_action="network access",
+        metadata={"apiKey": "sk-secret"},
+    )
+
+    evidence = decision.to_evidence()
+
+    assert decision.outcome == PolicyOutcome.DENY
+    assert evidence["requestedAction"] == "network access"
+    assert evidence["metadata"]["approvalTimedOut"] is True
+    assert evidence["metadata"]["apiKey"] == "[redacted]"
+
+
+def test_policy_engine_evidence_payload_is_safe_and_stable() -> None:
+    decision = require_approval(
+        PolicyCategory.DEPLOY,
+        "External deploy needs approval.",
+        requested_action="deploy via vercel",
+        metadata={"token": "vercel-secret", "providerId": "vercel"},
+    )
+
+    payload = policy_evidence_event_payload(decision)
+
+    assert payload["eventType"] == "policy.decision"
+    assert payload["decision"]["outcome"] == "require_approval"
+    assert payload["decision"]["metadata"] == {
+        "token": "[redacted]",
+        "providerId": "vercel",
+    }
 
 
 def _target(*, check_command: Optional[str] = None) -> TargetProject:
