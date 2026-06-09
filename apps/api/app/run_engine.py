@@ -240,13 +240,21 @@ async def execute_task_run(
         supervisor.unregister(task_run.id)
     db.refresh(task_run)
     if task_run.state == "completed":
-        collect_task_run_diff(db, task_run.id)
-        create_scripted_review_for_task_run(db, task_run.id)
-        refresh_session_ledger_for_task_run(db, task_run.id)
-        _complete_ready_pipeline_review_tasks(db, task_run.task_id)
-        _maybe_auto_preview_and_mock_deploy(db, task_run)
-        await _auto_start_next_pipeline_task(db, task_run.task_id)
-        db.refresh(task_run)
+        await finalize_completed_task_run(db, task_run)
+    return task_run
+
+
+async def finalize_completed_task_run(
+    db: DbSession,
+    task_run: TaskRun,
+) -> TaskRun:
+    collect_task_run_diff(db, task_run.id)
+    create_scripted_review_for_task_run(db, task_run.id)
+    refresh_session_ledger_for_task_run(db, task_run.id)
+    _complete_ready_pipeline_review_tasks(db, task_run.task_id)
+    _maybe_auto_preview_and_mock_deploy(db, task_run)
+    await _auto_start_next_pipeline_task(db, task_run.task_id)
+    db.refresh(task_run)
     return task_run
 
 

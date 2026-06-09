@@ -2919,6 +2919,147 @@ def test_execute_task_run_timeout_interrupts_and_fails(
         assert adapter.interrupted == ["adapter-run-timeout"]
 
 
+def test_execute_task_run_only_finalizes_completed_runs(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+
+        class FailingAdapter:
+            def getCapabilities(self) -> AdapterCapabilities:
+                return AdapterCapabilities(
+                    supportsStreaming=True,
+                    supportsInterrupt=True,
+                    supportsApproval=False,
+                    supportsFileEdit=False,
+                    supportsShellCommand=False,
+                    supportsDiffArtifact=False,
+                    supportsPreviewArtifact=False,
+                    supportsNetwork=False,
+                )
+
+            async def createRun(self, request):
+                return AdapterRun(adapterRunId="adapter-run-failed")
+
+            async def streamEvents(self, adapter_run_id):
+                yield {
+                    "type": "error",
+                    "payload": {
+                        "code": "TEST_FAILURE",
+                        "message": "failed before finalizer",
+                    },
+                }
+
+            async def interrupt(self, adapter_run_id):
+                return None
+
+            async def approve(self, adapter_run_id, approval):
+                return None
+
+            async def collectArtifacts(self, adapter_run_id):
+                return []
+
+            async def cleanup(self, adapter_run_id):
+                return None
+
+        finalized: list[str] = []
+
+        async def fake_finalize_completed_task_run(db, task_run):
+            finalized.append(task_run.id)
+            return task_run
+
+        monkeypatch.setattr(
+            run_engine_module,
+            "finalize_completed_task_run",
+            fake_finalize_completed_task_run,
+        )
+
+        import asyncio
+
+        asyncio.run(
+            run_engine_module.execute_task_run(
+                db,
+                run,
+                adapter_type="scripted_mock",
+                adapter=FailingAdapter(),
+            )
+        )
+
+        assert finalized == []
+        assert db.get(TaskRun, run.id).state == "failed"
+
+
+def test_finalize_completed_task_run_runs_artifact_steps(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+        transition_task_run(db, run.id, "completed")
+        calls: list[str] = []
+
+        def fake_collect_task_run_diff(db, task_run_id):
+            calls.append(f"diff:{task_run_id}")
+
+        def fake_create_scripted_review_for_task_run(db, task_run_id):
+            calls.append(f"review:{task_run_id}")
+
+        def fake_refresh_session_ledger_for_task_run(db, task_run_id):
+            calls.append(f"ledger:{task_run_id}")
+
+        def fake_complete_ready_pipeline_review_tasks(db, task_id):
+            calls.append(f"review-tasks:{task_id}")
+            return []
+
+        def fake_maybe_auto_preview_and_mock_deploy(db, task_run):
+            calls.append(f"preview:{task_run.id}")
+
+        async def fake_auto_start_next_pipeline_task(db, task_id):
+            calls.append(f"downstream:{task_id}")
+            return None
+
+        monkeypatch.setattr(run_engine_module, "collect_task_run_diff", fake_collect_task_run_diff)
+        monkeypatch.setattr(
+            run_engine_module,
+            "create_scripted_review_for_task_run",
+            fake_create_scripted_review_for_task_run,
+        )
+        monkeypatch.setattr(
+            run_engine_module,
+            "refresh_session_ledger_for_task_run",
+            fake_refresh_session_ledger_for_task_run,
+        )
+        monkeypatch.setattr(
+            run_engine_module,
+            "_complete_ready_pipeline_review_tasks",
+            fake_complete_ready_pipeline_review_tasks,
+        )
+        monkeypatch.setattr(
+            run_engine_module,
+            "_maybe_auto_preview_and_mock_deploy",
+            fake_maybe_auto_preview_and_mock_deploy,
+        )
+        monkeypatch.setattr(
+            run_engine_module,
+            "_auto_start_next_pipeline_task",
+            fake_auto_start_next_pipeline_task,
+        )
+
+        import asyncio
+
+        asyncio.run(run_engine_module.finalize_completed_task_run(db, run))
+
+        assert calls == [
+            f"diff:{run.id}",
+            f"review:{run.id}",
+            f"ledger:{run.id}",
+            f"review-tasks:{run.task_id}",
+            f"preview:{run.id}",
+            f"downstream:{run.task_id}",
+        ]
+
+
 def test_background_execution_claims_and_refreshes_lease(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

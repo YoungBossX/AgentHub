@@ -56,13 +56,13 @@
 
 ## 7. Artifact Collector 与 Finalizer 幂等
 
-- [ ] 7.1 将 diff/review/preview/deploy 后处理收敛到 ArtifactCollector / Finalizer 边界。
-- [ ] 7.2 确保 adapter failed/interrupted/timeout 时仍保留可用 worktree/diff 证据，但不伪造成成功。
-- [ ] 7.3 确保 preview/deploy 失败记录 evidence，不覆盖编码 run 的真实失败原因。
-- [ ] 7.4 确保 downstream auto-start 在恢复和重试时幂等，不重复启动同一任务链。
-- [ ] 7.5 添加测试覆盖 artifact collector failure、preview failure、finalizer 重入、downstream 不重复。
-- [ ] 7.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 7.7 单独提交：`feat: finalize durable runs with artifact evidence`。
+- [x] 7.1 将 diff/review/preview/deploy 后处理收敛到 ArtifactCollector / Finalizer 边界。
+- [x] 7.2 确保 adapter failed/interrupted/timeout 时仍保留可用 worktree/diff 证据，但不伪造成成功。
+- [x] 7.3 确保 preview/deploy 失败记录 evidence，不覆盖编码 run 的真实失败原因。
+- [x] 7.4 确保 downstream auto-start 在恢复和重试时幂等，不重复启动同一任务链。
+- [x] 7.5 添加测试覆盖 artifact collector failure、preview failure、finalizer 重入、downstream 不重复。
+- [x] 7.6 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 7.7 单独提交：`feat: finalize durable runs with artifact evidence`。
 
 ## 8. Mission Trace、诊断证据与冻结审查
 
