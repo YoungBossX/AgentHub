@@ -3,6 +3,17 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## V2.5 Policy Engine Status
+
+V2.5 started on 2026-06-09. The current slice adds a standalone Policy Engine
+contract with categories, outcomes, risk levels, approval types, evidence
+serialization, and metadata redaction. It is not yet wired into Run Engine,
+Approval, Deploy, or Transactional Delivery execution paths.
+
+Policy Engine remains a decision/evidence layer; Target Registry,
+PlanValidator, Guardrails, Project Command Policy, and Provider Gateway remain
+the hard safety boundaries.
+
 ## V2.4 Project Profile Boundary Status
 
 V2.4 started on 2026-06-09. The current implementation adds the ProjectProfile

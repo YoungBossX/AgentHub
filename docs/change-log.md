@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## V2.5-2 Policy Engine Contract
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added a standalone Policy Engine contract with policy categories, outcomes,
+  risk levels, approval types, decision evidence, and metadata redaction.
+- Added tests for allow, deny, require approval, require elevated approval, and
+  secret/protected-path redaction.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py -q` | Pass, 5 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-5-policy-engine --strict` | Pass |
+
 ## V2.4-5 ProjectProfile Instruction Context
 
 **Date:** 2026-06-09

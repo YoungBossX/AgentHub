@@ -1,17 +1,17 @@
 ## 1. OpenSpec 与边界确认
 
-- [ ] 1.1 创建 V2.5 Policy Engine OpenSpec，定义中文范围、非目标、策略 outcome、类别和安全约束。
-- [ ] 1.2 审查现有 Guardrails、Target Registry、Project Command Policy、Provider Gateway、Deployment Provider 和 Approval 入口。
-- [ ] 1.3 明确 V2.5 首版只做统一策略合同和测试，不新增任意 shell agent、不绕过 PlanValidator、不放开生产部署。
-- [ ] 1.4 验证 `git diff --check` 和 `openspec validate agenthub-v2-5-policy-engine --strict`。
+- [x] 1.1 创建 V2.5 Policy Engine OpenSpec，定义中文范围、非目标、策略 outcome、类别和安全约束。
+- [x] 1.2 审查现有 Guardrails、Target Registry、Project Command Policy、Provider Gateway、Deployment Provider 和 Approval 入口。
+- [x] 1.3 明确 V2.5 首版只做统一策略合同和测试，不新增任意 shell agent、不绕过 PlanValidator、不放开生产部署。
+- [x] 1.4 验证 `git diff --check` 和 `openspec validate agenthub-v2-5-policy-engine --strict`。
 
 ## 2. Policy Engine 合同
 
-- [ ] 2.1 新增 `apps/api/app/policy_engine.py`，定义 PolicyDecision、PolicyOutcome、PolicyCategory、RiskLevel、ApprovalType 等合同。
-- [ ] 2.2 支持 outcome：`allow`、`deny`、`require_approval`、`require_elevated_approval`。
-- [ ] 2.3 支持 category：command、path、network、cost、destructive_change、deploy、platform_maintenance。
-- [ ] 2.4 evidence 必须脱敏，不暴露 secrets、tokens、API keys、`.env` 内容或未授权 host paths。
-- [ ] 2.5 增加合同测试并验证。
+- [x] 2.1 新增 `apps/api/app/policy_engine.py`，定义 PolicyDecision、PolicyOutcome、PolicyCategory、RiskLevel、ApprovalType 等合同。
+- [x] 2.2 支持 outcome：`allow`、`deny`、`require_approval`、`require_elevated_approval`。
+- [x] 2.3 支持 category：command、path、network、cost、destructive_change、deploy、platform_maintenance。
+- [x] 2.4 evidence 必须脱敏，不暴露 secrets、tokens、API keys、`.env` 内容或未授权 host paths。
+- [x] 2.5 增加合同测试并验证。
 - [ ] 2.6 提交：`feat: add policy engine contract`。
 
 ## 3. 现有边界适配
