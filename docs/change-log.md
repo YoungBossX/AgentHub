@@ -1,5 +1,56 @@
 # AgentHub Change Log
 
+## V2.7 Run Diagnostics Backend Projection
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added a backend Run Diagnostics projection for TaskRuns with classified
+  failure reasons, contributing factors, timeline items, health summary, and
+  next-step suggestions.
+- Exposed safe read-only diagnostics APIs for individual TaskRuns and Session
+  summaries without changing execution, provider, scheduler, preview, or deploy
+  semantics.
+- Added redaction and truncation for diagnostic metadata so secrets, tokens,
+  protected paths, and host paths are not returned by diagnostics responses.
+- Added backend tests for classification, timeline artifacts, health summary,
+  suggestions, API redaction, unknown legacy evidence, and Session summaries.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_run_diagnostics.py -q` | Pass, 7 tests |
+| `pnpm check:demo-api` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py -q` | Failed, 71 pass / 5 fail in pre-existing/concurrent run scheduling expectations outside this worker's scope |
+
+## V2.2-3 Provider Resolution And Registry
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added a coding ProviderRegistry derived from existing Claude Code, Codex, and
+  ScriptedMock provider configs without adding adapters or including Planner
+  providers.
+- Added ProviderResolver support for default, explicit, and runtime coding
+  provider selection, compatibility checks, unavailable-provider rejection, and
+  scripted mock fallback candidates.
+- Added provider resolution event/metrics recording via `provider.resolved`.
+- Expanded Provider Gateway tests for registry metadata, resolution paths,
+  fallback candidates, Planner isolation, and TaskRunEvent evidence.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py -q` | Pass, 8 tests |
+| `pnpm check` | Pass |
+| `pnpm demo:api:test` | Pass, 5 tests |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-2-provider-gateway --strict` | Pass |
+
 ## V2.2-2 Provider Gateway Contract
 
 **Date:** 2026-06-09

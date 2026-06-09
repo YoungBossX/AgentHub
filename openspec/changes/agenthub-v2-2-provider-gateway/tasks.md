@@ -15,12 +15,12 @@
 
 ## 3. Provider Resolution 与 Registry
 
-- [ ] 3.1 实现 coding ProviderRegistry，派生 Claude Code、Codex 和 ScriptedMock 的安全元数据。
-- [ ] 3.2 实现 ProviderResolver，基于 role、runtime config、target/mode/capability、availability 和 fallback policy 输出 resolution plan。
-- [ ] 3.3 记录 provider resolution TaskRunEvent 或 evidence，包含 selected provider、候选和拒绝原因。
-- [ ] 3.4 添加测试覆盖默认 provider、显式 provider、不可用 provider、fallback candidates、Planner provider 隔离。
-- [ ] 3.5 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 3.6 单独提交：`feat: resolve coding providers through gateway`。
+- [x] 3.1 实现 coding ProviderRegistry，派生 Claude Code、Codex 和 ScriptedMock 的安全元数据。
+- [x] 3.2 实现 ProviderResolver，基于 role、runtime config、target/mode/capability、availability 和 fallback policy 输出 resolution plan。
+- [x] 3.3 记录 provider resolution TaskRunEvent 或 evidence，包含 selected provider、候选和拒绝原因。
+- [x] 3.4 添加测试覆盖默认 provider、显式 provider、不可用 provider、fallback candidates、Planner provider 隔离。
+- [x] 3.5 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 3.6 单独提交：`feat: resolve coding providers through gateway`。
 
 ## 4. Health Probe 与 Launch Path 对齐
 

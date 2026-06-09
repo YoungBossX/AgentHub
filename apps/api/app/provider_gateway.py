@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import re
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Literal, Optional
 
+from sqlmodel import Session as DbSession
+
+from app.events import append_task_run_event
 from app.models import utc_now
+from app.models import TaskRun
+from app.provider_configs import ProviderConfig, list_provider_configs
 
 CodingAdapterType = Literal["claude_code", "codex", "scripted_mock"]
 ProviderAvailability = Literal["available", "unavailable", "unknown"]
@@ -31,6 +37,26 @@ CODING_ADAPTER_TYPES: frozenset[str] = frozenset(
 )
 REAL_CODING_ADAPTER_TYPES: frozenset[str] = frozenset({"claude_code", "codex"})
 MOCK_CODING_ADAPTER_TYPES: frozenset[str] = frozenset({"scripted_mock"})
+NON_CODING_ROLES: frozenset[str] = frozenset({"planner", "orchestrator", "fallback"})
+DEFAULT_CODING_PROVIDER_BY_ROLE: dict[str, str] = {
+    "frontend": "local-codex-cli",
+    "backend": "local-codex-cli",
+    "qa": "local-scripted-mock",
+    "review": "local-scripted-mock",
+}
+SAFE_LAUNCH_SUMMARY_BY_ADAPTER: dict[str, str] = {
+    "claude_code": "local Claude Code CLI launch path",
+    "codex": "local Codex CLI launch path",
+    "scripted_mock": "local scripted mock demo boundary",
+}
+CAPABILITIES_BY_ADAPTER: dict[str, tuple[str, ...]] = {
+    "claude_code": ("file_edit", "shell_command", "diff_artifact", "preview_artifact"),
+    "codex": ("file_edit", "shell_command", "diff_artifact", "preview_artifact"),
+    "scripted_mock": ("file_edit", "diff_artifact", "preview_artifact", "review"),
+}
+FALLBACK_DISABLED_POLICIES: frozenset[str] = frozenset(
+    {"none", "explicit_only", "disabled"}
+)
 
 PROVIDER_GATEWAY_EVENT_TYPES: tuple[str, ...] = (
     "provider.resolution_started",
@@ -71,6 +97,10 @@ class ProviderGatewayStatus(str, Enum):
     FAILED = "failed"
     BLOCKED = "blocked"
     FALLBACK_SUCCEEDED = "fallback_succeeded"
+
+
+class ProviderResolutionError(ValueError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -141,6 +171,163 @@ class CodingProviderMetadata:
                 "safeLaunchSummary": self.safe_launch_summary,
             }
         )
+
+
+class ProviderRegistry:
+    def __init__(
+        self,
+        providers: Optional[list[CodingProviderMetadata]] = None,
+    ) -> None:
+        self._providers = tuple(providers) if providers is not None else tuple(
+            _coding_provider_from_config(provider)
+            for provider in list_provider_configs()
+            if is_coding_adapter_type(provider.adapter_type)
+        )
+
+    def list_providers(self) -> list[CodingProviderMetadata]:
+        return list(self._providers)
+
+    def get(self, provider_id: str) -> Optional[CodingProviderMetadata]:
+        return next(
+            (
+                provider
+                for provider in self._providers
+                if provider.provider_id == provider_id
+            ),
+            None,
+        )
+
+    def coding_provider_ids(self) -> list[str]:
+        return [provider.provider_id for provider in self._providers]
+
+    def default_provider_for_role(
+        self,
+        role: str,
+    ) -> Optional[CodingProviderMetadata]:
+        preferred_id = DEFAULT_CODING_PROVIDER_BY_ROLE.get(role)
+        if preferred_id:
+            preferred = self.get(preferred_id)
+            if preferred is not None:
+                return preferred
+        return next(
+            (
+                provider
+                for provider in self._providers
+                if role in provider.supported_roles and provider.is_real_provider
+            ),
+            None,
+        )
+
+    def fallback_providers_for(
+        self,
+        context: CodingRunContext,
+    ) -> list[CodingProviderMetadata]:
+        return [
+            provider
+            for provider in self._providers
+            if provider.is_fallback_provider
+            and provider.availability == "available"
+            and _provider_matches_context(provider, context)
+        ]
+
+
+class ProviderResolver:
+    def __init__(self, registry: Optional[ProviderRegistry] = None) -> None:
+        self.registry = registry or ProviderRegistry()
+
+    def resolve(self, context: CodingRunContext) -> ProviderResolutionPlan:
+        ordered = self._ordered_candidates(context)
+        fallback_providers = self.registry.fallback_providers_for(context)
+        candidates: list[ProviderCandidateDecision] = []
+        rejected: list[ProviderCandidateDecision] = []
+        fallback_decisions: list[ProviderCandidateDecision] = []
+        selected: Optional[CodingProviderMetadata] = None
+        selection_reason = "No compatible coding provider was available."
+
+        for provider in ordered:
+            decision = _candidate_decision(provider, context)
+            candidates.append(decision)
+            if not decision.accepted:
+                rejected.append(decision)
+                continue
+            if provider.is_fallback_provider:
+                fallback_decisions.append(decision)
+                continue
+            if selected is None:
+                selected = provider
+                selection_reason = decision.reason
+                break
+
+        for provider in fallback_providers:
+            if selected is not None and provider.provider_id == selected.provider_id:
+                continue
+            decision = _candidate_decision(provider, context)
+            if decision not in fallback_decisions:
+                fallback_decisions.append(decision)
+            if not decision.accepted:
+                rejected.append(decision)
+
+        if selected is None and _fallback_allowed(context.fallback_policy):
+            fallback_selected = next(
+                (
+                    self.registry.get(decision.provider_id)
+                    for decision in fallback_decisions
+                    if decision.accepted
+                ),
+                None,
+            )
+            if fallback_selected is not None:
+                selected = fallback_selected
+                selection_reason = (
+                    "Fallback coding provider selected because no real provider "
+                    "was available."
+                )
+
+        should_fail = selected is None
+        return ProviderResolutionPlan(
+            selected_provider_id=selected.provider_id if selected is not None else None,
+            selected_adapter_type=selected.adapter_type if selected is not None else None,
+            selection_reason=selection_reason,
+            candidates=tuple(candidates),
+            fallback_candidates=tuple(fallback_decisions),
+            rejected_candidates=tuple(_dedupe_decisions(rejected)),
+            selected_is_real_provider=(
+                selected.is_real_provider if selected is not None else False
+            ),
+            should_fail=should_fail,
+        )
+
+    def _ordered_candidates(
+        self,
+        context: CodingRunContext,
+    ) -> list[CodingProviderMetadata]:
+        providers: list[CodingProviderMetadata] = []
+
+        for provider_id in [
+            context.requested_provider_id,
+            context.runtime_provider_id,
+            DEFAULT_CODING_PROVIDER_BY_ROLE.get(context.role),
+        ]:
+            if not provider_id:
+                continue
+            provider = self.registry.get(provider_id)
+            if provider is not None and provider not in providers:
+                providers.append(provider)
+
+        if context.runtime_adapter_type and is_coding_adapter_type(
+            context.runtime_adapter_type
+        ):
+            for provider in self.registry.list_providers():
+                if (
+                    provider.adapter_type == context.runtime_adapter_type
+                    and provider not in providers
+                ):
+                    providers.append(provider)
+
+        for provider in self.registry.list_providers():
+            if provider.is_real_provider and provider not in providers:
+                providers.append(provider)
+        return providers
 
 
 @dataclass(frozen=True)
@@ -404,6 +591,216 @@ def coding_provider_ids_from_configs(provider_configs: list[Any]) -> list[str]:
         if is_coding_adapter_type(adapter_type) and isinstance(provider_id, str):
             provider_ids.append(provider_id)
     return provider_ids
+
+
+def record_provider_resolution(
+    db: DbSession,
+    *,
+    task_run_id: str,
+    plan: ProviderResolutionPlan,
+) -> None:
+    evidence = plan.to_evidence()
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type="provider.resolved",
+        payload_json=json.dumps(evidence, separators=(",", ":")),
+    )
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        return
+    metrics = _json_dict(task_run.metrics_json)
+    provider_gateway = metrics.get("providerGateway")
+    if not isinstance(provider_gateway, dict):
+        provider_gateway = {}
+    provider_gateway["resolution"] = evidence
+    metrics["providerGateway"] = provider_gateway
+    task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
+    task_run.updated_at = utc_now()
+    db.add(task_run)
+    db.commit()
+
+
+def _coding_provider_from_config(
+    provider: ProviderConfig,
+) -> CodingProviderMetadata:
+    roles = tuple(
+        role
+        for role in provider.default_for_roles
+        if role not in NON_CODING_ROLES
+    )
+    adapter_type = _coding_adapter_type_or_raise(provider.adapter_type)
+    return CodingProviderMetadata(
+        provider_id=provider.provider_id,
+        display_name=provider.display_name,
+        adapter_type=adapter_type,
+        supported_roles=roles or ("frontend", "backend", "review"),
+        supported_targets=("*",),
+        supported_modes=_normalized_supported_modes(provider),
+        capabilities=CAPABILITIES_BY_ADAPTER.get(provider.adapter_type, ()),
+        auth_status=provider.auth_status,
+        availability="available" if provider.available else "unavailable",
+        is_real_provider=provider.adapter_type in REAL_CODING_ADAPTER_TYPES,
+        is_mock_provider=provider.adapter_type in MOCK_CODING_ADAPTER_TYPES,
+        is_fallback_provider=provider.adapter_type in MOCK_CODING_ADAPTER_TYPES,
+        safe_launch_summary=SAFE_LAUNCH_SUMMARY_BY_ADAPTER.get(
+            provider.adapter_type,
+            "local coding provider launch path",
+        ),
+    )
+
+
+def _coding_adapter_type_or_raise(adapter_type: str) -> CodingAdapterType:
+    if adapter_type == "claude_code":
+        return "claude_code"
+    if adapter_type == "codex":
+        return "codex"
+    if adapter_type == "scripted_mock":
+        return "scripted_mock"
+    raise ProviderResolutionError(f"Not a coding adapter type: {adapter_type}")
+
+
+def _normalized_supported_modes(provider: ProviderConfig) -> tuple[str, ...]:
+    modes = set(provider.supported_modes)
+    normalized: set[str] = set()
+    if modes.intersection({"frontend", "backend"}):
+        normalized.add("write")
+    if modes.intersection({"qa", "review", "read_only"}):
+        normalized.add("review")
+    if "debug" in modes:
+        normalized.add("debug")
+    if provider.adapter_type == "scripted_mock":
+        normalized.add("write")
+    return tuple(sorted(normalized or modes))
+
+
+def _candidate_decision(
+    provider: CodingProviderMetadata,
+    context: CodingRunContext,
+) -> ProviderCandidateDecision:
+    if not _provider_matches_context(provider, context):
+        return ProviderCandidateDecision(
+            provider_id=provider.provider_id,
+            adapter_type=provider.adapter_type,
+            accepted=False,
+            reason=_context_rejection_reason(provider, context),
+        )
+    if provider.availability != "available":
+        return ProviderCandidateDecision(
+            provider_id=provider.provider_id,
+            adapter_type=provider.adapter_type,
+            accepted=False,
+            reason=f"Provider availability is {provider.availability}.",
+        )
+    return ProviderCandidateDecision(
+        provider_id=provider.provider_id,
+        adapter_type=provider.adapter_type,
+        accepted=True,
+        reason=_selection_reason(provider, context),
+    )
+
+
+def _provider_matches_context(
+    provider: CodingProviderMetadata,
+    context: CodingRunContext,
+) -> bool:
+    return (
+        _provider_supports_role(provider, context.role)
+        and _provider_supports_target(provider, context.target_id)
+        and _provider_supports_mode(provider, context)
+        and _provider_supports_capabilities(provider, context.required_capabilities)
+    )
+
+
+def _provider_supports_role(
+    provider: CodingProviderMetadata,
+    role: str,
+) -> bool:
+    if role in NON_CODING_ROLES:
+        return False
+    return role in provider.supported_roles or "*" in provider.supported_roles
+
+
+def _provider_supports_target(
+    provider: CodingProviderMetadata,
+    target_id: Optional[str],
+) -> bool:
+    if target_id is None:
+        return True
+    return "*" in provider.supported_targets or target_id in provider.supported_targets
+
+
+def _provider_supports_mode(
+    provider: CodingProviderMetadata,
+    context: CodingRunContext,
+) -> bool:
+    if context.mode in provider.supported_modes:
+        return True
+    if context.mode == "write" and context.role in {"frontend", "backend"}:
+        return "write" in provider.supported_modes
+    if context.mode == "review" and context.role in {"qa", "review"}:
+        return "review" in provider.supported_modes
+    return False
+
+
+def _provider_supports_capabilities(
+    provider: CodingProviderMetadata,
+    required_capabilities: tuple[str, ...],
+) -> bool:
+    capabilities = set(provider.capabilities)
+    return all(capability in capabilities for capability in required_capabilities)
+
+
+def _context_rejection_reason(
+    provider: CodingProviderMetadata,
+    context: CodingRunContext,
+) -> str:
+    if not _provider_supports_role(provider, context.role):
+        return f"Provider does not support role {context.role}."
+    if not _provider_supports_target(provider, context.target_id):
+        return f"Provider does not support target {context.target_id}."
+    if not _provider_supports_mode(provider, context):
+        return f"Provider does not support mode {context.mode}."
+    if not _provider_supports_capabilities(provider, context.required_capabilities):
+        return "Provider is missing required coding capabilities."
+    return "Provider is not compatible with this coding run."
+
+
+def _selection_reason(
+    provider: CodingProviderMetadata,
+    context: CodingRunContext,
+) -> str:
+    if context.requested_provider_id == provider.provider_id:
+        return "Explicit provider request is compatible."
+    if context.runtime_provider_id == provider.provider_id:
+        return "Runtime coding provider configuration is compatible."
+    return "Default coding provider is compatible."
+
+
+def _fallback_allowed(fallback_policy: str) -> bool:
+    return fallback_policy not in FALLBACK_DISABLED_POLICIES
+
+
+def _dedupe_decisions(
+    decisions: list[ProviderCandidateDecision],
+) -> list[ProviderCandidateDecision]:
+    deduped: list[ProviderCandidateDecision] = []
+    seen: set[tuple[str, str]] = set()
+    for decision in decisions:
+        key = (decision.provider_id, decision.reason)
+        if key in seen:
+            continue
+        deduped.append(decision)
+        seen.add(key)
+    return deduped
+
+
+def _json_dict(raw: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
 
 
 def redact_provider_evidence(value: Any) -> Any:
