@@ -2762,8 +2762,19 @@ def test_execute_task_run_registers_with_supervisor(client: TestClient) -> None:
                 task_run_id: str,
                 adapter_type: str,
                 adapter_run_id: Optional[str] = None,
+                adapter=None,
             ) -> None:
                 self.registered.append((task_run_id, adapter_type))
+
+            def update_adapter_run_id(
+                self,
+                task_run_id: str,
+                adapter_run_id: str,
+            ) -> None:
+                return None
+
+            async def interrupt(self, task_run_id: str) -> bool:
+                return False
 
             def unregister(self, task_run_id: str) -> None:
                 self.unregistered.append(task_run_id)
@@ -2784,6 +2795,128 @@ def test_execute_task_run_registers_with_supervisor(client: TestClient) -> None:
 
         assert supervisor.registered == [(run.id, "scripted_mock")]
         assert supervisor.unregistered == [run.id]
+
+
+def test_interrupt_supervised_task_run_calls_adapter_interrupt() -> None:
+    class InterruptRecordingAdapter:
+        def __init__(self) -> None:
+            self.interrupted: list[str] = []
+
+        async def interrupt(self, adapter_run_id: str) -> None:
+            self.interrupted.append(adapter_run_id)
+
+    adapter = InterruptRecordingAdapter()
+    supervisor = run_engine_module.RunSupervisor()
+    supervisor.register(
+        task_run_id="run-1",
+        adapter_type="codex",
+        adapter_run_id="adapter-1",
+        adapter=adapter,
+    )
+
+    import asyncio
+
+    interrupted = asyncio.run(
+        run_engine_module.interrupt_supervised_task_run(
+            "run-1",
+            supervisor=supervisor,
+        )
+    )
+
+    assert interrupted is True
+    assert adapter.interrupted == ["adapter-1"]
+
+
+def test_interrupt_endpoint_attempts_supervisor_interrupt(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+        run_id = run.id
+
+    interrupted: list[str] = []
+
+    async def fake_interrupt_supervised_task_run(task_run_id: str) -> bool:
+        interrupted.append(task_run_id)
+        return True
+
+    monkeypatch.setattr(
+        main_module,
+        "interrupt_supervised_task_run",
+        fake_interrupt_supervised_task_run,
+    )
+
+    response = client.post(f"/task-runs/{run_id}/interrupt")
+
+    assert response.status_code == 200
+    assert response.json()["state"] == "interrupted"
+    assert interrupted == [run_id]
+
+
+def test_execute_task_run_timeout_interrupts_and_fails(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+
+        class HangingAdapter:
+            def __init__(self) -> None:
+                self.interrupted: list[str] = []
+
+            def getCapabilities(self) -> AdapterCapabilities:
+                return AdapterCapabilities(
+                    supportsStreaming=True,
+                    supportsInterrupt=True,
+                    supportsApproval=False,
+                    supportsFileEdit=False,
+                    supportsShellCommand=False,
+                    supportsDiffArtifact=False,
+                    supportsPreviewArtifact=False,
+                    supportsNetwork=False,
+                    maxRuntimeSec=60,
+                )
+
+            async def createRun(self, request):
+                return AdapterRun(adapterRunId="adapter-run-timeout")
+
+            async def streamEvents(self, adapter_run_id):
+                import asyncio
+
+                await asyncio.sleep(60)
+                if False:
+                    yield {}
+
+            async def interrupt(self, adapter_run_id):
+                self.interrupted.append(adapter_run_id)
+
+            async def approve(self, adapter_run_id, approval):
+                return None
+
+            async def collectArtifacts(self, adapter_run_id):
+                return []
+
+            async def cleanup(self, adapter_run_id):
+                return None
+
+        adapter = HangingAdapter()
+
+        import asyncio
+
+        asyncio.run(
+            run_engine_module.execute_task_run(
+                db,
+                run,
+                adapter_type="scripted_mock",
+                adapter=adapter,
+                max_runtime_seconds=0.01,
+            )
+        )
+
+        stored = db.get(TaskRun, run.id)
+        assert stored.state == "failed"
+        assert stored.error_code == "TASK_RUN_TIMEOUT"
+        assert adapter.interrupted == ["adapter-run-timeout"]
 
 
 def test_background_execution_claims_and_refreshes_lease(

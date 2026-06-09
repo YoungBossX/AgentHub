@@ -35,14 +35,14 @@
 
 ## 5. RunSupervisor 中断与超时
 
-- [ ] 5.1 实现 supervisor active run registry，关联 `task_run_id`、adapter run id、进程句柄或 adapter interrupt handle。
-- [ ] 5.2 修改 interrupt 路径，使其记录 interrupt request 并调用 supervisor/adapter interrupt。
-- [ ] 5.3 添加 terminate / kill escalation 和可审计事件。
-- [ ] 5.4 添加 max runtime timeout 与 idle output timeout 包装。
-- [ ] 5.5 确保 timeout 和 interrupt 不会被 artifact collector 或 adapter late event 覆盖为 completed。
-- [ ] 5.6 添加测试覆盖 active interrupt、terminal interrupt 幂等、timeout failed、late completed ignored。
-- [ ] 5.7 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 5.8 单独提交：`feat: supervise task run interrupt and timeout`。
+- [x] 5.1 实现 supervisor active run registry，关联 `task_run_id`、adapter run id、进程句柄或 adapter interrupt handle。
+- [x] 5.2 修改 interrupt 路径，使其记录 interrupt request 并调用 supervisor/adapter interrupt。
+- [x] 5.3 添加 terminate / kill escalation 和可审计事件。
+- [x] 5.4 添加 max runtime timeout 与 idle output timeout 包装。
+- [x] 5.5 确保 timeout 和 interrupt 不会被 artifact collector 或 adapter late event 覆盖为 completed。
+- [x] 5.6 添加测试覆盖 active interrupt、terminal interrupt 幂等、timeout failed、late completed ignored。
+- [x] 5.7 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 5.8 单独提交：`feat: supervise task run interrupt and timeout`。
 
 ## 6. 恢复扫描与 Stale Run 处理
 

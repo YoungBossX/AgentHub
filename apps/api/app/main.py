@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 import json
 from pathlib import Path
 from typing import Any, AsyncIterator, Iterator, Optional
@@ -129,6 +130,7 @@ from app.run_engine import (
     adapter_for_type,
     agent_run_request_for,
     execute_task_run,
+    interrupt_supervised_task_run,
     plan_json_for_task,
     schedule_task_run_execution,
     _background_execute_task_run,
@@ -1892,6 +1894,7 @@ def interrupt_existing_task_run(
     db: DbSession = Depends(get_db),
 ) -> TaskRunResponse:
     try:
+        asyncio.run(interrupt_supervised_task_run(task_run_id))
         task_run = interrupt_task_run(db, task_run_id)
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

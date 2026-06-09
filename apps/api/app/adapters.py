@@ -1,6 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 from typing import Any, Literal, Optional, Union
 
@@ -139,6 +139,7 @@ async def run_adapter_event_stream(
     db: DbSession,
     adapter: AgentAdapter,
     request: AgentRunRequest,
+    on_adapter_run_created: Optional[Callable[[AdapterRun], None]] = None,
 ) -> list[TaskRunEvent]:
     capabilities = adapter.getCapabilities()
     if not capabilities.supports_streaming:
@@ -148,6 +149,8 @@ async def run_adapter_event_stream(
     persisted: list[TaskRunEvent] = []
     try:
         run = await adapter.createRun(request)
+        if on_adapter_run_created is not None:
+            on_adapter_run_created(run)
         task_run = db.get(TaskRun, request.task_run_id)
         if task_run is not None:
             task_run.adapter_run_id = run.adapter_run_id

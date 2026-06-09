@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 from typing import Any, Optional
@@ -181,6 +182,7 @@ async def execute_task_run(
     adapter: AgentAdapter,
     plan_context: Optional[dict[str, Any]] = None,
     supervisor: RunSupervisor = default_run_supervisor,
+    max_runtime_seconds: Optional[float] = None,
 ) -> TaskRun:
     request = agent_run_request_for(
         db,
@@ -192,9 +194,38 @@ async def execute_task_run(
         task_run_id=task_run.id,
         adapter_type=adapter_type,
         adapter_run_id=task_run.adapter_run_id,
+        adapter=adapter,
     )
     try:
-        await run_adapter_event_stream(db, adapter, request)
+        capabilities = adapter.getCapabilities()
+        stream = run_adapter_event_stream(
+            db,
+            adapter,
+            request,
+            on_adapter_run_created=lambda run: supervisor.update_adapter_run_id(
+                task_run.id,
+                run.adapter_run_id,
+            ),
+        )
+        runtime_timeout = (
+            max_runtime_seconds
+            if max_runtime_seconds is not None
+            else capabilities.max_runtime_sec
+        )
+        if runtime_timeout is not None:
+            await asyncio.wait_for(stream, timeout=runtime_timeout)
+        else:
+            await stream
+    except asyncio.TimeoutError:
+        await supervisor.interrupt(task_run.id)
+        transition_task_run(
+            db,
+            task_run.id,
+            "failed",
+            payload={"reason": "TaskRun exceeded max runtime."},
+            error_code="TASK_RUN_TIMEOUT",
+            error_message="TaskRun exceeded its maximum runtime.",
+        )
     finally:
         supervisor.unregister(task_run.id)
     db.refresh(task_run)
@@ -405,3 +436,11 @@ async def execute_task_run_background(
 
 def _new_worker_id() -> str:
     return f"{DEFAULT_RUN_WORKER_ID_PREFIX}:{uuid4()}"
+
+
+async def interrupt_supervised_task_run(
+    task_run_id: str,
+    *,
+    supervisor: RunSupervisor = default_run_supervisor,
+) -> bool:
+    return await supervisor.interrupt(task_run_id)
