@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## V2.5-3 Runtime Policy Evaluation Helpers
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added Policy Engine helpers for command, path, network, deploy, and platform
+  maintenance decisions using existing Target Registry, Guardrails, and Project
+  Command Policy semantics.
+- Kept helpers side-effect free and did not replace current execution,
+  approval, or deployment paths.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py tests/test_guardrails.py tests/test_project_command_policy.py -q` | Pass, 29 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-5-policy-engine --strict` | Pass |
+
 ## V2.5-2 Policy Engine Contract
 
 **Date:** 2026-06-09

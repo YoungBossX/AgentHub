@@ -12,16 +12,16 @@
 - [x] 2.3 支持 category：command、path、network、cost、destructive_change、deploy、platform_maintenance。
 - [x] 2.4 evidence 必须脱敏，不暴露 secrets、tokens、API keys、`.env` 内容或未授权 host paths。
 - [x] 2.5 增加合同测试并验证。
-- [ ] 2.6 提交：`feat: add policy engine contract`。
+- [x] 2.6 提交：`feat: add policy engine contract`。
 
 ## 3. 现有边界适配
 
-- [ ] 3.1 command policy 复用 `evaluate_project_command()`，匹配允许，缺失或不匹配拒绝。
-- [ ] 3.2 path policy 复用 target allowed/denied paths 和 guardrails 语义。
-- [ ] 3.3 network policy 默认要求审批，不能默认放开外网。
-- [ ] 3.4 deploy policy 保留 mock/local staging/manual/blocked 行为，不新增生产部署。
-- [ ] 3.5 platform maintenance 返回高级审批，不能被普通 approval 绕过。
-- [ ] 3.6 增加适配测试并验证。
+- [x] 3.1 command policy 复用 `evaluate_project_command()`，匹配允许，缺失或不匹配拒绝。
+- [x] 3.2 path policy 复用 target allowed/denied paths 和 guardrails 语义。
+- [x] 3.3 network policy 默认要求审批，不能默认放开外网。
+- [x] 3.4 deploy policy 保留 mock/local staging/manual/blocked 行为，不新增生产部署。
+- [x] 3.5 platform maintenance 返回高级审批，不能被普通 approval 绕过。
+- [x] 3.6 增加适配测试并验证。
 - [ ] 3.7 提交：`feat: evaluate runtime policies`。
 
 ## 4. Approval Timeout 与 Evidence

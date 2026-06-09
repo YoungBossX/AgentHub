@@ -10,6 +10,11 @@ contract with categories, outcomes, risk levels, approval types, evidence
 serialization, and metadata redaction. It is not yet wired into Run Engine,
 Approval, Deploy, or Transactional Delivery execution paths.
 
+The engine now has side-effect-free helper functions for command, path, network,
+deploy, and platform maintenance decisions. These helpers reuse existing
+Target Registry, Guardrails, and Project Command Policy semantics, but execution
+paths have not yet been rewired to depend on them.
+
 Policy Engine remains a decision/evidence layer; Target Registry,
 PlanValidator, Guardrails, Project Command Policy, and Provider Gateway remain
 the hard safety boundaries.
