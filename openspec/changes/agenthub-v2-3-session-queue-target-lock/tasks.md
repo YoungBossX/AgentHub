@@ -58,8 +58,8 @@
 
 ## 7. 诊断、Mission Trace 与冻结审查
 
-- [ ] 7.1 在 TaskRun evidence、TaskRunEvent 或 MissionTrace 中展示 queue position、access mode、target id、lock key、holder、wait reason、release reason 和 preview/deploy job 状态。
-- [ ] 7.2 确保证据不泄露 secrets、API key、tokens、受保护 host paths 或未分配给当前 Session 的 host 路径。
-- [ ] 7.3 更新 `docs/project-state.md` 和 `docs/change-log.md`。
-- [ ] 7.4 创建 V2.3 freeze review 文档，记录实现范围、验证、真实限制和后续 V2.4/V2.5 依赖。
-- [ ] 7.5 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-3-session-queue-target-lock --strict`。
+- [x] 7.1 在 TaskRun evidence、TaskRunEvent 或 MissionTrace 中展示 queue position、access mode、target id、lock key、holder、wait reason、release reason 和 preview/deploy job 状态。
+- [x] 7.2 确保证据不泄露 secrets、API key、tokens、受保护 host paths 或未分配给当前 Session 的 host 路径。
+- [x] 7.3 更新 `docs/project-state.md` 和 `docs/change-log.md`。
+- [x] 7.4 创建 V2.3 freeze review 文档，记录实现范围、验证、真实限制和后续 V2.4/V2.5 依赖。
+- [x] 7.5 运行完整验证：`pnpm check`、`pnpm test`、`pnpm demo:api:test`、`git diff --check`、`openspec validate agenthub-v2-3-session-queue-target-lock --strict`。
