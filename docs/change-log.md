@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## V2.6-2 Transactional Delivery Contract
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added a Transactional Delivery contract with delivery states, retry modes,
+  checkpoint evidence, pending validation, rollback preflight, and retry mode
+  decisions.
+- Added tests proving checkpoint evidence is read from TaskRun metrics and
+  rollback is refused when no checkpoint exists.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py tests/test_recovery.py -q` | Pass, 9 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-6-transactional-delivery --strict` | Pass |
+
 ## V2.5-4 Policy Evidence And Timeout
 
 **Date:** 2026-06-09

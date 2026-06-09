@@ -1,16 +1,16 @@
 ## 1. OpenSpec 与边界确认
 
-- [ ] 1.1 创建 V2.6 Transactional Delivery OpenSpec，定义中文范围、非目标、状态、checkpoint、validation、accept、rollback 和 retry 边界。
-- [ ] 1.2 审查现有 checkpoint、diff、review、command evidence、recovery retry、run diagnostics 和 run engine finalizer。
-- [ ] 1.3 明确 V2.6 不新增 adapter、不重做 durable worker、不改 planner 核心、不做 PR/export/生产部署。
-- [ ] 1.4 验证 `git diff --check` 和 `openspec validate agenthub-v2-6-transactional-delivery --strict`。
+- [x] 1.1 创建 V2.6 Transactional Delivery OpenSpec，定义中文范围、非目标、状态、checkpoint、validation、accept、rollback 和 retry 边界。
+- [x] 1.2 审查现有 checkpoint、diff、review、command evidence、recovery retry、run diagnostics 和 run engine finalizer。
+- [x] 1.3 明确 V2.6 不新增 adapter、不重做 durable worker、不改 planner 核心、不做 PR/export/生产部署。
+- [x] 1.4 验证 `git diff --check` 和 `openspec validate agenthub-v2-6-transactional-delivery --strict`。
 
 ## 2. Delivery 合同与 Checkpoint Evidence
 
-- [ ] 2.1 新增 `apps/api/app/transactional_delivery.py`，定义 delivery state、delivery decision、artifact state 和 retry mode。
-- [ ] 2.2 复用 TaskRun metrics / checkpoint 信息生成 delivery checkpoint evidence。
-- [ ] 2.3 缺少 checkpoint 时 rollback 必须拒绝。
-- [ ] 2.4 增加 checkpoint / state 合同测试并验证。
+- [x] 2.1 新增 `apps/api/app/transactional_delivery.py`，定义 delivery state、delivery decision、artifact state 和 retry mode。
+- [x] 2.2 复用 TaskRun metrics / checkpoint 信息生成 delivery checkpoint evidence。
+- [x] 2.3 缺少 checkpoint 时 rollback 必须拒绝。
+- [x] 2.4 增加 checkpoint / state 合同测试并验证。
 - [ ] 2.5 提交：`feat: add transactional delivery contract`。
 
 ## 3. Validation 与 Review Gate

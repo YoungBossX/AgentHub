@@ -3,6 +3,17 @@
 This document captures stable project state that future Codex prompts can
 reference instead of repeating long context blocks.
 
+## V2.6 Transactional Delivery Status
+
+V2.6 started on 2026-06-09. The current slice adds a standalone transactional
+delivery contract with checkpoint evidence, pending validation, rollback
+preflight, and explicit retry mode decisions. It reads existing TaskRun
+`preRunCheckpoint` metrics and does not yet perform actual worktree rollback or
+rewire Run Engine finalization.
+
+The implementation remains a delivery/evidence layer. V2.1 Durable Run Engine,
+V2.3 queue/target locks, V2.5 Policy Engine, and V2.7 Diagnostics remain intact.
+
 ## V2.5 Policy Engine Status
 
 V2.5 started on 2026-06-09. The current slice adds a standalone Policy Engine
