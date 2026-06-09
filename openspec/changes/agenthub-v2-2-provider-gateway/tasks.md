@@ -7,11 +7,11 @@
 
 ## 2. Gateway 合同与数据模型
 
-- [ ] 2.1 新增 Provider Gateway 后端边界和类型定义，覆盖 provider id、resolution plan、health、capacity、circuit、error taxonomy 和 fallback evidence。
-- [ ] 2.2 保留 ClaudeCodeAdapter、CodexAdapter、ScriptedMockAdapter，不新增 adapter。
-- [ ] 2.3 添加单元测试覆盖 gateway result、redacted evidence、planner provider 不被纳入 coding gateway。
-- [ ] 2.4 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 2.5 单独提交：`feat: define coding provider gateway contract`。
+- [x] 2.1 新增 Provider Gateway 后端边界和类型定义，覆盖 provider id、resolution plan、health、capacity、circuit、error taxonomy 和 fallback evidence。
+- [x] 2.2 保留 ClaudeCodeAdapter、CodexAdapter、ScriptedMockAdapter，不新增 adapter。
+- [x] 2.3 添加单元测试覆盖 gateway result、redacted evidence、planner provider 不被纳入 coding gateway。
+- [x] 2.4 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 2.5 单独提交：`feat: define coding provider gateway contract`。
 
 ## 3. Provider Resolution 与 Registry
 
