@@ -1,5 +1,26 @@
 # AgentHub Change Log
 
+## V2.4-4 Profile Command Policy Coverage
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Added direct Project Command Policy coverage proving configured target/profile
+  commands are allowed while missing, mismatched, unknown, and unconfigured
+  generic repo commands are rejected.
+- Confirmed Generic Repo profiles do not open arbitrary shell commands and only
+  allow explicitly configured validation commands.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_project_command_policy.py tests/test_external_evidence.py -q` | Pass, 11 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | Pass |
+
 ## V2.4-3 ProjectProfile Target Registry
 
 **Date:** 2026-06-09

@@ -20,15 +20,15 @@
 - [x] 3.3 保持 allowedPaths、deniedPaths、allowedAgents 和 platform maintenance approval 逻辑不回退。
 - [x] 3.4 增加 external workspace / target registry 测试。
 - [x] 3.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
-- [ ] 3.6 提交：`feat: attach project profiles to targets`。
+- [x] 3.6 提交：`feat: attach project profiles to targets`。
 
 ## 4. Profile 驱动命令策略
 
-- [ ] 4.1 让 Project Command Policy 使用 target/profile 配置命令作为允许来源。
-- [ ] 4.2 对 Generic Repo 保持保守：未显式配置的命令必须拒绝，不能开放任意 shell。
-- [ ] 4.3 记录命令允许/拒绝原因，方便 Run Diagnostics 和 mission trace 展示。
-- [ ] 4.4 增加 command policy 测试，覆盖匹配、不匹配、缺失、generic 显式命令和未知命令类型。
-- [ ] 4.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
+- [x] 4.1 让 Project Command Policy 使用 target/profile 配置命令作为允许来源。
+- [x] 4.2 对 Generic Repo 保持保守：未显式配置的命令必须拒绝，不能开放任意 shell。
+- [x] 4.3 记录命令允许/拒绝原因，方便 Run Diagnostics 和 mission trace 展示。
+- [x] 4.4 增加 command policy 测试，覆盖匹配、不匹配、缺失、generic 显式命令和未知命令类型。
+- [x] 4.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
 - [ ] 4.6 提交：`feat: derive command policy from project profiles`。
 
 ## 5. Planner / Instruction 上下文
