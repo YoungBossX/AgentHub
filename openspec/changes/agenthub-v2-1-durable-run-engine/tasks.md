@@ -7,12 +7,12 @@
 
 ## 2. 执行服务边界抽取
 
-- [ ] 2.1 新增 `run_engine` / `run_supervisor` 模块骨架，将执行编排从 endpoint helper 中抽出。
-- [ ] 2.2 保留现有 BackgroundTasks 调用作为临时启动方式，先不改变外部行为。
-- [ ] 2.3 将 `agent_run_request_for`、adapter 执行、diff/review/preview/deploy 后处理划入清晰服务边界。
-- [ ] 2.4 添加回归测试证明手动 run、auto-start run、retry run 仍能进入同一执行服务。
-- [ ] 2.5 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 2.6 单独提交：`refactor: extract durable run execution boundary`。
+- [x] 2.1 新增 `run_engine` / `run_supervisor` 模块骨架，将执行编排从 endpoint helper 中抽出。
+- [x] 2.2 保留现有 BackgroundTasks 调用作为临时启动方式，先不改变外部行为。
+- [x] 2.3 将 `agent_run_request_for`、adapter 执行、diff/review/preview/deploy 后处理划入清晰服务边界。
+- [x] 2.4 添加回归测试证明手动 run、auto-start run、retry run 仍能进入同一执行服务。
+- [x] 2.5 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 2.6 单独提交：`refactor: extract durable run execution boundary`。
 
 ## 3. Worker Claim、Lease 与 Heartbeat
 

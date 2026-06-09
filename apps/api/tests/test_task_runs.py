@@ -3,13 +3,17 @@ import subprocess
 from collections.abc import Iterator
 from datetime import timedelta
 from pathlib import Path
+from typing import Optional
 
 import pytest
+import app.main as main_module
+import app.run_engine as run_engine_module
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
+from app.adapters import AdapterCapabilities, AdapterRun
 from app.context_pack import build_session_context_pack
 from app.external_workspaces import (
     ExternalWorkspaceRegistration,
@@ -2570,6 +2574,172 @@ def test_retry_failed_or_interrupted_run_creates_new_history_row(
         runs = db.exec(select(TaskRun).where(TaskRun.task_id == previous.task_id)).all()
         assert previous.state == "interrupted"
         assert len(runs) == 2
+
+
+def test_retry_failed_run_schedules_background_execution(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps(
+            {
+                "targetId": DEMO_FRONTEND_TARGET_ID,
+                "safeTarget": "apps/demo/src",
+                "files": ["apps/demo/src/App.tsx"],
+            },
+            separators=(",", ":"),
+        )
+        db.add(task)
+        db.commit()
+        original = create_task_run(db, task.id)
+        transition_task_run(
+            db,
+            original.id,
+            "failed",
+            error_code="CODEX_TEST_FAILURE",
+            error_message="Codex failed before retry.",
+        )
+        original_id = original.id
+
+    scheduled: list[tuple[str, str]] = []
+
+    def fake_schedule_task_run_execution(
+        background_tasks,
+        task_run_id: str,
+        adapter_type: str,
+    ) -> None:
+        scheduled.append((task_run_id, adapter_type))
+
+    monkeypatch.setattr(
+        main_module,
+        "schedule_task_run_execution",
+        fake_schedule_task_run_execution,
+    )
+
+    response = client.post(f"/task-runs/{original_id}/retry")
+
+    assert response.status_code == 201
+    retried = response.json()
+    assert retried["state"] == "queued"
+    assert scheduled == [(retried["id"], "codex")]
+
+
+def test_run_endpoints_use_shared_execution_scheduler(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scheduled: list[tuple[str, str]] = []
+
+    def fake_schedule_task_run_execution(
+        background_tasks,
+        task_run_id: str,
+        adapter_type: str,
+    ) -> None:
+        scheduled.append((task_run_id, adapter_type))
+
+    monkeypatch.setattr(
+        main_module,
+        "schedule_task_run_execution",
+        fake_schedule_task_run_execution,
+    )
+
+    response = client.post(f"/tasks/{task_id()}/runs")
+
+    assert response.status_code == 201
+    manual = response.json()
+    assert scheduled == [(manual["id"], "codex")]
+
+    with db_from_override() as db:
+        transition_task_run(
+            db,
+            manual["id"],
+            "failed",
+            error_code="CODEX_TEST_FAILURE",
+            error_message="Codex failed before retry.",
+        )
+
+    retry_response = client.post(f"/task-runs/{manual['id']}/retry")
+
+    assert retry_response.status_code == 201
+    retried = retry_response.json()
+    assert scheduled[-1] == (retried["id"], "codex")
+
+
+def test_execute_task_run_registers_with_supervisor(client: TestClient) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+
+        class CompletingAdapter:
+            def getCapabilities(self) -> AdapterCapabilities:
+                return AdapterCapabilities(
+                    supportsStreaming=True,
+                    supportsInterrupt=True,
+                    supportsApproval=False,
+                    supportsFileEdit=False,
+                    supportsShellCommand=False,
+                    supportsDiffArtifact=False,
+                    supportsPreviewArtifact=False,
+                    supportsNetwork=False,
+                )
+
+            async def createRun(self, request):
+                return AdapterRun(adapterRunId="adapter-run-test")
+
+            async def streamEvents(self, adapter_run_id):
+                yield {
+                    "type": "error",
+                    "payload": {
+                        "code": "TEST_ADAPTER_STOP",
+                        "message": "stop before artifact collection",
+                    },
+                }
+
+            async def interrupt(self, adapter_run_id):
+                return None
+
+            async def approve(self, adapter_run_id, approval):
+                return None
+
+            async def collectArtifacts(self, adapter_run_id):
+                return []
+
+            async def cleanup(self, adapter_run_id):
+                return None
+
+        class RecordingSupervisor:
+            def __init__(self) -> None:
+                self.registered: list[tuple[str, str]] = []
+                self.unregistered: list[str] = []
+
+            def register(
+                self,
+                *,
+                task_run_id: str,
+                adapter_type: str,
+                adapter_run_id: Optional[str] = None,
+            ) -> None:
+                self.registered.append((task_run_id, adapter_type))
+
+            def unregister(self, task_run_id: str) -> None:
+                self.unregistered.append(task_run_id)
+
+        supervisor = RecordingSupervisor()
+
+        import asyncio
+
+        asyncio.run(
+            run_engine_module.execute_task_run(
+                db,
+                run,
+                adapter_type="scripted_mock",
+                adapter=CompletingAdapter(),
+                supervisor=supervisor,
+            )
+        )
+
+        assert supervisor.registered == [(run.id, "scripted_mock")]
+        assert supervisor.unregistered == [run.id]
 
 
 def test_retry_blocks_external_target_dirty_worktree_outside_checkpoint(
