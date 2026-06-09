@@ -304,6 +304,44 @@ def refresh_task_run_heartbeat(
     return task_run
 
 
+def claim_task_run_for_worker(
+    db: DbSession,
+    task_run_id: str,
+    *,
+    worker_id: str,
+    lease_seconds: int = DEFAULT_LEASE_SECONDS,
+) -> TaskRun:
+    task_run = _task_run_or_raise(db, task_run_id)
+    if task_run.state != "queued":
+        raise TaskRunLifecycleError("Only queued TaskRuns can be claimed by a worker.")
+
+    now = utc_now()
+    task_run.runner_id = worker_id
+    task_run.last_heartbeat_at = now
+    task_run.lease_expires_at = _lease_expires_at(now, lease_seconds)
+    task_run.updated_at = now
+    db.add(task_run)
+    db.commit()
+    db.refresh(task_run)
+    append_task_run_event(
+        db,
+        task_run_id=task_run.id,
+        event_type="run.claimed",
+        payload_json=json.dumps(
+            {
+                "workerId": worker_id,
+                "runnerId": task_run.runner_id,
+                "claimedAt": now.isoformat(),
+                "leaseExpiresAt": task_run.lease_expires_at.isoformat()
+                if task_run.lease_expires_at is not None
+                else None,
+            },
+            separators=(",", ":"),
+        ),
+    )
+    return task_run
+
+
 def stale_task_runs(
     db: DbSession,
     *,

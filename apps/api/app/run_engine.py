@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 from fastapi import BackgroundTasks
 from sqlmodel import Session as DbSession
@@ -25,14 +26,17 @@ from app.scripted_mock import ScriptedMockAdapter
 from app.task_runs import (
     TaskRunLifecycleError,
     adapter_type_for_run,
+    claim_task_run_for_worker,
     create_task_run,
     list_task_runs,
     metrics_for_run,
+    refresh_task_run_heartbeat,
     transition_task_run,
 )
 
 _preview_service = PreviewService()
 _deploy_service = DeployService()
+DEFAULT_RUN_WORKER_ID_PREFIX = "worker"
 
 
 def get_preview_service() -> PreviewService:
@@ -317,33 +321,59 @@ async def _background_execute_task_run(
 ) -> None:
     from app.db import engine as db_engine
 
+    with DbSession(db_engine) as db:
+        await execute_task_run_background(db, task_run_id, adapter_type)
+
+
+async def execute_task_run_background(
+    db: DbSession,
+    task_run_id: str,
+    adapter_type: str,
+    *,
+    worker_id: Optional[str] = None,
+) -> None:
+    worker_id = worker_id or _new_worker_id()
     adapter = adapter_for_type(
         adapter_type,
         codex_adapter=CodexAdapter(),
         claude_code_adapter=ClaudeCodeAdapter(),
         scripted_mock_adapter=ScriptedMockAdapter(),
     )
-    with DbSession(db_engine) as db:
-        task_run = db.get(TaskRun, task_run_id)
-        if task_run is None:
-            return
-        try:
-            await execute_task_run(
+    task_run = db.get(TaskRun, task_run_id)
+    if task_run is None:
+        return
+    try:
+        if task_run.state == "queued":
+            task_run = claim_task_run_for_worker(
                 db,
-                task_run,
-                adapter_type=adapter_type,
-                adapter=adapter,
+                task_run.id,
+                worker_id=worker_id,
             )
-        except Exception:
-            db.refresh(task_run)
-            if task_run.state not in {"completed", "failed", "interrupted"}:
-                try:
-                    transition_task_run(
-                        db,
-                        task_run_id,
-                        "failed",
-                        error_code="ADAPTER_EXECUTION_ERROR",
-                        error_message="Adapter execution failed unexpectedly.",
-                    )
-                except Exception:
-                    pass
+        refresh_task_run_heartbeat(
+            db,
+            task_run.id,
+            runner_id=task_run.runner_id,
+        )
+        await execute_task_run(
+            db,
+            task_run,
+            adapter_type=adapter_type,
+            adapter=adapter,
+        )
+    except Exception:
+        db.refresh(task_run)
+        if task_run.state not in {"completed", "failed", "interrupted"}:
+            try:
+                transition_task_run(
+                    db,
+                    task_run_id,
+                    "failed",
+                    error_code="ADAPTER_EXECUTION_ERROR",
+                    error_message="Adapter execution failed unexpectedly.",
+                )
+            except Exception:
+                pass
+
+
+def _new_worker_id() -> str:
+    return f"{DEFAULT_RUN_WORKER_ID_PREFIX}:{uuid4()}"

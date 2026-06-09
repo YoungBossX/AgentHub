@@ -16,12 +16,12 @@
 
 ## 3. Worker Claim、Lease 与 Heartbeat
 
-- [ ] 3.1 实现 SQLite 兼容的 TaskRun claim helper，确保同一 queued run 只能被一个 worker 认领。
-- [ ] 3.2 实现 heartbeat loop，执行中周期刷新 `last_heartbeat_at` 和 `lease_expires_at`。
-- [ ] 3.3 记录 `run.claimed`、`run.heartbeat`、worker id、lease 过期时间等事件或 metrics。
-- [ ] 3.4 添加测试覆盖：单 worker claim、双 worker 竞争、heartbeat 延长 lease、terminal run 不再 heartbeat。
-- [ ] 3.5 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
-- [ ] 3.6 单独提交：`feat: add task run worker lease heartbeat`。
+- [x] 3.1 实现 SQLite 兼容的 TaskRun claim helper，确保同一 queued run 只能被一个 worker 认领。
+- [x] 3.2 实现 heartbeat loop，执行中周期刷新 `last_heartbeat_at` 和 `lease_expires_at`。
+- [x] 3.3 记录 `run.claimed`、`run.heartbeat`、worker id、lease 过期时间等事件或 metrics。
+- [x] 3.4 添加测试覆盖：单 worker claim、双 worker 竞争、heartbeat 延长 lease、terminal run 不再 heartbeat。
+- [x] 3.5 验证相关 API 测试、`pnpm check`、`pnpm demo:api:test`、`git diff --check`。
+- [x] 3.6 单独提交：`feat: add task run worker lease heartbeat`。
 
 ## 4. Durable Worker Loop 与 BackgroundTasks 替换
 

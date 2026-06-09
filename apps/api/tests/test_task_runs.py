@@ -48,6 +48,7 @@ from app.models import (
 from app.models import utc_now
 from app.task_runs import (
     TaskRunLifecycleError,
+    claim_task_run_for_worker,
     create_task_run,
     mark_stale_task_runs,
     refresh_task_run_heartbeat,
@@ -253,6 +254,53 @@ def test_refresh_task_run_heartbeat_extends_active_lease(client: TestClient) -> 
 
         assert payload["runnerId"] == task_run.runner_id
         assert payload["leaseExpiresAt"] is not None
+
+
+def test_claim_task_run_for_worker_records_claim_and_lease(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task_run = create_task_run(db, task_id())
+        original_runner_id = task_run.runner_id
+
+        claimed = claim_task_run_for_worker(
+            db,
+            task_run.id,
+            worker_id="worker:test",
+            lease_seconds=120,
+        )
+
+        assert claimed.state == "queued"
+        assert claimed.runner_id == "worker:test"
+        assert claimed.runner_id != original_runner_id
+        assert claimed.last_heartbeat_at is not None
+        assert claimed.lease_expires_at > claimed.last_heartbeat_at
+
+        event = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .where(TaskRunEvent.event_type == "run.claimed")
+        ).one()
+        payload = json.loads(event.payload_json)
+
+        assert payload["workerId"] == "worker:test"
+        assert payload["runnerId"] == "worker:test"
+        assert payload["leaseExpiresAt"] is not None
+
+
+def test_claim_task_run_for_worker_rejects_terminal_run(
+    client: TestClient,
+) -> None:
+    with db_from_override() as db:
+        task_run = create_task_run(db, task_id())
+        transition_task_run(db, task_run.id, "completed")
+
+        with pytest.raises(TaskRunLifecycleError, match="Only queued"):
+            claim_task_run_for_worker(
+                db,
+                task_run.id,
+                worker_id="worker:test",
+            )
 
 
 def test_mark_stale_task_runs_marks_expired_active_run_honestly(
@@ -2740,6 +2788,79 @@ def test_execute_task_run_registers_with_supervisor(client: TestClient) -> None:
 
         assert supervisor.registered == [(run.id, "scripted_mock")]
         assert supervisor.unregistered == [run.id]
+
+
+def test_background_execution_claims_and_refreshes_lease(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+        run_id = run.id
+
+    class FailingBeforeStreamAdapter:
+        def getCapabilities(self) -> AdapterCapabilities:
+            return AdapterCapabilities(
+                supportsStreaming=True,
+                supportsInterrupt=True,
+                supportsApproval=False,
+                supportsFileEdit=False,
+                supportsShellCommand=False,
+                supportsDiffArtifact=False,
+                supportsPreviewArtifact=False,
+                supportsNetwork=False,
+            )
+
+        async def createRun(self, request):
+            raise RuntimeError("stop after claim")
+
+        async def streamEvents(self, adapter_run_id):
+            if False:
+                yield {}
+
+        async def interrupt(self, adapter_run_id):
+            return None
+
+        async def approve(self, adapter_run_id, approval):
+            return None
+
+        async def collectArtifacts(self, adapter_run_id):
+            return []
+
+        async def cleanup(self, adapter_run_id):
+            return None
+
+    monkeypatch.setattr(
+        run_engine_module,
+        "CodexAdapter",
+        lambda: FailingBeforeStreamAdapter(),
+    )
+
+    import asyncio
+
+    with db_from_override() as db:
+        asyncio.run(
+            run_engine_module.execute_task_run_background(
+                db,
+                run_id,
+                "codex",
+                worker_id="worker:test",
+            )
+        )
+        stored = db.get(TaskRun, run_id)
+        events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == run_id)
+            .order_by(TaskRunEvent.sequence)
+        ).all()
+        event_types = [event.event_type for event in events]
+
+        assert stored.state == "failed"
+        assert stored.runner_id == "worker:test"
+        assert stored.last_heartbeat_at is not None
+        assert stored.lease_expires_at > stored.last_heartbeat_at
+        assert "run.claimed" in event_types
+        assert "task.heartbeat" in event_types
 
 
 def test_retry_blocks_external_target_dirty_worktree_outside_checkpoint(
