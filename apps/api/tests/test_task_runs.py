@@ -54,6 +54,8 @@ from app.task_runs import (
     refresh_task_run_heartbeat,
     transition_task_run,
 )
+from app.session_queue import entry_for_task_run
+from app.target_locks import acquire_target_lock
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
@@ -148,7 +150,11 @@ def test_create_task_run_persists_queued_state_before_event(client: TestClient) 
 
     with db_from_override() as db:
         stored = db.get(TaskRun, run["id"])
-        event = db.exec(select(TaskRunEvent).where(TaskRunEvent.task_run_id == run["id"])).one()
+        event = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == run["id"])
+            .where(TaskRunEvent.event_type == "task.state")
+        ).one()
         task = db.get(Task, stored.task_id)
 
         assert stored.state == "queued"
@@ -460,7 +466,9 @@ def test_default_code_adapter_env_selects_claude_code_for_frontend_task(
     with db_from_override() as db:
         task_run = create_task_run(db, task_id())
         event = db.exec(
-            select(TaskRunEvent).where(TaskRunEvent.task_run_id == task_run.id)
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .where(TaskRunEvent.event_type == "task.state")
         ).one()
 
         assert json.loads(task_run.metrics_json)["adapterType"] == "claude_code"
@@ -3135,6 +3143,116 @@ def test_background_execution_claims_and_refreshes_lease(
         assert stored.lease_expires_at > stored.last_heartbeat_at
         assert "run.claimed" in event_types
         assert "task.heartbeat" in event_types
+
+
+def test_background_execution_waits_for_target_lock_without_starting_adapter(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        current_session = db.get(Session, task.session_id)
+        other_session = Session(
+            workspace_id=current_session.workspace_id,
+            title="Other target lock session",
+            bound_branch="main",
+            worktree_path=".worktrees/other-target-lock-session",
+        )
+        second = Task(
+            session_id=other_session.id,
+            title="Second login page change",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=task.assigned_agent_id,
+            plan_json=json.dumps(
+                {
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "safeTarget": "apps/demo/src",
+                    "files": ["apps/demo/src/App.tsx"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(other_session)
+        db.add(second)
+        db.commit()
+        db.refresh(second)
+        first_run = claim_task_run_for_worker(
+            db,
+            create_task_run(db, task.id).id,
+            worker_id="worker:first",
+        )
+        first_run_id = first_run.id
+        acquire_target_lock(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            session_id=task.session_id,
+            task_run_id=first_run.id,
+            worker_id="worker:first",
+            lease_expires_at=first_run.lease_expires_at,
+        )
+        second_run = create_task_run(db, second.id)
+        second_run_id = second_run.id
+
+    calls: list[str] = []
+
+    class UnexpectedAdapter:
+        def getCapabilities(self) -> AdapterCapabilities:
+            return AdapterCapabilities(
+                supportsStreaming=True,
+                supportsInterrupt=True,
+                supportsApproval=False,
+                supportsFileEdit=False,
+                supportsShellCommand=False,
+                supportsDiffArtifact=False,
+                supportsPreviewArtifact=False,
+                supportsNetwork=False,
+            )
+
+        async def createRun(self, request):
+            calls.append("createRun")
+            return AdapterRun(id="unexpected")
+
+        async def streamEvents(self, adapter_run_id):
+            if False:
+                yield {}
+
+        async def interrupt(self, adapter_run_id):
+            return None
+
+        async def approve(self, adapter_run_id, approval):
+            return None
+
+        async def collectArtifacts(self, adapter_run_id):
+            return []
+
+        async def cleanup(self, adapter_run_id):
+            return None
+
+    monkeypatch.setattr(run_engine_module, "CodexAdapter", lambda: UnexpectedAdapter())
+
+    import asyncio
+
+    with db_from_override() as db:
+        executed = asyncio.run(
+            run_engine_module.execute_task_run_background(
+                db,
+                second_run_id,
+                "codex",
+                worker_id="worker:second",
+            )
+        )
+        stored = db.get(TaskRun, second_run_id)
+        stored_task = db.get(Task, stored.task_id)
+        queue_entry = entry_for_task_run(db, second_run_id)
+        scheduler = json.loads(stored_task.plan_json)["scheduler"]
+
+        assert executed is False
+        assert calls == []
+        assert stored.state == "queued"
+        assert queue_entry.state == "waiting_lock"
+        assert scheduler["state"] == "waiting_target_lock"
+        assert scheduler["lockHolderTaskRunIds"] == [first_run_id]
 
 
 def test_run_worker_executes_next_queued_task_run(

@@ -27,12 +27,15 @@ from app.scheduler import (
     evaluate_and_apply_dependency_readiness,
     evaluate_dependency_readiness,
 )
+from app.session_queue import entry_for_task_run
 from app.task_runs import (
     TaskRunLifecycleError,
+    claim_task_run_for_worker,
     create_task_run,
     retry_with_scripted_mock,
     transition_task_run,
 )
+from app.target_locks import acquire_target_lock
 from app.provider_assignments import PROVIDER_ASSIGNMENT_MATRIX_ENV
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
@@ -160,7 +163,7 @@ def test_same_frontend_target_write_task_waits_for_active_lock() -> None:
         assert scheduler["lockHolderTaskRunIds"] == [first_run.id]
 
 
-def test_manual_start_fails_honestly_when_same_backend_target_lock_is_active() -> None:
+def test_manual_start_queues_when_same_backend_target_lock_is_active() -> None:
     with scheduler_db() as db:
         _, _, first, second = seed_same_target_write_tasks(
             db,
@@ -170,15 +173,17 @@ def test_manual_start_fails_honestly_when_same_backend_target_lock_is_active() -
         )
         first_run = create_task_run(db, first.id)
 
-        with pytest.raises(TaskRunLifecycleError, match=DEMO_BACKEND_TARGET_ID):
-            create_task_run(db, second.id)
+        second_run = create_task_run(db, second.id)
 
         stored = db.get(Task, second.id)
         scheduler = json.loads(stored.plan_json)["scheduler"]
+        queue_entry = entry_for_task_run(db, second_run.id)
 
-        assert stored.status == "waiting_target_lock"
+        assert first_run.state == "queued"
+        assert second_run.state == "queued"
+        assert stored.status == "running"
+        assert queue_entry.state == "waiting_lock"
         assert scheduler["state"] == SCHEDULER_WAITING_TARGET_LOCK
-        assert scheduler["targetId"] == DEMO_BACKEND_TARGET_ID
         assert scheduler["lockHolderTaskRunIds"] == [first_run.id]
 
 
@@ -241,7 +246,22 @@ def test_stale_target_lock_cleanup_releases_only_stale_owner() -> None:
             safe_target="apps/demo/src",
         )
         first_run = create_task_run(db, first.id)
+        first_run = claim_task_run_for_worker(
+            db,
+            first_run.id,
+            worker_id="worker:stale-lock-test",
+        )
+        lock_result = acquire_target_lock(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            session_id=session.id,
+            task_run_id=first_run.id,
+            worker_id="worker:stale-lock-test",
+            lease_expires_at=first_run.lease_expires_at,
+        )
         first_run.lease_expires_at = utc_now() - timedelta(minutes=1)
+        lock_result.lock.lease_expires_at = first_run.lease_expires_at
+        db.add(lock_result.lock)
         db.add(first_run)
         db.commit()
         auto_start_safe_tasks(db, [second], BackgroundTasks())
@@ -254,7 +274,7 @@ def test_stale_target_lock_cleanup_releases_only_stale_owner() -> None:
         release_event = db.exec(
             select(TaskRunEvent).where(
                 TaskRunEvent.task_run_id == first_run.id,
-                TaskRunEvent.event_type == "target_lock.released",
+                TaskRunEvent.event_type == "target_lock.stale_released",
             )
         ).one()
         payload = json.loads(release_event.payload_json)
@@ -266,8 +286,8 @@ def test_stale_target_lock_cleanup_releases_only_stale_owner() -> None:
         assert scheduler["state"] == SCHEDULER_READY
         assert scheduler["lockHolderTaskRunIds"] == []
         assert payload["targetId"] == DEMO_FRONTEND_TARGET_ID
-        assert payload["ownerTaskRunId"] == first_run.id
-        assert payload["releaseReason"] == "stale_owner"
+        assert payload["holderTaskRunId"] == first_run.id
+        assert payload["releaseReason"] == "stale_lease_expired"
 
 
 def test_read_only_review_task_does_not_acquire_target_write_lock() -> None:
@@ -343,7 +363,7 @@ def test_ordinary_backend_task_cannot_acquire_platform_write_lock() -> None:
         assert scheduler["targetId"] == AGENTHUB_PLATFORM_TARGET_ID
 
 
-def test_same_external_target_write_task_waits_for_active_lock(tmp_path) -> None:
+def test_same_external_target_write_task_queues_for_active_lock(tmp_path) -> None:
     with scheduler_db() as db:
         workspace, session, _, _ = seed_same_target_write_tasks(
             db,
@@ -394,14 +414,16 @@ def test_same_external_target_write_task_waits_for_active_lock(tmp_path) -> None
         db.refresh(second)
         first_run = create_task_run(db, first.id)
 
-        with pytest.raises(TaskRunLifecycleError, match="external-vite-app"):
-            create_task_run(db, second.id)
+        second_run = create_task_run(db, second.id)
 
         stored = db.get(Task, second.id)
         scheduler = json.loads(stored.plan_json)["scheduler"]
+        queue_entry = entry_for_task_run(db, second_run.id)
 
         assert first_run.state == "queued"
-        assert stored.status == "waiting_target_lock"
+        assert second_run.state == "queued"
+        assert stored.status == "running"
+        assert queue_entry.state == "waiting_lock"
         assert scheduler["state"] == SCHEDULER_WAITING_TARGET_LOCK
         assert scheduler["targetId"] == "external-vite-app"
         assert scheduler["lockHolderTaskRunIds"] == [first_run.id]
@@ -803,7 +825,7 @@ def test_mixed_provider_dependency_waits_then_frontend_uses_claude_code(
         assert scheduler["targetId"] == DEMO_FRONTEND_TARGET_ID
 
 
-def test_target_lock_is_provider_independent_for_same_frontend_target() -> None:
+def test_target_lock_queue_is_provider_independent_for_same_frontend_target() -> None:
     with scheduler_db() as db:
         _, _, first, second = seed_same_target_write_tasks(
             db,
@@ -813,15 +835,17 @@ def test_target_lock_is_provider_independent_for_same_frontend_target() -> None:
         )
         first_run = create_task_run(db, first.id, adapter_type="codex")
 
-        with pytest.raises(TaskRunLifecycleError, match=DEMO_FRONTEND_TARGET_ID):
-            create_task_run(db, second.id, adapter_type="claude_code")
+        second_run = create_task_run(db, second.id, adapter_type="claude_code")
 
         first_metrics = json.loads(first_run.metrics_json)
         stored_second = db.get(Task, second.id)
         scheduler = json.loads(stored_second.plan_json)["scheduler"]
+        queue_entry = entry_for_task_run(db, second_run.id)
 
         assert first_metrics["providerAssignment"]["adapterType"] == "codex"
-        assert stored_second.status == "waiting_target_lock"
+        assert second_run.state == "queued"
+        assert stored_second.status == "running"
+        assert queue_entry.state == "waiting_lock"
         assert scheduler["state"] == SCHEDULER_WAITING_TARGET_LOCK
         assert scheduler["targetId"] == DEMO_FRONTEND_TARGET_ID
         assert scheduler["lockHolderTaskRunIds"] == [first_run.id]

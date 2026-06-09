@@ -51,7 +51,7 @@ def build_session_mission_trace(
         memorySnapshot=memory_snapshot_metadata(snapshot) or None,
         tasks=[_task_trace(task) for task in tasks],
         taskGraphReadiness=_task_graph_readiness(tasks),
-        taskRuns=[_task_run_trace(task_run) for task_run in task_runs],
+        taskRuns=[_task_run_trace(db, task_run) for task_run in task_runs],
         events=[_event_trace(event) for event in events],
         artifacts=[_artifact_trace(artifact) for artifact in artifacts],
         blockers=blockers,
@@ -109,7 +109,11 @@ def _task_trace(task: Task) -> dict[str, Any]:
     }
 
 
-def _task_run_trace(task_run: TaskRun) -> dict[str, Any]:
+def _task_run_trace(db: DbSession, task_run: TaskRun) -> dict[str, Any]:
+    from app.preview_deploy_jobs import job_diagnostics_for_task_run
+    from app.session_queue import queue_diagnostics_for_task_run
+    from app.target_locks import lock_diagnostics_for_task_run
+
     metrics = _json_dict(task_run.metrics_json)
     return {
         "id": task_run.id,
@@ -120,6 +124,9 @@ def _task_run_trace(task_run: TaskRun) -> dict[str, Any]:
         "providerAssignment": metrics.get("providerAssignment"),
         "runtimeConfigResolution": metrics.get("runtimeConfigResolution"),
         "memorySnapshot": metrics.get("memorySnapshot"),
+        "sessionQueue": queue_diagnostics_for_task_run(db, task_run.id),
+        "targetLock": lock_diagnostics_for_task_run(db, task_run.id),
+        "previewDeployJobs": job_diagnostics_for_task_run(db, task_run.id),
         "durableRun": {
             "runnerId": task_run.runner_id,
             "adapterRunId": task_run.adapter_run_id,

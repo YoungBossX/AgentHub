@@ -199,6 +199,12 @@ def evaluate_scheduler_readiness(db: DbSession, task: Task) -> SchedulerDecision
     dependency_decision = evaluate_dependency_readiness(db, task)
     if not dependency_decision.runnable:
         return dependency_decision
+    queue_decision = _evaluate_persisted_queue_readiness(db, task)
+    if queue_decision is not None and not queue_decision.runnable:
+        return queue_decision
+    pending_queue_decision = _evaluate_pending_write_queue_readiness(db, task)
+    if pending_queue_decision is not None:
+        return pending_queue_decision
     target_lock_decision = evaluate_target_lock_readiness(db, task)
     if not target_lock_decision.runnable:
         return target_lock_decision
@@ -491,50 +497,28 @@ def cleanup_stale_target_locks(
     *,
     session_id: Optional[str] = None,
 ) -> list[dict[str, Any]]:
-    from app.task_runs import mark_stale_task_runs
+    from app.target_locks import recover_stale_target_locks
 
-    stale_runs = mark_stale_task_runs(db, reason="target_lock_owner_stale")
+    recovered_locks = recover_stale_target_locks(db)
     released: list[dict[str, Any]] = []
-    for task_run in stale_runs:
+    for lock in recovered_locks:
+        if lock.task_run_id is None:
+            continue
+        task_run = db.get(TaskRun, lock.task_run_id)
+        if task_run is None:
+            continue
         task = db.get(Task, task_run.task_id)
         if task is None:
             continue
         if session_id is not None and task.session_id != session_id:
             continue
-        if not write_lock_required_for_task(task):
-            continue
-        target_id = target_id_for_task(task, db)
-        if target_id is None:
-            continue
-
-        released_at = utc_now()
-        payload = {
-            "targetId": target_id,
-            "ownerTaskRunId": task_run.id,
-            "ownerTaskId": task.id,
-            "sessionId": task.session_id,
-            "lockMode": "write",
-            "acquiredAt": task_run.created_at.isoformat(),
-            "leaseExpiresAt": task_run.lease_expires_at.isoformat()
-            if task_run.lease_expires_at is not None
-            else None,
-            "releasedAt": released_at.isoformat(),
-            "releaseReason": "stale_owner",
-            "ownerState": task_run.state,
-        }
-        append_task_run_event(
-            db,
-            task_run_id=task_run.id,
-            event_type="target_lock.released",
-            payload_json=json.dumps(payload, separators=(",", ":")),
-        )
         released.append(
             {
                 "taskRunId": task_run.id,
                 "taskId": task.id,
                 "sessionId": task.session_id,
-                "targetId": target_id,
-                "releaseReason": "stale_owner",
+                "targetId": lock.target_id,
+                "releaseReason": lock.release_reason or "stale_owner",
             }
         )
 
@@ -585,17 +569,76 @@ def active_write_lock_holder_run_ids(
     task: Task,
     target_id: str,
 ) -> list[str]:
-    runs = db.exec(select(TaskRun).where(TaskRun.state.in_(LOCK_ACTIVE_RUN_STATES))).all()
-    holders: list[str] = []
-    for run in runs:
-        run_task = db.get(Task, run.task_id)
-        if run_task is None or run_task.session_id != task.session_id:
-            continue
-        if not write_lock_required_for_task(run_task):
-            continue
-        if target_id_for_task(run_task, db) == target_id:
-            holders.append(run.id)
-    return holders
+    from app.target_locks import held_lock_for_target
+
+    lock = held_lock_for_target(db, target_id)
+    if lock is not None and lock.task_run_id is not None:
+        return [lock.task_run_id]
+    return []
+
+
+def _evaluate_persisted_queue_readiness(
+    db: DbSession,
+    task: Task,
+) -> Optional[SchedulerDecision]:
+    from app.session_queue import entry_for_task_run, queue_gate_for_task_run
+
+    latest_run = db.exec(
+        select(TaskRun)
+        .where(TaskRun.task_id == task.id)
+        .order_by(TaskRun.created_at.desc(), TaskRun.id.desc())
+    ).first()
+    if latest_run is None or entry_for_task_run(db, latest_run.id) is None:
+        return None
+    gate = queue_gate_for_task_run(db, latest_run.id)
+    if gate.runnable:
+        return None
+    return SchedulerDecision(
+        state=SCHEDULER_WAITING_TARGET_LOCK,
+        runnable=False,
+        reason=gate.reason,
+        dependency_ids=dependency_ids_for_task(task),
+        blocking_dependency_ids=[],
+        target_id=target_id_for_task(task, db),
+        write_lock_required=write_lock_required_for_task(task),
+        lock_holder_task_run_ids=gate.blocking_task_run_ids,
+    )
+
+
+def _evaluate_pending_write_queue_readiness(
+    db: DbSession,
+    task: Task,
+) -> Optional[SchedulerDecision]:
+    if not write_lock_required_for_task(task):
+        return None
+    from app.models import SessionQueueEntry
+
+    latest_run = db.exec(
+        select(TaskRun)
+        .where(TaskRun.task_id == task.id)
+        .order_by(TaskRun.created_at.desc(), TaskRun.id.desc())
+    ).first()
+    blockers = db.exec(
+        select(SessionQueueEntry)
+        .where(SessionQueueEntry.session_id == task.session_id)
+        .where(SessionQueueEntry.access_mode == "write")
+        .where(SessionQueueEntry.state.notin_({"completed", "failed", "interrupted", "cancelled"}))
+        .order_by(SessionQueueEntry.position, SessionQueueEntry.id)
+    ).all()
+    if latest_run is not None:
+        blockers = [entry for entry in blockers if entry.task_run_id != latest_run.id]
+    if not blockers:
+        return None
+    return SchedulerDecision(
+        state=SCHEDULER_WAITING_TARGET_LOCK,
+        runnable=False,
+        reason="Waiting for earlier session write queue entry.",
+        dependency_ids=dependency_ids_for_task(task),
+        blocking_dependency_ids=[],
+        target_id=target_id_for_task(task, db),
+        write_lock_required=True,
+        lock_holder_task_run_ids=[entry.task_run_id for entry in blockers],
+    )
 
 
 def _contract_drift_conflict(task: Task) -> Optional[dict[str, Any]]:

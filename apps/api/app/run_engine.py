@@ -23,8 +23,15 @@ from app.previews import PreviewError, PreviewService
 from app.repositories import list_session_tasks
 from app.reviews import create_scripted_review_for_task_run, list_task_run_reviews
 from app.run_supervisor import RunSupervisor, default_run_supervisor
-from app.scheduler import evaluate_and_apply_scheduler_readiness
+from app.scheduler import SCHEDULER_WAITING_TARGET_LOCK, evaluate_and_apply_scheduler_readiness
+from app.scheduler import target_id_for_task, write_lock_required_for_task
+from app.session_queue import (
+    mark_task_run_running,
+    mark_task_run_waiting_lock,
+    queue_gate_for_task_run,
+)
 from app.scripted_mock import ScriptedMockAdapter
+from app.target_locks import acquire_target_lock
 from app.task_runs import (
     TaskRunLifecycleError,
     adapter_type_for_run,
@@ -61,34 +68,45 @@ class RunWorker:
         self.worker_id = worker_id or _new_worker_id()
 
     async def run_once(self, db: DbSession) -> Optional[TaskRun]:
-        task_run = next_queued_task_run(db)
-        if task_run is None:
-            return None
-        adapter_type = adapter_type_for_run(db, task_run)
-        await execute_task_run_background(
-            db,
-            task_run.id,
-            adapter_type,
-            worker_id=self.worker_id,
-        )
-        return db.get(TaskRun, task_run.id)
+        for task_run in queued_task_runs(db):
+            adapter_type = adapter_type_for_run(db, task_run)
+            executed = await execute_task_run_background(
+                db,
+                task_run.id,
+                adapter_type,
+                worker_id=self.worker_id,
+            )
+            if executed:
+                return db.get(TaskRun, task_run.id)
+        return None
 
     def recover_stale_runs(self, db: DbSession, *, reason: str = "worker_startup") -> dict[str, Any]:
+        from app.session_queue import recover_queue_entries
+        from app.target_locks import recover_stale_target_locks
+
+        recovered_entries = recover_queue_entries(db)
+        recovered_locks = recover_stale_target_locks(db)
         marked = mark_stale_task_runs(db, reason=reason)
         return {
             "workerId": self.worker_id,
             "reason": reason,
             "staleRunIds": [run.id for run in marked],
             "staleRunCount": len(marked),
+            "recoveredQueueEntryIds": [entry.id for entry in recovered_entries],
+            "recoveredLockKeys": [lock.lock_key for lock in recovered_locks],
         }
 
 
 def next_queued_task_run(db: DbSession) -> Optional[TaskRun]:
+    return queued_task_runs(db)[0] if queued_task_runs(db) else None
+
+
+def queued_task_runs(db: DbSession) -> list[TaskRun]:
     return db.exec(
         select(TaskRun)
         .where(TaskRun.state == "queued")
         .order_by(TaskRun.created_at, TaskRun.id)
-    ).first()
+    ).all()
 
 
 def agent_run_request_for(
@@ -362,14 +380,26 @@ def _maybe_auto_preview_and_mock_deploy(db: DbSession, task_run: TaskRun) -> Non
     demo_root = Path(task_run.worktree_path) / "apps/demo"
     if not demo_root.exists():
         return
-    try:
-        preview = _preview_service.start_task_run_preview(db, task_run.id)
-        if preview.health_status != "healthy":
-            return
-        _deploy_service.create_mock_deployment(db, preview.id)
-        refresh_session_ledger_for_task_run(db, task_run.id)
-    except (PreviewError, DeployError):
+    from app.preview_deploy_jobs import (
+        enqueue_deploy_job,
+        enqueue_preview_job,
+        run_deploy_job,
+        run_preview_job,
+    )
+
+    preview_job = enqueue_preview_job(db, task_run)
+    if preview_job is None:
         return
+    preview_job = run_preview_job(db, preview_job, preview_service=_preview_service)
+    if preview_job.state != "completed":
+        return
+    evidence = json.loads(preview_job.evidence_json)
+    preview_id = evidence.get("previewId")
+    if not isinstance(preview_id, str):
+        return
+    deploy_job = enqueue_deploy_job(db, task_run.id, preview_id)
+    run_deploy_job(db, deploy_job, deploy_service=_deploy_service)
+    refresh_session_ledger_for_task_run(db, task_run.id)
 
 
 def _is_auto_pipeline_task(task: Task) -> bool:
@@ -408,7 +438,7 @@ async def execute_task_run_background(
     adapter_type: str,
     *,
     worker_id: Optional[str] = None,
-) -> None:
+) -> bool:
     worker_id = worker_id or _new_worker_id()
     adapter = adapter_for_type(
         adapter_type,
@@ -418,7 +448,7 @@ async def execute_task_run_background(
     )
     task_run = db.get(TaskRun, task_run_id)
     if task_run is None:
-        return
+        return False
     try:
         if task_run.state == "queued":
             task_run = claim_task_run_for_worker(
@@ -426,6 +456,8 @@ async def execute_task_run_background(
                 task_run.id,
                 worker_id=worker_id,
             )
+            if not _prepare_claimed_task_run_for_adapter(db, task_run, worker_id):
+                return False
         refresh_task_run_heartbeat(
             db,
             task_run.id,
@@ -437,6 +469,7 @@ async def execute_task_run_background(
             adapter_type=adapter_type,
             adapter=adapter,
         )
+        return True
     except Exception:
         db.refresh(task_run)
         if task_run.state not in {"completed", "failed", "interrupted"}:
@@ -450,6 +483,50 @@ async def execute_task_run_background(
                 )
             except Exception:
                 pass
+        return True
+
+
+def _prepare_claimed_task_run_for_adapter(
+    db: DbSession,
+    task_run: TaskRun,
+    worker_id: str,
+) -> bool:
+    task = db.get(Task, task_run.task_id)
+    if task is None:
+        return False
+    decision = evaluate_and_apply_scheduler_readiness(db, task)
+    if not decision.runnable:
+        if decision.state == SCHEDULER_WAITING_TARGET_LOCK:
+            mark_task_run_waiting_lock(db, task_run.id, decision.reason)
+        return False
+    queue_decision = queue_gate_for_task_run(db, task_run.id)
+    if not queue_decision.runnable:
+        return False
+    if not write_lock_required_for_task(task):
+        mark_task_run_running(db, task_run.id, queue_decision.reason)
+        return True
+    target_id = target_id_for_task(task, db)
+    if target_id is None:
+        mark_task_run_running(
+            db,
+            task_run.id,
+            "Legacy write TaskRun has no target id; preserving existing demo path.",
+        )
+        return True
+    result = acquire_target_lock(
+        db,
+        target_id=target_id,
+        session_id=task.session_id,
+        task_run_id=task_run.id,
+        worker_id=worker_id,
+        lease_expires_at=task_run.lease_expires_at,
+    )
+    if not result.acquired:
+        mark_task_run_waiting_lock(db, task_run.id, result.reason)
+        evaluate_and_apply_scheduler_readiness(db, task)
+        return False
+    mark_task_run_running(db, task_run.id, "Target write lock acquired.")
+    return True
 
 
 def _new_worker_id() -> str:

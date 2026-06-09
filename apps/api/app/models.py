@@ -214,6 +214,57 @@ class TaskRunEvent(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
 
 
+class SessionQueueEntry(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    session_id: str = Field(foreign_key="session.id", index=True)
+    task_id: str = Field(foreign_key="task.id", index=True)
+    task_run_id: str = Field(foreign_key="taskrun.id", index=True, unique=True)
+    queue_kind: str = Field(default="main", index=True)
+    access_mode: str = Field(default="write", index=True)
+    target_id: Optional[str] = Field(default=None, index=True)
+    target_lock_key: Optional[str] = Field(default=None, index=True)
+    position: int = Field(index=True)
+    state: str = Field(default="queued", index=True)
+    blocked_reason: Optional[str] = None
+    created_at: datetime = Field(default_factory=utc_now)
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class TargetLock(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    lock_key: str = Field(index=True, unique=True)
+    target_id: str = Field(index=True)
+    session_id: Optional[str] = Field(default=None, foreign_key="session.id", index=True)
+    task_run_id: Optional[str] = Field(default=None, foreign_key="taskrun.id", index=True)
+    worker_id: Optional[str] = Field(default=None, index=True)
+    mode: str = Field(default="write")
+    state: str = Field(default="released", index=True)
+    lease_expires_at: Optional[datetime] = None
+    acquired_at: Optional[datetime] = None
+    released_at: Optional[datetime] = None
+    release_reason: Optional[str] = None
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class PreviewDeployJob(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    session_id: str = Field(foreign_key="session.id", index=True)
+    source_task_run_id: str = Field(foreign_key="taskrun.id", index=True)
+    job_type: str = Field(index=True)
+    state: str = Field(default="queued", index=True)
+    attempt: int = 1
+    port: Optional[int] = None
+    error_code: Optional[str] = None
+    evidence_json: str = "{}"
+    created_at: datetime = Field(default_factory=utc_now)
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
 class Artifact(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     task_run_id: str = Field(foreign_key="taskrun.id", index=True)

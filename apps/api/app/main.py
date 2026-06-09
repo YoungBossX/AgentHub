@@ -1439,6 +1439,10 @@ def read_session_mission_trace(
 
 
 def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
+    from app.preview_deploy_jobs import job_diagnostics_for_task_run
+    from app.session_queue import queue_diagnostics_for_task_run
+    from app.target_locks import lock_diagnostics_for_task_run
+
     task = db.get(Task, task_run.task_id)
     metrics = metrics_for_run(task_run)
     return TaskRunResponse(
@@ -1465,6 +1469,9 @@ def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
         providerAssignment=metrics.get("providerAssignment"),
         runtimeConfigResolution=metrics.get("runtimeConfigResolution"),
         memorySnapshot=metrics.get("memorySnapshot"),
+        sessionQueue=queue_diagnostics_for_task_run(db, task_run.id),
+        targetLock=lock_diagnostics_for_task_run(db, task_run.id),
+        previewDeployJobs=job_diagnostics_for_task_run(db, task_run.id),
         approvalRequest=latest_approval_request(db, task_run),
         createdAt=task_run.created_at,
         updatedAt=task_run.updated_at,

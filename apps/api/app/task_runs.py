@@ -116,7 +116,7 @@ def create_task_run(
         )
     except AgentSelectionError as exc:
         raise TaskRunLifecycleError(str(exc)) from exc
-    _ensure_target_write_lock_available(db, task)
+    _ensure_scheduler_allows_run_creation(db, task)
 
     now = utc_now()
     worktree_path = _worktree_path_for_task(db, task, session)
@@ -179,6 +179,7 @@ def create_task_run(
             "memorySnapshotId": memory_snapshot.id,
         },
     )
+    _enqueue_session_queue_entry(db, task, task_run)
     if checkpoint is not None:
         append_task_run_event(
             db,
@@ -241,6 +242,7 @@ def transition_task_run(
     event_payload.setdefault("adapterType", adapter_type_for_run(db, task_run))
     _append_state_event(db, task_run, state, event_payload)
     if state in TERMINAL_STATES:
+        _finalize_queue_and_lock_for_terminal_run(db, task, task_run, state)
         from app.scheduler import mark_task_run_terminal_scheduler_state
         from app.scheduler import refresh_downstream_scheduler_state
         from app.scheduler import refresh_session_scheduler_state
@@ -384,6 +386,7 @@ def mark_stale_task_runs(
         db.add(task_run)
         db.commit()
         db.refresh(task_run)
+        _finalize_queue_and_lock_for_terminal_run(db, task, task_run, "failed")
 
         _append_state_event(
             db,
@@ -736,7 +739,7 @@ def _worktree_path_for_task(
     return target.root
 
 
-def _ensure_target_write_lock_available(db: DbSession, task: Task) -> None:
+def _ensure_scheduler_allows_run_creation(db: DbSession, task: Task) -> None:
     from app.scheduler import (
         SCHEDULER_BLOCKED,
         SCHEDULER_WAITING_TARGET_LOCK,
@@ -748,11 +751,69 @@ def _ensure_target_write_lock_available(db: DbSession, task: Task) -> None:
     decision = evaluate_scheduler_readiness(db, task)
     if decision.state in {
         SCHEDULER_WAITING_DEPENDENCY,
-        SCHEDULER_WAITING_TARGET_LOCK,
         SCHEDULER_BLOCKED,
     }:
         apply_scheduler_decision(db, task, decision)
         raise TaskRunLifecycleError(decision.reason)
+    if decision.state == SCHEDULER_WAITING_TARGET_LOCK:
+        apply_scheduler_decision(db, task, decision)
+
+
+def _enqueue_session_queue_entry(
+    db: DbSession,
+    task: Task,
+    task_run: TaskRun,
+) -> None:
+    from app.scheduler import target_id_for_task, write_lock_required_for_task
+    from app.session_queue import (
+        READONLY_ACCESS_MODE,
+        WRITE_ACCESS_MODE,
+        enqueue_task_run,
+    )
+
+    write_lock_required = write_lock_required_for_task(task)
+    access_mode = WRITE_ACCESS_MODE if write_lock_required else READONLY_ACCESS_MODE
+    target_id = target_id_for_task(task, db)
+    scheduler = _plan_json(task).get("scheduler")
+    initial_queue_state = "queued"
+    blocked_reason = None
+    if isinstance(scheduler, dict) and scheduler.get("state") == "waiting_target_lock":
+        initial_queue_state = "waiting_lock"
+        blocked_reason = scheduler.get("reason")
+    if task_run.state == "waiting_approval":
+        blocked_reason = "Waiting for approval before queue claim."
+    enqueue_task_run(
+        db,
+        task=task,
+        task_run=task_run,
+        access_mode=access_mode,
+        target_id=target_id,
+        initial_state=initial_queue_state,
+        blocked_reason=blocked_reason,
+    )
+
+
+def _finalize_queue_and_lock_for_terminal_run(
+    db: DbSession,
+    task: Task,
+    task_run: TaskRun,
+    terminal_state: str,
+) -> None:
+    from app.session_queue import mark_task_run_terminal
+    from app.target_locks import release_target_lock_for_task_run
+
+    release_target_lock_for_task_run(
+        db,
+        task_run_id=task_run.id,
+        session_id=task.session_id,
+        release_reason=f"task_run_{terminal_state}",
+    )
+    mark_task_run_terminal(
+        db,
+        task_run.id,
+        terminal_state,
+        reason=f"TaskRun finalized as {terminal_state}.",
+    )
 
 
 def _plan_json(task: Task) -> dict[str, Any]:

@@ -522,6 +522,15 @@ class TaskRunResponse(ApiModel):
         default=None,
         alias="memorySnapshot",
     )
+    session_queue: Optional[dict[str, Any]] = Field(
+        default=None,
+        alias="sessionQueue",
+    )
+    target_lock: Optional[dict[str, Any]] = Field(default=None, alias="targetLock")
+    preview_deploy_jobs: list[dict[str, Any]] = Field(
+        default_factory=list,
+        alias="previewDeployJobs",
+    )
     approval_request: Optional[ApprovalRequestResponse] = Field(
         default=None,
         alias="approvalRequest",
