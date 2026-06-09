@@ -230,6 +230,10 @@ def test_workspace_registry_merges_builtin_and_external_targets(tmp_path) -> Non
         assert external.package_manager == "pnpm"
         assert external.detected_framework == "vite-react"
         assert external.project_type == "vite-react"
+        assert external.project_profile is not None
+        assert external.project_profile.profile_id == "vite-react"
+        assert external.project_profile.commands.build == "pnpm build"
+        assert external.project_profile.preview_strategy == "vite-dev-server"
         assert external.allows_agent("frontend") is True
         assert maybe_get_target_for_workspace(db, workspace.id, "external-vite-app") is not None
 

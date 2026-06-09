@@ -132,6 +132,7 @@ class ExternalProjectTargetResponse(ApiModel):
     package_manager: Optional[str] = Field(alias="packageManager")
     detected_framework: Optional[str] = Field(alias="detectedFramework")
     analysis_status: str = Field(alias="analysisStatus")
+    project_profile: dict[str, Any] = Field(alias="projectProfile")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
 

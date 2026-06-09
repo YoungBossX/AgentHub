@@ -100,6 +100,9 @@ def test_register_external_project_target(client: TestClient, tmp_path: Path) ->
     assert body["packageManager"] == "pnpm"
     assert body["detectedFramework"] == "vite-react"
     assert body["analysisStatus"] == "manual"
+    assert body["projectProfile"]["profileId"] == "vite-react"
+    assert body["projectProfile"]["commands"]["build"] == "pnpm build"
+    assert body["projectProfile"]["previewStrategy"] == "vite-dev-server"
     for denied_path in DEFAULT_EXTERNAL_DENIED_PATHS:
         assert denied_path in body["deniedPaths"]
 
@@ -129,6 +132,8 @@ def test_register_external_project_target(client: TestClient, tmp_path: Path) ->
     assert targets["external-sample-vite"]["stagingOutputDir"] == "dist"
     assert targets["external-sample-vite"]["deployProviderIds"] == ["local_staging"]
     assert targets["external-sample-vite"]["packageManager"] == "pnpm"
+    assert targets["external-sample-vite"]["projectProfile"]["profileId"] == "vite-react"
+    assert targets["external-sample-vite"]["projectProfile"]["commands"]["test"] == "pnpm test"
 
     session = client.get(f"/workspaces/{workspace['id']}/sessions").json()[0]
     selection_response = client.patch(
@@ -163,6 +168,8 @@ def test_register_external_project_target_can_allow_selected_folder_scope(
     assert body["rootPath"] == str(project.resolve())
     assert body["projectType"] == "unknown"
     assert body["allowedPaths"] == ["*"]
+    assert body["projectProfile"]["profileId"] == "generic-repo"
+    assert body["projectProfile"]["status"] == "manual"
     assert ".git" in body["deniedPaths"]
     assert "node_modules" in body["deniedPaths"]
 

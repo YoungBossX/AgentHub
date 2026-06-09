@@ -5,15 +5,16 @@ reference instead of repeating long context blocks.
 
 ## V2.4 Project Profile Boundary Status
 
-V2.4 started on 2026-06-09. The current slice adds the ProjectProfile contract
-and attaches profile summaries to external project analysis results. Profiles
-currently describe project type, framework, package manager, allowed and denied
-paths, configured project commands, preview strategy, confidence, status, and
-warnings.
+V2.4 started on 2026-06-09. The current implementation adds the ProjectProfile
+contract and attaches profile summaries to external project analysis, external
+target, and workspace target registry responses. Profiles describe project type,
+framework, package manager, allowed and denied paths, configured project
+commands, preview strategy, confidence, status, and warnings.
 
-This slice does not yet persist profile metadata onto registered targets or
-change execution behavior. Target Registry, PlanValidator, Guardrails, Provider
-Gateway, and existing command policy remain the hard execution boundaries.
+Profile metadata is derived from existing target fields rather than stored as a
+new database column, and it does not change execution behavior. Target Registry,
+PlanValidator, Guardrails, Provider Gateway, and existing command policy remain
+the hard execution boundaries.
 
 ## V2.7 Run Diagnostics Backend Status
 

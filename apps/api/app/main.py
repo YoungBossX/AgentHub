@@ -147,6 +147,7 @@ from app.target_registry import DEMO_BACKEND_TARGET_ID, DEMO_FRONTEND_TARGET_ID
 from app.target_registry import (
     TargetProject,
     TargetRegistryError,
+    external_target_to_project,
     get_target_for_workspace,
     list_targets_for_workspace,
 )
@@ -340,6 +341,7 @@ def external_target_response(
         packageManager=target.package_manager,
         detectedFramework=target.detected_framework,
         analysisStatus=target.analysis_status,
+        projectProfile=external_target_to_project(target).project_profile.summary(),
         createdAt=target.created_at,
         updatedAt=target.updated_at,
     )
@@ -405,6 +407,9 @@ def target_project_response(target: TargetProject) -> TargetProjectResponse:
         detectedFramework=target.detected_framework,
         projectType=target.project_type,
         analysisStatus=target.analysis_status,
+        projectProfile=(
+            target.project_profile.summary() if target.project_profile is not None else None
+        ),
         allowedAgents=list(target.allowed_agents),
         requiresPlatformMode=target.requires_platform_mode,
         requiresApproval=target.requires_approval,

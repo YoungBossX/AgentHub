@@ -1,5 +1,25 @@
 # AgentHub Change Log
 
+## V2.4-3 ProjectProfile Target Registry
+
+**Date:** 2026-06-09
+
+### Changed
+
+- Attached derived ProjectProfile summaries to external target API responses and
+  workspace target registry responses.
+- Preserved existing target allowed paths, denied paths, commands, approval, and
+  agent role behavior while making project profile metadata auditable.
+
+### Validation
+
+| Command | Result |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_external_workspaces.py tests/test_target_registry.py tests/test_project_profiles.py tests/test_project_analyzer.py -q` | Pass, 31 tests |
+| `pnpm check` | Pass |
+| `git diff --check` | Pass |
+| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | Pass |
+
 ## V2.4-2 ProjectProfile Contract
 
 **Date:** 2026-06-09

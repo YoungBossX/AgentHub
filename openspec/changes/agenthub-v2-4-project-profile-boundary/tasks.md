@@ -11,15 +11,15 @@
 - [x] 2.2 将 analyzer 输出规范化为 ProjectProfile，保持现有 API 字段向后兼容。
 - [x] 2.3 增加 Vite/React、Next.js/React、FastAPI/Python、Generic Repo profile 测试。
 - [x] 2.4 验证相关 API 单元测试、`pnpm check` 或更窄等效命令、`git diff --check`。
-- [ ] 2.5 提交：`feat: add project profile contract`。
+- [x] 2.5 提交：`feat: add project profile contract`。
 
 ## 3. Target Registry 与 External Target 接入
 
-- [ ] 3.1 在 external target registration / analysis response 中暴露 ProjectProfile 摘要。
-- [ ] 3.2 确保 `TargetProject` 能携带 profile id、preview strategy、confidence 和 warnings 等审计信息。
-- [ ] 3.3 保持 allowedPaths、deniedPaths、allowedAgents 和 platform maintenance approval 逻辑不回退。
-- [ ] 3.4 增加 external workspace / target registry 测试。
-- [ ] 3.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
+- [x] 3.1 在 external target registration / analysis response 中暴露 ProjectProfile 摘要。
+- [x] 3.2 确保 `TargetProject` 能携带 profile id、preview strategy、confidence 和 warnings 等审计信息。
+- [x] 3.3 保持 allowedPaths、deniedPaths、allowedAgents 和 platform maintenance approval 逻辑不回退。
+- [x] 3.4 增加 external workspace / target registry 测试。
+- [x] 3.5 验证相关测试、`pnpm check` 或更窄等效命令、`git diff --check`。
 - [ ] 3.6 提交：`feat: attach project profiles to targets`。
 
 ## 4. Profile 驱动命令策略

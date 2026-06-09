@@ -11,6 +11,7 @@ from app.external_workspaces import (
     list_external_project_targets,
 )
 from app.models import ExternalProjectTarget
+from app.project_profiles import ProjectProfile, build_project_profile
 
 TargetType = Literal["frontend", "backend", "platform"]
 AgentRole = Literal["orchestrator", "frontend", "backend", "qa", "review"]
@@ -49,6 +50,7 @@ class TargetProject:
     detected_framework: Optional[str] = None
     project_type: Optional[str] = None
     analysis_status: Optional[str] = None
+    project_profile: Optional[ProjectProfile] = None
     requires_platform_mode: bool = False
     requires_approval: bool = False
     related_target_ids: tuple[str, ...] = ()
@@ -185,13 +187,15 @@ def maybe_get_target_for_workspace(
 
 def external_target_to_project(target: ExternalProjectTarget) -> TargetProject:
     target_type = _target_type_for_external_project(target.project_type)
+    allowed_paths = tuple(allowed_paths_for(target))
+    denied_paths = tuple(denied_paths_for(target))
     return TargetProject(
         target_id=target.target_id,
         name=target.name,
         type=target_type,
         root=target.root_path,
-        allowed_paths=tuple(allowed_paths_for(target)),
-        denied_paths=tuple(denied_paths_for(target)),
+        allowed_paths=allowed_paths,
+        denied_paths=denied_paths,
         dev_command=target.dev_command,
         test_command=target.test_command,
         check_command=target.check_command,
@@ -204,6 +208,21 @@ def external_target_to_project(target: ExternalProjectTarget) -> TargetProject:
         detected_framework=target.detected_framework,
         project_type=target.project_type,
         analysis_status=target.analysis_status,
+        project_profile=build_project_profile(
+            project_type=target.project_type,
+            detected_framework=target.detected_framework or target.project_type or "unknown",
+            package_manager=target.package_manager or "unknown",
+            allowed_paths=allowed_paths,
+            denied_paths=denied_paths,
+            dev_command=target.dev_command,
+            test_command=target.test_command,
+            check_command=target.check_command,
+            build_command=target.build_command,
+            preview_command=target.preview_command,
+            analysis_status=target.analysis_status,
+            analysis_warnings=(),
+            confidence="high" if target.analysis_status in {"manual", "ready"} else "low",
+        ),
         allowed_agents=_allowed_agents_for_external_type(target_type),
         requires_platform_mode=False,
         requires_approval=False,
