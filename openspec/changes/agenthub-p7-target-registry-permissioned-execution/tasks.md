@@ -1,0 +1,156 @@
+## 1. P7 目标注册表与权限化执行
+
+- [x] 1.1 P7-1 目标项目注册表。
+  - 目标：为受支持的目标项目定义单一可信源。
+  - 范围：
+    - 为 `demo-frontend`、`demo-backend` 和 `agenthub-platform` 创建注册表记录；
+    - 在适用时包含 `targetId`、`name`、`type`、`root`、`allowedPaths`、`deniedPaths`、`devCommand`、`testCommand`、`previewCommand`，在适用时包含 `baseUrl`、`allowedAgents`、`requiresPlatformMode` 和 `requiresApproval`；
+    - 提供按目标 ID 的查找辅助函数，以及前端与后端目标之间的关系辅助函数；
+    - 除非实现过程中发现持久化需求，否则在 P7 阶段保持注册表 static/in-code；
+    - 为注册表内容和被拒绝路径的默认值添加测试。
+  - 验收标准：
+    - 演示前端、演示后端和 AgentHub 平台的目标元数据可从同一个注册表边界获取；
+    - 演示后端的基础 URL 只能通过目标元数据获取；
+    - 对于普通应用后端目标，`apps/api` 被拒绝；
+    - 平台目标需要显式的平台模式和审批。
+  - 验证：
+    - 注册表单元测试；
+    - `pnpm check`；
+    - `pnpm test`；
+    - `git diff --check`；
+    - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`。
+
+- [x] 1.2 P7-2 目标感知指令构建器。
+  - 目标：根据目标注册表元数据生成角色指令。
+  - 范围：
+    - 更新前端、后端、QA 和审查指令，以从 `targetId` 解析目标元数据；
+    - 在实际可行的情况下，移除分散的硬编码目标路径和基础 URL；
+    - 确保前端指令使用注册表中来自 `baseUrl` 的后端目标进行应用数据调用；
+    - 保留针对 `.env*`、`node_modules`、`.git`、`secrets` 和未分配主机路径的护栏；
+    - 保留针对迷你 CRM 路径的 P6 指令行为。
+  - 验收标准：
+    - 前端合约指令引用 `demo-frontend` 和注册表解析的 `demo-backend` 基础 URL；
+    - 后端指令以 `demo-backend` 为目标，并禁止 `apps/api`；
+    - 平台指令仅在显式平台模式下生成；
+    - 在注册表迁移后，现有的 P6 角色指令测试继续通过。
+  - 验证：
+    - 指令构建器测试；
+    - 适配器请求构建测试；
+    - `pnpm check`；
+    - `pnpm test`；
+    - `git diff --check`；
+    - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`。
+
+- [x] 1.3 P7-3 目标感知合约规划器。
+  - 目标：使应用合约和生成的任务基于目标 ID。
+  - 范围：
+    - 向应用合约添加 `frontendTargetId` 和 `backendTargetId`；
+    - 从注册表中推导出 `frontendTarget`、`backendTarget` 和后端基础 URL；
+    - 使用 `targetId` 和已解析的目标元数据生成 frontend/backend/review 任务计划；
+    - 保持确定性的不支持请求行为；
+    - 保留待办事项、笔记和迷你 CRM 联系人绑定的应用规划。
+  - 验收标准：
+    - 迷你 CRM 合约引用 `demo-frontend` 和 `demo-backend`；
+    - 生成的 frontend/backend 任务引用目标 ID，而不仅仅是原始路径；
+    - 前端任务接收注册表解析的演示后端基础 URL；
+    - 不支持的平台或任意 SaaS 请求应诚实失败或请求澄清。
+  - 验证：
+    - 规划测试；
+    - 合约模式测试；
+    - 不支持请求测试；
+    - `pnpm check`；
+    - `pnpm test`；
+    - `git diff --check`；
+    - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`。
+
+- [x] 1.4 P7-4 目标感知审查/质量保证。
+  - 目标：根据目标注册表策略审查差异和契约。
+  - 范围：
+    - 根据目标 `allowedPaths` 检查变更文件；
+    - 在目标 `deniedPaths` 上发出警告或失败；
+    - 检测普通应用后端任务中意外的 `apps/api` 修改；
+    - 检测前端调用与注册表解析的后端目标不匹配的后端基础 URL；
+    - 验证契约目标 ID 与任务目标 ID 及变更文件前缀一致；
+    - 除非后续变更引入硬性限制，否则在 P7 阶段保持审查建议性。
+  - 验收标准：
+    - 涉及 `apps/api` 的普通应用后端差异被报告为目标策略违规；
+    - 为获取应用数据而调用 `http://localhost:8000` 的前端差异被报告为后端基础不匹配；
+    - 仅涉及 `demo-frontend` 和 `demo-backend` 允许路径的全栈差异通过目标一致性检查；
+    - 中间仅后端的串行差异可能发出警告，直到累积的前端差异存在。
+  - 验证：
+    - 审查单元测试；
+    - P6 迷你 CRM 审查行为的回归测试；
+    - `pnpm check`；
+    - `pnpm test`；
+    - `git diff --check`；
+    - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`。
+
+- [x] 1.5 P7-5 平台维护模式。
+  - 目标：明确将应用开发任务与 AgentHub 平台维护任务分离。
+  - 范围：
+    - 普通 `@backend` 和编排器创建的应用后端任务必须针对 `demo-backend`，而非 `agenthub-platform`；
+    - 添加明确的平台维护路由或任务元数据；
+    - 平台维护任务针对 `agenthub-platform`；
+    - 平台任务需要平台模式与审批；
+    - 平台任务使用更严格的验证，例如 `pnpm check` 和 `pnpm test`；
+    - 不支持的模糊请求不得静默针对 `apps/api` 执行。
+  - 验收标准：
+    - `@backend add endpoint` 默认创建演示后端任务；
+    - 修改 AgentHub 平台后端的请求需要显式平台模式；
+    - 平台模式任务标记为平台维护，并包含更严格的验证预期；
+    - 没有普通应用任务能在无审查警告或失败的情况下修改 `apps/api`。
+  - 验证：
+    - 路由测试；
+    - 目标策略测试；
+    - 按需进行 approval/platform-mode 测试；
+    - `pnpm check`；
+    - `pnpm test`；
+    - `git diff --check`；
+    - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`。
+
+- [x] 1.6 P7-6 P7 端到端预演与冻结审查。
+  - 目标：验证 P7 目标注册表在添加权限化执行边界的同时保留了 P6。
+  - 范围：
+    - 验证 P6 迷你 CRM 垂直切片仍能通过目标注册表元数据正常工作；
+    - 验证前端从注册表连接到 `demo-backend.baseUrl`；
+    - 验证后端目标仍为 `apps/demo-api`；
+    - 验证普通应用任务无法修改 `apps/api`；
+    - 验证平台代码在未显式启用平台模式时仍受保护；
+    - 记录证据 ID、实际适配器使用情况、兜底使用情况、注意事项以及最终冻结建议。
+  - 验收标准：
+    - 迷你 CRM 流程仍能生成合约、后端任务、前端任务、差异、审查、预览和模拟部署证据；
+    - 目标 ID 和目标元数据在计划或证据中可见；
+    - 演示前端从注册表解析的演示后端基础 URL 加载数据；
+    - 除非显式启用平台模式，否则平台代码的变更被阻止或报告；
+    - P4/P5/P6 基线保持不变。
+  - 验证：
+    - 按实际情况进行有针对性的 API/browser 预演；
+    - `pnpm check`；
+    - `pnpm test`；
+    - `pnpm demo:api:test`；
+    - `git diff --check`；
+    - `openspec validate agenthub-p7-target-registry-permissioned-execution --strict`。
+
+## 2. P7 的明确非目标
+
+- 多用户即时通讯。
+- 集成 Matrix、飞书、微信、Slack 或其他外部即时通讯工具。
+- 生产环境部署。
+- Docker 沙箱。
+- 提供商市场。
+- 创建 PR。
+- 无限制的仓库编辑。
+- 分布式 Manager/Worker 调度器。
+- 任意 SaaS 生成。
+
+## 3. P7 完成定义
+
+- 目标注册表是演示前端、演示后端及 AgentHub 平台目标元数据的真实来源。
+- 规划器、指令构建器、上下文包和审查逻辑均消费目标元数据，而非重复使用路径和 URL 常量。
+- 应用契约通过注册表解析引用目标 ID 和后端基础 URL。
+- 普通应用后端任务无法修改 `apps/api`。
+- 平台维护需要明确的平台模式和审批。
+- P6 迷你 CRM 垂直切片仍通过目标注册表工作。
+- 不支持的目标操作会如实失败。
+- 仅在实际运行时，才会记录真实的 Claude/Codex 成功。
+- P4/P5/P6 基线保持不变。

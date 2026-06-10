@@ -93,11 +93,11 @@ coverage/
 *agent建议*.md
 agenthub_design_v_2.md
 
-# Internal OpenSpec planning files (not for public repo)
-openspec/
+# OpenSpec planning files are allowed as competition/process evidence.
 
 # Internal project docs (for AI/dev workflow, not for public users)
-docs/
+docs/*
+!docs/change-log.md
 
 # Extra local temp files
 *.local

@@ -1,0 +1,176 @@
+## 1. P10 调度器健壮性与冲突恢复
+
+- [x] 1.1 P10-1 TaskRun 心跳与租约
+  - 目标：明确 TaskRun 的存活状态，使正在运行的工作能够被归类为健康、过期、超时或终止。
+  - 范围：
+    - 在 `TaskRun` 或等效的 TaskRun 自有元数据面上添加持久的 `runnerId`、`lastHeartbeatAt`、`leaseExpiresAt` 以及过期原因元数据。
+    - 在本地 TaskRun 执行活跃期间刷新心跳元数据。
+    - 检测没有新心跳的已过期租约。
+    - 诚实地将 stale/timed-out 运行标记为终止，而不声称适配器成功。
+    - 当过期检测导致状态变更时，记录一条 `TaskRunEvent` 审计条目。
+  - 验收标准：
+    - 活跃的 TaskRun 具有运行器和租约元数据。
+    - 未过期的 TaskRun 不会被标记为过期。
+    - 已过期的运行中 TaskRun 变为 stale/timed-out 或等效的终止失败状态。
+    - 过期状态转换记录运行器 ID、租约时间戳和原因。
+  - 验证：
+    - 添加或更新有针对性的 heartbeat/lease 测试。
+    - 运行 `pnpm check`。
+    - 运行 `pnpm test`。
+    - 运行 `git diff --check`。
+    - 运行 `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`。
+
+- [x] 1.2 P10-2 过期目标锁清理
+  - 目标：确保目标写入锁被拥有、可审计，并且仅在其所属的 TaskRun 过期或处于终态时才能安全释放。
+  - 范围：
+    - 将调度器目标锁绑定到所属的 `taskRunId`、`sessionId`、`targetId`、锁模式、获取时间和租约过期时间。
+    - 当所属者的心跳和租约有效时，保持活动锁的持有状态。
+    - 仅当所属 TaskRun 过期、超时或已处于终态时，才释放锁。
+    - 记录包含锁、目标、所属者、执行者和原因的清理审计事件。
+  - 验收标准：
+    - 针对同一目标的写入任务仍被活动锁阻塞。
+    - 过期所属者的锁可以在不释放活动锁的情况下被释放。
+    - 清理操作可通过 TaskRunEvent 或等效的审计元数据进行追溯。
+    - 外部目标使用与内置目标相同的锁清理规则。
+  - 验证：
+    - 新增或更新目标锁清理测试。
+    - 运行 `pnpm check`。
+    - 运行 `pnpm test`。
+    - 运行 `git diff --check`。
+    - 运行 `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`。
+
+- [x] 1.3 P10-3 预运行快照/检查点。
+  - 目标：在写入执行前捕获目标状态，以便重试和恢复能够基于已知基线进行推理。
+  - 范围：
+    - 在内置和外部写入 TaskRun 之前记录预运行检查点。
+    - 包含目标 ID、目标根目录、允许路径、拒绝路径、基础提交、Git 状态、脏文件、计划文件、可用时的合约 ID/hash 以及创建时间。
+    - 编辑或省略拒绝路径内容及密钥。
+    - 通过 API/UI 表面暴露检查点元数据，以解释重试安全性。
+  - 验收标准：
+    - 写入 TaskRun 在适配器执行开始前具有检查点元数据。
+    - 外部目标检查点使用目标注册表路径策略。
+    - 检查点绝不暴露拒绝路径内容。
+    - Retry/recovery 代码能够读取检查点元数据。
+  - 验证：
+    - 为演示和外部目标添加或更新检查点测试。
+    - 运行 `pnpm check`。
+    - 运行 `pnpm test`。
+    - 运行 `git diff --check`。
+    - 运行 `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`。
+
+- [x] 1.4 P10-4 重试幂等性
+  - 目标：使重试可追溯，并防止自动重试进入不安全、脏或冲突的工作树。
+  - 范围：
+    - 在重试运行时记录 `previousRunId`、失败摘要、重试模式、检查点引用以及脏工作树决策。
+    - 在重试前检测检查点、选定制品或计划安全路径之外的脏文件。
+    - 阻止不安全的自动重试，并提示需要显式恢复。
+    - 当依赖和锁允许时，允许通过现有 TaskRun 路径进行安全重试。
+  - 验收标准：
+    - 重试历史可链接回 failed/interrupted TaskRun。
+    - 不安全的重试被阻止，并附带可解释的原因。
+    - 安全重试会创建新的 TaskRun，且不擦除先前的证据。
+    - 重试不会伪造适配器成功或绕过目标策略。
+  - 验证：
+    - 新增或更新重试幂等性测试。
+    - 运行 `pnpm check`。
+    - 运行 `pnpm test`。
+    - 运行 `git diff --check`。
+    - 运行 `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`。
+
+- [x] 1.5 P10-5 故障传播加固。
+  - 目标：阻止下游执行、预览和模拟部署在前置条件失败后继续推进。
+  - 范围：
+    - 确保失败、中断、过期、超时或阻塞的依赖项使下游任务保持在 blocked/waiting 状态。
+    - 仅在 retry/fallback/recovery 成功且依赖、锁定、审批和冲突检查通过后，重新评估下游执行资格。
+    - 将预览和模拟部署的创建限制在编码前置条件成功之后。
+    - 在调度器状态中展示失败的前置条件信息。
+  - 验收标准：
+    - 失败的依赖项阻止下游任务执行。
+    - 成功的 retry/fallback 可在重新检查后解除下游任务的阻塞。
+    - 预览和模拟部署不会在前置条件失败后自动运行。
+    - 现有的 P8 依赖语义保持不变。
+  - 验证：
+    - 新增或更新故障传播和 preview/deploy 门控测试。
+    - 运行 `pnpm check`。
+    - 运行 `pnpm test`。
+    - 运行 `pnpm demo:api:test`。
+    - 运行 `git diff --check`。
+    - 运行 `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`。
+
+- [x] 1.6 P10-6 冲突检测。
+  - 目标：尽早识别常见冲突并停止执行，而非尝试自动合并或不安全执行。
+  - 范围：
+    - 检测同一会话或目标流水线中可执行写入任务之间的文件重叠冲突。
+    - 检测检查点、选定制品或计划安全路径之外的脏工作区冲突。
+    - 当下游任务引用过时合约时检测应用合约漂移 ID/hash/version.
+    - 展示冲突详情和恢复选项，不进行自动合并。
+  - 验收标准：
+    - 重叠的计划或触及文件会阻止不安全的并发写入。
+    - 脏工作区冲突会阻止自动写入执行。
+    - 过时合约引用会阻止下游实现。
+    - 在 P10 中不会自动合并任何复杂冲突。
+  - 验证：
+    - 新增或更新冲突检测测试。
+    - 运行 `pnpm check`。
+    - 运行 `pnpm test`。
+    - 运行 `git diff --check`。
+    - 运行 `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`。
+
+- [x] 1.7 P10-7 恢复操作。
+  - 目标：为过期运行、过期锁、重试决策以及下游流水线控制提供明确且可审计的恢复操作。
+  - 范围：
+    - 添加恢复操作，用于将过期 TaskRun 标记为失败、释放过期锁、从当前状态重试、在安全时从检查点重试、停止下游推进以及恢复下游推进。
+    - 针对租约、锁、检查点、冲突、依赖关系和目标策略状态，验证每个恢复操作。
+    - 在审计事件中记录执行者、原因、先前状态、新状态以及受影响的 ID。
+    - 仅对已实现且安全的操作，暴露 UI 或 API 接口。
+  - 验收标准：
+    - 恢复操作是明确且可审计的。
+    - 释放过期锁不能释放处于活动状态的已拥有锁。
+    - 从检查点重试不会破坏性地重置允许目标路径之外的文件。
+    - Stop/resume 下游流水线更新调度器资格状态，使其可见。
+  - 验证：
+    - 添加或更新恢复操作测试。
+    - 运行 `pnpm check`。
+    - 运行 `pnpm test`。
+    - 运行 `git diff --check`。
+    - 运行 `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`。
+
+- [x] 1.8 P10-8 鲁棒性演练与冻结审查。
+  - 目标：端到端验证 P10 鲁棒性行为，并决定变更是否准备就绪可冻结。
+  - 范围：
+    - 演练过期 TaskRun 检测。
+    - 演练过期目标锁清理。
+    - 演练失败依赖阻塞及下游重新评估。
+    - 演练重试安全性与不安全重试阻塞。
+    - 演练文件重叠、脏工作树及契约漂移冲突。
+    - 验证 P6/P7/P8/P9 基线保持完整，包括 P9 外部项目工作区模式。
+    - 使用最终证据和注意事项更新 `docs/project-state.md`、`docs/change-log.md` 及本任务列表。
+  - 验收标准：
+    - P10 场景已记录，并附有证据 ID 或测试名称。
+    - P9 外部项目执行仍保持目标策略感知。
+    - P8 调度器依赖与目标锁语义保持完整。
+    - 未声明任何未经验证的 Claude/Codex 成功。
+    - P10 注意事项及延期工作已记录。
+  - 验证：
+    - 运行 `pnpm check`。
+    - 运行 `pnpm test`。
+    - 运行 `pnpm demo:api:test`。
+    - 运行 `git diff --check`。
+    - 运行 `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict`。
+
+## 明确非目标
+
+- 分布式工作节点集群。
+- Docker 沙箱。
+- 生产环境部署。
+- 提供商市场。
+- PR 创建。
+- 全自动 Git 冲突合并。
+- 多用户即时通讯。
+- 企业级 RBAC。
+- 不受限制的仓库编辑或绕过 P7 目标注册表策略。
+- 修改 `CodexAdapter`、`ClaudeCodeAdapter` 或 `ScriptedMockAdapter` 的执行语义。
+
+## 完成定义
+
+P10 仅在以下条件满足时才算完成：heartbeat/lease、过期锁清理、检查点、重试幂等性、故障传播加固、冲突检测、恢复操作以及冻结演练均已实现并通过验证，且未对 P6/P7/P8/P9 基线造成回归。不安全的重试和冲突必须诚实停止，恢复操作必须可审计，外部目标 allowed/denied 路径必须持续强制执行，且不得在缺乏真实证据的情况下声称 Claude/Codex 成功。

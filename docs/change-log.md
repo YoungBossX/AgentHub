@@ -1,5 +1,41 @@
 # AgentHub 变更日志
 
+## GitHub 提交范围放行
+
+**日期:** 2026-06-10
+
+### 变更
+
+- 调整 `.gitignore`，允许 `openspec` 目录作为比赛过程证据进入 Git 跟踪。
+- 保持 `docs` 目录默认忽略，仅明确放行 `docs/change-log.md`，避免一次性提交全部内部工作流文档。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| `git check-ignore -v docs/change-log.md openspec/changes/agenthub-im-coding-mvp/proposal.md openspec/changes/agenthub-im-coding-mvp/specs/orchestrator/spec.md` | 三个路径均未被忽略 |
+
+## 预览拒绝连接与死端口治理
+
+**日期:** 2026-06-10
+
+### 变更
+
+- Vite 预览进程启动后会捕获 stdout/stderr 到诊断日志，失败时把最近输出写入 Preview artifact metadata、provider evidence 和 `artifact.preview.failed` 事件。
+- 预览健康检查失败、进程提前退出或 API 重启后遗留的陈旧 `process_id`，会被标记为 failed/unhealthy，并清理进程引用，避免把不可达端口重新显示为可用。
+- 右侧产物面板不再 iframe 嵌入 unhealthy/failed 预览，也不会允许打开不可达预览 URL；界面会展示诊断原因，并优先选择仍然 healthy 的预览 artifact。
+- 在右侧面板刷新 failed/unhealthy 预览且没有 healthy 预览可用时，会重新启动一个新的预览，避免用户继续落到 `127.0.0.1:<port>` connection refused。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_previews.py tests/test_failure_recovery.py tests/test_cross_provider_rehearsal.py -q` | 通过，11 个测试 |
+| `cd apps/web && pnpm test src/components/preview-card.test.tsx src/components/task-card-list.test.tsx -- --runInBand` | 通过，2 个测试文件 / 23 个测试 |
+| `cd apps/api && ../../.venv/bin/python -m compileall app` | 通过 |
+| `pnpm --filter @agenthub/web check` | 通过 |
+| `git diff --check -- apps/api/app/previews.py apps/api/tests/test_previews.py apps/api/tests/test_failure_recovery.py apps/api/tests/test_cross_provider_rehearsal.py apps/web/src/components/preview-card.tsx apps/web/src/components/preview-card.test.tsx apps/web/src/components/task-card-list.tsx apps/web/src/components/task-card.tsx apps/web/src/components/workspace-shell.tsx docs/change-log.md` | 通过 |
+
 ## 显式 ScriptedMock fallback 调度修复
 
 **日期:** 2026-06-10
