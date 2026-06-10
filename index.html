@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentHub - Multi-Agent Coding Platform | IM 驱动的 AI 协作开发</title>
+    <title>AgentHub - 可验证的多 Agent 编程工作台</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -981,20 +981,20 @@
     <section class="hero">
         <div class="hero-content">
             <div class="hero-text">
-                <div class="hero-badge">LOCAL DEMO MVP</div>
+                <div class="hero-badge">LOCAL AGENT WORKSPACE</div>
                 <h1 class="hero-title">
-                    Multi-Agent<br>
-                    <span class="highlight">Coding Platform</span>
+                    让 AI 编程<br>
+                    <span class="highlight">可验证交付</span>
                 </h1>
                 <p class="hero-description">
-                    像使用微信、飞书一样，通过 IM 聊天与多个 AI Agent 协作编程。支持 @orchestrator、@frontend、@backend、@qa 多角色协作，自动生成真实 Git Diff 和实时预览。
+                    通过群聊式界面调度 Orchestrator、Frontend、Backend、QA，多 Agent 将需求拆成任务，在本地 worktree 或项目 target 中执行，并沉淀 Diff、Review、Preview、诊断和部署状态证据。
                 </p>
                 <div class="hero-actions">
                     <a href="https://github.com/YoungBossX/AgentHub" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
-                        View on GitHub
+                        查看仓库
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </a>
-                    <a href="#features" class="btn btn-secondary">Explore Features</a>
+                    <a href="#features" class="btn btn-secondary">查看功能</a>
                 </div>
             </div>
 
@@ -1006,37 +1006,37 @@
                             <div class="terminal-dot yellow"></div>
                             <div class="terminal-dot green"></div>
                         </div>
-                        <div class="terminal-title">agenthub — demo session</div>
+                        <div class="terminal-title">agenthub — 演示会话</div>
                     </div>
                     <div class="terminal-body">
                         <div class="terminal-line">
-                            <span class="prompt">you $</span>
-                            <span class="cmd"> @orchestrator build a login page</span>
+                            <span class="prompt">你 $</span>
+                            <span class="cmd"> @orchestrator 做一个登录页</span>
                         </div>
                         <div class="terminal-line">
                             <span class="out">[orchestrator]</span>
-                            <span class="success"> Parsing @mentions...</span>
+                            <span class="success"> 解析提及角色...</span>
                         </div>
                         <div class="terminal-line">
                             <span class="out">[orchestrator]</span>
-                            <span class="comment"> Creating 3-step plan:</span>
+                            <span class="comment"> 生成 3 步计划：</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="out">  → 1. @frontend Generate login component</span>
+                            <span class="out">  → 1. @frontend 实现登录界面</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="out">  → 2. @qa Review & validate</span>
+                            <span class="out">  → 2. @qa 审查并验证变更</span>
                         </div>
                         <div class="terminal-line">
-                            <span class="out">  → 3. Preview & deploy card</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="out">[frontend]</span>
-                            <span class="warning"> Modifying apps/demo/src/App.tsx...</span>
+                            <span class="out">  → 3. 生成预览与交付证据</span>
                         </div>
                         <div class="terminal-line">
                             <span class="out">[frontend]</span>
-                            <span class="success"> ✓ Diff ready • Preview at :5173</span>
+                            <span class="warning"> 修改 apps/demo/src/App.tsx...</span>
+                        </div>
+                        <div class="terminal-line">
+                            <span class="out">[frontend]</span>
+                            <span class="success"> ✓ Diff 已生成 · 预览 :5173</span>
                         </div>
                     </div>
                 </div>
@@ -1049,19 +1049,19 @@
         <div class="stats-content">
             <div class="stat-item">
                 <div class="stat-value">4</div>
-                <div class="stat-label">Agent Roles (orchestrator, frontend, backend, qa)</div>
+                <div class="stat-label">角色 Agent（orchestrator / frontend / backend / qa）</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value">3</div>
-                <div class="stat-label">Adapters (Codex, Claude Code, ScriptedMock)</div>
+                <div class="stat-label">执行适配器（Codex / Claude Code / ScriptedMock）</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value">15<span class="accent">+</span></div>
-                <div class="stat-label">API Endpoints</div>
+                <div class="stat-value">50<span class="accent">+</span></div>
+                <div class="stat-label">后端测试文件，覆盖执行、证据、策略和诊断</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value">100<span class="accent">%</span></div>
-                <div class="stat-label">Real Git Diffs & Previews</div>
+                <div class="stat-value">6<span class="accent">+</span></div>
+                <div class="stat-label">证据类型：Diff / Review / Preview / Deploy 等</div>
             </div>
         </div>
     </div>
@@ -1071,55 +1071,55 @@
         <div class="section-container">
             <div class="section-header">
                 <div class="section-tag">// 功能特性</div>
-                <h2 class="section-title">IM 驱动的多 Agent 协作开发</h2>
+                <h2 class="section-title">群聊式多 Agent 编程工作台</h2>
             </div>
 
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon cyan">💬</div>
-                    <h3 class="feature-title">IM 聊天交互</h3>
+                    <h3 class="feature-title">群聊式任务入口</h3>
                     <p class="feature-desc">
-                        左侧 Session 列表 + 中间聊天流。支持 @orchestrator、@frontend、@backend、@qa 多角色协作，像使用微信一样自然。
+                        通过 @orchestrator、@frontend、@backend、@qa 把需求分发给不同角色 Agent，用户用自然语言推进任务。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon purple">🎯</div>
-                    <h3 class="feature-title">协调器自动规划</h3>
+                    <h3 class="feature-title">计划先行的任务拆解</h3>
                     <p class="feature-desc">
-                        Orchestrator 自动解析用户意图，拆解为 2-4 步任务计划，分配给前端、后端、QA 等专业 Agent 执行。
+                        Orchestrator 先把需求拆成可审查计划，再分配给前端、后端、QA 等角色，避免直接黑盒改代码。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon cyan">🔗</div>
-                    <h3 class="feature-title">多适配器切换</h3>
+                    <h3 class="feature-title">真实执行与可靠 fallback</h3>
                     <p class="feature-desc">
-                        统一适配器层支持 Codex CLI、Claude Code CLI 和 ScriptedMock。真实 Agent 不可用时自动降级到 Mock 保证 Demo 可用。
+                        统一适配器层支持 Codex CLI、Claude Code CLI 和 ScriptedMock。真实路径失败时，可通过明确 fallback 保持演示闭环。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon purple">📊</div>
-                    <h3 class="feature-title">真实 Git Diff</h3>
+                    <h3 class="feature-title">可审计 Diff</h3>
                     <p class="feature-desc">
-                        每个 Session 独立 Git Worktree 隔离。所有代码变更实时生成 Diff，支持 Monaco Editor 逐行对比查看。
+                        每个 Session 独立 worktree；Git 项目生成真实 Git Diff，非 Git target 也能基于文件快照生成变更证据。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon amber">👁️</div>
-                    <h3 class="feature-title">实时预览</h3>
+                    <h3 class="feature-title">本地预览</h3>
                     <p class="feature-desc">
-                        Agent 执行完成后自动生成 Vite React 预览卡片，右侧 iframe 面板实时展示修改效果，支持刷新和全屏查看。
+                        任务完成后生成 Vite React 预览卡片，右侧面板展示运行页面，并保留端口、URL、健康状态等证据。
                     </p>
                 </div>
 
                 <div class="feature-card">
                     <div class="feature-icon cyan">🚀</div>
-                    <h3 class="feature-title">部署卡片</h3>
+                    <h3 class="feature-title">诚实部署卡片</h3>
                     <p class="feature-desc">
-                        预览健康后一键生成部署卡片，展示状态、URL、端口等信息。当前为 Mock 部署，未来支持真实部署。
+                        部署卡片记录本地暂存、手动交接或外部提供者阻塞状态；没有真实第三方结果时，不伪造部署成功。
                     </p>
                 </div>
             </div>
@@ -1131,7 +1131,7 @@
         <div class="section-container">
             <div class="section-header">
                 <div class="section-tag">// 技术栈</div>
-                <h2 class="section-title">成熟的技术栈，开箱即用</h2>
+                <h2 class="section-title">本地可运行的工程栈</h2>
             </div>
 
             <div class="tech-grid">
@@ -1193,29 +1193,29 @@
         <div class="section-container">
             <div class="section-header">
                 <div class="section-tag">// 工作流程</div>
-                <h2 class="section-title">从需求到部署的完整闭环</h2>
+                <h2 class="section-title">从需求到可验证交付证据</h2>
             </div>
 
             <div class="workflow-steps">
                 <div class="workflow-step">
                     <div class="workflow-number">01</div>
                     <h4 class="workflow-title">需求输入</h4>
-                    <p class="workflow-desc">在聊天中 @orchestrator 描述需求</p>
+                    <p class="workflow-desc">在会话中 @orchestrator 描述目标</p>
                 </div>
                 <div class="workflow-step">
                     <div class="workflow-number">02</div>
-                    <h4 class="workflow-title">自动规划</h4>
-                    <p class="workflow-desc">协调器拆解为可执行任务</p>
+                    <h4 class="workflow-title">计划拆解</h4>
+                    <p class="workflow-desc">编排器生成可审查任务计划</p>
                 </div>
                 <div class="workflow-step">
                     <div class="workflow-number">03</div>
                     <h4 class="workflow-title">Agent 执行</h4>
-                    <p class="workflow-desc">前端/后端 Agent 写真实代码</p>
+                    <p class="workflow-desc">角色 Agent 在受控目标内修改代码</p>
                 </div>
                 <div class="workflow-step">
                     <div class="workflow-number">04</div>
-                    <h4 class="workflow-title">预览部署</h4>
-                    <p class="workflow-desc">实时 Diff + 预览 + 部署卡片</p>
+                    <h4 class="workflow-title">证据交付</h4>
+                    <p class="workflow-desc">沉淀 Diff、Review、Preview 和状态卡片</p>
                 </div>
             </div>
         </div>
@@ -1223,11 +1223,11 @@
 
     <!-- CTA Section -->
     <section class="cta">
-        <h2 class="cta-title">开始使用 AgentHub</h2>
-        <p class="cta-desc">克隆仓库，运行安装脚本，几分钟内即可启动本地多 Agent 编码环境。</p>
+        <h2 class="cta-title">在本地跑通 AgentHub</h2>
+        <p class="cta-desc">按 README 完成依赖、数据库和 demo app 初始化，即可启动本地多 Agent 编程工作台。</p>
         <div class="cta-actions">
             <a href="https://github.com/YoungBossX/AgentHub" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
-                View on GitHub
+                查看仓库
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
         </div>

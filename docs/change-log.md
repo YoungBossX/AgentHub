@@ -1,5 +1,23 @@
 # AgentHub 变更日志
 
+## GitHub 首页文案中文化与诚实化
+
+**日期:** 2026-06-10
+
+### 变更
+
+- `index.html` 首屏从英文泛化标题调整为中文主张“让 AI 编程可验证交付”，突出 AgentHub 的证据链价值。
+- 将按钮、终端演示、统计区、功能卡片、流程和 CTA 改为中文优先文案。
+- 移除或收敛过度承诺表述：不再使用 `100% Real Git Diffs & Previews`，不再声明真实 Agent 失败会自动降级到 Mock，不再暗示第三方部署成功。
+- 补充更贴近当前实现的能力表达：文件快照 Diff、显式 fallback、Run/Artifact 证据链、诚实部署状态卡片。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `rg -n "Multi-Agent Coding Platform|Explore Features|100<span|Real Git Diffs|自动降级|未来支持真实部署" index.html` | 通过，无旧营销文案残留 |
+| `git diff --check -- index.html docs/change-log.md` | 通过，仅 Windows 换行提示 |
+
 ## GitHub 提交范围放行
 
 **日期:** 2026-06-10
