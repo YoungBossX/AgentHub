@@ -66,6 +66,7 @@ export function statusLabel(status: string) {
 
 export function healthLabel(health: string) {
   const labels: Record<string, string> = {
+    failed: "失败",
     healthy: "健康",
     pending: "等待中",
     starting: "启动中",

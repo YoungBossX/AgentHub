@@ -106,6 +106,10 @@ function previewTitle(title: string) {
   return title === "Vite React preview" ? "Vite React 预览" : title
 }
 
+function isPreviewHealthy(preview: PreviewArtifact) {
+  return preview.healthStatus === "healthy"
+}
+
 function reviewTitleLabel(title: string) {
   return title === "Review Agent report" ? "评审报告" : title
 }
@@ -257,6 +261,7 @@ function reviewTextLabel(value: string) {
 
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
+    failed: "失败",
     healthy: "健康",
     pending: "等待中",
     ready: "就绪",
@@ -275,6 +280,7 @@ export function PreviewCard({
   onStop,
   preview,
 }: PreviewCardProps) {
+  const canOpen = isPreviewHealthy(preview)
   return (
     <article className="rounded-lg border border-[var(--border)] bg-white p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -321,7 +327,7 @@ export function PreviewCard({
       <div className="mt-3 flex flex-wrap gap-2">
         <Button
           className="h-8 px-3 text-xs"
-          disabled={busy || !onOpen}
+          disabled={busy || !onOpen || !canOpen}
           onClick={() => onOpen?.(preview)}
           type="button"
         >
@@ -381,7 +387,7 @@ export function PreviewPanel({
   const selectedPreview =
     selectedItem?.kind === "preview" ? selectedItem.artifact : null
   const latestByKind = (kind: ArtifactPanelItem["kind"]) =>
-    [...artifactItems].reverse().find((item) => item.kind === kind) ?? null
+    preferredArtifactItem(kind, artifactItems)
   const activeKind = selectedItem?.kind ?? "empty"
 
   return (
@@ -621,12 +627,21 @@ function ArtifactDetail({
         onStop={onStopPreview}
         preview={item.artifact}
       />
-      <iframe
-        className="min-h-[420px] w-full rounded-lg border border-[var(--border)] bg-white shadow-sm"
-        key={`${item.artifact.id}-${frameKey}`}
-        src={item.artifact.url}
-        title="Vite React 预览"
-      />
+      {isPreviewHealthy(item.artifact) ? (
+        <iframe
+          className="min-h-[420px] w-full rounded-lg border border-[var(--border)] bg-white shadow-sm"
+          key={`${item.artifact.id}-${frameKey}`}
+          src={item.artifact.url}
+          title="Vite React 预览"
+        />
+      ) : (
+        <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <h4 className="font-semibold">预览未运行</h4>
+          <p className="mt-2 text-xs leading-5">
+            当前预览端口没有通过健康检查，AgentHub 已阻止嵌入这个不可达地址。请查看上方诊断原因，修复后点击刷新预览重新启动。
+          </p>
+        </section>
+      )}
     </div>
   )
 }
@@ -678,6 +693,21 @@ function panelTitle(item: ArtifactPanelItem | null) {
     return item.artifact.title
   }
   return item.artifact.title
+}
+
+function preferredArtifactItem(
+  kind: ArtifactPanelItem["kind"],
+  items: ArtifactPanelItem[],
+) {
+  const matching = [...items].reverse().filter((item) => item.kind === kind)
+  if (kind === "preview") {
+    const previewItems = matching.filter(
+      (item): item is Extract<ArtifactPanelItem, { kind: "preview" }> =>
+        item.kind === "preview",
+    )
+    return previewItems.find((item) => isPreviewHealthy(item.artifact)) ?? previewItems[0] ?? null
+  }
+  return matching[0] ?? null
 }
 
 function artifactKindLabel(kind: ArtifactPanelItem["kind"]) {

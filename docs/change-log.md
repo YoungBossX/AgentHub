@@ -18,6 +18,49 @@
 | `rg -n "Multi-Agent Coding Platform|Explore Features|100<span|Real Git Diffs|自动降级|未来支持真实部署" index.html` | 通过，无旧营销文案残留 |
 | `git diff --check -- index.html docs/change-log.md` | 通过，仅 Windows 换行提示 |
 
+## 预览刷新卡住与 Codex Node 环境隔离修复
+
+**日期:** 2026-06-10
+
+### 变更
+
+- PreviewService 启动 Vite 预览子进程时会清理 Codex App 注入的 `NODE` 和 bundled runtime PATH，优先使用系统 Node/pnpm，避免 Rollup/Vite native binding 被 macOS 代码签名策略拒绝加载。
+- 预览健康检查会在子进程提前退出时立即停止等待，采集最近日志并写入 failed preview artifact，避免“刷新预览”请求长时间卡住、界面看起来无响应。
+- 补充回归测试覆盖 Codex bundled Node 环境隔离，以及预览子进程启动即退出时快速返回失败。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_previews.py tests/test_failure_recovery.py tests/test_cross_provider_rehearsal.py -q` | 通过，14 个测试 |
+| `cd apps/web && pnpm test src/components/preview-card.test.tsx src/components/task-card-list.test.tsx -- --runInBand` | 通过，2 个测试文件 / 24 个测试 |
+| `cd apps/api && ../../.venv/bin/python -m compileall app` | 通过 |
+| `pnpm --filter @agenthub/web check` | 通过 |
+| `curl -sS --max-time 5 http://127.0.0.1:8000/health` | 通过，返回 `status=ok` |
+| `curl -sS --max-time 20 -X POST http://127.0.0.1:8000/task-runs/84e1a453-b201-48ed-93f6-196dc6b3391b/preview` | 通过，创建 `ready/healthy` 预览 `http://127.0.0.1:56967` |
+| `curl -sS --max-time 5 -I http://127.0.0.1:56967/` | 通过，返回 HTTP 200 |
+| `git diff --check -- apps/api/app/previews.py apps/api/tests/test_previews.py apps/api/tests/test_failure_recovery.py apps/api/tests/test_cross_provider_rehearsal.py apps/web/src/components/preview-card.tsx apps/web/src/components/preview-card.test.tsx apps/web/src/components/task-card-list.tsx apps/web/src/components/task-card-list.test.tsx apps/web/src/components/task-card.tsx apps/web/src/components/workspace-shell.tsx docs/change-log.md` | 通过 |
+
+## Backend target 误启动预览修复
+
+**日期:** 2026-06-10
+
+### 变更
+
+- PreviewService 在启动 Vite 预览前会校验目标是否为支持 preview 的 frontend target；FastAPI/backend target 会直接返回明确错误，不再把 `pnpm dev` 跑到 backend 目录。
+- 任务卡片仅在 frontend 任务或 frontend target 上显示“启动预览”，避免 completed backend run 误导用户点击预览。
+- 补充回归测试覆盖 external backend target 的预览拒绝，以及前端不显示 backend 预览按钮。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_previews.py tests/test_failure_recovery.py tests/test_cross_provider_rehearsal.py -q` | 通过，12 个测试 |
+| `cd apps/web && pnpm test src/components/preview-card.test.tsx src/components/task-card-list.test.tsx -- --runInBand` | 通过，2 个测试文件 / 24 个测试 |
+| `cd apps/api && ../../.venv/bin/python -m compileall app` | 通过 |
+| `pnpm --filter @agenthub/web check` | 通过 |
+| `git diff --check -- apps/api/app/previews.py apps/api/tests/test_previews.py apps/api/tests/test_failure_recovery.py apps/api/tests/test_cross_provider_rehearsal.py apps/web/src/components/preview-card.tsx apps/web/src/components/preview-card.test.tsx apps/web/src/components/task-card-list.tsx apps/web/src/components/task-card-list.test.tsx apps/web/src/components/task-card.tsx apps/web/src/components/workspace-shell.tsx docs/change-log.md` | 通过 |
+
 ## GitHub 提交范围放行
 
 **日期:** 2026-06-10

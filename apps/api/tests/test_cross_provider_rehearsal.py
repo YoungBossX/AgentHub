@@ -19,7 +19,7 @@ from app.diffs import collect_task_run_diff
 from app.handoffs import create_handoff_artifact
 from app.mission_trace import build_session_mission_trace
 from app.models import Agent, Artifact, Session, Task, TaskRun, Workspace
-from app.previews import PreviewProcess, PreviewService
+from app.previews import PreviewProcess, PreviewProcessDiagnostics, PreviewService
 from app.provider_assignments import PROVIDER_ASSIGNMENT_MATRIX_ENV
 from app.reviews import create_scripted_review_for_task_run
 from app.scheduler import evaluate_and_apply_scheduler_readiness
@@ -49,6 +49,9 @@ class RecordingPreviewRunner:
 
     def stop(self, process_id: int) -> None:
         pass
+
+    def diagnostics(self, process_id: int) -> PreviewProcessDiagnostics:
+        return PreviewProcessDiagnostics(running=True)
 
 
 class StaticHealthChecker:

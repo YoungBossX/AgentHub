@@ -434,7 +434,9 @@ export function TaskCardList({
                     : undefined
                 }
                 onStartPreview={
-                  latestRun && onStartPreview ? () => onStartPreview(latestRun.id) : undefined
+                  latestRun && onStartPreview && taskSupportsPreview(task)
+                    ? () => onStartPreview(latestRun.id)
+                    : undefined
                 }
               />
             </article>
@@ -789,6 +791,25 @@ function planReviewMetadataFromPlan(task: SessionTask): PlanReviewMetadata | nul
     readOnly: true,
     sourceTaskId: task.id,
   }
+}
+
+function taskSupportsPreview(task: SessionTask) {
+  const targetId = previewTargetIdForTask(task)
+  if (targetId) {
+    return targetId === "demo-frontend" || targetId.includes("frontend")
+  }
+  return task.assignedAgentRole === "frontend" || task.intentType.includes("frontend")
+}
+
+function previewTargetIdForTask(task: SessionTask) {
+  const plan = task.planJson
+  const metadata = task.planReviewMetadata
+  return (
+    stringValue(plan.targetId) ||
+    stringValue(plan.frontendTargetId) ||
+    metadata?.targetId ||
+    undefined
+  )
 }
 
 function taskBreakdownFromPlan(value: unknown): PlanReviewMetadata["taskBreakdown"] {
@@ -1387,7 +1408,7 @@ function buildTraceNodes({
   const latestRun = task.taskRuns[task.taskRuns.length - 1] ?? null
   const latestDiff = diffs[diffs.length - 1] ?? null
   const latestReview = reviews[reviews.length - 1] ?? null
-  const latestPreview = previews[previews.length - 1] ?? null
+  const latestPreview = preferredPreview(previews)
   const latestDeployment = deployments[deployments.length - 1] ?? null
   const codingStatus = latestRun ? traceStatusForRun(latestRun.state) : "skipped"
   const fallback = task.taskRuns.find(
@@ -1521,6 +1542,12 @@ function traceStatusForPreview(preview: PreviewArtifact | null | undefined): Tra
     return "warning"
   }
   return "active"
+}
+
+function preferredPreview(previews: PreviewArtifact[]) {
+  return [...previews].reverse().find((preview) => preview.healthStatus === "healthy") ??
+    previews[previews.length - 1] ??
+    null
 }
 
 function traceStatusForDeployment(
@@ -1661,6 +1688,7 @@ function ArtifactChips({
   ) {
     return null
   }
+  const displayedPreview = preferredPreview(previews)
 
   return (
     <div className="mt-3 flex flex-wrap gap-2">
@@ -1686,7 +1714,7 @@ function ArtifactChips({
       {previews.length > 0 ? (
         <EvidenceChip
           className="bg-green-50 text-green-700"
-          label={`预览${healthLabel(previews[previews.length - 1]?.healthStatus ?? "")}`}
+          label={`预览${healthLabel(displayedPreview?.healthStatus ?? "")}`}
           onClick={selectLatestArtifact("preview", taskArtifactItems, onSelectArtifact)}
           selected={selectedArtifactId === latestArtifactId("preview", taskArtifactItems)}
         />
@@ -1750,7 +1778,19 @@ function latestArtifactId(
   kind: ArtifactPanelItem["kind"],
   items: ArtifactPanelItem[],
 ) {
-  return [...items].reverse().find((item) => item.kind === kind)?.id ?? null
+  const matching = [...items].reverse().filter((item) => item.kind === kind)
+  if (kind === "preview") {
+    const previewItems = matching.filter(
+      (item): item is Extract<ArtifactPanelItem, { kind: "preview" }> =>
+        item.kind === "preview",
+    )
+    return (
+      previewItems.find((item) => item.artifact.healthStatus === "healthy") ??
+      previewItems[0] ??
+      null
+    )?.id ?? null
+  }
+  return matching[0]?.id ?? null
 }
 
 function selectLatestArtifact(
@@ -1907,11 +1947,14 @@ function RunControls({
   }
 
   if (latestRun.state === "completed") {
+    if (!onStartPreview) {
+      return null
+    }
     return (
       <div className="mt-3">
         <Button
           className="h-8 px-3 text-xs"
-          disabled={busy || !onStartPreview}
+          disabled={busy}
           onClick={onStartPreview}
           type="button"
           variant="secondary"

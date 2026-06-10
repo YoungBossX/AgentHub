@@ -12,7 +12,7 @@ from sqlmodel import SQLModel, create_engine, select
 
 from app.main import app, get_db, get_preview_service
 from app.models import Agent, Artifact, Deployment, Diff, Session, Task, TaskRun, Workspace
-from app.previews import PreviewProcess, PreviewService
+from app.previews import PreviewProcess, PreviewProcessDiagnostics, PreviewService
 from app import run_engine as run_engine_module
 
 
@@ -35,6 +35,9 @@ class RecordingPreviewRunner:
 
     def stop(self, process_id: int) -> None:
         return None
+
+    def diagnostics(self, process_id: int) -> PreviewProcessDiagnostics:
+        return PreviewProcessDiagnostics(running=True)
 
 
 class HealthyPreview:

@@ -406,7 +406,16 @@ export function WorkspaceShell({
   function handleRefreshPreviews(taskRunId: string) {
     runClientAction(async () => {
       const previews = await listTaskRunPreviews(backendUrl, taskRunId)
-      const latestPreview = previews[previews.length - 1] ?? null
+      const hasHealthyPreview = previews.some(
+        (preview) => preview.healthStatus === "healthy",
+      )
+      const shouldRestartSelectedPreview =
+        selectedPreview?.taskRunId === taskRunId &&
+        selectedPreview.healthStatus !== "healthy" &&
+        !hasHealthyPreview
+      const latestPreview = shouldRestartSelectedPreview
+        ? await startTaskRunPreview(backendUrl, taskRunId)
+        : preferredPreview(previews)
       if (latestPreview && selectedPreview?.taskRunId === taskRunId) {
         setSelectedArtifactId(`preview:${latestPreview.id}`)
         setPreviewFrameKey((current) => current + 1)
@@ -704,6 +713,12 @@ export function WorkspaceShell({
       </div>
     </section>
   )
+}
+
+function preferredPreview(previews: PreviewArtifact[]) {
+  return [...previews].reverse().find((preview) => preview.healthStatus === "healthy") ??
+    previews[previews.length - 1] ??
+    null
 }
 
 function ConversationModeSwitch({

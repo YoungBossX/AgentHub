@@ -502,6 +502,55 @@ describe("TaskCardList", () => {
     )
   })
 
+  it("does not offer preview controls for completed backend task runs", async () => {
+    const onStartPreview = vi.fn()
+    const fetcher = vi.fn(async () => new Response(JSON.stringify([]), { status: 200 }))
+    const completedBackendTask: SessionTask = {
+      ...baseTask,
+      assignedAgentId: "agent-backend",
+      assignedAgentRole: "backend",
+      intentType: "backend_change",
+      planJson: { targetId: "external-backend-pomodoro-app" },
+      status: "completed",
+      title: "Build the FastAPI backend",
+      taskRuns: [
+        {
+          id: "run-backend-1",
+          taskId: "task-1",
+          sessionId: "session-1",
+          agentId: "agent-backend",
+          adapterType: "claude_code",
+          adapterRunId: null,
+          state: "completed",
+          startedAt: "2026-05-14T00:00:00Z",
+          endedAt: "2026-05-14T00:00:01Z",
+          worktreePath: "/Users/luotianhang/Desktop/pomodoro-app/backend",
+          baseRef: null,
+          headRef: null,
+          errorCode: null,
+          errorMessage: null,
+          metricsJson: { adapterType: "claude_code" },
+          createdAt: "2026-05-14T00:00:00Z",
+          updatedAt: "2026-05-14T00:00:01Z",
+        },
+      ],
+    }
+
+    render(
+      createElement(TaskCardList, {
+        artifactRefreshKey: 1,
+        backendUrl: "http://127.0.0.1:8000",
+        fetcher,
+        onStartPreview,
+        tasks: [completedBackendTask],
+      }),
+    )
+
+    await waitFor(() => expect(fetcher).toHaveBeenCalled())
+    expect(screen.queryByRole("button", { name: "启动预览" })).toBeNull()
+    expect(onStartPreview).not.toHaveBeenCalled()
+  })
+
   it("loads deployments as timeline summary chips and panel items", async () => {
     const onArtifactsChange = vi.fn()
     const onSelectArtifact = vi.fn()

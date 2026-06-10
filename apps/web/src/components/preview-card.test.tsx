@@ -75,6 +75,41 @@ describe("PreviewCard", () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it("keeps unhealthy preview artifacts as diagnostics instead of loading a dead iframe", () => {
+    const onOpen = vi.fn()
+
+    render(
+      createElement(PreviewPanel, {
+        artifactItems: [
+          {
+            artifact: {
+              ...samplePreviewArtifact,
+              healthStatus: "unhealthy",
+              processId: null,
+              status: "failed",
+              statusReason:
+                "Preview process exited before becoming healthy. Recent preview output: Cannot find native binding.",
+            },
+            id: "preview-asset",
+            kind: "preview",
+            taskRunId: "run-1",
+            taskTitle: "Build the Vite React login page",
+          },
+        ],
+        frameKey: 2,
+        onOpenPreview: onOpen,
+        selectedArtifactId: "preview-asset",
+      }),
+    )
+
+    expect(screen.queryByTitle("Vite React 预览")).toBeNull()
+    expect(screen.getByText("预览未运行")).toBeTruthy()
+    expect(screen.getByText(/Cannot find native binding/)).toBeTruthy()
+    const openButton = screen.getByRole("button", { name: "打开预览" })
+    expect((openButton as HTMLButtonElement).disabled).toBe(true)
+    expect(onOpen).not.toHaveBeenCalled()
+  })
+
   it("renders review artifacts in the right-side panel", () => {
     render(
       createElement(PreviewPanel, {
