@@ -2,9 +2,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeSettingsPageClient } from "./runtime-settings-page-client"
-import type { AgentRuntimeConfig, Workspace } from "@/lib/api"
+import type { AgentRuntimeConfig, ExternalProjectTarget, ProjectProvisioningPlan, Workspace } from "@/lib/api"
 
 const apiMocks = vi.hoisted(() => ({
+  applyProjectProvisioning: vi.fn(),
   checkAgentRuntimeProvider: vi.fn(),
   createExternalProjectTarget: vi.fn(),
   getAgentRuntimeConfig: vi.fn(),
@@ -18,6 +19,7 @@ const apiMocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
+  applyProjectProvisioning: apiMocks.applyProjectProvisioning,
   checkAgentRuntimeProvider: apiMocks.checkAgentRuntimeProvider,
   createExternalProjectTarget: apiMocks.createExternalProjectTarget,
   getAgentRuntimeConfig: apiMocks.getAgentRuntimeConfig,
@@ -301,6 +303,18 @@ describe("RuntimeSettingsPageClient", () => {
       updatedAt: "2026-06-02T00:00:00Z",
       workspaceId: "workspace-1",
     })
+    apiMocks.applyProjectProvisioning.mockResolvedValue({
+      plan: projectProvisioningPlan("new-app"),
+      registeredTargets: [
+        externalProjectTarget("external-frontend-new-app", "frontend"),
+        externalProjectTarget("external-backend-new-app", "backend"),
+      ],
+      session: {
+        ...workspaceSessions[0],
+        activeBackendTargetId: "external-backend-new-app",
+        activeFrontendTargetId: "external-frontend-new-app",
+      },
+    })
     apiMocks.updateSessionTargetSelection.mockResolvedValue({
       ...workspaceSessions[0],
       activeFrontendTargetId: "demo-frontend",
@@ -352,8 +366,8 @@ describe("RuntimeSettingsPageClient", () => {
         "http://127.0.0.1:8000",
         "workspace-1",
       )
-      expect(screen.getByText("工作区设置")).toBeTruthy()
       expect(screen.getByText("当前会话目标")).toBeTruthy()
+      expect(screen.getByText("空文件夹与外部项目")).toBeTruthy()
       expect(screen.getByText("规划模型")).toBeTruthy()
     })
   })
@@ -415,6 +429,82 @@ describe("RuntimeSettingsPageClient", () => {
         }),
       )
       expect(screen.getByText("外部项目已注册：前端外部项目 sample-app")).toBeTruthy()
+    })
+  })
+
+  it("provisions a generic full-stack project from a selected empty folder", async () => {
+    apiMocks.applyProjectProvisioning.mockResolvedValueOnce({
+      plan: projectProvisioningPlan("new-app"),
+      registeredTargets: [
+        externalProjectTarget("external-frontend-new-app", "frontend"),
+        externalProjectTarget("external-backend-new-app", "backend"),
+      ],
+      session: {
+        ...workspaceSessions[0],
+        activeBackendTargetId: "external-backend-new-app",
+        activeFrontendTargetId: "external-frontend-new-app",
+      },
+    })
+    apiMocks.listWorkspaceTargets
+      .mockResolvedValueOnce(workspaceTargets)
+      .mockResolvedValueOnce([
+        ...workspaceTargets,
+        {
+          ...workspaceTargets[0],
+          name: "New App",
+          root: "/Users/demo/Desktop/new-app",
+          targetId: "external-frontend-new-app",
+        },
+        {
+          ...workspaceTargets[1],
+          name: "New App API",
+          root: "/Users/demo/Desktop/new-app",
+          targetId: "external-backend-new-app",
+        },
+      ])
+    apiMocks.listWorkspaceSessions
+      .mockResolvedValueOnce(workspaceSessions)
+      .mockResolvedValueOnce([
+        {
+          ...workspaceSessions[0],
+          activeBackendTargetId: "external-backend-new-app",
+          activeFrontendTargetId: "external-frontend-new-app",
+        },
+      ])
+
+    render(
+      <RuntimeSettingsPageClient
+        backendUrl="http://127.0.0.1:8000"
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("项目路径")).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText("项目路径"), {
+      target: { value: "/Users/demo/Desktop/new-app" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "新建全栈项目" }))
+
+    await waitFor(() => {
+      expect(apiMocks.applyProjectProvisioning).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000",
+        "workspace-1",
+        {
+          preferredSlug: "new-app",
+          selectedRootPath: "/Users/demo/Desktop/new-app",
+          sessionId: "session-1",
+          userRequest: "新建全栈项目",
+        },
+      )
+      expect(apiMocks.updateSessionTargetSelection).not.toHaveBeenCalled()
+      expect(screen.getByText("新项目已创建并绑定到当前会话。")).toBeTruthy()
+      expect(screen.getByText("pnpm install")).toBeTruthy()
+      expect(screen.getByText("/Users/demo/Desktop/new-app/frontend")).toBeTruthy()
+      expect(screen.getByText("pip install -r requirements.txt")).toBeTruthy()
+      expect(screen.getByText("/Users/demo/Desktop/new-app/backend")).toBeTruthy()
     })
   })
 
@@ -687,3 +777,65 @@ describe("RuntimeSettingsPageClient", () => {
     })
   })
 })
+
+function projectProvisioningPlan(slug: string): ProjectProvisioningPlan {
+  return {
+    approvalRequiredCommands: [],
+    defaultBackendStack: "fastapi",
+    defaultFrontendStack: "vite-react",
+    notes: [],
+    projectKind: "existing_project",
+    projectRoot: `/Users/demo/Desktop/${slug}`,
+    projectSlug: slug,
+    requiresBackend: true,
+    requiresFrontend: true,
+    safeDefaultCommands: [],
+    setupSteps: [
+      {
+        command: "pnpm install",
+        cwd: `/Users/demo/Desktop/${slug}/frontend`,
+        reason: "Install frontend dependencies before check, test, build, or preview.",
+        requiresApproval: true,
+        role: "frontend",
+      },
+      {
+        command: "pip install -r requirements.txt",
+        cwd: `/Users/demo/Desktop/${slug}/backend`,
+        reason: "Install backend dependencies before running API checks or tests.",
+        requiresApproval: true,
+        role: "backend",
+      },
+    ],
+    targetDrafts: [],
+  }
+}
+
+function externalProjectTarget(
+  targetId: string,
+  role: "frontend" | "backend",
+): ExternalProjectTarget {
+  const isFrontend = role === "frontend"
+  return {
+    allowedPaths: isFrontend ? ["src"] : ["app"],
+    analysisStatus: "manual",
+    buildCommand: isFrontend ? "pnpm build" : null,
+    checkCommand: isFrontend ? "pnpm check" : "python -m compileall .",
+    createdAt: "2026-06-10T00:00:00Z",
+    deniedPaths: [".env", "node_modules"],
+    deployProviderIds: [],
+    detectedFramework: isFrontend ? "vite-react" : "fastapi",
+    devCommand: isFrontend ? "pnpm dev" : "uvicorn app.main:app --reload",
+    id: targetId,
+    name: targetId,
+    packageManager: isFrontend ? "pnpm" : "pip",
+    previewCommand: isFrontend ? "pnpm dev" : null,
+    projectType: isFrontend ? "vite-react" : "fastapi",
+    rootPath: `/Users/demo/Desktop/new-app/${role}`,
+    stagingOutputDir: null,
+    stagingServeCommand: null,
+    targetId,
+    testCommand: isFrontend ? "pnpm test" : "pytest",
+    updatedAt: "2026-06-10T00:00:00Z",
+    workspaceId: "workspace-1",
+  }
+}

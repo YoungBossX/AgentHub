@@ -35,6 +35,7 @@ from app.models import (
     TaskRunEvent,
     Workspace,
 )
+from app.reviews import create_scripted_review_for_task_run
 from app.task_runs import create_task_run
 
 
@@ -290,6 +291,192 @@ def test_external_task_run_diff_uses_allowed_paths_and_excludes_denied(
     assert metadata["providerEvidence"]["adapterType"] == "codex"
     assert metadata["providerEvidence"]["changedFiles"] == ["src/App.tsx"]
     assert event_payload["providerEvidence"]["adapterType"] == "codex"
+
+
+def test_non_git_external_task_run_diff_uses_pre_run_file_snapshot(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    external_root = tmp_path / "non-git-app"
+    (external_root / "src").mkdir(parents=True)
+    (external_root / "src" / "App.tsx").write_text(
+        "export default function App() {\n"
+        "  return <h1>Before</h1>\n"
+        "}\n"
+    )
+    (external_root / "src" / "Old.ts").write_text("export const oldValue = true\n")
+
+    workspace = Workspace(
+        name="AgentHub Demo",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="External non-git diff session",
+        bound_branch="main",
+        worktree_path=".worktrees/external-non-git-diff-session",
+    )
+    agent = Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local")
+    db.add(workspace)
+    db.add(session)
+    db.add(agent)
+    db.commit()
+    db.refresh(workspace)
+    register_external_project_target(
+        db,
+        workspace,
+        ExternalWorkspaceRegistration(
+            target_id="external-non-git-diff-app",
+            name="External Non Git Diff App",
+            root_path=str(external_root),
+            project_type="vite-react",
+            allowed_paths=["src"],
+            denied_paths=[".env", "node_modules", ".git"],
+        ),
+    )
+    task = Task(
+        session_id=session.id,
+        title="External non-git frontend change",
+        intent_type="frontend_change",
+        assigned_agent_id=agent.id,
+        plan_json=json.dumps(
+            {
+                "targetId": "external-non-git-diff-app",
+                "safeTarget": "src",
+                "files": ["src/App.tsx", "src/New.ts"],
+            },
+            separators=(",", ":"),
+        ),
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+
+    task_run = create_task_run(db, task.id)
+    checkpoint = json.loads(task_run.metrics_json)["preRunCheckpoint"]
+    assert task_run.base_ref is None
+    assert checkpoint["fileSnapshot"]["available"] is True
+    assert checkpoint["fileSnapshot"]["snapshotId"].startswith("filesystem-snapshot:")
+
+    (external_root / "src" / "App.tsx").write_text(
+        "export default function App() {\n"
+        "  return <h1>After</h1>\n"
+        "}\n"
+    )
+    (external_root / "src" / "New.ts").write_text("export const newValue = true\n")
+    (external_root / "src" / "Old.ts").unlink()
+    (external_root / ".env").write_text("SECRET=hidden\n")
+    (external_root / "node_modules").mkdir()
+    (external_root / "node_modules" / "cache.txt").write_text("hidden cache\n")
+
+    diff_artifact = collect_task_run_diff(db, task_run.id)
+
+    stored_run = db.get(TaskRun, task_run.id)
+    assert stored_run is not None
+    assert stored_run.base_ref == checkpoint["fileSnapshot"]["snapshotId"]
+    assert stored_run.head_ref is not None
+    assert stored_run.head_ref.startswith("filesystem-snapshot:")
+    assert diff_artifact.changed_files == [
+        "src/App.tsx",
+        "src/New.ts",
+        "src/Old.ts",
+    ]
+    assert "diff --git a/src/App.tsx b/src/App.tsx" in diff_artifact.patch_text
+    assert "+  return <h1>After</h1>" in diff_artifact.patch_text
+    assert "new file mode 100644" in diff_artifact.patch_text
+    assert "deleted file mode 100644" in diff_artifact.patch_text
+    assert "SECRET=hidden" not in diff_artifact.patch_text
+    assert "node_modules" not in diff_artifact.patch_text
+    assert diff_artifact.stats["filesChanged"] == 3
+
+    manual_review_response = create_scripted_review_for_task_run(db, task_run.id)
+    assert manual_review_response.reviewed_diff_artifact_id == diff_artifact.artifact_id
+    assert manual_review_response.files_reviewed == [
+        "src/App.tsx",
+        "src/New.ts",
+        "src/Old.ts",
+    ]
+
+
+def test_legacy_non_git_external_task_run_without_snapshot_falls_back_to_empty_base(
+    db: DbSession,
+    tmp_path: Path,
+) -> None:
+    external_root = tmp_path / "legacy-non-git-app"
+    (external_root / "src").mkdir(parents=True)
+    (external_root / "src" / "App.tsx").write_text(
+        "export default function App() {\n"
+        "  return <h1>Already generated</h1>\n"
+        "}\n"
+    )
+    (external_root / ".env").write_text("SECRET=hidden\n")
+
+    workspace = Workspace(
+        name="AgentHub Demo",
+        repo_url="local://apps/demo",
+        root_path="apps/demo",
+        default_branch="main",
+    )
+    session = Session(
+        workspace_id=workspace.id,
+        title="Legacy external non-git diff session",
+        bound_branch="main",
+        worktree_path=".worktrees/legacy-external-non-git-diff-session",
+    )
+    agent = Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local")
+    db.add(workspace)
+    db.add(session)
+    db.add(agent)
+    db.commit()
+    db.refresh(workspace)
+    register_external_project_target(
+        db,
+        workspace,
+        ExternalWorkspaceRegistration(
+            target_id="external-legacy-non-git-diff-app",
+            name="External Legacy Non Git Diff App",
+            root_path=str(external_root),
+            project_type="vite-react",
+            allowed_paths=["src"],
+            denied_paths=[".env", "node_modules", ".git"],
+        ),
+    )
+    task = Task(
+        session_id=session.id,
+        title="Legacy external frontend change",
+        intent_type="frontend_change",
+        assigned_agent_id=agent.id,
+        plan_json=json.dumps(
+            {
+                "targetId": "external-legacy-non-git-diff-app",
+                "safeTarget": "src",
+                "files": ["src/App.tsx"],
+            },
+            separators=(",", ":"),
+        ),
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    task_run = create_task_run(db, task.id)
+    metrics = json.loads(task_run.metrics_json)
+    metrics["preRunCheckpoint"].pop("fileSnapshot", None)
+    task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
+    db.add(task_run)
+    db.commit()
+    db.refresh(task_run)
+
+    diff_artifact = collect_task_run_diff(db, task_run.id)
+    review = create_scripted_review_for_task_run(db, task_run.id)
+
+    assert diff_artifact.base_ref == "filesystem-snapshot:empty"
+    assert diff_artifact.changed_files == ["src/App.tsx"]
+    assert "new file mode 100644" in diff_artifact.patch_text
+    assert "Already generated" in diff_artifact.patch_text
+    assert "SECRET=hidden" not in diff_artifact.patch_text
+    assert review.reviewed_diff_artifact_id == diff_artifact.artifact_id
 
 
 def test_diff_api_returns_stored_diff_artifacts(

@@ -4,6 +4,13 @@ export type BackendHealth = {
   database: string
 }
 
+export class ApiRequestError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "ApiRequestError"
+  }
+}
+
 export type Workspace = {
   id: string
   name: string
@@ -110,6 +117,42 @@ export type LocalFolderListing = {
   parentPath: string | null
   starts: LocalFolderStart[]
   children: LocalFolderEntry[]
+}
+
+export type ProjectProvisioningApplyInput = {
+  userRequest: string
+  selectedRootPath: string
+  preferredSlug?: string | null
+  sessionId?: string | null
+}
+
+export type ProjectProvisioningSetupStep = {
+  role: "frontend" | "backend" | string
+  command: string
+  cwd: string
+  reason: string
+  requiresApproval: boolean
+}
+
+export type ProjectProvisioningPlan = {
+  projectKind: string
+  projectSlug: string
+  projectRoot: string
+  requiresFrontend: boolean
+  requiresBackend: boolean
+  defaultFrontendStack: string | null
+  defaultBackendStack: string | null
+  targetDrafts: Record<string, unknown>[]
+  approvalRequiredCommands: string[]
+  setupSteps: ProjectProvisioningSetupStep[]
+  safeDefaultCommands: string[]
+  notes: string[]
+}
+
+export type ProjectProvisioningApplyResponse = {
+  plan: ProjectProvisioningPlan
+  registeredTargets: ExternalProjectTarget[]
+  session: WorkspaceSession
 }
 
 export type AgentContact = {
@@ -632,7 +675,9 @@ export async function analyzeExternalProject(
   )
 
   if (!response.ok) {
-    throw new Error("Could not analyze external project")
+    throw new ApiRequestError(
+      await responseErrorMessage(response, "Could not analyze external project"),
+    )
   }
 
   return (await response.json()) as ExternalProjectAnalysis
@@ -654,10 +699,36 @@ export async function createExternalProjectTarget(
   )
 
   if (!response.ok) {
-    throw new Error("Could not register external project")
+    throw new ApiRequestError(
+      await responseErrorMessage(response, "Could not register external project"),
+    )
   }
 
   return (await response.json()) as ExternalProjectTarget
+}
+
+export async function applyProjectProvisioning(
+  backendUrl: string,
+  workspaceId: string,
+  input: ProjectProvisioningApplyInput,
+  fetcher: Fetcher = fetch,
+): Promise<ProjectProvisioningApplyResponse> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/project-provisioning/apply`),
+    {
+      body: JSON.stringify(input),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  )
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      await responseErrorMessage(response, "Could not apply project provisioning"),
+    )
+  }
+
+  return (await response.json()) as ProjectProvisioningApplyResponse
 }
 
 export async function listExternalTargetFolders(
@@ -712,7 +783,9 @@ export async function updateSessionTargetSelection(
   )
 
   if (!response.ok) {
-    throw new Error("Could not update session target selection")
+    throw new ApiRequestError(
+      await responseErrorMessage(response, "Could not update session target selection"),
+    )
   }
 
   return (await response.json()) as WorkspaceSession
@@ -1306,8 +1379,22 @@ async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {
   const response = await fetcher(url, { method: "POST" })
 
   if (!response.ok) {
-    throw new Error("Could not update task run")
+    throw new ApiRequestError(
+      await responseErrorMessage(response, "Could not update task run"),
+    )
   }
 
   return (await response.json()) as TaskRun
+}
+
+async function responseErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload = (await response.json()) as { detail?: unknown }
+    if (typeof payload.detail === "string" && payload.detail.trim().length > 0) {
+      return payload.detail
+    }
+  } catch {
+    return fallback
+  }
+  return fallback
 }

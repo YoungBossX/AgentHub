@@ -119,6 +119,55 @@ def test_planner_response_contract_requires_plan_and_task_fields() -> None:
     assert response.tasks[0].requires_approval is False
 
 
+def test_planner_response_contract_accepts_project_setup_metadata() -> None:
+    response = PlannerResponse.model_validate(
+        {
+            "planId": "plan-health-management",
+            "planner": "llm_v1",
+            "plannerMode": "llm_v1",
+            "rationale": "Prepare a new fullstack project before assigning work.",
+            "acceptanceCriteria": ["Project boundaries are prepared"],
+            "validationExpectations": ["configured commands are used"],
+            "projectSetup": {
+                "projectKind": "new_project",
+                "plannedProjectRoot": "~/Desktop/agenthub-rehearsals/health-management",
+                "defaultFrontendStack": "vite-react",
+                "defaultBackendStack": "fastapi",
+                "approvalRequiredCommands": ["pnpm install"],
+                "provisionalTargets": [
+                    {
+                        "targetId": "external-frontend-health-management",
+                        "role": "frontend",
+                        "rootPath": "~/Desktop/agenthub-rehearsals/health-management/frontend",
+                        "projectType": "vite-react",
+                        "allowedPaths": ["src", "package.json"],
+                        "validationCommands": ["pnpm build"],
+                    }
+                ],
+            },
+            "tasks": [
+                {
+                    "title": "Build health frontend",
+                    "role": "frontend",
+                    "targetId": "external-frontend-health-management",
+                    "intentType": "frontend_change",
+                    "plannedFiles": ["src/App.tsx"],
+                    "dependsOn": [],
+                    "expectedArtifactTypes": ["diff"],
+                    "acceptanceCriteria": ["Login page renders"],
+                    "riskLevel": "medium",
+                    "requiresApproval": False,
+                }
+            ],
+        }
+    )
+
+    payload = response.to_payload()
+
+    assert payload["projectSetup"]["projectKind"] == "new_project"
+    assert payload["projectSetup"]["provisionalTargets"][0]["role"] == "frontend"
+
+
 def test_planner_response_contract_rejects_incomplete_plan() -> None:
     with pytest.raises(ValidationError):
         PlannerResponse.model_validate(

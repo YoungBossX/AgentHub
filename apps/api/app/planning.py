@@ -36,6 +36,7 @@ from app.target_registry import (
     get_related_backend_target,
     get_target,
     get_target_for_workspace,
+    list_targets_for_workspace,
 )
 from app.task_graph_builder import TaskGraphTaskSpec, task_graph_metadata
 
@@ -227,6 +228,7 @@ def plan_for_message(
 ) -> list[Task]:
     parsed = parse_mentions(db, content)
     existing_tasks = list_session_tasks(db, message.session_id)
+    active_tasks = _active_planning_tasks(existing_tasks)
     routed_role = parsed.roles[0] if parsed.roles else "orchestrator"
     if routed_role == "orchestrator":
         memory_write = _maybe_handle_explicit_memory_write(db, message, content)
@@ -291,11 +293,7 @@ def plan_for_message(
                             planner_provider,
                         )
                         if fallback_tasks:
-                            _attach_planner_runtime_evidence(
-                                db,
-                                fallback_tasks,
-                                planner_runtime,
-                            )
+                            _attach_planner_runtime_evidence(db, fallback_tasks, planner_runtime)
                             return fallback_tasks
                         if _should_request_target_setup_for_non_task_llm_outcome(
                             db,
@@ -385,45 +383,59 @@ def plan_for_message(
 
     contract_intent = parse_app_contract_intent(content)
     bounded_intent = parse_frontend_intent(content)
-    if contract_intent is not None and not existing_tasks:
+    if (
+        not active_tasks
+        and _has_active_external_targets(db, message)
+        and bounded_intent is None
+    ):
+        external_fallback_tasks = _create_external_fallback_tasks_for_request(
+            db,
+            message,
+            content,
+            llm_fallback=llm_fallback,
+        )
+        if external_fallback_tasks:
+            return external_fallback_tasks
+
+    if contract_intent is not None and not active_tasks:
         return _create_contract_first_plan(
             db,
             message,
             contract_intent,
             llm_fallback=llm_fallback,
         )
-    if contract_intent is not None and existing_tasks:
+    if contract_intent is not None and active_tasks:
         return []
 
-    if _is_explicit_platform_mode_request(content) and not existing_tasks:
+    if _is_explicit_platform_mode_request(content) and not active_tasks:
         return _create_platform_maintenance_task(
             db,
             message,
             llm_fallback=llm_fallback,
         )
 
-    if bounded_intent is not None and existing_tasks:
+    if bounded_intent is not None and active_tasks:
         return _create_dynamic_frontend_tasks(
             db,
             message,
             bounded_intent,
-            existing_tasks=existing_tasks,
+            existing_tasks=active_tasks,
             auto_start=True,
         )
 
-    if existing_tasks:
+    if active_tasks:
         return []
 
     if "login page" not in content.lower() or "demo app" not in content.lower():
         if bounded_intent is None:
-            active_frontend_target = _active_external_target_for_role(db, message, "frontend")
-            if active_frontend_target is not None and _is_safe_external_frontend_request(content):
-                return _create_orchestrator_external_frontend_task(
-                    db,
-                    message,
-                    active_frontend_target,
-                    llm_fallback=llm_fallback,
-                )
+            external_fallback_tasks = _create_external_fallback_tasks_for_request(
+                db,
+                message,
+                content,
+                llm_fallback=llm_fallback,
+            )
+            if external_fallback_tasks:
+                return external_fallback_tasks
             if _is_safe_demo_frontend_request(content):
                 return _create_orchestrator_demo_frontend_task(
                     db,
@@ -1328,6 +1340,48 @@ def _create_orchestrator_external_frontend_task(
     return [task]
 
 
+def _create_external_fallback_tasks_for_request(
+    db: DbSession,
+    message: Message,
+    content: str,
+    *,
+    llm_fallback: Optional[dict] = None,
+) -> list[Task]:
+    frontend_target = _fallback_external_target_for_role(db, message, "frontend")
+    if frontend_target is None:
+        return []
+    if not _is_safe_external_frontend_request(content):
+        return []
+
+    tasks = _create_orchestrator_external_frontend_task(
+        db,
+        message,
+        frontend_target,
+        llm_fallback=llm_fallback,
+    )
+    backend_target = _fallback_external_target_for_role(db, message, "backend")
+    if backend_target is not None and _requires_backend_target(content):
+        backend = _enabled_agent_or_raise(db, "backend")
+        tasks.append(
+            _create_external_assignment_task(
+                db,
+                message,
+                agent=backend,
+                role="backend",
+                target=backend_target,
+                intent_type="backend_change",
+                priority=1,
+                depends_on=[tasks[0].id],
+                auto_start=True,
+                planner="orchestrator_external_target_v1",
+                routing="orchestrator_default",
+                extra_plan=_fallback_plan_metadata(llm_fallback),
+            )
+        )
+    _record_fallback_created_task_ids(db, tasks)
+    return tasks
+
+
 def _create_external_assignment_task(
     db: DbSession,
     message: Message,
@@ -1550,13 +1604,43 @@ def _is_safe_external_frontend_request(content: str) -> bool:
         "copy",
         "button",
         "layout",
+        "app",
+        "application",
+        "system",
+        "login",
+        "management",
         "前端",
         "页面",
+        "系统",
+        "应用",
+        "软件",
+        "登录",
+        "管理",
+        "登记",
+        "健康",
         "仪表盘",
         "按钮",
         "文案",
     ]
     return any(signal in normalized for signal in safe_signals)
+
+
+def _requires_backend_target(content: str) -> bool:
+    normalized = MENTION_PATTERN.sub("", content).lower()
+    return any(
+        signal in normalized
+        for signal in (
+            "backend",
+            "api",
+            "database",
+            "server",
+            "后端",
+            "前后端",
+            "数据库",
+            "服务端",
+            "接口",
+        )
+    )
 
 
 def _active_external_target_for_role(
@@ -1585,18 +1669,85 @@ def _active_external_target_for_role(
     return target
 
 
+def _fallback_external_target_for_role(
+    db: DbSession,
+    message: Message,
+    role: str,
+) -> Optional[TargetProject]:
+    active = _active_external_target_for_role(db, message, role)
+    if active is not None:
+        return active
+    session = _session_for_message(db, message)
+    expected_type = "frontend" if role == "frontend" else "backend"
+    targets = [
+        target
+        for target in list_targets_for_workspace(db, session.workspace_id)
+        if target.target_id.startswith("external-")
+        and target.type == expected_type
+        and target.allows_agent(role)
+        and not target.requires_platform_mode
+        and not target.requires_approval
+    ]
+    preferred_ids = (
+        ["external-agenthub-rehearsals", "external-frontend-agenthub-rehearsals"]
+        if role == "frontend"
+        else ["external-backend-agenthub-rehearsals"]
+    )
+    for preferred in preferred_ids:
+        match = next((target for target in targets if target.target_id == preferred), None)
+        if match is not None:
+            return match
+    return next(
+        (
+            target
+            for target in targets
+            if "agenthub-rehearsals" in target.target_id
+            or "agenthub-rehearsals" in target.root
+        ),
+        targets[0] if targets else None,
+    )
+
+
+def _has_active_external_targets(
+    db: DbSession,
+    message: Message,
+) -> bool:
+    return (
+        _active_external_target_for_role(db, message, "frontend") is not None
+        or _active_external_target_for_role(db, message, "backend") is not None
+    )
+
+
 def _external_task_files(target: TargetProject) -> list[str]:
     root = Path(target.root)
     files: list[str] = []
     for allowed_path in target.allowed_paths:
+        if allowed_path == "*":
+            wildcard_files = _wildcard_external_task_files(target)
+            files.extend(wildcard_files)
+            continue
         allowed_root = root / allowed_path
+        if allowed_root.is_file():
+            files.append(allowed_path)
+            continue
         for candidate in ("App.tsx", "App.jsx", "main.tsx", "main.jsx", "main.py", "server.ts"):
             if (allowed_root / candidate).exists():
                 files.append(f"{allowed_path}/{candidate}")
                 break
-        if not files:
+        else:
             files.append(allowed_path)
     return files[:4]
+
+
+def _wildcard_external_task_files(target: TargetProject) -> list[str]:
+    root = Path(target.root)
+    candidates = (
+        ("src/App.tsx", "src/main.tsx", "src/App.jsx", "src/main.jsx", "package.json")
+        if target.type == "frontend"
+        else ("app/main.py", "main.py", "requirements.txt", "pyproject.toml")
+    )
+    files = [path for path in candidates if (root / path).exists()]
+    return files or ["*"]
 
 
 def _maybe_handle_explicit_memory_write(
@@ -1747,12 +1898,7 @@ def _fallback_tasks_for_non_task_llm_outcome(
         return []
     if _is_pure_chat_request(content):
         return []
-    if list_session_tasks(db, message.session_id):
-        return []
-    active_frontend_target = _active_external_target_for_role(db, message, "frontend")
-    if active_frontend_target is None:
-        return []
-    if not _is_safe_external_frontend_request(content):
+    if _active_planning_tasks(list_session_tasks(db, message.session_id)):
         return []
     llm_fallback = llm_planner_fallback_metadata(
         "non_task_coding_outcome",
@@ -1767,14 +1913,12 @@ def _fallback_tasks_for_non_task_llm_outcome(
     llm_fallback["errorSummary"] = (
         "LLM router returned assistant_reply for a safe external frontend coding request."
     )
-    tasks = _create_orchestrator_external_frontend_task(
+    return _create_external_fallback_tasks_for_request(
         db,
         message,
-        active_frontend_target,
+        content,
         llm_fallback=llm_fallback,
     )
-    _record_fallback_created_task_ids(db, tasks)
-    return tasks
 
 
 def _should_request_target_setup_for_non_task_llm_outcome(
@@ -1787,7 +1931,7 @@ def _should_request_target_setup_for_non_task_llm_outcome(
         return False
     if _is_pure_chat_request(content):
         return False
-    if list_session_tasks(db, message.session_id):
+    if _active_planning_tasks(list_session_tasks(db, message.session_id)):
         return False
     if _active_external_target_for_role(db, message, "frontend") is not None:
         return False
@@ -1818,6 +1962,14 @@ def _record_fallback_created_task_ids(db: DbSession, tasks: list[Task]) -> None:
     db.commit()
     for task in tasks:
         db.refresh(task)
+
+
+def _active_planning_tasks(tasks: list[Task]) -> list[Task]:
+    return [
+        task
+        for task in tasks
+        if task.status not in {"failed", "cancelled", "completed"}
+    ]
 
 
 def _primary_allowed_path(target: TargetProject) -> str:

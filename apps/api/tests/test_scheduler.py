@@ -27,7 +27,7 @@ from app.scheduler import (
     evaluate_and_apply_dependency_readiness,
     evaluate_dependency_readiness,
 )
-from app.session_queue import entry_for_task_run
+from app.session_queue import entry_for_task_run, mark_task_run_running
 from app.task_runs import (
     TaskRunLifecycleError,
     claim_task_run_for_worker,
@@ -35,7 +35,7 @@ from app.task_runs import (
     retry_with_scripted_mock,
     transition_task_run,
 )
-from app.target_locks import acquire_target_lock
+from app.target_locks import acquire_target_lock, held_lock_for_target, lock_diagnostics_for_task_run
 from app.provider_assignments import PROVIDER_ASSIGNMENT_MATRIX_ENV
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
@@ -427,6 +427,121 @@ def test_same_external_target_write_task_queues_for_active_lock(tmp_path) -> Non
         assert scheduler["state"] == SCHEDULER_WAITING_TARGET_LOCK
         assert scheduler["targetId"] == "external-vite-app"
         assert scheduler["lockHolderTaskRunIds"] == [first_run.id]
+
+
+def test_provisioned_project_runs_use_durable_queue_and_release_target_lock(tmp_path) -> None:
+    with scheduler_db() as db:
+        workspace = Workspace(
+            name="AgentHub Demo",
+            repo_url="local://apps/demo",
+            root_path="apps/demo",
+            default_branch="main",
+        )
+        session = Session(
+            workspace_id=workspace.id,
+            title="Provisioned run session",
+            bound_branch="main",
+            worktree_path=".worktrees/provisioned-run-session",
+        )
+        frontend = Agent(
+            name="Frontend Agent",
+            role="frontend",
+            adapter_type="codex",
+            provider="local",
+        )
+        db.add(workspace)
+        db.add(session)
+        db.add(frontend)
+        db.commit()
+        frontend_root = tmp_path / "notes-app" / "frontend"
+        (frontend_root / "src").mkdir(parents=True)
+        (frontend_root / "src" / "App.tsx").write_text(
+            "export default function App() { return null }\n"
+        )
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-frontend-notes-app",
+                name="Notes frontend",
+                root_path=str(frontend_root),
+                project_type="vite-react",
+                allowed_paths=["src", "package.json", "vite.config.ts"],
+                denied_paths=[".env", "node_modules"],
+                check_command="pnpm check",
+                build_command="pnpm build",
+                package_manager="pnpm",
+                detected_framework="vite-react",
+            ),
+        )
+        session.active_frontend_target_id = "external-frontend-notes-app"
+        plan = {
+            "planner": "orchestrator_external_target_v1",
+            "targetId": "external-frontend-notes-app",
+            "frontendTargetId": "external-frontend-notes-app",
+            "safeTarget": "src",
+            "allowedPaths": ["src", "package.json", "vite.config.ts"],
+            "deniedPaths": [".env", "node_modules"],
+            "files": ["src/App.tsx"],
+            "autoStart": True,
+        }
+        first = Task(
+            session_id=session.id,
+            title="First provisioned frontend task",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend.id,
+            plan_json=json.dumps(plan, separators=(",", ":")),
+        )
+        second = Task(
+            session_id=session.id,
+            title="Second provisioned frontend task",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend.id,
+            plan_json=json.dumps(plan, separators=(",", ":")),
+        )
+        db.add(session)
+        db.add(first)
+        db.add(second)
+        db.commit()
+        db.refresh(first)
+        db.refresh(second)
+
+        first_run = claim_task_run_for_worker(
+            db,
+            create_task_run(db, first.id).id,
+            worker_id="worker:provisioned-first",
+        )
+        mark_task_run_running(
+            db,
+            first_run.id,
+            "Session write queue entry is at the head of the queue.",
+        )
+        lock_result = acquire_target_lock(
+            db,
+            target_id="external-frontend-notes-app",
+            session_id=session.id,
+            task_run_id=first_run.id,
+            worker_id="worker:provisioned-first",
+            lease_expires_at=first_run.lease_expires_at,
+        )
+        second_run = create_task_run(db, second.id)
+        second_entry = entry_for_task_run(db, second_run.id)
+
+        assert lock_result.acquired is True
+        assert entry_for_task_run(db, first_run.id).state == "running"
+        assert second_run.state == "queued"
+        assert second_entry.state == "waiting_lock"
+        assert second_entry.target_id == "external-frontend-notes-app"
+        assert lock_diagnostics_for_task_run(db, first_run.id)["state"] == "held"
+        assert held_lock_for_target(db, "external-frontend-notes-app") is not None
+
+        transition_task_run(db, first_run.id, "completed")
+
+        assert held_lock_for_target(db, "external-frontend-notes-app") is None
+        assert lock_diagnostics_for_task_run(db, first_run.id)["state"] == "released"
+        assert entry_for_task_run(db, first_run.id).state == "completed"
 
 
 def test_file_overlap_conflict_blocks_unsequenced_write_task() -> None:

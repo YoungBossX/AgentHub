@@ -640,7 +640,19 @@ class ProviderErrorClassifier:
         ("tool", ("tool failed", "command failed", "subprocess", "non-zero", "exit code")),
         ("guardrail", ("guardrail", "protected path", "permission denied", "command denied")),
         ("dirty_worktree", ("dirty worktree", "uncommitted", "git status")),
-        ("unavailable", ("not found", "missing", "unavailable", "connection refused", "binary")),
+        (
+            "unavailable",
+            (
+                "not found",
+                "missing",
+                "unavailable",
+                "unable to connect",
+                "connection refused",
+                "connectionrefused",
+                "econnrefused",
+                "binary",
+            ),
+        ),
     )
     RETRYABLE: frozenset[ProviderErrorCategory] = frozenset(
         {"quota", "rate_limit", "timeout", "tool", "unavailable", "unknown"}
@@ -690,9 +702,15 @@ class ProviderErrorClassifier:
     def _category_for(self, raw: str) -> ProviderErrorCategory:
         normalized = raw.lower()
         for category, keywords in self.CATEGORY_KEYWORDS:
-            if any(keyword in normalized for keyword in keywords):
+            if any(_provider_error_keyword_matches(normalized, keyword) for keyword in keywords):
                 return category
         return "unknown"
+
+
+def _provider_error_keyword_matches(normalized_text: str, keyword: str) -> bool:
+    if keyword in {"401", "403", "429"}:
+        return re.search(rf"(?<![A-Za-z0-9]){keyword}(?![A-Za-z0-9])", normalized_text) is not None
+    return keyword in normalized_text
 
 
 class FallbackPolicy:

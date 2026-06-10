@@ -115,16 +115,10 @@ export function MemorySettingsPageClient({
       <div className="rounded-lg border border-[var(--border)] bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold text-[var(--text-muted)]">
-              工作区记忆
-            </p>
-            <h2 className="mt-1 text-base font-semibold text-slate-950">
-              {workspace?.name ?? "未选择工作区"}
-            </h2>
-            <p className="mt-1 max-w-xl break-all font-mono text-xs text-[var(--muted-foreground)]">
+            <p className="max-w-xl break-all font-mono text-xs text-[var(--muted-foreground)]">
               {currentSnapshotId
-                ? `当前 memorySnapshotId: ${currentSnapshotId}`
-                : "当前会话暂无 memory snapshot"}
+                ? `memorySnapshotId: ${currentSnapshotId}`
+                : "暂无 memory snapshot"}
             </p>
           </div>
           <button

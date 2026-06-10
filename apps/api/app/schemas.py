@@ -68,6 +68,38 @@ class ExternalProjectAnalysisResponse(ApiModel):
     project_profile: dict[str, Any] = Field(alias="projectProfile")
 
 
+class ProjectProvisioningRequest(BaseModel):
+    user_request: str = Field(alias="userRequest")
+    existing_project_root: Optional[str] = Field(default=None, alias="existingProjectRoot")
+    preferred_slug: Optional[str] = Field(default=None, alias="preferredSlug")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ProjectProvisioningApplyRequest(BaseModel):
+    user_request: str = Field(alias="userRequest")
+    selected_root_path: str = Field(alias="selectedRootPath")
+    session_id: str = Field(alias="sessionId")
+    preferred_slug: Optional[str] = Field(default=None, alias="preferredSlug")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ProjectProvisioningResponse(ApiModel):
+    project_kind: str = Field(alias="projectKind")
+    project_slug: str = Field(alias="projectSlug")
+    project_root: str = Field(alias="projectRoot")
+    requires_frontend: bool = Field(alias="requiresFrontend")
+    requires_backend: bool = Field(alias="requiresBackend")
+    default_frontend_stack: Optional[str] = Field(alias="defaultFrontendStack")
+    default_backend_stack: Optional[str] = Field(alias="defaultBackendStack")
+    target_drafts: list[dict[str, Any]] = Field(alias="targetDrafts")
+    approval_required_commands: list[str] = Field(alias="approvalRequiredCommands")
+    setup_steps: list[dict[str, Any]] = Field(alias="setupSteps")
+    safe_default_commands: list[str] = Field(alias="safeDefaultCommands")
+    notes: list[str]
+
+
 class LocalFolderEntryResponse(ApiModel):
     name: str
     path: str
@@ -379,6 +411,12 @@ class SessionResponse(ApiModel):
     last_message_at: Optional[datetime] = Field(alias="lastMessageAt")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
+
+
+class ProjectProvisioningApplyResponse(ApiModel):
+    plan: ProjectProvisioningResponse
+    registered_targets: list[ExternalProjectTargetResponse] = Field(alias="registeredTargets")
+    session: SessionResponse
 
 
 class SessionCreateRequest(BaseModel):

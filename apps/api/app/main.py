@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
-from app.adapters import AgentAdapter, AgentRunRequest, run_adapter_event_stream
+from app.adapters import AgentAdapter, AgentRunRequest
 from app.agent_directory import (
     AgentCompatibility,
     AgentDirectoryEntry,
@@ -50,12 +50,17 @@ from app.artifact_workbench import (
 )
 from app.config import get_settings
 from app.claude_code_adapter import ClaudeCodeAdapter
-from app.codex_adapter import CodexAdapter
 from app.context_pack import build_session_context_pack
 from app.db import engine, init_database
 from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
 from app.deployment_providers import list_deployment_providers
-from app.diffs import DiffCollectionError, StoredDiffArtifact, collect_task_run_diff, list_task_run_diffs
+from app.diffs import (
+    DiffCollectionError,
+    StoredDiffArtifact,
+    collect_task_run_diff,
+    list_task_run_diffs,
+    record_diff_collection_failure,
+)
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
 from app.external_workspaces import (
     ExternalWorkspaceRegistration,
@@ -105,6 +110,13 @@ from app.models import utc_now
 from app.planning import MentionParseError, plan_for_message
 from app.pmo_decisions import PmoDecisionError, apply_pmo_decision, require_supported_decision_payload
 from app.project_analyzer import ProjectAnalysisResult, analyze_external_project
+from app.project_provisioning import (
+    ProjectProvisioningApplyError,
+    ProjectProvisioningApplyResult,
+    ProjectProvisioningPlan,
+    apply_project_provisioning,
+    plan_project_provisioning,
+)
 from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
 from app.provider_configs import ProviderConfig, list_provider_configs
 from app.provider_health import ProviderHealthCheckResult, check_runtime_role_provider
@@ -125,6 +137,7 @@ from app.reviews import (
     StoredReviewArtifact,
     create_scripted_review_for_task_run,
     list_task_run_reviews,
+    record_review_collection_failure,
 )
 from app.run_diagnostics import (
     build_session_run_diagnostics_summary,
@@ -187,6 +200,10 @@ from app.schemas import (
     MemoryItemStatusUpdateRequest,
     PMOPlanDecisionRequest,
     PreviewResponse,
+    ProjectProvisioningApplyRequest,
+    ProjectProvisioningApplyResponse,
+    ProjectProvisioningRequest,
+    ProjectProvisioningResponse,
     ProviderConfigResponse,
     ReviewArtifactResponse,
     RuntimeConfigResponse,
@@ -219,7 +236,6 @@ from app.task_runs import (
     retry_with_scripted_mock,
     transition_task_run,
 )
-from app.scripted_mock import ScriptedMockAdapter
 from app.worktrees import WorktreeError, WorktreeService
 
 
@@ -369,6 +385,46 @@ def external_project_analysis_response(
     )
 
 
+def project_provisioning_response(
+    plan: ProjectProvisioningPlan,
+) -> ProjectProvisioningResponse:
+    summary = plan.summary()
+    return ProjectProvisioningResponse(
+        projectKind=str(summary["projectKind"]),
+        projectSlug=str(summary["projectSlug"]),
+        projectRoot=str(summary["projectRoot"]),
+        requiresFrontend=bool(summary["requiresFrontend"]),
+        requiresBackend=bool(summary["requiresBackend"]),
+        defaultFrontendStack=(
+            summary["defaultFrontendStack"]
+            if isinstance(summary["defaultFrontendStack"], str)
+            else None
+        ),
+        defaultBackendStack=(
+            summary["defaultBackendStack"]
+            if isinstance(summary["defaultBackendStack"], str)
+            else None
+        ),
+        targetDrafts=list(summary["targetDrafts"]),
+        approvalRequiredCommands=list(summary["approvalRequiredCommands"]),
+        setupSteps=list(summary["setupSteps"]),
+        safeDefaultCommands=list(summary["safeDefaultCommands"]),
+        notes=list(summary["notes"]),
+    )
+
+
+def project_provisioning_apply_response(
+    result: ProjectProvisioningApplyResult,
+) -> ProjectProvisioningApplyResponse:
+    return ProjectProvisioningApplyResponse(
+        plan=project_provisioning_response(result.plan),
+        registeredTargets=[
+            external_target_response(target) for target in result.registered_targets
+        ],
+        session=result.session,
+    )
+
+
 def local_folder_listing_response(
     listing: "LocalFolderListing",
 ) -> LocalFolderListingResponse:
@@ -447,6 +503,60 @@ def analyze_external_target(
     return external_project_analysis_response(
         analyze_external_project(request.root_path)
     )
+
+
+@app.post(
+    "/workspaces/{workspace_id}/project-provisioning/plan",
+    response_model=ProjectProvisioningResponse,
+)
+def plan_workspace_project_provisioning(
+    workspace_id: str,
+    request: ProjectProvisioningRequest,
+    db: DbSession = Depends(get_db),
+) -> ProjectProvisioningResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return project_provisioning_response(
+        plan_project_provisioning(
+            user_request=request.user_request,
+            existing_project_root=request.existing_project_root,
+            preferred_slug=request.preferred_slug,
+        )
+    )
+
+
+@app.post(
+    "/workspaces/{workspace_id}/project-provisioning/apply",
+    response_model=ProjectProvisioningApplyResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def apply_workspace_project_provisioning(
+    workspace_id: str,
+    request: ProjectProvisioningApplyRequest,
+    db: DbSession = Depends(get_db),
+) -> ProjectProvisioningApplyResponse:
+    workspace = get_workspace(db, workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    session = get_session(db, request.session_id)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    try:
+        result = apply_project_provisioning(
+            db,
+            workspace=workspace,
+            session=session,
+            user_request=request.user_request,
+            selected_root_path=request.selected_root_path,
+            preferred_slug=request.preferred_slug,
+        )
+    except ProjectProvisioningApplyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return project_provisioning_apply_response(result)
 
 
 @app.get(
@@ -1903,20 +2013,19 @@ async def create_task_run_for_task(
 )
 async def force_codex_failure_for_task(
     task_id: str,
+    background_tasks: BackgroundTasks,
     db: DbSession = Depends(get_db),
 ) -> TaskRunResponse:
     try:
-        task_run = create_task_run(db, task_id, adapter_type="codex")
-        request = agent_run_request_for(
+        task_run = create_task_run(
             db,
-            task_run,
+            task_id,
             adapter_type="codex",
-            plan_context={"forceFailure": True},
+            retry_metadata={"forceFailure": True},
         )
-        await run_adapter_event_stream(db, CodexAdapter(), request)
-        db.refresh(task_run)
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    schedule_task_run_execution(background_tasks)
     return task_run_response(db, task_run)
 
 
@@ -1972,24 +2081,14 @@ def retry_existing_task_run(
 )
 async def retry_existing_task_run_with_fallback(
     task_run_id: str,
+    background_tasks: BackgroundTasks,
     db: DbSession = Depends(get_db),
 ) -> TaskRunResponse:
     try:
         task_run = retry_with_scripted_mock(db, task_run_id)
-        request = agent_run_request_for(db, task_run, adapter_type="scripted_mock")
-        await run_adapter_event_stream(db, ScriptedMockAdapter(), request)
-        db.refresh(task_run)
-        if task_run.state == "completed":
-            collect_task_run_diff(db, task_run.id)
-            create_scripted_review_for_task_run(db, task_run.id)
-            refresh_session_ledger_for_task_run(db, task_run.id)
-            db.refresh(task_run)
     except TaskRunLifecycleError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    except DiffCollectionError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    except ReviewError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    schedule_task_run_execution(background_tasks)
     return task_run_response(db, task_run)
 
 
@@ -2039,13 +2138,18 @@ def collect_diff_for_task_run(
     task_run_id: str,
     db: DbSession = Depends(get_db),
 ) -> DiffArtifactResponse:
+    if db.get(TaskRun, task_run_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
     try:
         diff_artifact = collect_task_run_diff(db, task_run_id)
         create_scripted_review_for_task_run(db, task_run_id)
         refresh_session_ledger_for_task_run(db, task_run_id)
     except DiffCollectionError as exc:
+        record_diff_collection_failure(db, task_run_id, exc)
+        record_review_collection_failure(db, task_run_id, ReviewError("No diff artifact found for review."), skipped=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except ReviewError as exc:
+        record_review_collection_failure(db, task_run_id, exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return diff_artifact_response(diff_artifact)
 
@@ -2187,6 +2291,7 @@ def create_review_for_task_run(
         review = create_scripted_review_for_task_run(db, task_run_id)
         refresh_session_ledger_for_task_run(db, task_run_id)
     except ReviewError as exc:
+        record_review_collection_failure(db, task_run_id, exc)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return review_response(review)
 

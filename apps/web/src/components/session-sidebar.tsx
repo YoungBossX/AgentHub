@@ -64,23 +64,14 @@ export function SessionSidebar({
               <GitBranch aria-hidden="true" size={18} />
             </span>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-                工作区
-              </p>
-              <h2 className="mt-1 truncate text-base font-semibold text-slate-950">
+              <h2 className="truncate text-base font-semibold text-slate-950">
                 {workspace.name}
               </h2>
-              <p className="mt-1 truncate font-mono text-xs text-[var(--muted-foreground)]">
-                {workspace.rootPath}
-              </p>
             </div>
           </div>
         </div>
 
         <section className="mt-6 grid gap-1.5">
-          <p className="mb-1 px-1 text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-            Main menu
-          </p>
           <SidebarSettingsLink
             href="/settings/contacts"
             icon={<Users aria-hidden="true" size={17} />}

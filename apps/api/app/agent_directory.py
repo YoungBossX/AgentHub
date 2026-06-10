@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from app.agent_profiles import AgentProfile
+from app.agent_target_compatibility import supports_target_id
 from app.provider_configs import ProviderConfig
 
 if TYPE_CHECKING:
@@ -183,9 +184,4 @@ def check_agent_compatibility(
 
 
 def _target_supported(supported_targets: list[str], target_id: str) -> bool:
-    return (
-        target_id in supported_targets
-        or "external" in supported_targets
-        or (target_id.startswith("external-frontend") and "external-frontend" in supported_targets)
-        or (target_id.startswith("external-backend") and "external-backend" in supported_targets)
-    )
+    return supports_target_id(supported_targets, target_id)

@@ -1,11 +1,10 @@
 ## 总体设计
 
-V2.6 在现有 TaskRun execution 和 artifact 之上新增“交付事务”投影。首版优先用
+V2.6 在现有 TaskRun 执行和制品之上新增“交付事务”投影。首版优先使用
 TaskRunEvent、metrics_json 和现有 Artifact/Diff/Review/Command Evidence 记录状态，
-避免大迁移。
+避免大规模迁移。
 
 目标形态：
-
 ```text
 TaskRun execution
   -> delivery checkpoint evidence
@@ -13,7 +12,6 @@ TaskRun execution
   -> delivery decision
   -> accepted | review_required | rolled_back | retry_requested
 ```
-
 ## Delivery 状态
 
 建议状态：

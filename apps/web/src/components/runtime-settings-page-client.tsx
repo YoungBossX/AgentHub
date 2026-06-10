@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react"
 import { AgentRuntimeSettings } from "@/components/agent-runtime-settings"
 import { WorkspaceTargetSettings } from "@/components/workspace-target-settings"
 import {
+  ApiRequestError,
+  applyProjectProvisioning,
   checkAgentRuntimeProvider,
   createExternalProjectTarget,
   getDemoWorkspace,
@@ -16,6 +18,7 @@ import {
   updateSessionTargetSelection,
   type AgentRuntimeConfig,
   type LocalFolderListing,
+  type ProjectProvisioningSetupStep,
   type RuntimeProviderCheck,
   type RuntimeRoleConfigInput,
   type TargetProject,
@@ -44,9 +47,11 @@ export function RuntimeSettingsPageClient({
   const [externalRootPath, setExternalRootPath] = useState("")
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [workspaceStatusMessage, setWorkspaceStatusMessage] = useState<string | null>(null)
+  const [projectSetupSteps, setProjectSetupSteps] = useState<ProjectProvisioningSetupStep[]>([])
   const [isLoadingConfig, setIsLoadingConfig] = useState(true)
   const [checkingRole, setCheckingRole] = useState<string | null>(null)
   const [isRegisteringExternal, setIsRegisteringExternal] = useState(false)
+  const [isProvisioningProject, setIsProvisioningProject] = useState(false)
   const [isSavingTargets, setIsSavingTargets] = useState(false)
   const [folderListing, setFolderListing] = useState<LocalFolderListing | null>(null)
   const [isFolderPickerOpen, setIsFolderPickerOpen] = useState(false)
@@ -121,6 +126,7 @@ export function RuntimeSettingsPageClient({
           applyInitialTargetSelection(nextSessions, nextTargets)
           setStatusMessage(null)
           setWorkspaceStatusMessage(null)
+          setProjectSetupSteps([])
         }
       } catch {
         if (!cancelled) {
@@ -157,8 +163,10 @@ export function RuntimeSettingsPageClient({
       ) ?? nextSessions[0]
       applyTargetSelection(selectedSession, nextTargets)
       setWorkspaceStatusMessage("工作区目标已刷新。")
-    } catch {
-      setWorkspaceStatusMessage("刷新工作区目标失败，请确认后端服务可访问。")
+    } catch (error) {
+      setWorkspaceStatusMessage(
+        workspaceSettingsErrorMessage(error, "刷新工作区目标失败，请确认后端服务可访问。"),
+      )
     }
   }
 
@@ -212,10 +220,89 @@ export function RuntimeSettingsPageClient({
       )
       await refreshWorkspaceTargets()
       setWorkspaceStatusMessage(`外部项目已注册：${registered.name}`)
-    } catch {
-      setWorkspaceStatusMessage("外部项目注册失败，可能 targetId 已存在或路径不符合安全规则。")
+    } catch (error) {
+      setWorkspaceStatusMessage(
+        workspaceSettingsErrorMessage(
+          error,
+          "外部项目注册失败，可能 targetId 已存在或路径不符合安全规则。",
+        ),
+      )
     } finally {
       setIsRegisteringExternal(false)
+    }
+  }
+
+  async function handleProvisionNewProject() {
+    if (!workspace) {
+      setWorkspaceStatusMessage("无法新建项目：未找到可配置的工作区。")
+      return
+    }
+
+    if (!selectedSessionId) {
+      setWorkspaceStatusMessage("无法新建项目：请选择一个会话。")
+      return
+    }
+
+    const selectedRootPath = externalRootPath.trim()
+    if (!selectedRootPath) {
+      setWorkspaceStatusMessage("请先选择一个空文件夹。")
+      return
+    }
+
+    setIsProvisioningProject(true)
+    setWorkspaceStatusMessage(null)
+    setProjectSetupSteps([])
+    try {
+      const provisioned = await applyProjectProvisioning(
+        backendUrl,
+        workspace.id,
+        {
+          preferredSlug: preferredProjectSlugFor(selectedRootPath),
+          selectedRootPath,
+          sessionId: selectedSessionId,
+          userRequest: "新建全栈项目",
+        },
+      )
+      const provisionedFrontendTargetId =
+        provisioned.session.activeFrontendTargetId ??
+        provisioned.registeredTargets.find((target) => target.targetId.includes("-frontend-"))
+          ?.targetId ??
+        null
+      const provisionedBackendTargetId =
+        provisioned.session.activeBackendTargetId ??
+        provisioned.registeredTargets.find((target) => target.targetId.includes("-backend-"))
+          ?.targetId ??
+        null
+      const [nextSessions, nextTargets] = await Promise.all([
+        listWorkspaceSessions(backendUrl, workspace.id),
+        listWorkspaceTargets(backendUrl, workspace.id),
+      ])
+      const selectedSession =
+        provisioned.session ?? nextSessions.find((session) => session.id === selectedSessionId)
+      const mergedSessions = mergeSession(nextSessions, selectedSession)
+
+      setSessions(mergedSessions)
+      setTargets(nextTargets)
+      setFrontendTargetId(
+        selectedSession?.activeFrontendTargetId ??
+          provisionedFrontendTargetId ??
+          nextTargets.find((target) => target.type === "frontend")?.targetId ??
+          "",
+      )
+      setBackendTargetId(
+        selectedSession?.activeBackendTargetId ??
+          provisionedBackendTargetId ??
+          nextTargets.find((target) => target.type === "backend")?.targetId ??
+          "",
+      )
+      setProjectSetupSteps(provisioned.plan.setupSteps)
+      setWorkspaceStatusMessage("新项目已创建并绑定到当前会话。")
+    } catch (error) {
+      setWorkspaceStatusMessage(
+        workspaceSettingsErrorMessage(error, "新项目创建失败，请确认文件夹为空且可写。"),
+      )
+    } finally {
+      setIsProvisioningProject(false)
     }
   }
 
@@ -243,8 +330,10 @@ export function RuntimeSettingsPageClient({
         path,
       )
       setFolderListing(listing)
-    } catch {
-      setWorkspaceStatusMessage("无法读取本地文件夹，请选择其他目录。")
+    } catch (error) {
+      setWorkspaceStatusMessage(
+        workspaceSettingsErrorMessage(error, "无法读取本地文件夹，请选择其他目录。"),
+      )
     } finally {
       setIsLoadingFolders(false)
     }
@@ -281,8 +370,10 @@ export function RuntimeSettingsPageClient({
         current.map((session) => session.id === updated.id ? updated : session),
       )
       setWorkspaceStatusMessage("会话目标已保存。")
-    } catch {
-      setWorkspaceStatusMessage("会话目标保存失败，请确认目标类型匹配。")
+    } catch (error) {
+      setWorkspaceStatusMessage(
+        workspaceSettingsErrorMessage(error, "会话目标保存失败，请确认目标类型匹配。"),
+      )
     } finally {
       setIsSavingTargets(false)
     }
@@ -394,6 +485,7 @@ export function RuntimeSettingsPageClient({
         externalTargetKind={externalTargetKind}
         isFolderPickerOpen={isFolderPickerOpen}
         isLoadingFolders={isLoadingFolders}
+        isProvisioning={isProvisioningProject}
         isRegistering={isRegisteringExternal}
         isSavingTargets={isSavingTargets}
         onBackendTargetChange={(targetId) => {
@@ -415,15 +507,20 @@ export function RuntimeSettingsPageClient({
         onOpenFolderPicker={() => {
           void openFolderPicker()
         }}
+        onProvisionNewProject={() => {
+          void handleProvisionNewProject()
+        }}
         onRefresh={refreshWorkspaceTargets}
         onRegister={handleRegisterExternalProject}
         onRootPathChange={(rootPath) => {
           setExternalRootPath(rootPath)
           setWorkspaceStatusMessage(null)
+          setProjectSetupSteps([])
         }}
         onSaveTargets={handleSaveTargets}
         onSelectCurrentFolder={selectCurrentFolder}
         onSessionChange={handleSessionChange}
+        setupSteps={projectSetupSteps}
         rootPath={externalRootPath}
         selectedSessionId={selectedSessionId}
         sessions={sessions}
@@ -465,4 +562,34 @@ function externalTargetIdFor(rootPath: string, kind: "frontend" | "backend") {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48)
   return `external-${kind}-${slug || "project"}`
+}
+
+function preferredProjectSlugFor(rootPath: string) {
+  const lastSegment = rootPath.replace(/\/+$/, "").split("/").filter(Boolean).at(-1)
+  return (lastSegment || "project")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "project"
+}
+
+function mergeSession(
+  sessions: WorkspaceSession[],
+  session: WorkspaceSession | null | undefined,
+) {
+  if (!session) {
+    return sessions
+  }
+
+  if (sessions.some((current) => current.id === session.id)) {
+    return sessions.map((current) => current.id === session.id ? session : current)
+  }
+
+  return [session, ...sessions]
+}
+
+function workspaceSettingsErrorMessage(error: unknown, fallback: string) {
+  return error instanceof ApiRequestError && error.message.trim().length > 0
+    ? error.message
+    : fallback
 }

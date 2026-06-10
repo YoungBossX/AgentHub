@@ -11,7 +11,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
-from app.diffs import capture_base_ref_for_worktree
+from app.diffs import capture_base_ref_for_worktree, capture_file_snapshot_for_worktree
 from app.agent_selection_policy import AgentSelectionError, validate_agent_selection
 from app.memory_snapshots import (
     ensure_session_memory_snapshot,
@@ -116,6 +116,7 @@ def create_task_run(
         )
     except AgentSelectionError as exc:
         raise TaskRunLifecycleError(str(exc)) from exc
+    _recover_terminal_target_locks_before_run_creation(db)
     _ensure_scheduler_allows_run_creation(db, task)
 
     now = utc_now()
@@ -799,6 +800,15 @@ def _finalize_queue_and_lock_for_terminal_run(
     task_run: TaskRun,
     terminal_state: str,
 ) -> None:
+    finalize_terminal_task_run(db, task, task_run, terminal_state)
+
+
+def finalize_terminal_task_run(
+    db: DbSession,
+    task: Task,
+    task_run: TaskRun,
+    terminal_state: str,
+) -> None:
     from app.session_queue import mark_task_run_terminal
     from app.target_locks import release_target_lock_for_task_run
 
@@ -814,6 +824,12 @@ def _finalize_queue_and_lock_for_terminal_run(
         terminal_state,
         reason=f"TaskRun finalized as {terminal_state}.",
     )
+
+
+def _recover_terminal_target_locks_before_run_creation(db: DbSession) -> None:
+    from app.target_locks import recover_terminal_holder_target_locks
+
+    recover_terminal_holder_target_locks(db)
 
 
 def _plan_json(task: Task) -> dict[str, Any]:
@@ -861,7 +877,7 @@ def _pre_run_checkpoint_for_task(
         allowed_paths=list(target.allowed_paths),
         denied_paths=list(target.denied_paths),
     )
-    return {
+    checkpoint = {
         "targetId": target.target_id,
         "targetRoot": target.root,
         "allowedPaths": list(target.allowed_paths),
@@ -874,6 +890,13 @@ def _pre_run_checkpoint_for_task(
         "contractHash": _contract_hash(contract),
         "createdAt": now.isoformat(),
     }
+    if base_ref is None:
+        checkpoint["fileSnapshot"] = capture_file_snapshot_for_worktree(
+            worktree_path,
+            allowed_paths=list(target.allowed_paths),
+            denied_paths=list(target.denied_paths),
+        )
+    return checkpoint
 
 
 def _git_status_checkpoint(

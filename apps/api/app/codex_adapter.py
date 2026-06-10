@@ -285,6 +285,7 @@ class CodexAdapter(AgentAdapter):
             "--json",
             "--cd",
             str(cwd),
+            "--skip-git-repo-check",
             "--sandbox",
             "workspace-write",
             request.instruction,

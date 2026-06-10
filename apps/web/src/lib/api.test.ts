@@ -6,6 +6,7 @@ import {
   checkAgentRuntimeProvider,
   createAgentProfileDraft,
   createExternalProjectTarget,
+  applyProjectProvisioning,
   createSessionMessage,
   createTaskRun,
   createPreviewDeployment,
@@ -371,6 +372,139 @@ describe("workspace and session API", () => {
       "http://127.0.0.1:8000/workspaces/workspace-1/external-targets/folders?path=%2FUsers%2Fdemo%2FDesktop",
       {
         cache: "no-store",
+      },
+    )
+  })
+
+  it("applies generic project provisioning for a selected empty folder", async () => {
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          plan: {
+            approvalRequiredCommands: [],
+            defaultBackendStack: "fastapi",
+            defaultFrontendStack: "vite-react",
+            notes: [],
+            projectKind: "existing_project",
+            projectRoot: "/Users/demo/Desktop/new-app",
+            projectSlug: "new-app",
+            requiresBackend: true,
+            requiresFrontend: true,
+            safeDefaultCommands: [],
+            setupSteps: [
+              {
+                command: "pnpm install",
+                cwd: "/Users/demo/Desktop/new-app/frontend",
+                reason: "Install frontend dependencies before check, test, build, or preview.",
+                requiresApproval: true,
+                role: "frontend",
+              },
+              {
+                command: "pip install -r requirements.txt",
+                cwd: "/Users/demo/Desktop/new-app/backend",
+                reason: "Install backend dependencies before running API checks or tests.",
+                requiresApproval: true,
+                role: "backend",
+              },
+            ],
+            targetDrafts: [],
+          },
+          registeredTargets: [
+            {
+              allowedPaths: ["src"],
+              analysisStatus: "manual",
+              buildCommand: "pnpm build",
+              checkCommand: "pnpm check",
+              createdAt: "2026-06-10T00:00:00Z",
+              deniedPaths: [".env", "node_modules"],
+              deployProviderIds: [],
+              detectedFramework: "vite-react",
+              devCommand: "pnpm dev",
+              id: "target-frontend",
+              name: "New App frontend",
+              packageManager: "pnpm",
+              previewCommand: "pnpm dev",
+              projectType: "vite-react",
+              rootPath: "/Users/demo/Desktop/new-app/frontend",
+              stagingOutputDir: null,
+              stagingServeCommand: null,
+              targetId: "external-frontend-new-app",
+              testCommand: "pnpm test",
+              updatedAt: "2026-06-10T00:00:00Z",
+              workspaceId: "workspace-1",
+            },
+            {
+              allowedPaths: ["app"],
+              analysisStatus: "manual",
+              buildCommand: null,
+              checkCommand: "python -m compileall .",
+              createdAt: "2026-06-10T00:00:00Z",
+              deniedPaths: [".env", "node_modules"],
+              deployProviderIds: [],
+              detectedFramework: "fastapi",
+              devCommand: "uvicorn app.main:app --reload",
+              id: "target-backend",
+              name: "New App backend",
+              packageManager: "pip",
+              previewCommand: null,
+              projectType: "fastapi",
+              rootPath: "/Users/demo/Desktop/new-app/backend",
+              stagingOutputDir: null,
+              stagingServeCommand: null,
+              targetId: "external-backend-new-app",
+              testCommand: "pytest",
+              updatedAt: "2026-06-10T00:00:00Z",
+              workspaceId: "workspace-1",
+            },
+          ],
+          session: {
+            activeBackendTargetId: "external-backend-new-app",
+            activeFrontendTargetId: "external-frontend-new-app",
+            boundBranch: "main",
+            createdAt: "2026-06-10T00:00:00Z",
+            id: "session-1",
+            lastMessageAt: null,
+            sessionType: "demo",
+            status: "active",
+            title: "Session 1",
+            updatedAt: "2026-06-10T00:00:00Z",
+            workspaceId: "workspace-1",
+            worktreePath: "/repo/.worktrees/session-1",
+          },
+        }),
+        { status: 200 },
+      )
+    })
+
+    const result = await applyProjectProvisioning(
+      "http://127.0.0.1:8000",
+      "workspace-1",
+      {
+        preferredSlug: "new-app",
+        selectedRootPath: "/Users/demo/Desktop/new-app",
+        sessionId: "session-1",
+        userRequest: "新建全栈项目",
+      },
+      fetchMock,
+    )
+
+    expect(result.registeredTargets[0].targetId).toBe("external-frontend-new-app")
+    expect(result.session.activeBackendTargetId).toBe("external-backend-new-app")
+    expect(result.plan.setupSteps.map((step) => step.command)).toEqual([
+      "pnpm install",
+      "pip install -r requirements.txt",
+    ])
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000/workspaces/workspace-1/project-provisioning/apply",
+      {
+        body: JSON.stringify({
+          preferredSlug: "new-app",
+          selectedRootPath: "/Users/demo/Desktop/new-app",
+          sessionId: "session-1",
+          userRequest: "新建全栈项目",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       },
     )
   })
@@ -1174,6 +1308,21 @@ describe("task API", () => {
       { method: "POST" },
     )
     expect(fallback.adapterType).toBe("scripted_mock")
+  })
+
+  it("surfaces task run mutation error details from the API", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          detail: "Waiting for target write lock: external-agenthub-rehearsals.",
+        }),
+        { status: 400 },
+      ),
+    )
+
+    await expect(
+      createTaskRun("http://127.0.0.1:8000", "task-locked", fetchMock),
+    ).rejects.toThrow("Waiting for target write lock: external-agenthub-rehearsals.")
   })
 
   it("creates a forced Codex failure run for demo recovery", async () => {

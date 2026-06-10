@@ -107,7 +107,22 @@ _CATEGORY_PRIORITY = [
 _CATEGORY_PATTERNS: list[tuple[str, tuple[str, ...]]] = [
     ("provider_auth", ("unauthorized", "forbidden", "invalid credential", "missing credential", "api key", "apikey", "auth", "token invalid", "401")),
     ("provider_quota", ("quota", "rate limit", "rate_limit", "too many requests", "billing", "payment", "429")),
-    ("provider_unavailable", ("provider unavailable", "provider_unavailable", "not configured", "binary missing", "command not found", "health check failed", "unavailable")),
+    (
+        "provider_unavailable",
+        (
+            "provider unavailable",
+            "provider_unavailable",
+            "not configured",
+            "binary missing",
+            "command not found",
+            "health check failed",
+            "unavailable",
+            "unable to connect",
+            "connection refused",
+            "connectionrefused",
+            "econnrefused",
+        ),
+    ),
     ("adapter_timeout", ("timeout", "timed out", "max runtime", "idle timeout", "deadline exceeded")),
     ("adapter_interrupted", ("interrupted", "interrupt", "cancelled", "canceled", "user_interrupt")),
     ("queue_stale", ("stale", "lease expired", "heartbeat lease", "task_run_stale")),
@@ -280,6 +295,8 @@ def classify_run_failure(
             category = "preview_failed"
         elif event.event_type.startswith("artifact.deploy"):
             category = _deploy_category(str(payload.get("status") or event.event_type))
+        elif event.event_type in {"artifact.diff.failed", "artifact.review.failed"}:
+            category = "artifact_collection_failed"
         elif event.event_type == "error" and category == "unknown":
             category = "adapter_error"
         if category != "unknown":
@@ -708,9 +725,15 @@ def _artifact_reference(
 def _category_from_text(text: str) -> str:
     lowered = text.lower()
     for category, patterns in _CATEGORY_PATTERNS:
-        if any(pattern in lowered for pattern in patterns):
+        if any(_category_pattern_matches(lowered, pattern) for pattern in patterns):
             return category
     return "unknown"
+
+
+def _category_pattern_matches(lowered_text: str, pattern: str) -> bool:
+    if pattern in {"401", "403", "429"}:
+        return re.search(rf"(?<![A-Za-z0-9]){pattern}(?![A-Za-z0-9])", lowered_text) is not None
+    return pattern in lowered_text
 
 
 def _category_from_error_code(error_code: Optional[str]) -> Optional[str]:

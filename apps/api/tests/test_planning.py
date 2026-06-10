@@ -14,6 +14,7 @@ from app.external_workspaces import (
 )
 from app.main import app, get_db
 from app.main import _should_auto_start_task
+import app.main as main_module
 from app.models import Agent, Message, Session, Task, Workspace
 from app.agent_runtime_config import RuntimeRoleConfig, upsert_runtime_config
 from app.config import Settings
@@ -597,6 +598,68 @@ def test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task(
 
     assert len(messages) == 1
     assert "started it automatically" in messages[0].content_md
+
+
+def test_failed_prior_task_does_not_block_new_external_frontend_request(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=False,
+            llm_planner_provider="disabled",
+        ),
+    )
+    project_root = tmp_path / "external-dashboard"
+    (project_root / "src").mkdir(parents=True)
+    (project_root / "src" / "App.tsx").write_text("export default function App() { return null }\n")
+
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-dashboard",
+                name="External Dashboard",
+                root_path=str(project_root),
+                allowed_paths=["src"],
+                project_type="vite-react",
+            ),
+        )
+        session.active_frontend_target_id = "external-dashboard"
+        failed_task = Task(
+            session_id=session.id,
+            title="Previous failed task",
+            intent_type="frontend_change",
+            status="failed",
+            priority=0,
+            plan_json=json.dumps({"planner": "direct_assignment_v1"}),
+        )
+        db.add(session)
+        db.add(failed_task)
+        db.commit()
+        session_id = session.id
+        failed_task_id = failed_task.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "帮我把当前前端页面改成一个健康登记 dashboard"},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert [task["id"] for task in tasks if task["id"] == failed_task_id] == [failed_task_id]
+    new_tasks = [task for task in tasks if task["id"] != failed_task_id]
+    assert len(new_tasks) == 1
+    assert new_tasks[0]["assignedAgentRole"] == "frontend"
+    assert new_tasks[0]["planJson"]["targetId"] == "external-dashboard"
+    assert new_tasks[0]["planJson"]["plannerSource"] == "fallback"
 
 
 def test_disabled_llm_router_returns_friendly_chat_fallback_without_task(
@@ -1838,6 +1901,223 @@ def test_p18c_library_request_misclassified_as_assistant_reply_routes_to_task(
     assert "database" not in json.dumps(task["planJson"]).lower()
     assert task["planJson"]["plannerEvidence"]["fallbackReason"] == "non_task_coding_outcome"
     assert task["planJson"]["plannerEvidence"]["llmOutcomeType"] == "assistant_reply"
+
+
+def test_fullstack_new_project_request_without_active_target_falls_back_to_external_tasks(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    prompt = "帮我做一个健康管理系统，需求是：有登录、健康登记等功能，需要有前后端，数据库任意"
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "assistant_reply",
+                "reply": "我先确认一下健康管理系统需求。",
+                "riskLevel": "low",
+                "reason": "Router misclassified a fullstack app request as chat.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "not_required",
+            },
+        ),
+    )
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        demo_project = tmp_path / "agenthub" / "apps" / "demo"
+        (demo_project / "src").mkdir(parents=True)
+        (demo_project / "src" / "App.tsx").write_text("export default function App() { return null }\n")
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-demo-test",
+                name="Legacy demo target",
+                root_path=str(demo_project),
+                project_type="vite-react",
+                allowed_paths=["src"],
+            ),
+        )
+        frontend_root = tmp_path / "agenthub-rehearsals"
+        frontend_root.mkdir(parents=True)
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-agenthub-rehearsals",
+                name="AgentHub rehearsals",
+                root_path=str(frontend_root),
+                project_type="unknown",
+                allowed_paths=["*"],
+            ),
+        )
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-backend-agenthub-rehearsals",
+                name="AgentHub rehearsals backend",
+                root_path=str(frontend_root),
+                project_type="external-backend",
+                allowed_paths=["*"],
+            ),
+        )
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": prompt},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert [task["assignedAgentRole"] for task in tasks] == ["frontend", "backend"]
+    assert [task["intentType"] for task in tasks] == ["frontend_change", "backend_change"]
+    assert tasks[0]["planJson"]["targetId"] == "external-agenthub-rehearsals"
+    assert tasks[0]["planJson"]["safeTarget"] == "*"
+    assert tasks[1]["planJson"]["targetId"] == "external-backend-agenthub-rehearsals"
+    assert tasks[1]["dependsOnTaskIds"] == [tasks[0]["id"]]
+    assert all(task["planJson"]["plannerSource"] == "fallback" for task in tasks)
+    assert all(
+        task["planJson"]["plannerFallback"]["errorCode"] == "LLM_NON_TASK_CODING_OUTCOME"
+        for task in tasks
+    )
+
+
+@pytest.mark.parametrize(
+    ("prompt", "slug"),
+    [
+        ("帮我做一个番茄钟软件，前后端分离，要有 API", "pomodoro-app"),
+        ("Build a todo app with frontend and backend API", "todo-app"),
+        ("帮我做一个读书笔记应用，需要前端页面和后端接口", "reading-notes"),
+    ],
+)
+def test_fullstack_requests_use_active_provisioned_targets_for_multiple_domains(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+    prompt: str,
+    slug: str,
+) -> None:
+    monkeypatch.setattr(
+        main_module,
+        "auto_start_safe_tasks",
+        lambda _db, _tasks, _background_tasks: None,
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "get_settings",
+        lambda: Settings(
+            llm_planner_enabled=True,
+            llm_planner_provider="claude_cli",
+        ),
+    )
+    monkeypatch.setattr(
+        planning_module,
+        "resolve_planner_provider",
+        lambda settings, **_kwargs: FakePlannerProvider(
+            provider_id="fake-llm-planner",
+            payload={
+                "outcomeType": "assistant_reply",
+                "reply": "我先确认一下需求。",
+                "riskLevel": "low",
+                "reason": "Router misclassified a fullstack request as chat.",
+                "plannerProvider": {"providerId": "fake-llm-planner"},
+                "validationResult": "not_required",
+            },
+        ),
+    )
+    with next(db_from_override()) as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        project_root = tmp_path / slug
+        frontend_root = project_root / "frontend"
+        backend_root = project_root / "backend"
+        (frontend_root / "src").mkdir(parents=True)
+        (frontend_root / "src" / "App.tsx").write_text(
+            "export default function App() { return null }\n"
+        )
+        (frontend_root / "package.json").write_text("{}\n")
+        (frontend_root / "vite.config.ts").write_text("export default {}\n")
+        (backend_root / "app").mkdir(parents=True)
+        (backend_root / "app" / "main.py").write_text("from fastapi import FastAPI\n")
+        (backend_root / "requirements.txt").write_text("fastapi\n")
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id=f"external-frontend-{slug}",
+                name=f"{slug} frontend",
+                root_path=str(frontend_root),
+                project_type="vite-react",
+                allowed_paths=["src", "package.json", "vite.config.ts"],
+                denied_paths=[".env", "node_modules"],
+                dev_command="pnpm dev --host 127.0.0.1 --port <port>",
+                test_command="pnpm test",
+                check_command="pnpm check",
+                build_command="pnpm build",
+                preview_command="pnpm dev --host 127.0.0.1 --port <port>",
+                package_manager="pnpm",
+                detected_framework="vite-react",
+            ),
+        )
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id=f"external-backend-{slug}",
+                name=f"{slug} backend",
+                root_path=str(backend_root),
+                project_type="fastapi",
+                allowed_paths=["app", "tests", "requirements.txt"],
+                denied_paths=[".env", ".venv"],
+                dev_command="uvicorn app.main:app --reload --host 127.0.0.1 --port <port>",
+                test_command="pytest",
+                check_command="python -m compileall .",
+                package_manager="pip",
+                detected_framework="fastapi",
+            ),
+        )
+        session.active_frontend_target_id = f"external-frontend-{slug}"
+        session.active_backend_target_id = f"external-backend-{slug}"
+        db.add(session)
+        db.commit()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": prompt},
+    )
+
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+
+    assert [task["assignedAgentRole"] for task in tasks] == ["frontend", "backend"]
+    assert [task["intentType"] for task in tasks] == ["frontend_change", "backend_change"]
+    assert tasks[0]["planJson"]["targetId"] == f"external-frontend-{slug}"
+    assert tasks[0]["planJson"]["frontendTargetId"] == f"external-frontend-{slug}"
+    assert tasks[0]["planJson"]["files"] == ["src/App.tsx", "package.json", "vite.config.ts"]
+    assert tasks[0]["planJson"]["safeTarget"] == "src"
+    assert tasks[1]["planJson"]["targetId"] == f"external-backend-{slug}"
+    assert tasks[1]["planJson"]["backendTargetId"] == f"external-backend-{slug}"
+    assert tasks[1]["planJson"]["files"] == ["app/main.py", "tests", "requirements.txt"]
+    assert tasks[1]["dependsOnTaskIds"] == [tasks[0]["id"]]
+    assert tasks[0]["planJson"]["autoStart"] is True
+    assert tasks[1]["planJson"]["autoStart"] is True
+    assert all(task["planJson"]["planner"] == "orchestrator_external_target_v1" for task in tasks)
+    assert all(task["planJson"]["plannerSource"] == "fallback" for task in tasks)
 
 
 def test_llm_assistant_reply_for_platform_request_does_not_fallback_to_frontend(

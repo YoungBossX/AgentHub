@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.agent_profiles import AgentProfile
+from app.agent_target_compatibility import supports_target_id
 from app.project_command_policy import allowed_validation_commands
 from app.target_registry import TargetProject
 from app.task_graph_builder import TaskGraphTaskSpec
@@ -139,11 +140,11 @@ def _validate_dependency_keys(task_specs: list[TaskGraphTaskSpec]) -> None:
 
 
 def _profile_supports_target(profile: AgentProfile, target_id: str) -> bool:
-    if target_id in profile.supported_targets:
-        return True
-    if target_id.startswith("external-") and "external" in profile.supported_targets:
-        return True
-    return False
+    return supports_target_id(
+        profile.supported_targets,
+        target_id,
+        role=profile.role,
+    )
 
 
 def _mode_for_spec(spec: TaskGraphTaskSpec) -> str:

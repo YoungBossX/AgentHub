@@ -564,6 +564,19 @@ def test_provider_error_classifier_maps_categories_and_redacts_evidence() -> Non
     assert unknown.category == "unknown"
 
 
+def test_provider_error_classifier_treats_connection_refused_as_unavailable() -> None:
+    classification = ProviderErrorClassifier().classify(
+        provider_id="local-claude-code-cli",
+        error_code="CLAUDE_CODE_EXIT_ERROR",
+        message="API Error: Unable to connect to API (ConnectionRefused)",
+        stderr="trace id 29ab2980-96b4-429b-9c9c-4f5dfd808c39",
+    )
+
+    assert classification.category == "unavailable"
+    assert classification.retryable is True
+    assert classification.circuit_breaker_eligible is True
+
+
 def test_fallback_policy_selects_mock_without_overwriting_original_failure() -> None:
     registry = ProviderRegistry(
         providers=[

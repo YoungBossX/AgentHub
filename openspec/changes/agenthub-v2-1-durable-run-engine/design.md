@@ -1,11 +1,8 @@
 ## 总体设计
 
-V2.1 将 AgentHub 的执行链从 “endpoint 创建 TaskRun 后丢给
-FastAPI BackgroundTasks” 改造成 “endpoint 创建/排队 TaskRun，Durable
-Run Engine 认领并执行”。
+V2.1 将 AgentHub 的执行链从 “endpoint 创建 TaskRun 后丢给 FastAPI BackgroundTasks” 改造成 “endpoint 创建/排队 TaskRun，Durable Run Engine 认领并执行”。
 
 目标不是一次性替换所有平台能力，而是建立一个稳定的执行内核边界：
-
 ```text
 TaskRunQueue
   -> RunWorker
@@ -14,7 +11,6 @@ TaskRunQueue
   -> ArtifactCollector
   -> Finalizer
 ```
-
 V2.1 仍复用现有：
 
 - PlanValidator
@@ -31,7 +27,6 @@ rollback 事务或新的 provider marketplace。
 ## 当前路径问题
 
 当前路径大致为：
-
 ```text
 create_message / run endpoint
   -> create_task_run
@@ -41,11 +36,10 @@ create_message / run endpoint
   -> collect diff / review / preview / deploy
   -> maybe start downstream task
 ```
-
 问题：
 
-- `BackgroundTasks` 是进程内请求后执行，不 durable。
-- active run 的进程句柄不归统一 supervisor 管理。
+- `BackgroundTasks` 是进程内请求后执行，不持久化。
+- 活跃运行的进程句柄不受统一 supervisor 管理。
 - interrupt API 难以触达正在运行的 adapter 子进程。
 - heartbeat 字段存在，但缺少执行期周期续租。
 - adapter stream 卡住时缺少统一 idle timeout。
@@ -177,7 +171,6 @@ interrupt 表现为 `interrupted`；stale 表现为 `failed` +
 ## Interrupt 设计
 
 interrupt 不再只是 DB 状态更新。流程：
-
 ```text
 POST /task-runs/{id}/interrupt
   -> record interrupt requested
@@ -187,7 +180,6 @@ POST /task-runs/{id}/interrupt
        kill after hard grace period
   -> finalize interrupted
 ```
-
 如果 run 已 terminal，interrupt 应幂等返回当前状态。
 
 如果 run 由已崩溃 worker 拥有且 lease 过期，interrupt 应转为 stale/recovery
@@ -249,4 +241,3 @@ Policy Engine 或前端大改。
 - 子进程 interrupt 需要与 Claude/Codex adapter 现有实现兼容。
 - preview/deploy 后处理可能失败，不能让其污染编码 run 的真实状态。
 - 当前工作区已有未提交改动，实施时必须避免覆盖用户或其他任务改动。
-

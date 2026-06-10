@@ -1,3 +1,4 @@
+import asyncio
 import shutil
 import subprocess
 from collections.abc import Iterator
@@ -12,6 +13,7 @@ from sqlmodel import SQLModel, create_engine, select
 from app.main import app, get_db, get_preview_service
 from app.models import Agent, Artifact, Deployment, Diff, Session, Task, TaskRun, Workspace
 from app.previews import PreviewProcess, PreviewService
+from app import run_engine as run_engine_module
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -119,7 +121,18 @@ def test_forced_codex_failure_recovers_through_scripted_diff_preview_and_deploy(
     try:
         client = TestClient(app)
         failed = client.post(f"/tasks/{task_id}/runs/force-codex-failure").json()
+        with DbSession(engine) as db:
+            asyncio.run(run_engine_module.RunWorker(worker_id="worker:forced-failure").run_once(db))
+            failed_run = db.get(TaskRun, failed["id"])
+            failed["state"] = failed_run.state
+            failed["errorCode"] = failed_run.error_code
+
         fallback = client.post(f"/task-runs/{failed['id']}/retry-with-fallback").json()
+        with DbSession(engine) as db:
+            asyncio.run(run_engine_module.RunWorker(worker_id="worker:fallback").run_once(db))
+            fallback_run = db.get(TaskRun, fallback["id"])
+            fallback["state"] = fallback_run.state
+
         preview = client.post(f"/task-runs/{fallback['id']}/preview").json()
         deployment = client.post(f"/previews/{preview['id']}/deploy").json()
         task = client.get(f"/sessions/{fallback['sessionId']}/tasks").json()[0]

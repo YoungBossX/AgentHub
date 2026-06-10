@@ -205,6 +205,11 @@ def _apply_task_run_event_state(db: DbSession, event: AgentEvent) -> None:
     db.add(task_run)
     db.commit()
 
+    if task is not None and task_run.state in {"completed", "failed", "interrupted", "cancelled"}:
+        from app.task_runs import finalize_terminal_task_run
+
+        finalize_terminal_task_run(db, task, task_run, task_run.state)
+
 
 def _task_status_for_run_state(state: str) -> str:
     if state == "waiting_approval":

@@ -86,4 +86,3 @@ Policy Engine、事务化交付和诊断 UI 都应建立在这条稳定执行生
   重启恢复、终态幂等和不伪造 provider 成功的测试。
 - 需要更新 `docs/change-log.md` 和 `docs/project-state.md`。
 - 不应修改 README 或无关 UI。
-

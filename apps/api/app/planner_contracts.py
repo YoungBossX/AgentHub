@@ -55,6 +55,34 @@ class PlannerTaskResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class PlannerProjectSetupTarget(BaseModel):
+    target_id: str = Field(alias="targetId")
+    role: str
+    root_path: str = Field(alias="rootPath")
+    project_type: str = Field(alias="projectType")
+    allowed_paths: list[str] = Field(alias="allowedPaths")
+    validation_commands: list[str] = Field(default_factory=list, alias="validationCommands")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class PlannerProjectSetup(BaseModel):
+    project_kind: str = Field(alias="projectKind")
+    planned_project_root: str = Field(alias="plannedProjectRoot")
+    default_frontend_stack: Optional[str] = Field(default=None, alias="defaultFrontendStack")
+    default_backend_stack: Optional[str] = Field(default=None, alias="defaultBackendStack")
+    provisional_targets: list[PlannerProjectSetupTarget] = Field(
+        default_factory=list,
+        alias="provisionalTargets",
+    )
+    approval_required_commands: list[str] = Field(
+        default_factory=list,
+        alias="approvalRequiredCommands",
+    )
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class PlannerResponse(BaseModel):
     plan_id: str = Field(alias="planId")
     planner: str
@@ -66,6 +94,7 @@ class PlannerResponse(BaseModel):
     intent: str = "real_coding_request"
     version: int = 1
     guardrail_notes: list[str] = Field(default_factory=list, alias="guardrailNotes")
+    project_setup: Optional[PlannerProjectSetup] = Field(default=None, alias="projectSetup")
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -150,15 +179,24 @@ def planner_conversation_system_prompt() -> str:
         "requests, return refusal or approval_required. For programming, "
         "coding, build, implement, create, develop, modify, add, generate, "
         "scaffold, or fix software requests, return task_plan and include "
-        "planDraft when the request can be target-scoped safely. planDraft must "
+        "planDraft when the request can be target-scoped safely. If the user "
+        "asks for a new project, include projectSetup so AgentHub can prepare "
+        "explicit frontend/backend boundaries before coding; do not pretend an "
+        "unprepared project already exists. planDraft must "
         "match this PlannerResponse contract: top-level fields planId, "
         "planner, plannerMode, rationale, tasks, acceptanceCriteria, "
-        "validationExpectations, intent, version, guardrailNotes. planId must "
+        "validationExpectations, intent, version, guardrailNotes, and optional "
+        "projectSetup. planId must "
         "be a stable string. planner and plannerMode must both be llm_v1. "
         "version must be an integer. rationale must explain why the requested "
         "task split is safe and target-scoped. acceptanceCriteria and "
         "validationExpectations must be arrays of strings. guardrailNotes must "
-        "be an array of strings. Each task must include title, role, targetId, "
+        "be an array of strings. projectSetup, when present, must include "
+        "projectKind, plannedProjectRoot, defaultFrontendStack, "
+        "defaultBackendStack, provisionalTargets, and approvalRequiredCommands. "
+        "Each provisional target must include targetId, role, rootPath, "
+        "projectType, allowedPaths, and validationCommands. Each task must "
+        "include title, role, targetId, "
         "intentType, plannedFiles, dependsOn, expectedArtifactTypes, "
         "acceptanceCriteria, riskLevel, requiresApproval, "
         "validationExpectations, and rationale. targetId must be one of the "

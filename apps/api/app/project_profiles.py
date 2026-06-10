@@ -8,6 +8,7 @@ PROJECT_PROFILE_IDS = {
     "vite-react",
     "nextjs-react",
     "fastapi-python",
+    "fullstack-vite-fastapi",
     "generic-repo",
 }
 
@@ -106,6 +107,8 @@ def build_project_profile(
 
 
 def profile_id_for_project_type(project_type: str) -> str:
+    if project_type == "fullstack-vite-fastapi":
+        return "fullstack-vite-fastapi"
     if project_type == "vite-react":
         return "vite-react"
     if project_type == "nextjs":
@@ -120,11 +123,14 @@ def display_name_for_profile(profile_id: str) -> str:
         "vite-react": "Vite / React",
         "nextjs-react": "Next.js / React",
         "fastapi-python": "FastAPI / Python",
+        "fullstack-vite-fastapi": "Vite / React + FastAPI",
         "generic-repo": "Generic Repo",
     }.get(profile_id, "Generic Repo")
 
 
 def preview_strategy_for_project_type(project_type: str) -> str:
+    if project_type == "fullstack-vite-fastapi":
+        return "vite-and-python-api"
     if project_type == "vite-react":
         return "vite-dev-server"
     if project_type == "nextjs":

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -14,6 +15,9 @@ from app.target_registry import (
     get_target,
 )
 from app.project_profiles import build_project_profile
+
+
+REHEARSAL_ROOT_NAME = "agenthub-rehearsals"
 
 
 def build_role_instruction(
@@ -277,6 +281,7 @@ def _review_body(original_request: str, target: TargetProject) -> str:
 
 def _external_frontend_body(original_request: str, target: TargetProject) -> str:
     command_hint = _command_hint(target)
+    subproject_hint = _external_rehearsal_subproject_hint(original_request, target)
     return (
         "You are the Frontend Agent for a registered external AgentHub target.\n"
         f"Original user request: {original_request}\n"
@@ -291,12 +296,14 @@ def _external_frontend_body(original_request: str, target: TargetProject) -> str
         "and project structure. Do not assume apps/demo, apps/demo-api, or any "
         "AgentHub built-in demo path unless the registered target metadata says "
         "so. "
+        f"{subproject_hint}"
         f"{command_hint}"
     )
 
 
 def _external_backend_body(original_request: str, target: TargetProject) -> str:
     command_hint = _command_hint(target)
+    subproject_hint = _external_rehearsal_subproject_hint(original_request, target)
     return (
         "You are the Backend Agent for a registered external AgentHub target.\n"
         f"Original user request: {original_request}\n"
@@ -310,8 +317,40 @@ def _external_backend_body(original_request: str, target: TargetProject) -> str:
         "target. Do not edit AgentHub platform backend `apps/api` unless the "
         "task explicitly targets `agenthub-platform` in platform maintenance "
         "mode. "
+        f"{subproject_hint}"
         f"{command_hint}"
     )
+
+
+def _external_rehearsal_subproject_hint(original_request: str, target: TargetProject) -> str:
+    root = Path(target.root).expanduser()
+    if root.name != REHEARSAL_ROOT_NAME:
+        return ""
+    if list(target.allowed_paths) != ["*"]:
+        return ""
+    slug = _request_project_slug(original_request)
+    return (
+        f"For this new-project rehearsal, create or update the dedicated "
+        f"subdirectory `{slug}` under the target root. Do not reuse or rewrite "
+        "unrelated sibling rehearsal apps.\n"
+    )
+
+
+def _request_project_slug(value: str) -> str:
+    normalized = value.lower()
+    explicit_ascii = re.findall(r"[a-zA-Z0-9]+", normalized)
+    if explicit_ascii:
+        slug = "-".join(explicit_ascii[:4])
+    elif "健康" in normalized:
+        slug = "health-management-app"
+    elif "记账" in normalized:
+        slug = "bookkeeping-app"
+    elif "图书" in normalized or "书" in normalized:
+        slug = "library-management-app"
+    else:
+        slug = "agenthub-generated-app"
+    slug = re.sub(r"[^a-z0-9-]+", "-", slug).strip("-")
+    return slug[:48] or "agenthub-generated-app"
 
 
 def _command_hint(target: TargetProject) -> str:

@@ -158,6 +158,7 @@ async def test_codex_adapter_builds_documented_command_shape(tmp_path: Path) -> 
         "--json",
         "--cd",
         str(tmp_path),
+        "--skip-git-repo-check",
         "--sandbox",
         "workspace-write",
         "Make the button text more friendly.",

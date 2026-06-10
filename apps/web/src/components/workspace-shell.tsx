@@ -28,7 +28,6 @@ import {
   type ComposerContextItem,
   MessageComposer,
 } from "@/components/message-composer"
-import { MissionPanel } from "@/components/mission-panel"
 import { type ArtifactPanelItem } from "@/components/preview-card"
 import { SessionSidebar } from "@/components/session-sidebar"
 import { type ArtifactContextIntent, TaskCardList } from "@/components/task-card-list"
@@ -43,7 +42,6 @@ import {
   denyTaskRun,
   forceCodexFailure,
   getSessionArtifactWorkbench,
-  getSessionLedger,
   interruptTaskRun,
   listTaskRunPreviews,
   listSessionMessages,
@@ -54,11 +52,11 @@ import {
   sessionEventsUrl,
   startTaskRunPreview,
   stopPreview,
+  ApiRequestError,
   type ArtifactWorkbenchArtifact,
   type AgentContact,
   type ChatMessage,
   type PreviewArtifact,
-  type SessionExecutionLedger,
   type SessionTask,
   type Workspace,
   type WorkspaceSession,
@@ -97,7 +95,6 @@ export function WorkspaceShell({
   const [conversationMode, setConversationMode] = useState<"direct" | "group">("group")
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
   const [syncError, setSyncError] = useState<string | null>(null)
-  const [ledger, setLedger] = useState<SessionExecutionLedger | null>(null)
 
   const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
   const selectedSession = useMemo(
@@ -133,9 +130,11 @@ export function WorkspaceShell({
   )
   const reportSyncError = useCallback(
     (action: string, error: unknown) => {
-      void error
+      const detail = error instanceof ApiRequestError ? error.message : null
       setSyncError(
-        `${action}。请确认 FastAPI 后端可访问：${backendUrl}。`,
+        detail && detail.trim().length > 0
+          ? `${action}：${detail}`
+          : `${action}。请确认 FastAPI 后端可访问：${backendUrl}。`,
       )
     },
     [backendUrl],
@@ -150,29 +149,16 @@ export function WorkspaceShell({
     [reportSyncError, startTransition],
   )
 
-  const refreshLedger = useCallback(async () => {
-    if (!selectedSessionId) {
-      setLedger(null)
-      return
-    }
-    const nextLedger = await getSessionLedger(backendUrl, selectedSessionId)
-    setLedger(nextLedger)
-  }, [backendUrl, selectedSessionId])
-
   useEffect(() => {
     if (!selectedSessionId) {
       return
     }
 
     let cancelled = false
-    Promise.all([
-      listSessionMessages(backendUrl, selectedSessionId),
-      getSessionLedger(backendUrl, selectedSessionId),
-    ])
-      .then(([nextMessages, nextLedger]) => {
+    listSessionMessages(backendUrl, selectedSessionId)
+      .then((nextMessages) => {
         if (!cancelled) {
           setMessages(nextMessages)
-          setLedger(nextLedger)
           setSyncError(null)
         }
       })
@@ -262,9 +248,6 @@ export function WorkspaceShell({
         .then((nextTasks) => {
           setTasks(nextTasks)
           setSyncError(null)
-          void refreshLedger().catch((error) =>
-            reportSyncError("无法刷新工作区上下文", error),
-          )
         })
         .catch((error) => reportSyncError("无法刷新任务时间线", error))
     }
@@ -275,14 +258,13 @@ export function WorkspaceShell({
     return () => {
       source.close()
     }
-  }, [backendUrl, lastEventSequence, refreshLedger, reportSyncError, selectedSessionId])
+  }, [backendUrl, lastEventSequence, reportSyncError, selectedSessionId])
 
   function selectSession(sessionId: string) {
     setSyncError(null)
     setEvidenceArtifactItems([])
     setWorkbenchArtifacts([])
     setSelectedArtifactId(null)
-    setLedger(null)
     const params = new URLSearchParams(searchParams.toString())
     params.set("session", sessionId)
     router.replace(`${pathname}?${params.toString()}`)
@@ -311,7 +293,6 @@ export function WorkspaceShell({
     try {
       const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
       setTasks(nextTasks)
-      await refreshLedger()
       setSyncError(null)
       if (nextTasks.length === 0) {
         setEvidenceArtifactItems([])
@@ -430,7 +411,6 @@ export function WorkspaceShell({
         setSelectedArtifactId(`preview:${latestPreview.id}`)
         setPreviewFrameKey((current) => current + 1)
       }
-      await refreshLedger()
       refreshArtifacts()
       setSyncError(null)
     }, "无法刷新预览")
@@ -441,7 +421,6 @@ export function WorkspaceShell({
       const preview = await startTaskRunPreview(backendUrl, taskRunId)
       setSelectedArtifactId(`preview:${preview.id}`)
       setPreviewFrameKey((current) => current + 1)
-      await refreshLedger()
       refreshArtifacts()
       setSyncError(null)
     }, "无法启动预览")
@@ -451,7 +430,6 @@ export function WorkspaceShell({
     runClientAction(async () => {
       const review = await createTaskRunReview(backendUrl, taskRunId)
       setSelectedArtifactId(`review:${review.id}`)
-      await refreshLedger()
       refreshArtifacts()
       setSyncError(null)
     }, "无法创建评审产物")
@@ -461,7 +439,6 @@ export function WorkspaceShell({
     runClientAction(async () => {
       const deployment = await createPreviewDeployment(backendUrl, previewId)
       setSelectedArtifactId(`deployment:${deployment.id}`)
-      await refreshLedger()
       refreshArtifacts()
       setSyncError(null)
     }, "无法创建部署卡片")
@@ -545,7 +522,6 @@ export function WorkspaceShell({
         nextMessages.length > 0 ? nextMessages : [...current, created],
       )
       setTasks(nextTasks)
-      await refreshLedger()
       setSessions((current) =>
         current.map((session) =>
           session.id === selectedSessionId
@@ -612,8 +588,7 @@ export function WorkspaceShell({
                     {selectedSession?.title ?? "未选择会话"}
                   </h2>
                   <p className="mt-2 truncate text-sm text-[var(--muted-foreground)]">
-                    {workspace.rootPath} · {tasks.length} 个任务 ·{" "}
-                    {hasCompletedRun ? "已有执行证据" : "等待运行"}
+                    {tasks.length} 个任务 · {hasCompletedRun ? "已有执行证据" : "等待运行"}
                   </p>
                 </div>
 
@@ -642,10 +617,6 @@ export function WorkspaceShell({
               >
                 {syncError}
               </div>
-            ) : null}
-
-            {selectedSession ? (
-              <MissionPanel ledger={ledger} selectedSession={selectedSession} tasks={tasks} />
             ) : null}
 
             <ChatThread
@@ -743,17 +714,7 @@ function ConversationModeSwitch({
   onModeChange: (mode: "direct" | "group") => void
 }) {
   return (
-    <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
-      <div className="min-w-0">
-        <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-          对话模式
-        </p>
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-          {mode === "direct"
-            ? "单聊聚焦当前对话，不改变后端路由。"
-            : "群聊显示 Orchestrator 与角色 Agent 协作，不改变调度规则。"}
-        </p>
-      </div>
+    <section className="flex justify-end rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
       <div className="grid grid-cols-2 rounded-full bg-white p-1 shadow-sm">
         <button
           aria-pressed={mode === "direct"}
@@ -821,9 +782,6 @@ function DemoPipeline({
 
   return (
     <div className="flex max-w-full flex-col items-start gap-2">
-      <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)] xl:text-right">
-        演示流程
-      </p>
       <ol className="flex max-w-full items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {stages.map((stage, index) => (
           <li className="flex shrink-0 items-center gap-2" key={stage.label}>

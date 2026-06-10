@@ -257,6 +257,43 @@ def test_timeline_and_health_cover_provider_timeout_preview_and_recovery(client:
     assert diagnostics.health_summary.preview["status"] == "failed"
 
 
+def test_connection_refused_provider_failure_is_not_reported_as_quota(client: TestClient) -> None:
+    with _db() as db:
+        run = _run(
+            db,
+            error_code="CLAUDE_CODE_EXIT_ERROR",
+            error_message="API Error: Unable to connect to API (ConnectionRefused)",
+            metrics={
+                "providerAssignment": {
+                    "providerId": "local-claude-code-cli",
+                    "adapterType": "claude_code",
+                }
+            },
+        )
+        append_task_run_event(
+            db,
+            run.id,
+            "error",
+            json.dumps(
+                {
+                    "code": "CLAUDE_CODE_EXIT_ERROR",
+                    "message": "API Error: Unable to connect to API (ConnectionRefused)",
+                    "adapter": "claude_code",
+                    "command": ["claude", "--print", "--max-budget-usd", "1.00"],
+                    "context": {
+                        "recentMessageId": "29ab2980-96b4-429b-9c9c-4f5dfd808c39",
+                    },
+                }
+            ),
+        )
+        diagnostics = build_task_run_diagnostics(db, run)
+
+    assert diagnostics.primary_failure is not None
+    assert diagnostics.primary_failure.category == "provider_unavailable"
+    assert diagnostics.summary.primary_category == "provider_unavailable"
+    assert diagnostics.health_summary.provider["status"] == "failed"
+
+
 def test_health_and_suggestions_cover_provider_approval_dirty_and_deploy_cases(client: TestClient) -> None:
     with _db() as db:
         provider_run = _run(db, error_code="PROVIDER_AUTH_MISSING", error_message="Missing API key.")

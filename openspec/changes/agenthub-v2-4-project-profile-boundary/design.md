@@ -4,7 +4,6 @@ V2.4 在现有 `project_analyzer.py`、`external_workspaces.py`、`target_regist
 和 `project_command_policy.py` 之间增加一个正式的 ProjectProfile 合同层。
 
 目标链路：
-
 ```text
 项目根目录
   -> Project Analyzer
@@ -13,7 +12,6 @@ V2.4 在现有 `project_analyzer.py`、`external_workspaces.py`、`target_regist
   -> Target Registry
   -> PlanValidator / Command Policy / Instruction Builder / Preview
 ```
-
 ProjectProfile 不是新的安全边界。它负责描述项目事实和建议策略；真正的执行允许
 仍由 Target Registry、PlanValidator、Guardrails、Provider Gateway 和后续 Policy
 Engine 决定。

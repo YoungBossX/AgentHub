@@ -11,6 +11,7 @@ from app.agent_profiles import (
     AgentProfile,
     profile_for_agent,
 )
+from app.agent_target_compatibility import supports_target_id
 from app.models import Agent, Task
 
 
@@ -139,16 +140,11 @@ def _required_capabilities_for_task(task: Task, plan: dict[str, Any]) -> list[st
 
 
 def _profile_supports_target(profile: AgentProfile, target_id: str) -> bool:
-    if target_id in profile.supported_targets:
-        return True
-    if target_id.startswith("external-"):
-        if "external" in profile.supported_targets:
-            return True
-        if profile.role == "frontend" and "external-frontend" in profile.supported_targets:
-            return True
-        if profile.role == "backend" and "external-backend" in profile.supported_targets:
-            return True
-    return False
+    return supports_target_id(
+        profile.supported_targets,
+        target_id,
+        role=profile.role,
+    )
 
 
 def _target_id_for_plan(plan: dict[str, Any]) -> Optional[str]:

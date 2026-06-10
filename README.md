@@ -114,6 +114,27 @@ Orchestrator 会自动生成 3 个 Task，点击 **Start run** 即可触发 Agen
 
 ---
 
+## 实际新建一个全栈应用
+
+AgentHub 现在支持从一个空文件夹开始创建真实项目，而不是只能修改内置 Demo 应用。推荐流程：
+
+1. 打开 `http://127.0.0.1:3000`，创建或选择一个 Session。
+2. 进入左侧 **运行设置**（`/settings/runtime`）。
+3. 在工作区目标区域选择一个空文件夹。
+4. 点击 **新建全栈项目**。AgentHub 会在该目录中创建 frontend/backend 项目边界，注册对应的 external frontend/backend targets，并绑定到当前 Session。
+5. 按页面展示的 setup steps 准备依赖。
+6. 回到会话，发送需求，例如：
+
+```text
+@orchestrator 帮我做一个番茄钟软件，前后端分离
+```
+
+Orchestrator 会把任务规划给前端 / 后端 Agent。点击任务上的 **Start run** 后，Agent 会在当前 Session 绑定的项目目录中执行，并生成 Diff、Review、预览和部署卡片等证据。
+
+当前这条路径适用于常见的本地全栈应用开发演示：前端默认 Vite React，后端默认 FastAPI。它不会在 Agent 执行期间自动安装依赖；依赖准备必须在 setup 阶段完成或经过显式审批。
+
+---
+
 ## Windows 用户注意事项
 
 项目脚本（`scripts/` 目录）使用 **bash** 编写，Windows 上需要以下方式之一执行：
@@ -252,6 +273,18 @@ pnpm demo:setup
 - Codex CLI + Claude Code CLI 真实适配器
 - ScriptedMockAdapter 降级适配器
 - Git Diff + 预览 + Mock Deploy
+- 空文件夹新建全栈项目路径
+- external frontend/backend targets 绑定到 Session
+- 非 Git 外部项目的文件快照 Diff / Review 证据链
+- Target 写锁恢复、队列调度、provider 失败诊断和 Review 中文证据面板
+
+当前可靠性能力：
+
+- 同一个 Session 复用已绑定的项目 target，不把不同 Session 写到同一个工作区。
+- TaskRun 开始前为非 Git 外部目标记录文件快照，完成后可生成真实 Diff。
+- Diff/Review 收尾失败会写入诊断事件，不再静默丢失证据。
+- Provider 连接失败、限流、不可用等常见问题会进入 Run Diagnostics，便于判断是否重试或切换 provider。
+- completed/failed/interrupted 终态会释放 target 写锁，避免旧 run 长时间阻塞后续任务。
 
 明确排除（P1/P2+）：
 - HumanAgentAdapter、Docker、WebSocket

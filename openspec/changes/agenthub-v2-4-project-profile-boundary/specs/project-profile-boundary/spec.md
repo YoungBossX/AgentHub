@@ -1,9 +1,6 @@
 ## ADDED Requirements
-
 ### Requirement: ProjectProfile 描述注册项目边界
-
-系统 SHALL 为每个注册 target 提供可审计的 ProjectProfile，用于描述项目类型、技术栈、
-允许路径、命令策略和预览策略。
+系统 SHALL 为每个注册 target 提供可审计的 ProjectProfile，用于描述项目类型、技术栈、允许路径、命令策略和预览策略。
 
 #### Scenario: 已识别项目返回 ready profile
 - **WHEN** 用户分析或注册一个可识别的 Vite、Next.js 或 FastAPI 项目
@@ -23,9 +20,7 @@
 - **AND** ProjectProfile MUST NOT 允许绕过 protected paths、platform maintenance approval 或 role/target 验证
 
 ### Requirement: 内置 profile 覆盖首批真实项目类型
-
-系统 SHALL 至少支持 Vite/React、Next.js/React、FastAPI/Python 和 Generic Repo 的
-profile 检测或规范化。
+系统 SHALL 至少支持 Vite/React、Next.js/React、FastAPI/Python 和 Generic Repo 的 profile 检测或规范化。
 
 #### Scenario: Vite React profile 派生前端命令
 - **WHEN** 项目包含 Vite React 标记和 package scripts
@@ -51,7 +46,6 @@ profile 检测或规范化。
 - **AND** 缺失命令 MUST 被 command policy 拒绝
 
 ### Requirement: Target Registry 暴露 profile 审计信息
-
 系统 SHALL 在 Target Registry 和 external target API 中暴露 ProjectProfile 审计信息。
 
 #### Scenario: External target 转换保留 profile
@@ -70,7 +64,6 @@ profile 检测或规范化。
 - **AND** denied paths MUST 保持可见为安全边界提示
 
 ### Requirement: 命令策略由 target/profile 配置驱动
-
 系统 SHALL 只允许 target/profile 显式配置的项目命令用于验证、构建或预览证据。
 
 #### Scenario: 匹配命令被允许
@@ -94,7 +87,6 @@ profile 检测或规范化。
 - **AND** AgentHub MUST NOT 因 generic profile 而允许任意 shell
 
 ### Requirement: V2.4 保持既有可靠性基线
-
 系统 SHALL 保持 P6-P23 以及 Reliability V2.1-V2.3/V2.7 已完成基线。
 
 #### Scenario: 执行计划仍需要 PlanValidator

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Search, ShieldCheck, Users } from "lucide-react"
+import { Search, ShieldCheck } from "lucide-react"
 
 import {
   createAgentProfileDraft,
@@ -56,26 +56,6 @@ export function AgentDirectorySettingsPageClient({
 
   return (
     <section className="grid gap-4">
-      <div className="rounded-lg border border-[var(--border)] bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-              工作区
-            </p>
-            <h2 className="mt-1 text-base font-semibold text-slate-950">
-              {workspace?.name ?? "未选择工作区"}
-            </h2>
-            <p className="mt-1 truncate font-mono text-xs text-[var(--muted-foreground)]">
-              {workspace?.rootPath ?? "正在加载工作区..."}
-            </p>
-          </div>
-          <span className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700">
-            <Users aria-hidden="true" size={14} />
-            {entries.length} 个 Agent
-          </span>
-        </div>
-      </div>
-
       <div className="grid gap-3 rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm">
         <label className="grid gap-1 text-xs font-semibold text-slate-700">
           搜索 Agent
@@ -165,13 +145,7 @@ export function AgentDirectorySettingsPageClient({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-slate-950">安全草稿 Agent</p>
-            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-              草稿默认只读/评审，不会进入执行调度。
-            </p>
           </div>
-          <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600">
-            metadata-only
-          </span>
         </div>
 
         <div className="grid gap-2 md:grid-cols-3">

@@ -12,6 +12,7 @@ from app.models import Agent, Session, Task, TaskRun, Workspace, utc_now
 from app.target_locks import (
     acquire_target_lock,
     held_lock_for_target,
+    recover_terminal_holder_target_locks,
     recover_stale_target_locks,
     release_target_lock_for_task_run,
 )
@@ -167,6 +168,53 @@ def test_recover_stale_lock_fails_uncertain_holder_without_claiming_success() ->
         assert stored_run.error_code == "TASK_RUN_STALE"
         assert stored_run.error_message
         assert "success" not in stored_run.error_message.lower()
+
+
+def test_recover_terminal_holder_locks_does_not_release_uncertain_active_run() -> None:
+    with lock_db() as db:
+        session, run = seed_lock_run(db, session_title="Active lock session")
+        run = claim_task_run_for_worker(db, run.id, worker_id="worker:active")
+        acquire_target_lock(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            session_id=session.id,
+            task_run_id=run.id,
+            worker_id="worker:active",
+            lease_expires_at=run.lease_expires_at,
+        )
+        run.lease_expires_at = utc_now() - timedelta(minutes=1)
+        db.add(run)
+        db.commit()
+
+        recovered = recover_terminal_holder_target_locks(db)
+
+        stored_run = db.get(TaskRun, run.id)
+        assert recovered == []
+        assert stored_run.state == "queued"
+        assert held_lock_for_target(db, DEMO_FRONTEND_TARGET_ID).task_run_id == run.id
+
+
+def test_recover_terminal_holder_locks_releases_completed_holder() -> None:
+    with lock_db() as db:
+        session, run = seed_lock_run(db, session_title="Completed lock session")
+        run = claim_task_run_for_worker(db, run.id, worker_id="worker:complete")
+        acquire_target_lock(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            session_id=session.id,
+            task_run_id=run.id,
+            worker_id="worker:complete",
+            lease_expires_at=run.lease_expires_at,
+        )
+        run.state = "completed"
+        run.ended_at = utc_now()
+        db.add(run)
+        db.commit()
+
+        recovered = recover_terminal_holder_target_locks(db)
+
+        assert [lock.lock_key for lock in recovered] == [f"target:{DEMO_FRONTEND_TARGET_ID}:write"]
+        assert held_lock_for_target(db, DEMO_FRONTEND_TARGET_ID) is None
 
 
 @contextmanager

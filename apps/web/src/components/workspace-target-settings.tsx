@@ -1,10 +1,11 @@
 "use client"
 
-import { ArrowUp, Folder, FolderGit2, FolderOpen, FolderPlus, RefreshCw, Save, X } from "lucide-react"
+import { ArrowUp, Folder, FolderGit2, FolderOpen, FolderPlus, RefreshCw, Save, Terminal, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type {
   LocalFolderListing,
+  ProjectProvisioningSetupStep,
   TargetProject,
   Workspace,
   WorkspaceSession,
@@ -20,6 +21,8 @@ type WorkspaceTargetSettingsProps = {
   isSavingTargets: boolean
   isFolderPickerOpen: boolean
   isLoadingFolders: boolean
+  isProvisioning: boolean
+  setupSteps: ProjectProvisioningSetupStep[]
   externalTargetKind: "frontend" | "backend"
   onBackendTargetChange: (targetId: string) => void
   onBrowseFolder: (path: string) => void
@@ -27,6 +30,7 @@ type WorkspaceTargetSettingsProps = {
   onExternalTargetKindChange: (kind: "frontend" | "backend") => void
   onFrontendTargetChange: (targetId: string) => void
   onOpenFolderPicker: () => void
+  onProvisionNewProject: () => void
   onRefresh: () => void
   onRegister: () => void
   onRootPathChange: (rootPath: string) => void
@@ -49,7 +53,9 @@ export function WorkspaceTargetSettings({
   isRegistering,
   isFolderPickerOpen,
   isLoadingFolders,
+  isProvisioning,
   isSavingTargets,
+  setupSteps,
   externalTargetKind,
   onBackendTargetChange,
   onBrowseFolder,
@@ -57,6 +63,7 @@ export function WorkspaceTargetSettings({
   onExternalTargetKindChange,
   onFrontendTargetChange,
   onOpenFolderPicker,
+  onProvisionNewProject,
   onRefresh,
   onRegister,
   onRootPathChange,
@@ -68,25 +75,13 @@ export function WorkspaceTargetSettings({
   sessions,
   statusMessage,
   targets,
-  workspace,
 }: WorkspaceTargetSettingsProps) {
   const frontendTargets = targets.filter((target) => target.type === "frontend")
   const backendTargets = targets.filter((target) => target.type === "backend")
 
   return (
     <section className="rounded-lg border border-[var(--border)] bg-white p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
-            工作区设置
-          </p>
-          <p className="mt-1 text-sm font-semibold text-slate-950">
-            {workspace?.name ?? "未选择工作区"}
-          </p>
-          <p className="mt-1 max-w-2xl truncate text-xs text-[var(--muted-foreground)]">
-            {workspace?.rootPath ?? "正在加载工作区..."}
-          </p>
-        </div>
+      <div className="flex flex-wrap justify-end gap-3">
         <Button
           className="bg-white text-slate-700 hover:bg-slate-50"
           disabled={busy}
@@ -158,12 +153,12 @@ export function WorkspaceTargetSettings({
           <div className="flex items-center gap-2">
             <FolderPlus aria-hidden="true" className="text-[var(--primary)]" size={16} />
             <p className="text-sm font-semibold text-slate-950">
-              注册外部项目
+              空文件夹与外部项目
             </p>
           </div>
 
           <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
-            选择或填写一个文件夹即可，无需预判项目类型。
+            选择或填写一个文件夹，可新建全栈项目，也可注册为单一目标。
           </p>
 
           <label className="mt-3 block text-[11px] font-bold tracking-normal text-[var(--text-muted)]">
@@ -206,11 +201,20 @@ export function WorkspaceTargetSettings({
             写入范围：当前文件夹下所有路径，受保护路径仍会被拒绝。
           </p>
 
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button
+              disabled={!rootPath.trim() || !selectedSessionId || isProvisioning || busy}
+              onClick={onProvisionNewProject}
+              type="button"
+            >
+              {isProvisioning ? "新建中..." : "新建全栈项目"}
+            </Button>
+            <Button
+              className="bg-white text-slate-700 hover:bg-slate-50"
               disabled={!rootPath.trim() || isRegistering || busy}
               onClick={onRegister}
               type="button"
+              variant="secondary"
             >
               {isRegistering ? "注册中..." : "注册"}
             </Button>
@@ -233,6 +237,36 @@ export function WorkspaceTargetSettings({
           {targets.map((target) => (
             <TargetPill key={target.targetId} target={target} />
           ))}
+        </div>
+      ) : null}
+
+      {setupSteps.length > 0 ? (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3">
+          <div className="flex items-center gap-2 text-amber-900">
+            <Terminal aria-hidden="true" size={15} />
+            <p className="text-xs font-semibold">依赖准备命令</p>
+          </div>
+          <div className="mt-2 grid gap-2">
+            {setupSteps.map((step) => (
+              <div
+                className="rounded border border-amber-200 bg-white px-2 py-2 text-[11px] text-slate-700"
+                key={`${step.role}:${step.cwd}:${step.command}`}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">
+                    {formatTargetType(step.role)}
+                  </span>
+                  <code className="rounded bg-slate-950 px-1.5 py-0.5 font-mono text-[11px] text-white">
+                    {step.command}
+                  </code>
+                </div>
+                <p className="mt-1 break-all font-mono text-[11px] text-slate-800">
+                  {step.cwd}
+                </p>
+                <p className="mt-1 text-[11px] text-slate-600">{step.reason}</p>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -31,6 +31,7 @@ from app.main import (
 from app.memory_snapshots import refresh_session_memory_snapshot
 from app.guardrails import ApprovalRequestPayload, request_task_run_approval
 from app.reviews import create_scripted_review_for_task_run
+from app.diffs import DiffCollectionError
 from app.models import (
     Agent,
     Artifact,
@@ -46,6 +47,7 @@ from app.models import (
     Workspace,
 )
 from app.models import utc_now
+from app.run_diagnostics import build_task_run_diagnostics
 from app.task_runs import (
     TaskRunLifecycleError,
     claim_task_run_for_worker,
@@ -55,7 +57,7 @@ from app.task_runs import (
     transition_task_run,
 )
 from app.session_queue import entry_for_task_run
-from app.target_locks import acquire_target_lock
+from app.target_locks import acquire_target_lock, held_lock_for_target
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
@@ -509,6 +511,75 @@ def test_runtime_config_frontend_adapter_overrides_default_adapter(
         assert metrics["runtimeConfigResolution"]["configSource"] == "workspace"
         assert response["providerAssignment"]["source"] == "runtime_config"
         assert response["runtimeConfigResolution"]["providerId"] == "local-claude-code-cli"
+
+
+def test_run_engine_gateway_honors_runtime_provider_id(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENTHUB_DEFAULT_CODE_ADAPTER", "codex")
+
+    with db_from_override() as db:
+        workspace_id = db.exec(select(Session)).first().workspace_id
+        upsert_runtime_config(
+            db,
+            workspace_id,
+            {
+                "frontend": RuntimeRoleConfig(
+                    role="frontend",
+                    agent_profile_id="agent-frontend",
+                    provider_id="local-claude-code-cli",
+                    adapter_type="claude_code",
+                    mode="frontend",
+                    enabled=True,
+                    fallback_policy="explicit_only",
+                )
+            },
+        )
+
+        task_run = create_task_run(db, task_id())
+        try:
+            gateway = run_engine_module._resolve_provider_gateway_for_run(
+                db,
+                task_run,
+                "claude_code",
+            )
+            metrics = json.loads(db.get(TaskRun, task_run.id).metrics_json)
+        finally:
+            run_engine_module._release_provider_capacity(db, task_run.id)
+
+    assert gateway["adapter_type"] == "claude_code"
+    assert metrics["providerGateway"]["resolution"]["selectedProviderId"] == (
+        "local-claude-code-cli"
+    )
+    assert metrics["providerGateway"]["resolution"]["selectedAdapterType"] == (
+        "claude_code"
+    )
+
+
+def test_run_engine_gateway_honors_stored_provider_assignment_for_retry(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGENTHUB_DEFAULT_CODE_ADAPTER", "codex")
+
+    with db_from_override() as db:
+        task_run = create_task_run(db, task_id(), adapter_type="claude_code")
+        try:
+            gateway = run_engine_module._resolve_provider_gateway_for_run(
+                db,
+                task_run,
+                "claude_code",
+            )
+            metrics = json.loads(db.get(TaskRun, task_run.id).metrics_json)
+        finally:
+            run_engine_module._release_provider_capacity(db, task_run.id)
+
+    assert gateway["adapter_type"] == "claude_code"
+    assert metrics["providerAssignment"]["providerId"] == "local-claude-code-cli"
+    assert metrics["providerGateway"]["resolution"]["selectedProviderId"] == (
+        "local-claude-code-cli"
+    )
 
 
 def test_runtime_config_backend_adapter_overrides_environment_default(
@@ -2038,6 +2109,54 @@ def test_external_backend_instruction_uses_external_target_metadata(
     assert "safe demo backend target" not in request.instruction
 
 
+def test_rehearsal_root_instruction_points_new_project_to_dedicated_subdirectory(
+    client: TestClient,
+    tmp_path,
+) -> None:
+    with db_from_override() as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        external_root = tmp_path / "agenthub-rehearsals"
+        external_root.mkdir()
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-agenthub-rehearsals",
+                name="AgentHub rehearsals",
+                root_path=str(external_root),
+                project_type="unknown",
+                allowed_paths=["*"],
+            ),
+        )
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
+        task = Task(
+            session_id=session_id,
+            title="External bookkeeping app",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=frontend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "targetId": "external-agenthub-rehearsals",
+                    "safeTarget": "*",
+                    "files": ["*"],
+                    "originalRequest": "帮我做一个记账软件，登记每天的支出与收入，界面可爱",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = create_task_run(db, task.id)
+
+        request = agent_run_request_for(db, task_run, adapter_type="codex")
+
+    assert "dedicated subdirectory `bookkeeping-app`" in request.instruction
+    assert "Do not reuse or rewrite unrelated sibling rehearsal apps" in request.instruction
+
+
 def test_external_review_instruction_is_read_oriented_with_command_evidence(
     client: TestClient,
     tmp_path,
@@ -3077,6 +3196,211 @@ def test_finalize_completed_task_run_runs_artifact_steps(
         ]
 
 
+def test_finalize_completed_task_run_records_artifact_failures_without_blocking_pipeline(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+        transition_task_run(db, run.id, "completed")
+        calls: list[str] = []
+
+        def fake_collect_task_run_diff(db, task_run_id):
+            calls.append(f"diff:{task_run_id}")
+            raise DiffCollectionError("TaskRun does not have a usable baseRef or file snapshot.")
+
+        def fake_create_scripted_review_for_task_run(db, task_run_id):
+            calls.append(f"review:{task_run_id}")
+
+        def fake_refresh_session_ledger_for_task_run(db, task_run_id):
+            calls.append(f"ledger:{task_run_id}")
+
+        def fake_complete_ready_pipeline_review_tasks(db, task_id):
+            calls.append(f"review-tasks:{task_id}")
+            return []
+
+        def fake_maybe_auto_preview_and_mock_deploy(db, task_run):
+            calls.append(f"preview:{task_run.id}")
+
+        async def fake_auto_start_next_pipeline_task(db, task_id):
+            calls.append(f"downstream:{task_id}")
+            return None
+
+        monkeypatch.setattr(run_engine_module, "collect_task_run_diff", fake_collect_task_run_diff)
+        monkeypatch.setattr(
+            run_engine_module,
+            "create_scripted_review_for_task_run",
+            fake_create_scripted_review_for_task_run,
+        )
+        monkeypatch.setattr(
+            run_engine_module,
+            "refresh_session_ledger_for_task_run",
+            fake_refresh_session_ledger_for_task_run,
+        )
+        monkeypatch.setattr(
+            run_engine_module,
+            "_complete_ready_pipeline_review_tasks",
+            fake_complete_ready_pipeline_review_tasks,
+        )
+        monkeypatch.setattr(
+            run_engine_module,
+            "_maybe_auto_preview_and_mock_deploy",
+            fake_maybe_auto_preview_and_mock_deploy,
+        )
+        monkeypatch.setattr(
+            run_engine_module,
+            "_auto_start_next_pipeline_task",
+            fake_auto_start_next_pipeline_task,
+        )
+
+        import asyncio
+
+        asyncio.run(run_engine_module.finalize_completed_task_run(db, run))
+
+        assert calls == [
+            f"diff:{run.id}",
+            f"ledger:{run.id}",
+            f"review-tasks:{run.task_id}",
+            f"preview:{run.id}",
+            f"downstream:{run.task_id}",
+        ]
+        failed_events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == run.id)
+            .where(TaskRunEvent.event_type.in_(["artifact.diff.failed", "artifact.review.failed"]))
+            .order_by(TaskRunEvent.sequence)
+        ).all()
+        assert [event.event_type for event in failed_events] == [
+            "artifact.diff.failed",
+            "artifact.review.failed",
+        ]
+        diff_payload = json.loads(failed_events[0].payload_json)
+        review_payload = json.loads(failed_events[1].payload_json)
+        assert diff_payload["errorCode"] == "ARTIFACT_COLLECTION_FAILED"
+        assert "baseRef" in diff_payload["message"]
+        assert review_payload["status"] == "skipped"
+
+        diagnostics = build_task_run_diagnostics(db, db.get(TaskRun, run.id))
+        assert diagnostics.primary_failure is None
+        assert any(
+            item.category == "artifact_collection_failed"
+            for item in diagnostics.contributing_factors
+        )
+        assert any(
+            item.phase == "diff" and item.status == "failed"
+            for item in diagnostics.timeline
+        )
+
+
+def test_auto_start_next_pipeline_task_runs_external_downstream_task(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    frontend_root = tmp_path / "external-fullstack" / "frontend"
+    backend_root = tmp_path / "external-fullstack" / "backend"
+    (frontend_root / "src").mkdir(parents=True)
+    (frontend_root / "src" / "App.tsx").write_text(
+        "export default function App() { return null }\n"
+    )
+    (backend_root / "app").mkdir(parents=True)
+    (backend_root / "app" / "main.py").write_text("from fastapi import FastAPI\n")
+
+    executed: list[tuple[str, str]] = []
+
+    async def fake_execute_task_run(db, task_run, *, adapter_type, adapter):
+        executed.append((task_run.id, adapter_type))
+        return task_run
+
+    monkeypatch.setattr(run_engine_module, "execute_task_run", fake_execute_task_run)
+
+    with db_from_override() as db:
+        workspace = db.exec(select(Workspace).where(Workspace.name == "AgentHub Demo")).one()
+        session = db.exec(select(Session).where(Session.title == "TaskRun session")).one()
+        frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        backend_agent = db.exec(select(Agent).where(Agent.role == "backend")).one()
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-fullstack-frontend",
+                name="External Fullstack Frontend",
+                root_path=str(frontend_root),
+                project_type="vite-react",
+                allowed_paths=["src", "package.json", "vite.config.ts"],
+                denied_paths=[".env", "node_modules"],
+            ),
+        )
+        register_external_project_target(
+            db,
+            workspace,
+            ExternalWorkspaceRegistration(
+                target_id="external-fullstack-backend",
+                name="External Fullstack Backend",
+                root_path=str(backend_root),
+                project_type="fastapi",
+                allowed_paths=["app", "tests", "requirements.txt"],
+                denied_paths=[".env", ".venv"],
+            ),
+        )
+        upstream = Task(
+            session_id=session.id,
+            title="Frontend external task",
+            intent_type="frontend_change",
+            status="completed",
+            assigned_agent_id=frontend_agent.id,
+            plan_json=json.dumps(
+                {
+                    "planner": "orchestrator_external_target_v1",
+                    "targetId": "external-fullstack-frontend",
+                    "safeTarget": "src",
+                    "files": ["src/App.tsx"],
+                    "autoStart": True,
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(upstream)
+        db.commit()
+        db.refresh(upstream)
+        downstream = Task(
+            session_id=session.id,
+            title="Backend external task",
+            intent_type="backend_change",
+            status="waiting_dependency",
+            assigned_agent_id=backend_agent.id,
+            depends_on_task_ids=json.dumps([upstream.id], separators=(",", ":")),
+            plan_json=json.dumps(
+                {
+                    "planner": "orchestrator_external_target_v1",
+                    "targetId": "external-fullstack-backend",
+                    "safeTarget": "app",
+                    "files": ["app/main.py"],
+                    "autoStart": True,
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(downstream)
+        db.commit()
+        db.refresh(downstream)
+
+        import asyncio
+
+        started = asyncio.run(
+            run_engine_module._auto_start_next_pipeline_task(db, upstream.id)
+        )
+
+        runs = db.exec(select(TaskRun).where(TaskRun.task_id == downstream.id)).all()
+        stored_downstream = db.get(Task, downstream.id)
+
+        assert started is not None
+        db.refresh(stored_downstream)
+        assert [run.id for run in runs] == [started.id]
+        assert executed == [(started.id, "codex")]
+        assert stored_downstream.status == "running"
+
+
 def test_background_execution_claims_and_refreshes_lease(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -3271,6 +3595,128 @@ def test_background_execution_waits_for_target_lock_without_starting_adapter(
         assert scheduler["lockHolderTaskRunIds"] == [first_run_id]
 
 
+def test_adapter_completed_event_releases_target_lock(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with db_from_override() as db:
+        run = create_task_run(db, task_id())
+        run_id = run.id
+
+    class CompletingAdapter:
+        def getCapabilities(self) -> AdapterCapabilities:
+            return AdapterCapabilities(
+                supportsStreaming=True,
+                supportsInterrupt=True,
+                supportsApproval=False,
+                supportsFileEdit=False,
+                supportsShellCommand=False,
+                supportsDiffArtifact=False,
+                supportsPreviewArtifact=False,
+                supportsNetwork=False,
+            )
+
+        async def createRun(self, request):
+            return AdapterRun(adapterRunId="adapter-completed")
+
+        async def streamEvents(self, adapter_run_id):
+            yield {
+                "type": "completed",
+                "taskRunId": run_id,
+                "payload": {"adapter": "codex"},
+            }
+
+        async def interrupt(self, adapter_run_id):
+            return None
+
+        async def approve(self, adapter_run_id, approval):
+            return None
+
+        async def collectArtifacts(self, adapter_run_id):
+            return []
+
+        async def cleanup(self, adapter_run_id):
+            return None
+
+    monkeypatch.setattr(run_engine_module, "CodexAdapter", lambda: CompletingAdapter())
+
+    import asyncio
+
+    with db_from_override() as db:
+        asyncio.run(
+            run_engine_module.execute_task_run_background(
+                db,
+                run_id,
+                "codex",
+                worker_id="worker:complete",
+            )
+        )
+        stored = db.get(TaskRun, run_id)
+        queue_entry = entry_for_task_run(db, run_id)
+
+        assert stored.state == "completed"
+        assert held_lock_for_target(db, DEMO_FRONTEND_TARGET_ID) is None
+        assert queue_entry.state == "completed"
+
+
+def test_create_task_run_recovers_terminal_holder_target_lock(client: TestClient) -> None:
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        current_session = db.get(Session, task.session_id)
+        other_session = Session(
+            workspace_id=current_session.workspace_id,
+            title="Recovered terminal lock session",
+            bound_branch="main",
+            worktree_path=".worktrees/recovered-terminal-lock-session",
+        )
+        second = Task(
+            session_id=other_session.id,
+            title="Second task after terminal holder",
+            intent_type="frontend_change",
+            status="pending",
+            assigned_agent_id=task.assigned_agent_id,
+            plan_json=json.dumps(
+                {
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "safeTarget": "apps/demo/src",
+                    "files": ["apps/demo/src/App.tsx"],
+                },
+                separators=(",", ":"),
+            ),
+        )
+        db.add(other_session)
+        db.add(second)
+        db.commit()
+        db.refresh(second)
+        second_id = second.id
+
+        first_run = claim_task_run_for_worker(
+            db,
+            create_task_run(db, task.id).id,
+            worker_id="worker:first",
+        )
+        acquire_target_lock(
+            db,
+            target_id=DEMO_FRONTEND_TARGET_ID,
+            session_id=task.session_id,
+            task_run_id=first_run.id,
+            worker_id="worker:first",
+            lease_expires_at=first_run.lease_expires_at,
+        )
+        first_run.state = "completed"
+        first_run.ended_at = utc_now()
+        db.add(first_run)
+        db.commit()
+
+    response = client.post(f"/tasks/{second_id}/runs")
+
+    assert response.status_code == 201
+    with db_from_override() as db:
+        assert held_lock_for_target(db, DEMO_FRONTEND_TARGET_ID) is None
+        stored_second = db.get(Task, second_id)
+        assert stored_second.status == "running"
+
+
 def test_run_worker_executes_next_queued_task_run(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -3445,8 +3891,23 @@ def test_retry_blocks_external_target_dirty_worktree_outside_checkpoint(
 
 def test_retry_with_scripted_mock_fallback_after_codex_failure(
     client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    scheduled: list[str] = []
+
+    def fake_schedule_task_run_execution(
+        background_tasks,
+    ) -> None:
+        scheduled.append("worker")
+
+    monkeypatch.setattr(
+        main_module,
+        "schedule_task_run_execution",
+        fake_schedule_task_run_execution,
+    )
+
     original = client.post(f"/tasks/{task_id()}/runs").json()
+    scheduled_after_original = len(scheduled)
 
     with db_from_override() as db:
         transition_task_run(
@@ -3466,24 +3927,42 @@ def test_retry_with_scripted_mock_fallback_after_codex_failure(
     assert fallback["adapterType"] == "scripted_mock"
     assert fallback["state"] in {"queued", "failed"}
     assert fallback["metricsJson"]["fallbackFromRunId"] == original["id"]
+    assert len(scheduled) == scheduled_after_original + 1
 
     task_response = client.get(f"/sessions/{fallback['sessionId']}/tasks")
     task = task_response.json()[0]
     assert [run["id"] for run in task["taskRuns"]] == [original["id"], fallback["id"]]
 
 
-def test_force_codex_failure_creates_failed_visible_run(client: TestClient) -> None:
+def test_force_codex_failure_queues_visible_run_through_scheduler(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scheduled: list[str] = []
+
+    def fake_schedule_task_run_execution(
+        background_tasks,
+    ) -> None:
+        scheduled.append("worker")
+
+    monkeypatch.setattr(
+        main_module,
+        "schedule_task_run_execution",
+        fake_schedule_task_run_execution,
+    )
+
     response = client.post(f"/tasks/{task_id()}/runs/force-codex-failure")
 
     assert response.status_code == 201
     run = response.json()
     assert run["adapterType"] == "codex"
-    assert run["state"] == "failed"
-    assert run["errorCode"] == "CODEX_DEMO_FORCED_FAILURE"
+    assert run["state"] == "queued"
+    assert run["metricsJson"]["forceFailure"] is True
+    assert scheduled == ["worker"]
 
     task_response = client.get(f"/sessions/{run['sessionId']}/tasks")
     task = task_response.json()[0]
-    assert task["status"] == "failed"
+    assert task["status"] == "running"
     assert [task_run["id"] for task_run in task["taskRuns"]] == [run["id"]]
 
 

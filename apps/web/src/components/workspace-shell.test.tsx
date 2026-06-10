@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ApiRequestError } from "@/lib/api"
+
 import { WorkspaceShell } from "./workspace-shell"
 
 const navigationMocks = vi.hoisted(() => ({
@@ -18,7 +20,6 @@ const apiMocks = vi.hoisted(() => ({
   forceCodexFailure: vi.fn(),
   getAgentRuntimeConfig: vi.fn(),
   getSessionArtifactWorkbench: vi.fn(),
-  getSessionLedger: vi.fn(),
   interruptTaskRun: vi.fn(),
   listSessionMessages: vi.fn(),
   listSessionTasks: vi.fn(),
@@ -50,7 +51,6 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   forceCodexFailure: apiMocks.forceCodexFailure,
   getAgentRuntimeConfig: apiMocks.getAgentRuntimeConfig,
   getSessionArtifactWorkbench: apiMocks.getSessionArtifactWorkbench,
-  getSessionLedger: apiMocks.getSessionLedger,
   interruptTaskRun: apiMocks.interruptTaskRun,
   listSessionMessages: apiMocks.listSessionMessages,
   listSessionTasks: apiMocks.listSessionTasks,
@@ -322,7 +322,6 @@ describe("WorkspaceShell", () => {
     apiMocks.sessionEventsUrl.mockReturnValue(
       "http://127.0.0.1:8000/sessions/session-1/events?after=0&stream=true",
     )
-    apiMocks.getSessionLedger.mockResolvedValue(null)
     apiMocks.getSessionArtifactWorkbench.mockResolvedValue({
       artifacts: [],
       sessionId: "session-1",
@@ -357,6 +356,57 @@ describe("WorkspaceShell", () => {
         "请确认 FastAPI 后端可访问：http://127.0.0.1:8000。",
       )
     })
+  })
+
+  it("shows concrete task run API errors instead of a generic backend warning", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([
+      {
+        assignedAgentId: "agent-frontend",
+        assignedAgentName: "Frontend Agent",
+        assignedAgentRole: "frontend",
+        createdAt: "2026-05-16T00:00:00Z",
+        dependsOnTaskIds: [],
+        id: "task-locked",
+        intentType: "frontend_change",
+        planJson: {
+          targetId: "external-agenthub-rehearsals",
+        },
+        priority: 1,
+        sessionId: "session-1",
+        status: "pending",
+        taskRuns: [],
+        title: "Frontend locked target",
+        updatedAt: "2026-05-16T00:00:00Z",
+      },
+    ])
+    apiMocks.createTaskRun.mockRejectedValue(
+      new ApiRequestError("Waiting for target write lock: external-agenthub-rehearsals."),
+    )
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "开始运行" })).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "开始运行" }))
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toContain(
+        "Waiting for target write lock: external-agenthub-rehearsals.",
+      )
+    })
+    expect(screen.getByRole("alert").textContent).not.toContain(
+      "请确认 FastAPI 后端可访问",
+    )
   })
 
   it("renders settings navigation links and keeps contacts off the chat sidebar", async () => {
@@ -432,21 +482,23 @@ describe("WorkspaceShell", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("对话模式")).toBeTruthy()
       expect(screen.getByText("群聊")).toBeTruthy()
+      expect(screen.queryByText("对话模式")).toBeNull()
     })
 
     fireEvent.click(screen.getByRole("button", { name: "单聊" }))
 
-    expect(screen.getByText("单聊聚焦当前对话，不改变后端路由。")).toBeTruthy()
+    expect(
+      screen.queryByText("单聊聚焦当前对话，不改变后端路由。"),
+    ).toBeNull()
     expect(apiMocks.createSessionMessage).not.toHaveBeenCalled()
     expect(apiMocks.createTaskRun).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole("button", { name: "群聊" }))
 
     expect(
-      screen.getByText("群聊显示 Orchestrator 与角色 Agent 协作，不改变调度规则。"),
-    ).toBeTruthy()
+      screen.queryByText("群聊显示 Orchestrator 与角色 Agent 协作，不改变调度规则。"),
+    ).toBeNull()
     expect(apiMocks.createTaskRun).not.toHaveBeenCalled()
   })
 
@@ -546,28 +598,9 @@ describe("WorkspaceShell", () => {
     expect(apiMocks.createSessionMessage).not.toHaveBeenCalled()
   })
 
-  it("renders the workspace context ledger for the selected session", async () => {
+  it("does not render the workspace context ledger in the chat column", async () => {
     apiMocks.listSessionMessages.mockResolvedValue([])
     apiMocks.listSessionTasks.mockResolvedValue([])
-    apiMocks.getSessionLedger.mockResolvedValue({
-      activeAgents: ["orchestrator", "frontend"],
-      currentGoal: "@orchestrator build a login page for the demo app",
-      id: "ledger-1",
-      lastSuccessfulAdapter: "scripted_mock",
-      latestChangedFiles: ["apps/demo/src/App.tsx"],
-      latestDeploymentId: "deployment-1",
-      latestDeploymentProvider: "mock",
-      latestDeploymentStatus: "ready",
-      latestDiffArtifactId: "artifact-diff-1",
-      latestPreviewHealth: "healthy",
-      latestPreviewId: "preview-1",
-      latestPreviewUrl: "http://127.0.0.1:4317",
-      latestTaskId: "task-1",
-      latestTaskRunId: "run-1",
-      sessionId: "session-1",
-      summaryMd: "Current goal: @orchestrator build a login page",
-      updatedAt: "2026-05-21T00:00:00Z",
-    })
 
     render(
       <WorkspaceShell
@@ -579,17 +612,14 @@ describe("WorkspaceShell", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText("Workspace Context")).toBeTruthy()
-      expect(
-        screen.getByText("@orchestrator build a login page for the demo app"),
-      ).toBeTruthy()
-      expect(screen.getByText("Deploy ready")).toBeTruthy()
-      expect(screen.getByText("scripted_mock")).toBeTruthy()
-      expect(screen.getByText("apps/demo/src/App.tsx")).toBeTruthy()
-      expect(screen.getByText("demo-frontend")).toBeTruthy()
-      expect(screen.getByText("demo-backend")).toBeTruthy()
-      expect(screen.getByText("memory-s")).toBeTruthy()
-      expect(screen.getByText("mock")).toBeTruthy()
+      expect(screen.getByRole("heading", { name: "Session 1" })).toBeTruthy()
+      expect(screen.queryByText("等待用户需求")).toBeNull()
+      expect(screen.queryByText("最新证据")).toBeNull()
+      expect(screen.queryByText("PMO 状态")).toBeNull()
+      expect(screen.queryByText("Deploy ready")).toBeNull()
+      expect(screen.queryByText("scripted_mock")).toBeNull()
+      expect(screen.queryByText("apps/demo/src/App.tsx")).toBeNull()
+      expect(screen.queryByText("memory-s")).toBeNull()
     })
   })
 

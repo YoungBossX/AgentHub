@@ -103,6 +103,62 @@ def test_allowed_validation_commands_uses_configured_target_commands() -> None:
     }
 
 
+def test_planned_vite_target_commands_are_allowed_but_install_is_not() -> None:
+    target = _target(
+        target_id="external-frontend-health-management",
+        check_command="pnpm check",
+        test_command="pnpm test",
+        build_command="pnpm build",
+    )
+
+    build = evaluate_project_command(
+        target=target,
+        command_type="build",
+        command="pnpm build",
+    )
+    install = evaluate_project_command(
+        target=target,
+        command_type="build",
+        command="pnpm install",
+    )
+
+    assert build.allowed is True
+    assert install.allowed is False
+    assert "expected 'pnpm build'" in install.reason
+
+
+def test_planned_fastapi_target_commands_are_allowed_but_dependency_install_is_not() -> None:
+    target = TargetProject(
+        target_id="external-backend-health-management",
+        name="Health Backend",
+        type="backend",
+        root="/tmp/health/backend",
+        allowed_paths=("app", "tests", "requirements.txt"),
+        denied_paths=(".git", ".env", "node_modules", "secrets"),
+        allowed_agents=("backend", "qa", "review"),
+        test_command="pytest",
+        check_command="python -m compileall .",
+        project_type="fastapi",
+        detected_framework="fastapi",
+        package_manager="pip",
+    )
+
+    test = evaluate_project_command(
+        target=target,
+        command_type="test",
+        command="pytest",
+    )
+    install = evaluate_project_command(
+        target=target,
+        command_type="test",
+        command="pip install -r requirements.txt",
+    )
+
+    assert test.allowed is True
+    assert install.allowed is False
+    assert "expected 'pytest'" in install.reason
+
+
 def _target(
     *,
     target_id: str,

@@ -16,6 +16,7 @@ LOCK_HELD = "held"
 LOCK_RELEASED = "released"
 LOCK_STALE_RELEASED = "stale_released"
 LOCK_LEASE_SECONDS = 300
+TERMINAL_TASK_RUN_STATES = {"completed", "failed", "interrupted", "cancelled"}
 
 
 @dataclass(frozen=True)
@@ -236,6 +237,38 @@ def recover_stale_target_locks(db: DbSession, *, now: Optional[datetime] = None)
                 stale=True,
             )
             recovered.append(released)
+    return recovered
+
+
+def recover_terminal_holder_target_locks(db: DbSession) -> list[TargetLock]:
+    recovered: list[TargetLock] = []
+    locks = db.exec(
+        select(TargetLock)
+        .where(TargetLock.state == LOCK_HELD)
+        .order_by(TargetLock.acquired_at, TargetLock.id)
+    ).all()
+    for lock in locks:
+        if lock.task_run_id is None:
+            continue
+        task_run = db.get(TaskRun, lock.task_run_id)
+        if task_run is None or task_run.state not in TERMINAL_TASK_RUN_STATES:
+            continue
+        mark_task_run_terminal(
+            db,
+            task_run.id,
+            task_run.state,
+            reason="Recovered terminal TaskRun lock holder.",
+        )
+        refreshed_lock = lock_for_key(db, lock.lock_key)
+        if refreshed_lock is None or refreshed_lock.state != LOCK_HELD:
+            continue
+        released = _release_lock(
+            db,
+            refreshed_lock,
+            release_reason="terminal_holder",
+            stale=True,
+        )
+        recovered.append(released)
     return recovered
 
 

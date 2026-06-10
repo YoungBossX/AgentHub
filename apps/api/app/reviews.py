@@ -57,6 +57,29 @@ def create_scripted_review_for_task_run(
     return create_scripted_review_for_diff(db, diff_artifact.id)
 
 
+def record_review_collection_failure(
+    db: DbSession,
+    task_run_id: str,
+    exc: Exception,
+    *,
+    skipped: bool = False,
+) -> None:
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type="artifact.review.failed",
+        payload_json=json.dumps(
+            {
+                "status": "skipped" if skipped else "failed",
+                "errorCode": "ARTIFACT_COLLECTION_FAILED",
+                "errorMessage": str(exc),
+                "message": f"Review collection {'skipped' if skipped else 'failed'}: {exc}",
+            },
+            separators=(",", ":"),
+        ),
+    )
+
+
 def create_scripted_review_for_diff(
     db: DbSession,
     diff_artifact_id: str,

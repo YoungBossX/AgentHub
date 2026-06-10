@@ -1,8 +1,7 @@
 ## 总体设计
 
-V2.2 在 Durable Run Engine 与现有编码 adapter 之间增加 Provider Gateway。
+V2.2 在 Durable Run Engine 与现有编码适配器之间增加 Provider Gateway。
 它不是新的 agent，也不是 provider marketplace，而是一个执行时控制面：
-
 ```text
 Durable Run Engine
   -> ProviderGateway
@@ -14,7 +13,6 @@ Durable Run Engine
       -> FallbackPolicy
   -> ClaudeCodeAdapter / CodexAdapter / ScriptedMockAdapter
 ```
-
 Provider Gateway 只处理 coding adapter 平面。Planner provider 继续走现有
 Conversation Router / Planner runtime 配置与 P17/P22 兼容性边界，不混入本阶段。
 

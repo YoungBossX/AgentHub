@@ -1,54 +1,48 @@
-# V2.2 Provider Gateway Freeze Review
+# V2.2 提供商网关冻结审查
 
-**Date:** 2026-06-09
+**日期：** 2026-06-09
 
-## Scope
+## 范围
 
-V2.2 added a coding Provider Gateway between the Durable Run Engine and the
-existing ClaudeCodeAdapter, CodexAdapter, and ScriptedMockAdapter.
+V2.2 在持久化运行引擎与现有 ClaudeCodeAdapter、CodexAdapter 和 ScriptedMockAdapter 之间新增了一个编码提供商网关。
 
-Implemented:
+已实现：
 
-- coding provider contract and safe evidence model
-- ProviderRegistry / ProviderResolver for coding adapters only
-- provider health probes for Claude Code, Codex, and ScriptedMock
-- provider capacity limiter with idempotent release
-- rate-limit evidence placeholder
-- provider circuit breaker with closed/open/half_open states
-- ProviderErrorClassifier and FallbackPolicy
-- provider resolution, health, capacity, circuit, error, and fallback events
-- Durable Run Engine integration for provider resolution before adapter launch
+- 编码提供商合约与安全证据模型
+- 仅用于编码适配器的 ProviderRegistry / ProviderResolver
+- 针对 Claude Code、Codex 和 ScriptedMock 的提供商健康探针
+- 具有幂等释放功能的提供商容量限制器
+- 速率限制证据占位符
+- 具有 closed/open/half_open 种状态的提供商断路器
+- ProviderErrorClassifier 和 FallbackPolicy
+- 提供商解析、健康、容量、断路器、错误和兜底事件
+- 在适配器启动前进行提供商解析的持久化运行引擎集成
 
-## Safety
+## 安全性
 
-- Planner providers remain separate from coding providers.
-- No new adapter, marketplace, cloud Codex wrapper, Docker sandbox, WebSocket,
-  or production deploy was added.
-- ScriptedMock evidence stays marked as fallback/mock.
-- Provider evidence is redacted for secrets, tokens, protected paths, and host
-  paths.
-- Provider failures are not converted into real provider success.
+- 规划器提供商与编码提供商保持分离。
+- 未新增适配器、市场、云端 Codex 封装器、Docker 沙箱、WebSocket 或生产部署。
+- ScriptedMock 证据仍标记为 fallback/mock.
+- 提供商证据会针对密钥、令牌、受保护路径和主机路径进行脱敏处理。
+- 提供商故障不会转换为真实的提供商成功。
 
-## Validation
+## 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py tests/test_task_runs.py -q` | Pass |
-| `pnpm check` | Pass |
-| `pnpm demo:api:test` | Pass |
-| `openspec validate agenthub-v2-2-provider-gateway --strict` | Pass |
-| `git diff --check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py tests/test_task_runs.py -q` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm demo:api:test` | 通过 |
+| `openspec validate agenthub-v2-2-provider-gateway --strict` | 通过 |
+| `git diff --check` | 通过 |
 
-## Limitations
+## 限制
 
-- Circuit and capacity state are in-process for the local SQLite demo path.
-- Full distributed provider quota/budget accounting is deferred.
-- Fallback policy records evidence and selection, but deeper automatic
-  provider retry chains should be hardened in later phases.
-- Provider health probes are startup-path checks, not full interactive
-  authentication smokes.
+- 断路器和容量状态在本地 SQLite 演示路径中为进程内处理。
+- 完整的分布式提供商 quota/budget 核算已推迟。
+- 兜底策略会记录证据和选择，但更深入的自动提供商重试链应在后续阶段加强。
+- 提供商健康探针是启动路径检查，而非完整的交互式身份验证烟雾测试。
 
-## Follow-up
+## 后续工作
 
-Recommended follow-up: finish V2.3 freeze review, then complete V2.7 UI so
-users can see provider gateway failures and next-step suggestions directly.
+建议后续工作：完成 V2.3 冻结审查，然后完成 V2.7 UI，以便用户能直接查看提供商网关故障和下一步建议。

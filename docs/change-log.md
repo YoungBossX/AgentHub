@@ -1,6687 +1,6388 @@
-# AgentHub Change Log
+# AgentHub 变更日志
 
-## V2.6-5 Transactional Delivery Evidence Integration
+## 显式 ScriptedMock fallback 调度修复
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added a helper to persist delivery decision events as TaskRunEvents.
-- Updated Run Diagnostics phase mapping so `delivery.review_required` appears
-  under validation and rollback events appear under recovery.
-- Added tests for delivery event persistence and diagnostics timeline mapping.
+- RunWorker 执行 `force-codex-failure` 创建的 queued run 时，会在队列/锁检查后触发 Codex forced failure，不再依赖真实 Codex CLI 可用性。
+- 已明确标记为 `scripted_mock` 的 fallback run 会直接使用 `ScriptedMockAdapter`，不再经过 provider resolver 被重新选择为真实 Codex/Claude provider。
+- 恢复集成测试改为显式驱动 RunWorker，覆盖“强制 Codex 失败 -> ScriptedMock fallback -> Diff/Preview/Deploy”的新调度路径。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py tests/test_run_diagnostics.py -q` | Pass, 21 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-6-transactional-delivery --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_failure_recovery.py -q` | 通过 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_retry_with_scripted_mock_fallback_after_codex_failure tests/test_task_runs.py::test_force_codex_failure_queues_visible_run_through_scheduler tests/test_task_runs.py::test_background_execution_claims_and_refreshes_lease tests/test_scheduler.py::test_failed_codex_coding_task_exposes_fallback_available_state -q` | 通过，4 个测试 |
+| `pnpm test` | 通过，Web 94 个测试 / API 622 个测试 / Demo API 5 个测试 |
 
-## V2.6-4 Delivery Accept Rollback Retry
+## README 当前可用路径说明更新
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added delivery artifact state, accept decision, rollback decision, and explicit
-  retry mode evidence helpers.
-- Added tests proving accept records diff/review/command/policy evidence ids,
-  rollback records checkpoint paths, and rollback refuses missing checkpoints.
+- README 新增“实际新建一个全栈应用”流程，说明从空文件夹创建 frontend/backend 项目边界、绑定当前 Session、执行前后端 Agent 的通用路径。
+- README 更新项目边界和当前可靠性能力，补充非 Git 外部项目 Diff/Review、target 写锁恢复、provider 诊断和 Review 中文证据面板说明。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py -q` | Pass, 12 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-6-transactional-delivery --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过，Web 94 个测试 / API 622 个测试 / Demo API 5 个测试 |
+| `git diff --check` | 通过 |
 
-## V2.6-3 Delivery Validation Gate
+## Review 证据面板中文化
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added delivery validation evidence and gate helpers that classify failed
-  command, diff/review, or policy evidence as `review_required`.
-- Added tests proving clean evidence passes while failed command evidence,
-  high-risk review evidence, and denied policy evidence require review.
+- 右侧证据面板中的 Review Agent 标题、摘要、风险/严重级别、建议项和适配器标签改为中文展示。
+- 对历史已生成的英文 Review artifact 增加前端展示层翻译，刷新页面即可看到中文，不需要重新执行任务。
+- 补充组件测试覆盖“缺少验证证据”类 Review finding 的中文显示。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py -q` | Pass, 9 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-6-transactional-delivery --strict` | Pass |
+| `cd apps/web && pnpm test src/components/preview-card.test.tsx -- --runInBand` | 通过，1 个测试文件 / 8 个测试 |
+| `pnpm --filter @agenthub/web check` | 通过 |
+| `git diff --check -- apps/web/src/components/preview-card.tsx apps/web/src/components/preview-card.test.tsx docs/change-log.md` | 通过 |
 
-## V2.6-2 Transactional Delivery Contract
+## 非 Git 新项目 Diff/Review 证据链修复
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added a Transactional Delivery contract with delivery states, retry modes,
-  checkpoint evidence, pending validation, rollback preflight, and retry mode
-  decisions.
-- Added tests proving checkpoint evidence is read from TaskRun metrics and
-  rollback is refused when no checkpoint exists.
+- 非 Git 外部项目 TaskRun 创建时会在 `preRunCheckpoint` 记录允许路径内的文件快照，用于执行后生成 Diff。
+- `collect_task_run_diff` 在没有 Git `baseRef` 时支持基于文件快照生成统一 Diff artifact，继续复用现有 Review、ArtifactVersion、右侧证据面板链路。
+- 对修复前已创建、没有文件快照的外部非 Git run，支持空基线补采 Diff，便于对已经生成的项目补出 Diff/Review。
+- Diff/Review 收尾失败会写入 `artifact.diff.failed` / `artifact.review.failed` 事件，并在 Run Diagnostics 中归类为 artifact collection failed，避免 completed run 静默丢证据。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py tests/test_recovery.py -q` | Pass, 9 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-6-transactional-delivery --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_diffs.py tests/test_task_runs.py::test_finalize_completed_task_run_runs_artifact_steps tests/test_task_runs.py::test_finalize_completed_task_run_records_artifact_failures_without_blocking_pipeline tests/test_task_runs.py::test_auto_start_next_pipeline_task_runs_external_downstream_task tests/test_run_diagnostics.py -q` | 通过，23 个测试 |
+| `cd apps/api && ../../.venv/bin/python -m compileall app` | 通过 |
+| `openspec validate agenthub-generic-new-project-runtime --strict` | 通过 |
 
-## V2.5-4 Policy Evidence And Timeout
+## 会话主栏上下文卡片移除
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added an approval timeout decision helper that defaults to deny and preserves
-  safe policy metadata.
-- Added a stable policy evidence event payload helper for future MissionTrace and
-  Run Diagnostics integration.
+- 移除会话主栏中的上下文/PMO 摘要卡片，避免遮挡聊天记录和底部 AI 对话输入栏。
+- WorkspaceShell 不再为该卡片拉取 session ledger，减少主会话页的无用请求。
+- 删除已无入口的 `MissionPanel` 组件及其专用测试。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py -q` | Pass, 12 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-5-policy-engine --strict` | Pass |
+| `cd apps/web && pnpm test src/components/workspace-shell.test.tsx -- --runInBand` | 通过，1 个测试文件 / 10 个测试 |
+| `pnpm --filter @agenthub/web check` | 通过 |
 
-## V2.5-3 Runtime Policy Evaluation Helpers
+## 外部全栈任务自动衔接与 Setup 可见化
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added Policy Engine helpers for command, path, network, deploy, and platform
-  maintenance decisions using existing Target Registry, Guardrails, and Project
-  Command Policy semantics.
-- Kept helpers side-effect free and did not replace current execution,
-  approval, or deployment paths.
+- 外部全栈 fallback planner 生成的 backend 任务现在会标记 `autoStart: true`，在 frontend 依赖完成后可自动进入后端执行链路。
+- TaskRun 自动下游启动器现在支持 `orchestrator_external_target_v1`，并显式跳过触发它的 completed task，避免误重启上游任务。
+- 新项目 provisioning plan/API response 新增结构化 `setupSteps`，包含角色、命令、工作目录、原因和审批标记。
+- 运行设置页在新建全栈项目成功后展示依赖准备命令和对应目录，避免把 `node_modules` / Python 依赖缺失隐藏到 agent 执行阶段。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py tests/test_guardrails.py tests/test_project_command_policy.py -q` | Pass, 29 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-5-policy-engine --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_fullstack_requests_use_active_provisioned_targets_for_multiple_domains tests/test_task_runs.py::test_auto_start_next_pipeline_task_runs_external_downstream_task tests/test_project_provisioning.py::test_project_provisioning_api_returns_dry_run_plan tests/test_project_provisioning.py::test_project_provisioning_apply_scaffolds_registers_targets_and_activates_session -q` | 通过，6 个测试 |
+| `cd apps/web && pnpm test src/lib/api.test.ts src/components/runtime-settings-page-client.test.tsx -- --runInBand` | 通过，2 个测试文件 / 42 个测试 |
+| `cd apps/api && ../../.venv/bin/python -m compileall app` | 通过 |
+| `pnpm check` | 通过 |
+| `openspec validate agenthub-generic-new-project-runtime --strict` | 通过 |
 
-## V2.5-2 Policy Engine Contract
+## Provider 连接失败诊断修复
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added a standalone Policy Engine contract with policy categories, outcomes,
-  risk levels, approval types, decision evidence, and metadata redaction.
-- Added tests for allow, deny, require approval, require elevated approval, and
-  secret/protected-path redaction.
+- 将 `Unable to connect`、`ConnectionRefused`、`connection refused`、`ECONNREFUSED` 等真实 CLI/API 连接失败文本归类为 provider unavailable。
+- Provider Gateway 错误分类器现在会把 Claude/Codex 连接失败纳入可重试、可熔断的 provider 不可用错误，而不是 unknown。
+- Run Diagnostics 现在会把 Claude Code API 连接失败显示为 provider unavailable，避免误导为 quota/rate limit。
+- 修复 Run Diagnostics 对 UUID 中 `429` 片段的误判，避免把普通 trace/message id 识别成 provider quota。
+- 新项目 Vite React 模板改用 `moduleResolution: Bundler`，补充 `@types/node` 与 `src/vite-env.d.ts`，并将 `tsBuildInfoFile` 放入 `node_modules/.tmp`，避免 TypeScript 6 / Vite 8 安装后 build 失败或污染项目根目录。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py -q` | Pass, 5 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-5-policy-engine --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_run_diagnostics.py::test_connection_refused_provider_failure_is_not_reported_as_quota -q` | 通过 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py::test_provider_error_classifier_treats_connection_refused_as_unavailable -q` | 通过 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_project_provisioning.py::test_project_provisioning_apply_scaffolds_registers_targets_and_activates_session -q` | 通过 |
 
-## V2.4-5 ProjectProfile Instruction Context
+## 前端新项目 Provisioning 接线
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added ProjectProfile metadata to coding-agent target instruction context,
-  including profile id, status, preview strategy, and configured profile
-  commands.
-- Rebuilt profile context from target summaries without exposing secrets or
-  changing PlanValidator/Target Registry enforcement.
+- 新增前端 API client，调用 `POST /workspaces/{workspaceId}/project-provisioning/apply`，请求字段为 `userRequest`、`selectedRootPath`、`preferredSlug`、`sessionId`。
+- 在工作区 target settings 中为已选择的空文件夹新增通用“新建全栈项目”入口，保留原有外部项目注册和前端/后端单目标保存能力。
+- Provisioning 成功后刷新 workspace targets，并按 response target IDs 或 session response 更新当前会话 active frontend/backend targets。
+- 设置页 target 相关错误现在优先显示后端 `detail`。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_external_target_context_reaches_instruction_builder tests/test_task_runs.py::test_external_backend_instruction_uses_external_target_metadata -q` | Pass, 2 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | Pass |
+| `pnpm --filter web test -- apps/web/src/components/workspace-shell.test.tsx apps/web/src/lib/api.test.ts apps/web/src/components/runtime-settings-page-client.test.tsx` | 通过，14 个测试文件 / 94 个测试 |
 
-## V2.4-4 Profile Command Policy Coverage
+## Target 写锁恢复优化
 
-**Date:** 2026-06-09
+**日期:** 2026-06-10
 
-### Changed
+### 变更
 
-- Added direct Project Command Policy coverage proving configured target/profile
-  commands are allowed while missing, mismatched, unknown, and unconfigured
-  generic repo commands are rejected.
-- Confirmed Generic Repo profiles do not open arbitrary shell commands and only
-  allow explicitly configured validation commands.
+- 修复 adapter stream 直接写入 completed/failed/interrupted 终态时未同步释放 target 写锁和 session queue entry 的问题。
+- 创建 TaskRun 前会先恢复由终态 holder 遗留的 stale target lock，避免已完成任务继续阻塞新任务。
+- 前端 TaskRun mutation 现在会显示后端返回的具体错误 detail；普通网络失败仍保留 FastAPI 后端不可访问提示。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_project_command_policy.py tests/test_external_evidence.py -q` | Pass, 11 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_target_locks.py tests/test_task_runs.py::test_adapter_completed_event_releases_target_lock tests/test_task_runs.py::test_create_task_run_recovers_terminal_holder_target_lock tests/test_task_runs.py::test_background_execution_waits_for_target_lock_without_starting_adapter -q` | 通过，7 个测试 |
+| `pnpm --filter @agenthub/web test -- src/lib/api.test.ts -t "surfaces task run mutation error details"` | 通过 |
+| `pnpm --filter @agenthub/web test -- src/components/workspace-shell.test.tsx -t "backend sync warning|concrete task run API errors"` | 通过 |
 
-## V2.4-3 ProjectProfile Target Registry
+## 实际开发测试执行链路修复
 
-**Date:** 2026-06-09
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Attached derived ProjectProfile summaries to external target API responses and
-  workspace target registry responses.
-- Preserved existing target allowed paths, denied paths, commands, approval, and
-  agent role behavior while making project profile metadata auditable.
+- 修复 Provider Gateway 在 TaskRun 执行时没有优先使用运行设置 / 已存 provider assignment 的问题，确保前端、后端任务按用户配置解析到对应 coding provider。
+- CodexAdapter 启动本地 Codex CLI 时增加 `--skip-git-repo-check`，允许在已注册但不是 Git 仓库根目录的新项目目标内执行。
+- 扩展 LLM 失败或误路由后的外部目标兜底：当请求明显是新建前端 / 全栈开发任务且工作区已有外部 frontend/backend target 时，创建可执行任务而不是停留在聊天回复。
+- 外部 `agenthub-rehearsals` 根目录目标的 coding agent 指令现在会根据用户请求推断专用子目录，避免后续新项目复用或覆盖已有演练项目。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_external_workspaces.py tests/test_target_registry.py tests/test_project_profiles.py tests/test_project_analyzer.py -q` | Pass, 31 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_fullstack_new_project_request_without_active_target_falls_back_to_external_tasks tests/test_planning.py::test_llm_assistant_reply_for_safe_external_frontend_request_falls_back_to_task tests/test_planning.py::test_p18c_library_request_misclassified_as_assistant_reply_routes_to_task tests/test_planning.py::test_llm_assistant_reply_for_platform_request_does_not_fallback_to_frontend -q` | 通过，4 个测试 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_rehearsal_root_instruction_points_new_project_to_dedicated_subdirectory tests/test_task_runs.py::test_external_target_context_reaches_instruction_builder tests/test_task_runs.py::test_external_backend_instruction_uses_external_target_metadata -q` | 通过，3 个测试 |
 
-## V2.4-2 ProjectProfile Contract
+## OpenSpec Delta Header 恢复
 
-**Date:** 2026-06-09
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added a ProjectProfile contract that normalizes project type, framework,
-  package manager, allowed/denied paths, commands, preview strategy, confidence,
-  status, and warnings.
-- Extended the external project analyzer to attach a project profile summary
-  while keeping existing analysis fields compatible.
-- Added analysis API output for `projectProfile` so later target registration,
-  planning, and command policy work can consume one canonical profile shape.
+- 恢复 `openspec/changes/**/specs/**/spec.md` 中 OpenSpec delta 语法标题的英文机器标记。
+- 保留需求标题、场景标题和正文的中文内容，仅将 `Requirements`、`Requirement:` 和 `Scenario:` 等 OpenSpec 解析关键字恢复为英文。
+- 清理中文化后残留在标题中的全角冒号字节，确保 spec 文件保持有效 UTF-8。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 检查 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_project_profiles.py tests/test_project_analyzer.py -q` | Pass, 11 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | Pass |
+| 中文化 delta header 残留扫描 | 通过 |
+| spec Markdown UTF-8 解码检查 | 通过 |
+| `openspec validate --all --strict` | 通过，28 个 change |
 
-## V2.2-4 Provider Health Probes
+## 项目工作区准备边界
 
-**Date:** 2026-06-09
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added ProviderHealthProbe for coding providers, checking Claude Code/Codex CLI
-  launch paths with safe `--version` probes and ScriptedMock's Vite demo app
-  boundary.
-- Added `provider.health_checked` event and TaskRun metrics recording helper.
-- Ensured health evidence is redacted and ScriptedMock availability does not
-  make real providers appear healthy.
-- Expanded Provider Gateway tests for healthy, unavailable, unknown, redaction,
-  ScriptedMock demo boundary, and health evidence persistence.
+- 新增共享的 Agent/Target 兼容性匹配，统一支持 `external-frontend-*` 与 `external-backend-*` 目标 ID，避免 PlanValidator、Agent Directory 和 AgentSelectionPolicy 规则漂移。
+- 新增 dry-run 项目准备合约和 API，用于区分已有项目与新项目，并生成计划中的前端/后端 target 边界。
+- 为新建 Vite React 前端和 FastAPI 后端生成默认 ProjectProfile、可验证命令和需要审批的安装命令。
+- 扩展 PlannerResponse，可携带可选 `projectSetup` 元数据，让后续 Planner 能表达“先准备项目边界，再分派 coding tasks”。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py -q` | Pass, 13 tests |
-| `pnpm check` | Pass |
-| `pnpm demo:api:test` | Pass, 5 tests |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-2-provider-gateway --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_target_compatibility.py tests/test_plan_validator_target_compatibility.py tests/test_project_provisioning.py tests/test_project_profiles.py tests/test_project_command_policy.py tests/test_external_workspaces.py tests/test_planner_contracts.py -q` | 通过，50 个测试 |
+| `POST /workspaces/{workspace_id}/project-provisioning/plan` 健康管理系统请求 | 返回新项目 frontend/backend target 草案 |
 
-## V2.7 Run Diagnostics Backend Projection
+## 文档中文化覆盖
 
-**Date:** 2026-06-09
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added a backend Run Diagnostics projection for TaskRuns with classified
-  failure reasons, contributing factors, timeline items, health summary, and
-  next-step suggestions.
-- Exposed safe read-only diagnostics APIs for individual TaskRuns and Session
-  summaries without changing execution, provider, scheduler, preview, or deploy
-  semantics.
-- Added redaction and truncation for diagnostic metadata so secrets, tokens,
-  protected paths, and host paths are not returned by diagnostics responses.
-- Added backend tests for classification, timeline artifacts, health summary,
-  suggestions, API redaction, unknown legacy evidence, and Session summaries.
+- 使用 DeepSeek V4 Flash 将 `docs` 和 `openspec` 下的 Markdown 文档覆盖翻译为简体中文。
+- 保留 Markdown 结构、代码块、命令、路径、URL、模型名、适配器名和 OpenSpec 关键字。
+- 保留 `.openspec.yaml` 元数据文件不翻译，以避免破坏 OpenSpec 的 `schema` 和 `created` 字段。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 检查 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_run_diagnostics.py -q` | Pass, 7 tests |
-| `pnpm check:demo-api` | Pass |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py -q` | Failed, 71 pass / 5 fail in pre-existing/concurrent run scheduling expectations outside this worker's scope |
+| Markdown 文件完成数 | 167/167 |
+| 占位符残留扫描 | 通过 |
+| Markdown 代码围栏奇偶检查 | 通过 |
+| `.openspec.yaml` 元数据 | 保持原样 |
 
-## V2.2-3 Provider Resolution And Registry
+## V2.6-5 事务性交付证据集成
 
-**Date:** 2026-06-09
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added a coding ProviderRegistry derived from existing Claude Code, Codex, and
-  ScriptedMock provider configs without adding adapters or including Planner
-  providers.
-- Added ProviderResolver support for default, explicit, and runtime coding
-  provider selection, compatibility checks, unavailable-provider rejection, and
-  scripted mock fallback candidates.
-- Added provider resolution event/metrics recording via `provider.resolved`.
-- Expanded Provider Gateway tests for registry metadata, resolution paths,
-  fallback candidates, Planner isolation, and TaskRunEvent evidence.
+- 添加了一个辅助函数，用于将交付决策事件持久化为 TaskRunEvent。
+- 更新了运行诊断阶段映射，使得 `delivery.review_required` 出现在验证阶段下，回滚事件出现在恢复阶段下。
+- 添加了交付事件持久化和诊断时间线映射的测试。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py -q` | Pass, 8 tests |
-| `pnpm check` | Pass |
-| `pnpm demo:api:test` | Pass, 5 tests |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-2-provider-gateway --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py tests/test_run_diagnostics.py -q` | 通过，21 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-6-transactional-delivery --strict` | 通过 |
 
-## V2.2-2 Provider Gateway Contract
+## V2.6-4 交付接受回滚重试
 
-**Date:** 2026-06-09
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added a coding-only Provider Gateway contract module covering provider
-  metadata, resolution plans, health, capacity, rate-limit placeholder, circuit,
-  error taxonomy, fallback evidence, gateway results, event names, and safe
-  evidence redaction.
-- Added regression coverage proving gateway evidence preserves original provider
-  failure plus scripted mock fallback, redacts secrets/protected paths, and keeps
-  Planner providers out of the coding gateway.
+- 添加了交付制品状态、接受决策、回滚决策和显式重试模式证据辅助函数。
+- 添加了测试，证明接受记录 diff/review/command/policy 证据 ID，回滚记录检查点路径，并且回滚会拒绝缺失的检查点。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py -q` | Pass, 3 tests |
-| `pnpm check` | Pass |
-| `pnpm demo:api:test` | Pass, 5 tests |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-v2-2-provider-gateway --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py -q` | 通过，12 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-6-transactional-delivery --strict` | 通过 |
 
-## V2.1-2 Durable Run Execution Boundary
+## V2.6-3 交付验证门禁
 
-**Date:** 2026-06-09
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Extracted TaskRun execution orchestration into `apps/api/app/run_engine.py`
-  while preserving the existing BackgroundTasks launch path.
-- Added a lightweight `run_supervisor.py` lifecycle registry skeleton for later
-  interrupt and timeout work.
-- Routed auto-start, manual run creation, and retry scheduling through a shared
-  execution scheduling helper.
-- Added regression coverage proving run endpoints use the shared scheduler and
-  execution registers/unregisters with the supervisor boundary.
+- 添加了交付验证证据和门禁辅助函数，将失败的命令、diff/review 或策略证据分类为 `review_required`。
+- 添加了测试，证明干净的证据通过，而失败的命令证据、高风险审查证据和被拒绝的策略证据需要审查。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py -q` | Pass, 65 tests |
-| `pnpm check:api` | Pass |
-| `git diff --check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py -q` | 通过，9 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-6-transactional-delivery --strict` | 通过 |
 
-## Runtime Development Smoke Follow-up
+## V2.6-2 事务性交付契约
 
-**Date:** 2026-06-09
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Fixed planning follow-up behavior so historical `failed`, `cancelled`, and
-  `completed` tasks do not block a later user request in the same session.
-- Added a regression test proving a failed prior task no longer prevents a new
-  external frontend request from creating a fallback task.
-- Created a desktop operation record for the 201/202 AgentHub development smoke.
+- 添加了一个事务性交付契约，包含交付状态、重试模式、检查点证据、待定验证、回滚预检和重试模式决策。
+- 添加了测试，证明检查点证据从 TaskRun 指标中读取，并且当不存在检查点时回滚被拒绝。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_failed_prior_task_does_not_block_new_external_frontend_request -q` | Pass |
-| `git diff --check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_transactional_delivery.py tests/test_recovery.py -q` | 通过，9 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-6-transactional-delivery --strict` | 通过 |
 
-## P24-2 Deployment Request And Status Evidence
+## V2.5-4 策略证据与超时
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Modified Files
+### 变更
 
-| File | Change |
+- 添加了一个审批超时决策辅助函数，默认拒绝并保留安全的策略元数据。
+- 添加了一个稳定的策略证据事件负载辅助函数，用于未来的 MissionTrace 和运行诊断集成。
+
+### 验证
+
+| 命令 | 结果 |
 |---|---|
-| `apps/api/app/deployments.py` | Added manual external handoff and unavailable external deployment providers that persist honest handoff/blocked evidence. |
-| `apps/api/tests/test_deployments.py` | Added deployment evidence tests for manual handoff, blocked external provider cards, local staging compatibility, and no fake success. |
-| `docs/project-state.md` | Recorded P24-2 deployment request/status evidence status. |
-| `openspec/changes/agenthub-p24-deployment-provider-status-cards/tasks.md` | Marked P24-2 tasks complete after validation. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py -q` | 通过，12 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-5-policy-engine --strict` | 通过 |
 
-### Validation
+## V2.5-3 运行时策略评估辅助函数
 
-| Command | Result |
+**日期:** 2026-06-09
+
+### 变更
+
+- 添加了策略引擎辅助函数，用于命令、路径、网络、部署和平台维护决策，使用现有的目标注册表、护栏和项目命令策略语义。
+- 保持辅助函数无副作用，并未替换当前的执行、审批或部署路径。
+
+### 验证
+
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_deployments.py::test_manual_external_provider_persists_handoff_evidence tests/test_deployments.py::test_unavailable_external_provider_persists_blocked_evidence tests/test_deployments.py::test_local_staging_provider_builds_serves_and_persists_ready_artifact tests/test_deployments.py::test_deploy_api_creates_and_lists_mock_deployments tests/test_deployments.py::test_deploy_api_creates_blocked_external_provider_card -q` | Pass, 5 tests |
-| `pnpm check:demo-api` | Pass |
-| `git diff --check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py tests/test_guardrails.py tests/test_project_command_policy.py -q` | 通过，29 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-5-policy-engine --strict` | 通过 |
 
-## P24-3 Deployment Status Card UI
+## V2.5-2 策略引擎契约
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Upgraded deployment cards to show localized provider/status metadata,
-  provider type, environment, source preview/diff/review references, logs, and
-  status history.
-- Added explicit blocked external provider and manual handoff card states so
-  third-party deploy requests do not look like successful production deploys.
-- Added an open-URL action only when deployment evidence includes a URL.
-- Added frontend coverage for ready mock, blocked external, and manual handoff
-  deployment card states.
+- 添加了一个独立的策略引擎契约，包含策略类别、结果、风险级别、审批类型、决策证据和元数据编辑。
+- 添加了允许、拒绝、需要审批、需要提升审批和 secret/protected-path 编辑的测试。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- deploy-card.test.tsx preview-card.test.tsx task-card-list.test.tsx api.test.ts --runInBand` | Pass |
-| `pnpm check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_policy_engine.py -q` | 通过，5 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-5-policy-engine --strict` | 通过 |
 
-## P24-4 Deployment Context And Follow-up
+## V2.4-5 ProjectProfile 指令上下文
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added safe deployment artifact reference metadata for provider, provider type,
-  environment, status, URL, target id, source preview/diff/review ids, logs
-  summary, and status history.
-- Redacted secret-like deployment log/status text before it enters selected
-  artifact context, artifact references, or latest deployment context.
-- Added a deployment-card "作为上下文" action so follow-up messages reuse the
-  existing artifact context path into Conversation Router / Planner.
-- Added backend and frontend tests for deployment context metadata, redaction,
-  and follow-up context selection.
+- 将 ProjectProfile 元数据添加到编码代理目标指令上下文中，包括配置文件 ID、状态、预览策略和已配置的配置文件命令。
+- 从目标摘要重建了配置文件上下文，不暴露机密或更改 PlanValidator/Target 注册表强制执行。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py -k "artifact_reference_context or deployment_artifact_reference" -q` | Pass |
-| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx deploy-card.test.tsx api.test.ts --runInBand` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_external_target_context_reaches_instruction_builder tests/test_task_runs.py::test_external_backend_instruction_uses_external_target_metadata -q` | 通过，2 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | 通过 |
 
-## P24 Freeze Review
+## V2.4-4 配置文件命令策略覆盖
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added `docs/p24-freeze-review.md` documenting P24 scope, bounded rehearsal,
-  validation, and deferred third-party deploy limitations.
-- Marked P24 rehearsal and freeze review tasks complete in OpenSpec.
+- 新增直接的项目命令策略覆盖验证，确保已配置的 target/profile 命令被允许，而缺失、不匹配、未知及未配置的通用仓库命令被拒绝。
+- 确认通用仓库配置文件不会打开任意 shell 命令，仅允许显式配置的验证命令。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_deployments.py -k "test_deploy_api_can_select_local_staging_provider or test_deploy_api_creates_blocked_external_provider_card" -q` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_project_command_policy.py tests/test_external_evidence.py -q` | 通过，11 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | 通过 |
 
-## P25-1 Context Item Model And Normalization
+## V2.4-3 项目配置文件目标注册表
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added backend context item normalization helpers that map explicit
-  `contextItems`, legacy selected artifact context, and quoted message context
-  into a bounded list.
-- Added redaction and size limits for titles, summaries, selected text, notes,
-  metadata, protected paths, and secret-like strings.
-- Added deterministic tests for legacy compatibility, redaction, truncation,
-  context item limits, and unsupported item kinds.
+- 将派生的项目配置文件摘要附加到外部目标 API 响应和工作区目标注册表响应中。
+- 保留现有目标允许路径、拒绝路径、命令、审批和代理角色行为，同时使项目配置文件元数据可审计。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_context_items.py -q` | Pass |
-| `pnpm check:api` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_external_workspaces.py tests/test_target_registry.py tests/test_project_profiles.py tests/test_project_analyzer.py -q` | 通过，31 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | 通过 |
 
-## P25-2 Planner Context Handoff
+## V2.4-2 项目配置文件契约
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added normalized `contextItems` to session context packs and canonical /
-  provider-visible context.
-- Added `contextHandoff` planner evidence with context item count, item kinds,
-  artifact ids, version ids, deployment ids, source, validity, and redaction
-  status.
-- Exposed context handoff metadata in mission trace task entries.
-- Added backend tests proving context-aware LLM task planning records context
-  evidence and context pack handoff remains provider-visible without leaking
-  protected data.
+- 新增项目配置文件契约，用于规范化项目类型、框架、包管理器、allowed/denied 路径、命令、预览策略、置信度、状态和警告。
+- 扩展外部项目分析器，附加项目配置文件摘要，同时保持现有分析字段的兼容性。
+- 为 `projectProfile` 添加分析 API 输出，以便后续的目标注册、规划和命令策略工作能够使用统一的配置文件结构。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py -k "contextHandoff or Breakout" tests/test_task_runs.py::test_artifact_reference_context_supports_workbench_version_context -q` | Pass |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_artifact_reference_context_supports_workbench_version_context -q` | Pass |
-| `pnpm check:api` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_project_profiles.py tests/test_project_analyzer.py -q` | 通过，11 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-4-project-profile-boundary --strict` | 通过 |
 
-## P25-3 Context Tray UI
+## V2.2-4 提供者健康探针
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Replaced the composer's single selected artifact / quoted message chip with a
-  compact multi-item Context Tray.
-- Added remove, move up, move down, and clear controls for staged context.
-- Preserved existing artifact and quoted-message actions by mapping them into
-  tray items.
-- Added a shared composer payload builder that sends normalized `contextItems`
-  while preserving legacy `selectedArtifact` and `quotedMessage` fields.
-- Added frontend tests for multiple context items, reorder/remove controls, and
-  payload shape.
+- 为编码提供者新增 ProviderHealthProbe，使用安全的 `--version` 探针检查 Claude Code/Codex CLI 启动路径，以及 ScriptedMock 的 Vite 演示应用边界。
+- 新增 `provider.health_checked` 事件和 TaskRun 指标记录辅助工具。
+- 确保健康证据被编辑，且 ScriptedMock 的可用性不会使真实提供者显示为健康状态。
+- 扩展提供者网关测试，覆盖健康、不可用、未知、编辑、ScriptedMock 演示边界以及健康证据持久化场景。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- message-composer.test.tsx task-card-list.test.tsx api.test.ts --runInBand` | Pass |
-| `pnpm check:web` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py -q` | 通过，13 个测试 |
+| `pnpm check` | 通过 |
+| `pnpm demo:api:test` | 通过，5 个测试 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-2-provider-gateway --strict` | 通过 |
 
-## P25-4 Secondary Interaction Actions
+## V2.7 运行诊断后端投影
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added artifact/deployment secondary interaction buttons for asking about an
-  item, revising based on it, and sending it to the orchestrator.
-- Secondary actions stage the selected item in the Context Tray and prefill a
-  draft; they do not execute tasks until the user sends the message.
-- Added a routing regression proving pure chat with context items does not
-  create tasks.
-- Added frontend coverage for the new action labels and intent payloads.
+- 新增 TaskRun 的后端运行诊断投影，包含分类后的失败原因、影响因素、时间线条目、健康摘要和下一步建议。
+- 暴露安全的只读诊断 API，用于单个 TaskRun 和会话摘要，不改变执行、提供者、调度器、预览或部署语义。
+- 为诊断元数据添加编辑和截断功能，确保诊断响应不会返回密钥、令牌、受保护路径和主机路径。
+- 新增后端测试，覆盖分类、时间线制品、健康摘要、建议、API 编辑、未知遗留证据和会话摘要。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx message-composer.test.tsx --runInBand` | Pass |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py -k "pure_chat_with_context_items or contextHandoff" -q` | Pass |
-| `pnpm check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_run_diagnostics.py -q` | 通过，7 个测试 |
+| `pnpm check:demo-api` | 通过 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py -q` | 失败，71 通过 / 5 失败，位于 pre-existing/concurrent 运行调度期望中，超出此工作进程范围 |
 
-## P25 Freeze Review
+## V2.2-3 提供者解析与注册表
 
-**Date:** 2026-06-08
+**日期:** 2026-06-09
 
-### Changed
+### 变更
 
-- Added `docs/p25-freeze-review.md` documenting P25 scope, bounded context
-  rehearsal, validation, and limitations.
-- Added a deterministic freeze rehearsal test for a combined deployment, diff,
-  artifact version, and quoted message context payload.
-- Marked P25 rehearsal and freeze tasks complete in OpenSpec.
+- 新增基于现有 Claude Code、Codex 和 ScriptedMock 提供者配置派生的编码 ProviderRegistry，不添加适配器或包含 Planner 提供者。
+- 新增 ProviderResolver 支持默认、显式和运行时编码提供者选择、兼容性检查、不可用提供者拒绝以及脚本化模拟兜底候选。
+- 通过 `provider.resolved` 添加了提供者解析 event/metrics 的记录。
+- 扩展了 Provider Gateway 测试，涵盖注册表元数据、解析路径、兜底候选、Planner 隔离以及 TaskRunEvent 证据。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- message-composer.test.tsx --runInBand` | Pass |
-| `openspec validate agenthub-p24-deployment-provider-status-cards --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py -q` | 通过，8 个测试 |
+| `pnpm check` | 通过 |
+| `pnpm demo:api:test` | 通过，5 个测试 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-2-provider-gateway --strict` | 通过 |
+
+## V2.2-2 Provider Gateway 契约
+
+**日期：** 2026-06-09
+
+### 变更
+
+- 新增了一个仅编码的 Provider Gateway 契约模块，涵盖提供者元数据、解析计划、健康度、容量、速率限制占位符、熔断、错误分类、兜底证据、网关结果、事件名称以及安全的证据编辑。
+- 新增了回归覆盖，证明网关证据保留了原始提供者故障以及脚本化模拟兜底，编辑了 secrets/protected 路径，并将 Planner 提供者排除在编码网关之外。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_provider_gateway_contract.py -q` | 通过，3 个测试 |
+| `pnpm check` | 通过 |
+| `pnpm demo:api:test` | 通过，5 个测试 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-v2-2-provider-gateway --strict` | 通过 |
+
+## V2.1-2 持久化运行执行边界
+
+**日期：** 2026-06-09
+
+### 变更
+
+- 将 TaskRun 执行编排提取到 `apps/api/app/run_engine.py` 中，同时保留了现有的 BackgroundTasks 启动路径。
+- 为后续的中断和超时工作添加了一个轻量级的 `run_supervisor.py` 生命周期注册表骨架。
+- 将自动启动、手动运行创建和重试调度路由到一个共享的执行调度辅助函数。
+- 新增了回归覆盖，证明运行端点使用了共享调度器和执行 registers/unregisters 以及监督者边界。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py -q` | 通过，65 个测试 |
+| `pnpm check:api` | 通过 |
+| `git diff --check` | 通过 |
+
+## 运行时开发冒烟跟进
+
+**日期：** 2026-06-09
+
+### 变更
+
+- 修复了规划跟进行为，使得历史 `failed`、`cancelled` 和 `completed` 任务不会阻塞同一会话中后续的用户请求。
+- 新增了一个回归测试，证明先前失败的任务不再阻止新的外部前端请求创建兜底任务。
+- 为 201/202 AgentHub 开发冒烟创建了一个桌面操作记录。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_failed_prior_task_does_not_block_new_external_frontend_request -q` | 通过 |
+| `git diff --check` | 通过 |
+
+## P24-2 部署请求与状态证据
+
+**日期：** 2026-06-08
+
+### 修改的文件
+
+| 文件 | 变更 |
+|---|---|
+| `apps/api/app/deployments.py` | 添加了手动外部交接和不可用的外部部署提供者，这些提供者会持久化诚实的 handoff/blocked 证据。 |
+| `apps/api/tests/test_deployments.py` | 为手动交接、被阻塞的外部提供者卡片、本地暂存兼容性以及无虚假成功添加了部署证据测试。 |
+| `docs/project-state.md` | 记录了 P24-2 部署 request/status 证据状态。 |
+| `openspec/changes/agenthub-p24-deployment-provider-status-cards/tasks.md` | 在验证后将 P24-2 任务标记为完成。 |
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_deployments.py::test_manual_external_provider_persists_handoff_evidence tests/test_deployments.py::test_unavailable_external_provider_persists_blocked_evidence tests/test_deployments.py::test_local_staging_provider_builds_serves_and_persists_ready_artifact tests/test_deployments.py::test_deploy_api_creates_and_lists_mock_deployments tests/test_deployments.py::test_deploy_api_creates_blocked_external_provider_card -q` | 通过，5 个测试 |
+| `pnpm check:demo-api` | 通过 |
+| `git diff --check` | 通过 |
+
+## P24-3 部署状态卡片 UI
+
+**日期：** 2026-06-08
+
+### 变更
+
+- 升级了部署卡片，以显示本地化的 provider/status 元数据、提供者类型、环境、源 preview/diff/review 引用、日志和状态历史。
+- 添加了明确的“被阻塞的外部提供者”和“手动交接”卡片状态，以便第三方部署请求看起来不像成功的生产部署。
+- 仅当部署证据包含 URL 时，才添加“打开 URL”操作。
+- 为就绪模拟、被阻塞的外部提供者和手动交接部署卡片状态添加了前端覆盖。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `pnpm --filter @agenthub/web test -- deploy-card.test.tsx preview-card.test.tsx task-card-list.test.tsx api.test.ts --runInBand` | 通过 |
+| `pnpm check` | 通过 |
+
+## P24-4 部署上下文与跟进
+
+**日期：** 2026-06-08
+
+### 变更
+
+- 为提供者、提供者类型、环境、状态、URL、目标 ID、源 preview/diff/review ID、日志
+摘要及状态历史。
+- 在选定的制品上下文、制品引用或最新部署上下文进入之前，对类似机密的部署文本 log/status 进行脱敏处理。
+- 新增部署卡片“作为上下文”操作，以便后续消息能复用对话路由器/规划器中的现有制品上下文路径。
+- 为部署上下文元数据、脱敏处理以及后续上下文选择添加了前后端测试。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py -k "artifact_reference_context or deployment_artifact_reference" -q` | 通过 |
+| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx deploy-card.test.tsx api.test.ts --runInBand` | 通过 |
+
+## P24 冻结审查
+
+**日期：** 2026-06-08
+
+### 变更
+
+- 新增 `docs/p24-freeze-review.md` 文档，记录了 P24 范围、受限演练、验证以及延期的第三方部署限制。
+- 在 OpenSpec 中将 P24 演练和冻结审查任务标记为完成。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_deployments.py -k "test_deploy_api_can_select_local_staging_provider or test_deploy_api_creates_blocked_external_provider_card" -q` | 通过 |
+
+## P25-1 上下文项模型与标准化
+
+**日期：** 2026-06-08
+
+### 变更
+
+- 新增后端上下文项标准化辅助函数，将显式的 `contextItems`、遗留的选定制品上下文以及引用的消息上下文映射到一个受限列表中。
+- 为标题、摘要、选定文本、注释、元数据、受保护路径以及类似机密的字符串添加了脱敏和大小限制。
+- 新增确定性测试，涵盖遗留兼容性、脱敏、截断、上下文项限制以及不支持的项类型。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_context_items.py -q` | 通过 |
+| `pnpm check:api` | 通过 |
+
+## P25-2 规划器上下文交接
+
+**日期：** 2026-06-08
+
+### 变更
+
+- 将标准化的 `contextItems` 添加到会话上下文包以及规范/提供者可见的上下文中。
+- 新增 `contextHandoff` 规划器证据，包含上下文项数量、项类型、制品 ID、版本 ID、部署 ID、来源、有效性和脱敏状态。
+- 在任务追踪条目中暴露上下文交接元数据。
+- 新增后端测试，证明上下文感知的 LLM 任务规划会记录上下文证据，并且上下文包交接在提供者可见的同时不会泄露受保护数据。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py -k "contextHandoff or Breakout" tests/test_task_runs.py::test_artifact_reference_context_supports_workbench_version_context -q` | 通过 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_artifact_reference_context_supports_workbench_version_context -q` | 通过 |
+| `pnpm check:api` | 通过 |
+
+## P25-3 上下文托盘 UI
+
+**日期：** 2026-06-08
+
+### 变更
+
+- 将编辑器中的单个选定制品/引用消息标签替换为紧凑的多项上下文托盘。
+- 为暂存的上下文新增移除、上移、下移和清空控件。
+- 通过将现有制品和引用消息操作映射为托盘项，保留了这些操作。
+- 新增共享的编辑器负载构建器，在发送标准化的 `contextItems` 的同时，保留遗留的 `selectedArtifact` 和 `quotedMessage` 字段。
+- 新增前端测试，涵盖多个上下文项、reorder/remove 控件以及负载结构。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `pnpm --filter @agenthub/web test -- message-composer.test.tsx task-card-list.test.tsx api.test.ts --runInBand` | 通过 |
+| `pnpm check:web` | 通过 |
+
+## P25-4 次级交互操作
+
+**日期：** 2026-06-08
+
+### 变更
+
+- 新增 artifact/deployment 次级交互按钮，用于询问关于某个项的信息、基于该项进行修订，以及将其发送给编排器。
+- 次级操作会将选定的项暂存到上下文托盘中并预填草稿；在用户发送消息之前不会执行任务。
+- 新增路由回归测试，证明带有上下文项的纯聊天不会创建任务。
+- 新增前端覆盖，涵盖新的操作标签和意图负载。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx message-composer.test.tsx --runInBand` | 通过 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py -k "pure_chat_with_context_items or contextHandoff" -q` | 通过 |
+| `pnpm check` | 通过 |
+
+## P25 冻结审查
+
+**日期：** 2026-06-08
+
+### 变更
+
+- 新增 `docs/p25-freeze-review.md` 文档，记录了 P25 范围、受限上下文演练、验证和限制。
+- 新增一个确定性冻结演练测试，针对组合了部署、差异、制品版本和引用消息上下文的负载。
+- 在 OpenSpec 中将 P25 演练和冻结任务标记为完成。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `pnpm --filter @agenthub/web test -- message-composer.test.tsx --runInBand` | 通过 |
+| `openspec validate agenthub-p24-deployment-provider-status-cards --strict` | 通过 |
 
 ---
 
-## P24-1 Deployment Provider Registry
+## P24-1 部署提供商注册表
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/deployment_providers.py` | Added safe deployment provider metadata for local staging, manual external handoff, Vercel, Netlify, and custom static host. |
-| `apps/api/app/schemas.py` | Added deployment provider registry response schemas. |
-| `apps/api/app/main.py` | Added `/deployment-providers` API route. |
-| `apps/api/tests/test_deployment_providers.py` | Added registry tests for defaults, env-based availability, and secret redaction. |
-| `docs/project-state.md` | Recorded P24-1 deployment provider registry status. |
-| `openspec/changes/agenthub-p24-deployment-provider-status-cards/tasks.md` | Marked P24-1 tasks complete after validation. |
+| `apps/api/app/deployment_providers.py` | 为本地预发布、手动外部移交、Vercel、Netlify 和自定义静态主机添加了安全的部署提供商元数据。 |
+| `apps/api/app/schemas.py` | 添加了部署提供商注册表响应模式。 |
+| `apps/api/app/main.py` | 添加了 `/deployment-providers` API 路由。 |
+| `apps/api/tests/test_deployment_providers.py` | 为默认值、基于环境变量的可用性和密钥编辑添加了注册表测试。 |
+| `docs/project-state.md` | 记录了 P24-1 部署提供商注册表状态。 |
+| `openspec/changes/agenthub-p24-deployment-provider-status-cards/tasks.md` | 验证后将 P24-1 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_deployment_providers.py tests/test_deployments.py::test_deploy_provider_result_records_standard_metadata -q` | Pass, 5 tests |
-| `pnpm check:demo-api` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p24-deployment-provider-status-cards --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_deployment_providers.py tests/test_deployments.py::test_deploy_provider_result_records_standard_metadata -q` | 通过，5 个测试 |
+| `pnpm check:demo-api` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p24-deployment-provider-status-cards --strict` | 通过 |
 
 ---
 
-## P23-6 Artifact References In Chat Context
+## P23-6 聊天上下文中的制品引用
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added `Message.context_json` for auditable message-level context. |
-| `apps/api/app/db.py` | Added SQLite compatibility column for message context. |
-| `apps/api/app/schemas.py` | Added `context` to message create requests. |
-| `apps/api/app/main.py` | Persisted message context on message creation. |
-| `apps/api/app/artifact_references.py` | Added P23 artifact reference support for markdown/text/code artifacts, version ids, selected text, safe summary, and metadata redaction. |
-| `apps/api/app/context_pack.py` | Merged creating-message context into session context packs and selected artifact metadata. |
-| `apps/api/tests/test_task_runs.py` | Added backend coverage for workbench artifact version context and redaction. |
-| `apps/api/tests/test_models.py` | Updated message model/schema expectations for context. |
-| `apps/web/src/lib/api.ts` | Added message context payload support for chat sends. |
-| `apps/web/src/lib/api.test.ts` | Added frontend API coverage for message context payloads. |
-| `apps/web/src/components/workspace-shell.tsx` | Sends selected artifact/version and quoted message context with follow-up messages. |
-| `docs/project-state.md` | Recorded P23-6 artifact reference context status. |
-| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | Marked P23-6 tasks complete after validation. |
+| `apps/api/app/models.py` | 为可审计的消息级上下文添加了 `Message.context_json`。 |
+| `apps/api/app/db.py` | 为消息上下文添加了 SQLite 兼容列。 |
+| `apps/api/app/schemas.py` | 在消息创建请求中添加了 `context`。 |
+| `apps/api/app/main.py` | 在消息创建时持久化了消息上下文。 |
+| `apps/api/app/artifact_references.py` | 为 markdown/text/code 制品、版本 ID、选中文本、安全摘要和元数据编辑添加了 P23 制品引用支持。 |
+| `apps/api/app/context_pack.py` | 将创建消息的上下文合并到会话上下文包和选中的制品元数据中。 |
+| `apps/api/tests/test_task_runs.py` | 为工作台制品版本上下文和编辑添加了后端覆盖。 |
+| `apps/api/tests/test_models.py` | 更新了消息 model/schema 对上下文的期望。 |
+| `apps/web/src/lib/api.ts` | 为聊天发送添加了消息上下文负载支持。 |
+| `apps/web/src/lib/api.test.ts` | 为消息上下文负载添加了前端 API 覆盖。 |
+| `apps/web/src/components/workspace-shell.tsx` | 在后续消息中发送选中的 artifact/version 和引用的消息上下文。 |
+| `docs/project-state.md` | 记录了 P23-6 制品引用上下文状态。 |
+| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | 验证后将 P23-6 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_artifact_reference_context_supports_workbench_version_context tests/test_task_runs.py::test_artifact_reference_context_rejects_unsupported_artifact_type tests/test_models.py::test_p0_model_boundary_and_required_fields tests/test_models.py::test_message_create_request_populates_by_alias tests/test_models.py::test_message_create_request_defaults_are_preserved -q` | Pass, 5 tests |
-| `pnpm --filter @agenthub/web test -- api.test.ts message-composer.test.tsx workspace-shell.test.tsx preview-card.test.tsx --runInBand` | Pass, 84 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_artifact_reference_context_supports_workbench_version_context tests/test_task_runs.py::test_artifact_reference_context_rejects_unsupported_artifact_type tests/test_models.py::test_p0_model_boundary_and_required_fields tests/test_models.py::test_message_create_request_populates_by_alias tests/test_models.py::test_message_create_request_defaults_are_preserved -q` | 通过，5 个测试 |
+| `pnpm --filter @agenthub/web test -- api.test.ts message-composer.test.tsx workspace-shell.test.tsx preview-card.test.tsx --runInBand` | 通过，84 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | 通过 |
 
 ---
 
-## P23-5 Artifact Editor And Version History UI
+## P23-5 制品编辑器与版本历史 UI
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/lib/api.ts` | Added Artifact Workbench edit input and save API helper. |
-| `apps/web/src/lib/api.test.ts` | Added client coverage for saving artifact edits as new versions. |
-| `apps/web/src/components/preview-card.tsx` | Added edit, save, cancel, content editor, summary input, and version history controls for editable workbench artifacts. |
-| `apps/web/src/components/preview-card.test.tsx` | Added coverage for save, cancel, version history, and read-only unknown artifact fallback. |
-| `apps/web/src/components/workspace-shell.tsx` | Connected artifact edit saves to the workbench API and refresh path. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added save API mock coverage for shell tests. |
-| `docs/project-state.md` | Recorded P23-5 artifact editor UI status. |
-| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | Marked P23-5 tasks complete after validation. |
+| `apps/web/src/lib/api.ts` | 添加了制品工作台编辑输入和保存 API 辅助函数。 |
+| `apps/web/src/lib/api.test.ts` | 添加了将制品编辑保存为新版本的客户端覆盖。 |
+| `apps/web/src/components/preview-card.tsx` | 为可编辑的工作台制品添加了编辑、保存、取消、内容编辑器、摘要输入和版本历史控件。 |
+| `apps/web/src/components/preview-card.test.tsx` | 添加了对保存、取消、版本历史和只读未知制品兜底的覆盖。 |
+| `apps/web/src/components/workspace-shell.tsx` | 将制品编辑保存连接到工作台 API 和刷新路径。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 为 shell 测试添加了保存 API 模拟覆盖。 |
+| `docs/project-state.md` | 记录了 P23-5 制品编辑器 UI 状态。 |
+| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | 验证后将 P23-5 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- preview-card.test.tsx api.test.ts workspace-shell.test.tsx --runInBand` | Pass, 83 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | Pass |
+| `pnpm --filter @agenthub/web test -- preview-card.test.tsx api.test.ts workspace-shell.test.tsx --runInBand` | 通过，83 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | 通过 |
 
 ---
 
-## P23-4 Artifact Workbench UI
+## P23-4 制品工作台 UI
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/lib/api.ts` | Added Artifact Workbench response types and session workbench API helper. |
-| `apps/web/src/lib/api.test.ts` | Added client coverage for session artifact workbench loading. |
-| `apps/web/src/components/preview-card.tsx` | Extended the right-side artifact panel with workbench renderer support for text/markdown/code/unknown artifacts and version metadata. |
-| `apps/web/src/components/preview-card.test.tsx` | Added UI coverage for workbench markdown rendering and unknown fallback. |
-| `apps/web/src/components/workspace-shell.tsx` | Loaded session workbench metadata and merged it with existing evidence cards without duplicating diff/review/preview/deploy artifacts. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added default workbench API mock for shell tests. |
-| `docs/project-state.md` | Recorded P23-4 Artifact Workbench UI status. |
-| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | Marked P23-4 tasks complete after validation. |
+| `apps/web/src/lib/api.ts` | 添加了制品工作台响应类型和会话工作台 API 辅助函数。 |
+| `apps/web/src/lib/api.test.ts` | 新增会话制品工作台加载的客户端覆盖。 |
+| `apps/web/src/components/preview-card.tsx` | 扩展右侧制品面板，增加对 text/markdown/code/unknown 制品和版本元数据的工作台渲染器支持。 |
+| `apps/web/src/components/preview-card.test.tsx` | 新增工作台 Markdown 渲染和未知兜底的 UI 覆盖。 |
+| `apps/web/src/components/workspace-shell.tsx` | 加载会话工作台元数据，并与现有证据卡片合并，避免重复 diff/review/preview/deploy 制品。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 为 Shell 测试新增默认工作台 API 模拟。 |
+| `docs/project-state.md` | 记录 P23-4 制品工作台 UI 状态。 |
+| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | 验证后将 P23-4 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- preview-card.test.tsx api.test.ts workspace-shell.test.tsx --runInBand` | Pass, 81 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | Pass |
+| `pnpm --filter @agenthub/web test -- preview-card.test.tsx api.test.ts workspace-shell.test.tsx --runInBand` | 通过，81 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | 通过 |
 
 ---
 
-## P23-3 Safe Artifact Editing API
+## P23-3 安全制品编辑 API
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added ArtifactVersion fields for parent version, content, content hash, and editor source. |
-| `apps/api/app/db.py` | Added SQLite compatibility columns for existing ArtifactVersion tables. |
-| `apps/api/app/artifact_versions.py` | Extended stored artifact version helpers to preserve edited artifact content metadata. |
-| `apps/api/app/artifact_workbench.py` | Added safe artifact edit helper that creates new versions without repository writes. |
-| `apps/api/app/main.py` | Added workbench edit API route. |
-| `apps/api/app/schemas.py` | Added edit request schema and extended workbench version response metadata. |
-| `apps/api/tests/test_artifact_workbench_edit_api.py` | Added API tests for editable saves, unsupported rejection, no diff creation, and immutable prior versions. |
-| `apps/api/tests/test_models.py` | Added model/schema compatibility coverage for ArtifactVersion edit columns. |
-| `docs/project-state.md` | Recorded P23-3 safe artifact editing API status. |
-| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | Marked P23-3 tasks complete after validation. |
+| `apps/api/app/models.py` | 为 ArtifactVersion 字段新增父版本、内容、内容哈希和编辑器来源。 |
+| `apps/api/app/db.py` | 为现有 ArtifactVersion 表新增 SQLite 兼容列。 |
+| `apps/api/app/artifact_versions.py` | 扩展存储的制品版本辅助函数，以保留已编辑制品的内容元数据。 |
+| `apps/api/app/artifact_workbench.py` | 新增安全制品编辑辅助函数，可在不写入仓库的情况下创建新版本。 |
+| `apps/api/app/main.py` | 新增工作台编辑 API 路由。 |
+| `apps/api/app/schemas.py` | 新增编辑请求模式，并扩展工作台版本响应元数据。 |
+| `apps/api/tests/test_artifact_workbench_edit_api.py` | 新增 API 测试，覆盖可编辑保存、不支持拒绝、无差异创建和不可变先前版本。 |
+| `apps/api/tests/test_models.py` | 新增 model/schema 兼容性覆盖，用于 ArtifactVersion 编辑列。 |
+| `docs/project-state.md` | 记录 P23-3 安全制品编辑 API 状态。 |
+| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | 验证后将 P23-3 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_artifact_workbench_edit_api.py tests/test_artifact_workbench_api.py tests/test_artifact_workbench.py tests/test_diffs.py::test_artifact_versions_support_followup_v2_parent_chain tests/test_models.py::test_p0_model_boundary_and_required_fields tests/test_models.py::test_sqlite_schema_compatibility_adds_artifact_version_edit_columns -q` | Pass, 15 tests |
-| `pnpm check:demo-api` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_artifact_workbench_edit_api.py tests/test_artifact_workbench_api.py tests/test_artifact_workbench.py tests/test_diffs.py::test_artifact_versions_support_followup_v2_parent_chain tests/test_models.py::test_p0_model_boundary_and_required_fields tests/test_models.py::test_sqlite_schema_compatibility_adds_artifact_version_edit_columns -q` | 通过，15 个测试 |
+| `pnpm check:demo-api` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | 通过 |
 
 ---
 
-## P23-2 Artifact Workbench API
+## P23-2 制品工作台 API
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/artifact_workbench.py` | Added DB-backed artifact workbench listing, artifact detail, and version metadata lookup helpers. |
-| `apps/api/app/main.py` | Added session artifact workbench, artifact workbench detail, version list, and version detail API routes. |
-| `apps/api/app/schemas.py` | Added workbench-specific artifact and version response schemas with safe metadata and content hashes. |
-| `apps/api/tests/test_artifact_workbench_api.py` | Added API coverage for listing, detail, version lookup, unknown artifact fallback, redaction, and 404 behavior. |
-| `docs/project-state.md` | Recorded P23-2 artifact workbench API status. |
-| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | Marked P23-2 tasks complete after validation. |
+| `apps/api/app/artifact_workbench.py` | 新增基于数据库的制品工作台列表、制品详情和版本元数据查找辅助函数。 |
+| `apps/api/app/main.py` | 新增会话制品工作台、制品工作台详情、版本列表和版本详情 API 路由。 |
+| `apps/api/app/schemas.py` | 新增工作台专用的制品和版本响应模式，包含安全元数据和内容哈希。 |
+| `apps/api/tests/test_artifact_workbench_api.py` | 新增 API 覆盖，涵盖列表、详情、版本查找、未知制品兜底、编辑和 404 行为。 |
+| `docs/project-state.md` | 记录 P23-2 制品工作台 API 状态。 |
+| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | 验证后将 P23-2 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_artifact_workbench_api.py tests/test_artifact_workbench.py tests/test_diffs.py::test_artifact_versions_support_followup_v2_parent_chain -q` | Pass, 9 tests |
-| `pnpm check:demo-api` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_artifact_workbench_api.py tests/test_artifact_workbench.py tests/test_diffs.py::test_artifact_versions_support_followup_v2_parent_chain -q` | 通过，9 个测试 |
+| `pnpm check:demo-api` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | 通过 |
 
 ---
 
-## P23-1 Artifact Version Metadata Foundation
+## P23-1 制品版本元数据基础
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/artifact_workbench.py` | Added artifact renderer classification, editable flag, safe metadata redaction, content hash, and version metadata helpers. |
-| `apps/api/tests/test_artifact_workbench.py` | Added backend coverage for supported/unknown renderers, editable rules, redaction, content hashes, version metadata, and legacy artifacts. |
-| `docs/project-state.md` | Recorded P23-1 artifact metadata foundation status. |
-| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | Marked P23-1 tasks complete after validation. |
+| `apps/api/app/artifact_workbench.py` | 新增制品渲染器分类、可编辑标志、安全元数据编辑、内容哈希和版本元数据辅助函数。 |
+| `apps/api/tests/test_artifact_workbench.py` | 新增后端覆盖，涵盖 supported/unknown 渲染器、可编辑规则、编辑、内容哈希、版本元数据和遗留制品。 |
+| `docs/project-state.md` | 记录 P23-1 制品元数据基础状态。 |
+| `openspec/changes/agenthub-p23-artifact-preview-editing-workbench/tasks.md` | 验证后将 P23-1 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_artifact_workbench.py tests/test_diffs.py::test_artifact_versions_support_followup_v2_parent_chain -q` | Pending |
-| `pnpm check:demo-api` | Pending |
-| `git diff --check` | Pending |
-| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | Pending |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_artifact_workbench.py tests/test_diffs.py::test_artifact_versions_support_followup_v2_parent_chain -q` | 待处理 |
+| `pnpm check:demo-api` | 待处理 |
+| `git diff --check` | 待处理 |
+| `openspec validate agenthub-p23-artifact-preview-editing-workbench --strict` | 待处理 |
 
 ---
 
-## P22 Freeze Review
+## P22 冻结审查
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p22-freeze-review.md` | Recorded P22 rehearsal evidence, validation plan, limitations, and freeze status. |
-| `docs/project-state.md` | Recorded P22 freeze status. |
-| `docs/change-log.md` | Added this freeze review entry. |
-| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | Marked P22 freeze review tasks complete after validation. |
+| `docs/p22-freeze-review.md` | 记录了 P22 排练证据、验证计划、限制和冻结状态。 |
+| `docs/project-state.md` | 记录了 P22 冻结状态。 |
+| `docs/change-log.md` | 添加了此冻结审查条目。 |
+| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | 验证后将 P22 冻结审查任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass, 78 web tests, 466 API tests, 5 demo API tests |
-| `pnpm demo:api:test` | Pass, 5 tests |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过，78 个 Web 测试，466 个 API 测试，5 个演示 API 测试 |
+| `pnpm demo:api:test` | 通过，5 个测试 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | 通过 |
 
 ---
 
-## P22-6 Draft Agent UI
+## P22-6 草稿代理 UI
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/lib/api.ts` | Added safe draft agent create input and API helper. |
-| `apps/web/src/lib/api.test.ts` | Added coverage for safe draft creation payloads and validation error surfacing. |
-| `apps/web/src/components/agent-directory-settings-page-client.tsx` | Added a metadata-only safe draft form with save/cancel controls and draft-only local display after save. |
-| `apps/web/src/components/agent-directory-settings-page-client.test.tsx` | Added coverage for save, cancel, validation errors, and absence of arbitrary shell/tool permission controls. |
-| `apps/web/src/app/settings/agents/page.tsx` | Passed backend URL to the client page for draft creation. |
-| `docs/project-state.md` | Recorded P22-6 draft UI status. |
-| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | Marked P22-6 Draft Agent UI tasks complete after validation. |
+| `apps/web/src/lib/api.ts` | 添加了安全的草稿代理创建输入和 API 辅助函数。 |
+| `apps/web/src/lib/api.test.ts` | 增加了对安全草稿创建负载和验证错误展示的覆盖。 |
+| `apps/web/src/components/agent-directory-settings-page-client.tsx` | 添加了一个仅包含元数据的安全草稿表单，包含 save/cancel 控件，并在保存后仅在本地显示草稿。 |
+| `apps/web/src/components/agent-directory-settings-page-client.test.tsx` | 增加了对保存、取消、验证错误以及缺少任意 shell/tool 权限控件的覆盖。 |
+| `apps/web/src/app/settings/agents/page.tsx` | 将后端 URL 传递给客户端页面以用于草稿创建。 |
+| `docs/project-state.md` | 记录了 P22-6 草稿 UI 状态。 |
+| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | 验证后将 P22-6 草稿代理 UI 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- agent-directory-settings-page-client.test.tsx api.test.ts --runInBand` | Pass, 78 tests |
-| `pnpm check` | Pending |
-| `git diff --check` | Pending |
-| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | Pending |
+| `pnpm --filter @agenthub/web test -- agent-directory-settings-page-client.test.tsx api.test.ts --runInBand` | 通过，78 个测试 |
+| `pnpm check` | 待处理 |
+| `git diff --check` | 待处理 |
+| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | 待处理 |
 
 ---
 
-## P22-5 Agent Directory UI
+## P22-5 代理目录 UI
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/lib/api.ts` | Added Agent Directory response types and `getWorkspaceAgentDirectory`. |
-| `apps/web/src/lib/api.test.ts` | Added coverage for loading directory entries with compatibility metadata. |
-| `apps/web/src/app/settings/agents/page.tsx` | Added the dedicated Agent Directory settings page. |
-| `apps/web/src/components/agent-directory-settings-page-client.tsx` | Added contact-style Agent Directory cards, provider/status/capability/target metadata, compatibility reasons, and filters. |
-| `apps/web/src/components/agent-directory-settings-page-client.test.tsx` | Added UI coverage for cards, filters, unavailable/draft state, and metadata display. |
-| `apps/web/src/components/session-sidebar.tsx` | Added a chat-sidebar settings link to the Agent Directory without exposing detailed config in chat. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Updated settings navigation coverage for the Agent Directory link. |
-| `docs/project-state.md` | Recorded P22-5 UI status. |
-| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | Marked P22-5 Agent Directory UI tasks complete after validation. |
+| `apps/web/src/lib/api.ts` | 添加了代理目录响应类型和 `getWorkspaceAgentDirectory`。 |
+| `apps/web/src/lib/api.test.ts` | 增加了对加载包含兼容性元数据的目录条目的覆盖。 |
+| `apps/web/src/app/settings/agents/page.tsx` | 添加了专用的代理目录设置页面。 |
+| `apps/web/src/components/agent-directory-settings-page-client.tsx` | 添加了联系人样式的代理目录卡片、provider/status/capability/target 元数据、兼容性原因和过滤器。 |
+| `apps/web/src/components/agent-directory-settings-page-client.test.tsx` | 增加了对卡片、过滤器、unavailable/draft 状态和元数据展示的 UI 覆盖。 |
+| `apps/web/src/components/session-sidebar.tsx` | 在聊天侧边栏中添加了一个指向代理目录的设置链接，而不在聊天中暴露详细配置。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 更新了设置导航覆盖以包含代理目录链接。 |
+| `docs/project-state.md` | 记录了 P22-5 UI 状态。 |
+| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | 验证后将 P22-5 代理目录 UI 任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- agent-directory-settings-page-client.test.tsx workspace-shell.test.tsx api.test.ts --runInBand` | Pass, 73 tests |
-| `pnpm check` | Pending |
-| `git diff --check` | Pending |
-| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | Pending |
+| `pnpm --filter @agenthub/web test -- agent-directory-settings-page-client.test.tsx workspace-shell.test.tsx api.test.ts --runInBand` | 通过，73 个测试 |
+| `pnpm check` | 待处理 |
+| `git diff --check` | 待处理 |
+| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | 待处理 |
 
 ---
 
-## P22-4 Runtime Config Compatibility Integration
+## P22-4 运行时配置兼容性集成
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_directory.py` | Broke the runtime import cycle so compatibility helpers can be shared safely. |
-| `apps/api/app/agent_runtime_config.py` | Reused Agent Directory compatibility checks for frontend, backend, and review runtime selections while preserving separate Planner provider validation. |
-| `apps/api/tests/test_agent_runtime_config.py` | Added coverage for compatible directory-backed runtime selections, draft rejection, validation-only rejection without persistence, and existing Planner runtime compatibility. |
-| `docs/project-state.md` | Recorded P22-4 runtime config integration status. |
-| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | Marked P22-4 runtime config integration tasks complete after validation. |
+| `apps/api/app/agent_directory.py` | 打破了运行时导入循环，以便兼容性辅助函数可以安全地共享。 |
+| `apps/api/app/agent_runtime_config.py` | 复用了代理目录兼容性检查，用于前端、后端和审查运行时选择，同时保留独立的 Planner 提供者验证。 |
+| `apps/api/tests/test_agent_runtime_config.py` | 增加了对兼容的目录支持运行时选择、草稿拒绝、仅验证拒绝而不持久化以及现有 Planner 运行时兼容性的覆盖。 |
+| `docs/project-state.md` | 记录了 P22-4 运行时配置集成状态。 |
+| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | 验证后将 P22-4 运行时配置集成任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py tests/test_agent_directory.py tests/test_agent_selection_policy.py -q` | Pending |
-| `pnpm check:demo-api` | Pending |
-| `git diff --check` | Pending |
-| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | Pending |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py tests/test_agent_directory.py tests/test_agent_selection_policy.py -q` | 待处理 |
+| `pnpm check:demo-api` | 待处理 |
+| `git diff --check` | 待处理 |
+| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | 待处理 |
 
 ---
 
-## P22-3 Safe Draft Agent Management
+## P22-3 安全草稿代理管理
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_agent_profile_drafts.py` | Added deterministic coverage for workspace-scoped draft listing, save/no-op behavior, and unsafe draft rejection without persistence. |
-| `apps/api/tests/test_agent_directory.py` | Added coverage that draft directory entries remain incompatible until validated. |
-| `docs/project-state.md` | Recorded P22-3 safe draft status. |
-| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | Marked P22-3 safe draft tasks complete after validation. |
+| `apps/api/tests/test_agent_profile_drafts.py` | 为工作区范围的草稿列表、save/no-op 行为以及不持久化拒绝不安全草稿增加了确定性覆盖。 |
+| `apps/api/tests/test_agent_directory.py` | 增加了覆盖，确保草稿目录条目在验证前保持不兼容状态。 |
+| `docs/project-state.md` | 记录了 P22-3 安全草稿状态。 |
+| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | 验证后将 P22-3 安全草稿任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_profile_drafts.py tests/test_agent_directory.py -q` | Pending |
-| `pnpm check:demo-api` | Pending |
-| `git diff --check` | Pending |
-| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | Pending |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_profile_drafts.py tests/test_agent_directory.py -q` | 待处理 |
+| `pnpm check:demo-api` | 待处理 |
+| `git diff --check` | 待处理 |
+| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | 待处理 |
 
 ---
 
-## P22-2 Agent Compatibility Policy
+## P22-2 代理兼容性策略
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_directory.py` | Added compatibility checks for provider availability, adapter, role, target, mode, capabilities, write/review safety, and draft status. |
-| `apps/api/app/main.py` | Added workspace-scoped Agent Directory compatibility check endpoint. |
-| `apps/api/app/schemas.py` | Added compatibility request/response schemas and compatibility metadata on directory entries. |
-| `apps/api/tests/test_agent_directory.py` | Added coverage for compatible frontend selection and incompatible draft reasons. |
-| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | Marked P22-2 compatibility policy tasks complete after validation. |
+| `apps/api/app/agent_directory.py` | 增加了对提供商可用性、适配器、角色、目标、模式、能力、write/review 安全性和草稿状态的兼容性检查。 |
+| `apps/api/app/main.py` | 增加了工作区范围的代理目录兼容性检查端点。 |
+| `apps/api/app/schemas.py` | 增加了兼容性 request/response 模式以及目录条目上的兼容性元数据。 |
+| `apps/api/tests/test_agent_directory.py` | 增加了对兼容前端选择和不兼容草稿原因的覆盖。 |
+| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | 验证后将 P22-2 兼容性策略任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_directory.py tests/test_agent_runtime_config.py tests/test_agent_selection_policy.py -q` | Pass, 27 tests |
-| `pnpm check:demo-api` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_directory.py tests/test_agent_runtime_config.py tests/test_agent_selection_policy.py -q` | 通过，27 个测试 |
+| `pnpm check:demo-api` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | 通过 |
 
 ---
 
-## P22-1 Agent Directory Backend
+## P22-1 代理目录后端
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_directory.py` | Added derived Agent Directory service entries from profiles, providers, runtime config, and draft metadata. |
-| `apps/api/app/main.py` | Added workspace-scoped Agent Directory API response helper and endpoint. |
-| `apps/api/app/schemas.py` | Added Agent Directory response schemas. |
-| `apps/api/tests/test_agent_directory.py` | Added coverage for built-in entries, draft entries, runtime-selected roles, provider availability, unknown workspace rejection, and secret-free metadata. |
-| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | Marked P22-1 backend directory tasks complete after validation. |
+| `apps/api/app/agent_directory.py` | 从配置文件、提供商、运行时配置和草稿元数据中派生出代理目录服务条目。 |
+| `apps/api/app/main.py` | 增加了工作区范围的代理目录 API 响应辅助函数和端点。 |
+| `apps/api/app/schemas.py` | 增加了代理目录响应模式。 |
+| `apps/api/tests/test_agent_directory.py` | 增加了对内置条目、草稿条目、运行时选择的角色、提供商可用性、未知工作区拒绝和无密钥元数据的覆盖。 |
+| `openspec/changes/agenthub-p22-agent-directory-custom-agent-foundation/tasks.md` | 验证后将 P22-1 后端目录任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_directory.py tests/test_agent_profile_drafts.py tests/test_provider_configs.py tests/test_agent_runtime_config.py -q` | Pass, 27 tests |
-| `pnpm check:demo-api` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_directory.py tests/test_agent_profile_drafts.py tests/test_provider_configs.py tests/test_agent_runtime_config.py -q` | 通过，27 个测试 |
+| `pnpm check:demo-api` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p22-agent-directory-custom-agent-foundation --strict` | 通过 |
 
 ---
 
-## P21 Freeze Review
+## P21 冻结审查
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p21-freeze-review.md` | Recorded P21 PMO rehearsal evidence, validation results, and limitations. |
-| `docs/project-state.md` | Recorded final P21 freeze status. |
-| `docs/change-log.md` | Added this freeze review entry. |
-| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | Marked P21 freeze review tasks complete. |
+| `docs/p21-freeze-review.md` | 记录了 P21 PMO 演练证据、验证结果和限制。 |
+| `docs/project-state.md` | 记录了最终的 P21 冻结状态。 |
+| `docs/change-log.md` | 添加了此冻结审查条目。 |
+| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | 将 P21 冻结审查任务标记为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass, 70 web tests, 460 API tests, 5 demo API tests |
-| `pnpm demo:api:test` | Pass, 5 tests |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p21-main-agent-orchestrator-pmo --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过，70 个 Web 测试，460 个 API 测试，5 个演示 API 测试 |
+| `pnpm demo:api:test` | 通过，5 个测试 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p21-main-agent-orchestrator-pmo --strict` | 通过 |
 
 ---
 
-## P21-5 PMO Workspace UI
+## P21-5 PMO 工作区 UI
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/lib/api.ts` | Added the PMO plan decision API helper for approve, reject, and clarification actions. |
-| `apps/web/src/components/task-card-list.tsx` | Added PMO decision display and plan approve/reject/clarification controls on task cards. |
-| `apps/web/src/components/mission-panel.tsx` | Added compact PMO readiness and next-action summary derived from current tasks. |
-| `apps/web/src/components/workspace-shell.tsx` | Wired PMO plan decision controls to backend actions and task refresh. |
-| `apps/web/src/components/task-card-list.test.tsx` | Added PMO decision card and action callback coverage. |
-| `apps/web/src/components/mission-panel.test.tsx` | Added mission panel PMO readiness and next action summary coverage. |
-| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | Marked P21-5 UI tasks complete after targeted validation. |
+| `apps/web/src/lib/api.ts` | 为批准、拒绝和澄清操作添加了 PMO 计划决策 API 辅助函数。 |
+| `apps/web/src/components/task-card-list.tsx` | 在任务卡片上添加了 PMO 决策显示和计划 approve/reject/clarification 控件。 |
+| `apps/web/src/components/mission-panel.tsx` | 添加了基于当前任务的紧凑型 PMO 就绪状态和下一步操作摘要。 |
+| `apps/web/src/components/workspace-shell.tsx` | 将 PMO 计划决策控件连接到后端操作和任务刷新。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 添加了 PMO 决策卡片和操作回调的覆盖。 |
+| `apps/web/src/components/mission-panel.test.tsx` | 添加了任务面板 PMO 就绪状态和下一步操作摘要的覆盖。 |
+| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | 标记 P21-5 UI 任务在针对性验证后完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx mission-panel.test.tsx --runInBand` | Pass, 70 tests |
-| `pnpm check` | Pass |
+| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx mission-panel.test.tsx --runInBand` | 通过，70 项测试 |
+| `pnpm check` | 通过 |
 
 ---
 
-## P21-4 PMO Mission Trace Evidence
+## P21-4 PMO 任务追踪证据
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/mission_trace.py` | Added redacted PMO coordination evidence for plan decisions, blockers, fallbacks, and conflict summaries. |
-| `apps/api/app/schemas.py` | Added `pmoEvidence` to mission trace responses. |
-| `apps/api/tests/test_pmo_decisions.py` | Added coverage that PMO evidence includes decision/blocker/fallback/conflict records without leaking secrets or protected host paths. |
-| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | Marked P21-4 mission trace evidence tasks complete after targeted validation. |
+| `apps/api/app/mission_trace.py` | 添加了经过编辑的 PMO 协调证据，用于计划决策、阻塞项、兜底方案和冲突摘要。 |
+| `apps/api/app/schemas.py` | 在任务追踪响应中添加了 `pmoEvidence`。 |
+| `apps/api/tests/test_pmo_decisions.py` | 增加了覆盖范围，确保 PMO 证据包含 decision/blocker/fallback/conflict 记录，同时不泄露机密或受保护的主机路径。 |
+| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | 标记 P21-4 任务追踪证据任务在针对性验证后完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_pmo_decisions.py -q` | Pass, 14 tests |
-| Mission trace regression subset | Pass, 4 tests |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_api_planner_provider_output_flows_through_plan_validator -q` | Pass, 1 test |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_pmo_decisions.py -q` | 通过，14 项测试 |
+| 任务追踪回归子集 | 通过，4 项测试 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_api_planner_provider_output_flows_through_plan_validator -q` | 通过，1 项测试 |
 
 ---
 
-## P21-3 PMO Graph Readiness And Next Actions
+## P21-3 PMO 图谱就绪状态与后续行动
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/mission_trace.py` | Added PMO-derived task graph readiness groups and richer next actions for ready tasks, blockers, plan review, retry, fallback, and approvals. |
-| `apps/api/app/schemas.py` | Added `taskGraphReadiness` to mission trace responses. |
-| `apps/api/tests/test_pmo_decisions.py` | Added coverage for PMO readiness grouping and next action derivation from current task/run/scheduler state. |
-| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | Marked P21-3 graph readiness and next action tasks complete after targeted validation. |
+| `apps/api/app/mission_trace.py` | 添加了 PMO 派生的任务图谱就绪状态分组，以及针对就绪任务、阻塞项、计划审查、重试、兜底方案和审批的更丰富的后续行动。 |
+| `apps/api/app/schemas.py` | 在任务追踪响应中添加了 `taskGraphReadiness`。 |
+| `apps/api/tests/test_pmo_decisions.py` | 增加了对 PMO 就绪状态分组以及从当前 task/run/scheduler 状态推导后续行动的覆盖范围。 |
+| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | 标记 P21-3 图谱就绪状态和后续行动任务在针对性验证后完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_pmo_decisions.py -q` | Pass, 13 tests |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_session_mission_trace_exposes_tasks_artifacts_and_blockers tests/test_task_runs.py::test_provider_assignment_is_visible_in_mission_trace tests/test_task_runs.py::test_runtime_config_resolution_is_visible_in_mission_trace tests/test_llm_planner.py::test_llm_planner_input_includes_followup_mission_trace -q` | Pass, 4 tests |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_pmo_decisions.py -q` | 通过，13 项测试 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_task_runs.py::test_session_mission_trace_exposes_tasks_artifacts_and_blockers tests/test_task_runs.py::test_provider_assignment_is_visible_in_mission_trace tests/test_task_runs.py::test_runtime_config_resolution_is_visible_in_mission_trace tests/test_llm_planner.py::test_llm_planner_input_includes_followup_mission_trace -q` | 通过，4 项测试 |
 
 ---
 
-## P21-2 PMO Plan Decision Actions
+## P21-2 PMO 计划决策操作
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/main.py` | Added narrow approve, reject, and request-clarification task plan decision endpoints that update PMO metadata without creating TaskRuns. |
-| `apps/api/app/schemas.py` | Added a strict PMO plan decision request schema that rejects raw plan mutation fields. |
-| `apps/api/tests/test_pmo_decisions.py` | Added API coverage for approve, reject, clarification, no TaskRun creation, and raw mutation rejection. |
-| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | Marked P21-2 plan decision action tasks complete after targeted validation. |
+| `apps/api/app/main.py` | 添加了狭窄的批准、拒绝和请求澄清的任务计划决策端点，这些端点更新 PMO 元数据而不创建 TaskRun。 |
+| `apps/api/app/schemas.py` | 添加了严格的 PMO 计划决策请求模式，拒绝原始计划修改字段。 |
+| `apps/api/tests/test_pmo_decisions.py` | 增加了对批准、拒绝、澄清、不创建 TaskRun 以及拒绝原始修改的 API 覆盖范围。 |
+| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | 标记 P21-2 计划决策操作任务在针对性验证后完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_pmo_decisions.py -q` | Pass, 11 tests |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_pmo_decisions.py -q` | 通过，11 项测试 |
 
 ---
 
-## P21-1 PMO Decision Metadata Foundation
+## P21-1 PMO 决策元数据基础
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/pmo_decisions.py` | Added stable PMO plan decision metadata helpers for pending review, approved, rejected, and clarification-needed states. |
-| `apps/api/app/mission_trace.py` | Exposed task `pmoDecision` metadata in mission trace task entries. |
-| `apps/api/tests/test_pmo_decisions.py` | Added deterministic tests for PMO decision metadata, unsupported raw mutation rejection, and mission trace visibility. |
-| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | Marked P21-1 metadata foundation tasks complete after targeted validation. |
+| `apps/api/app/pmo_decisions.py` | 添加了稳定的 PMO 计划决策元数据辅助函数，用于待审查、已批准、已拒绝和需要澄清状态。 |
+| `apps/api/app/mission_trace.py` | 在任务追踪任务条目中暴露了任务 `pmoDecision` 元数据。 |
+| `apps/api/tests/test_pmo_decisions.py` | 添加了针对 PMO 决策元数据、不支持的原始修改拒绝以及任务追踪可见性的确定性测试。 |
+| `openspec/changes/agenthub-p21-main-agent-orchestrator-pmo/tasks.md` | 标记 P21-1 元数据基础任务在针对性验证后完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_pmo_decisions.py -q` | Pass, 7 tests |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_pmo_decisions.py -q` | 通过，7 项测试 |
 
 ---
 
-## P20-5 Artifact Navigation Workbench
+## P20-5 制品导航工作台
 
-**Date:** 2026-06-08
+**日期:** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/task-card-list.tsx` | Renamed artifact cards to user-facing evidence cards, localized artifact actions, and clarified deployment evidence wording. |
-| `apps/web/src/components/preview-card.tsx` | Improved the artifact panel empty state and navigation copy for Diff, Review, Preview, and Deployment artifacts. |
-| `apps/web/src/components/task-card-list.test.tsx` | Updated artifact navigation/context tests for the clearer evidence card labels. |
-| `apps/web/src/components/preview-card.test.tsx` | Added coverage for the artifact workbench empty state. |
-| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | Marked P20-5 implementation tasks complete pending validation. |
+| `apps/web/src/components/task-card-list.tsx` | 将制品卡片重命名为面向用户的证据卡片，本地化制品操作，并澄清了部署证据的措辞。 |
+| `apps/web/src/components/preview-card.tsx` | 改进了制品面板的空状态以及针对 Diff、Review、Preview 和 Deployment 制品的导航文案。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 更新了制品 navigation/context 测试，以使用更清晰的证据卡片标签。 |
+| `apps/web/src/components/preview-card.test.tsx` | 增加了对制品工作台空状态的覆盖范围。 |
+| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | 标记 P20-5 实现任务已完成，待验证。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx preview-card.test.tsx --runInBand` | Pass, 68 tests |
+| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx preview-card.test.tsx --runInBand` | 通过，68 项测试 |
 
 ---
 
-## P20-4 Agent, Target, Memory, And Evidence Summary
+## P20-4 智能体、目标、记忆与证据摘要
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/mission-panel.tsx` | Added compact frontend/backend target, memory snapshot, latest evidence, adapter, files, and deployment provider/status summary. |
-| `apps/web/src/components/workspace-shell.tsx` | Passed the selected session into the mission/context panel so it can summarize target and memory state without API changes. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added coverage for target, memory snapshot, deployment provider, adapter, and latest evidence summary rendering. |
-| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | Marked P20-4 implementation tasks complete pending validation. |
+| `apps/web/src/components/mission-panel.tsx` | 新增了紧凑的 frontend/backend 目标、记忆快照、最新证据、适配器、文件及部署 provider/status 摘要。 |
+| `apps/web/src/components/workspace-shell.tsx` | 将选定的会话传递到 mission/context 面板，以便在不修改 API 的情况下总结目标和记忆状态。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 新增了对目标、记忆快照、部署提供商、适配器及最新证据摘要渲染的覆盖。 |
+| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | 将 P20-4 实现任务标记为完成，待验证。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- workspace-shell.test.tsx --runInBand` | Pass, 67 tests |
+| `pnpm --filter @agenthub/web test -- workspace-shell.test.tsx --runInBand` | 通过，67 项测试 |
 
 ---
 
-## P20-3 Read-only Plan Review Surface
+## P20-3 只读计划审查界面
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/task-card-list.tsx` | Added user-readable planner evidence for fallback, validation result, provider id, error code, and safe error summary inside the read-only plan review surface. |
-| `apps/web/src/components/task-card-list.test.tsx` | Added coverage for planner fallback and validation evidence rendering alongside existing plan review metadata. |
-| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | Marked P20-3 implementation tasks complete pending validation. |
+| `apps/web/src/components/task-card-list.tsx` | 在只读计划审查界面内，新增了用户可读的规划器证据，包括兜底、验证结果、提供商 ID、错误代码及安全错误摘要。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 新增了对规划器兜底和验证证据渲染的覆盖，与现有计划审查元数据一同展示。 |
+| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | 将 P20-3 实现任务标记为完成，待验证。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx --runInBand` | Pass, 67 tests |
+| `pnpm --filter @agenthub/web test -- task-card-list.test.tsx --runInBand` | 通过，67 项测试 |
 
 ---
 
-## P20-2 Conversation Mode And Context Display
+## P20-2 对话模式与上下文显示
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/workspace-shell.tsx` | Added local Direct/Group conversation mode display and message context state without changing backend routing. |
-| `apps/web/src/components/message-composer.tsx` | Added visible pending context for quoted messages and selected artifacts, plus unified clear-context behavior. |
-| `apps/web/src/components/message-composer.test.tsx` | Added coverage for message and artifact context display. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added coverage that mode changes and quote context staging do not create messages or TaskRuns. |
-| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | Marked P20-2 implementation tasks complete pending validation. |
+| `apps/web/src/components/workspace-shell.tsx` | 新增了本地 Direct/Group 对话模式显示和消息上下文状态，未更改后端路由。 |
+| `apps/web/src/components/message-composer.tsx` | 新增了引用消息和选定制品的可见待处理上下文，以及统一的清除上下文行为。 |
+| `apps/web/src/components/message-composer.test.tsx` | 新增了对消息和制品上下文显示的覆盖。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 新增了覆盖，确保模式变更和引用上下文暂存不会创建消息或 TaskRun。 |
+| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | 将 P20-2 实现任务标记为完成，待验证。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- workspace-shell.test.tsx message-composer.test.tsx --runInBand` | Pass, 67 tests |
+| `pnpm --filter @agenthub/web test -- workspace-shell.test.tsx message-composer.test.tsx --runInBand` | 通过，67 项测试 |
 
 ---
 
-## P20-1 Session Navigation Polish
+## P20-1 会话导航优化
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/session-sidebar.tsx` | Added session search/filtering, filtered count, selected-session task summary, and empty search state. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added coverage for session filtering and empty search while preserving selected session focus. |
-| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | Marked P20-1 implementation tasks complete pending validation. |
+| `apps/web/src/components/session-sidebar.tsx` | 新增了会话 search/filtering、筛选计数、选定会话的任务摘要及空搜索状态。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 新增了对会话筛选和空搜索的覆盖，同时保持选定会话的焦点。 |
+| `openspec/changes/agenthub-p20-daily-agent-workspace-ux/tasks.md` | 将 P20-1 实现任务标记为完成，待验证。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- workspace-shell.test.tsx --runInBand` | Pass, 63 tests |
+| `pnpm --filter @agenthub/web test -- workspace-shell.test.tsx --runInBand` | 通过，63 项测试 |
 
 ---
 
-## Local Folder Picker Target Registration
+## 本地文件夹选择器目标注册
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/local_folders.py` | Added local folder browsing helpers for workspace starts, parent navigation, child folder listing, and protected folder filtering. |
-| `apps/api/app/main.py` | Added the workspace-scoped external target folder browsing endpoint. |
-| `apps/api/app/schemas.py` | Added local folder listing response schemas. |
-| `apps/api/app/target_registry.py` | Added explicit selected-folder project type mapping for external frontend and backend targets. |
-| `apps/api/tests/test_external_workspaces.py` | Added backend coverage for folder listing and selected-folder scope registration. |
-| `apps/api/tests/test_guardrails.py` | Added coverage that selected-folder scope allows ordinary files while protected paths remain blocked. |
-| `apps/web/src/lib/api.ts` | Added the local folder listing API helper and types. |
-| `apps/web/src/lib/api.test.ts` | Added API helper coverage for folder listing query behavior. |
-| `apps/web/src/components/runtime-settings-page-client.tsx` | Wired runtime settings to load local folders and register selected folders with `allowedPaths: ["*"]`, including frontend/backend target kind selection. |
-| `apps/web/src/components/workspace-target-settings.tsx` | Added the folder picker dialog, frontend/backend target kind selection, and removed manual allowed-path entry from the external target registration flow. |
-| `apps/web/src/components/runtime-settings-page-client.test.tsx` | Added coverage for selecting a local folder and registering selected-folder scope. |
-| `openspec/changes/agenthub-local-folder-picker-target-registration/*` | Added and completed the focused OpenSpec change artifacts for this task. |
+| `apps/api/app/local_folders.py` | 新增了本地文件夹浏览辅助函数，用于工作区启动、父级导航、子文件夹列表及受保护文件夹筛选。 |
+| `apps/api/app/main.py` | 新增了工作区作用域的外部目标文件夹浏览端点。 |
+| `apps/api/app/schemas.py` | 新增了本地文件夹列表响应模式。 |
+| `apps/api/app/target_registry.py` | 为外部前端和后端目标新增了显式的选定文件夹项目类型映射。 |
+| `apps/api/tests/test_external_workspaces.py` | 新增了后端覆盖，用于文件夹列表和选定文件夹作用域注册。 |
+| `apps/api/tests/test_guardrails.py` | 新增了覆盖，确保选定文件夹作用域允许普通文件，同时受保护路径仍被阻止。 |
+| `apps/web/src/lib/api.ts` | 新增了本地文件夹列表 API 辅助函数和类型。 |
+| `apps/web/src/lib/api.test.ts` | 新增了 API 辅助函数覆盖，用于文件夹列表查询行为。 |
+| `apps/web/src/components/runtime-settings-page-client.tsx` | 将运行时设置连接到加载本地文件夹，并使用 `allowedPaths: ["*"]` 注册选定文件夹，包括 frontend/backend 目标类型选择。 |
+| `allowedPaths: ["*"]` | 新增了文件夹选择器对话框、frontend/backend 目标类型选择，并从外部目标注册流程中移除了手动允许路径输入。 |
+| `apps/web/src/components/workspace-target-settings.tsx` | 新增了覆盖，用于选择本地文件夹并注册选定文件夹作用域。 |
+| `openspec/changes/agenthub-local-folder-picker-target-registration/*` | 已添加并完成此任务的聚焦 OpenSpec 变更制品。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_external_workspaces.py tests/test_guardrails.py::test_target_path_policy_allows_selected_folder_scope_except_protected_paths -q` | Pass, 9 tests |
-| `cd apps/web && pnpm test src/components/runtime-settings-page-client.test.tsx src/lib/api.test.ts` | Pass, 31 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-local-folder-picker-target-registration --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_external_workspaces.py tests/test_guardrails.py::test_target_path_policy_allows_selected_folder_scope_except_protected_paths -q` | 通过，9 个测试 |
+| `cd apps/web && pnpm test src/components/runtime-settings-page-client.test.tsx src/lib/api.test.ts` | 通过，31 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-local-folder-picker-target-registration --strict` | 通过 |
 
 ---
 
-## P18c Live Memory Compliance Freeze
+## P18c 实时内存合规性冻结
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p18c-freeze-review.md` | Added the P18c live Library Management App memory compliance freeze review with provider, session, snapshot, artifact, metric, follow-up, and limitation evidence. |
-| `docs/project-state.md` | Recorded the final P18c live smoke status, metrics, evidence ids, and known limitations. |
-| `docs/change-log.md` | Added this final P18c freeze status entry. |
-| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | Marked P18c freeze review documentation tasks complete as they were validated. |
+| `docs/p18c-freeze-review.md` | 添加了 P18c 实时库管理应用内存合规性冻结审查，包含提供者、会话、快照、制品、指标、后续跟进和限制证据。 |
+| `docs/project-state.md` | 记录了最终的 P18c 实时冒烟状态、指标、证据 ID 和已知限制。 |
+| `docs/change-log.md` | 添加了此最终 P18c 冻结状态条目。 |
+| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | 将 P18c 冻结审查文档任务标记为完成，因为它们已通过验证。 |
 
-### Evidence Summary
+### 证据摘要
 
-| Item | Value |
+| 项目 | 值 |
 |---|---|
-| Session | `9dd8ff1d-be15-4114-b47c-4d3664838e53` |
+| 会话 | `9dd8ff1d-be15-4114-b47c-4d3664838e53` |
 | TaskRun | `09d77fb3-f81a-44e0-9b47-3f403ac58579` |
 | `memorySnapshotId` | `3a77e409-daae-428a-b739-6bc187105c70` |
-| Real coding provider | `codex` / `local-codex-cli` |
-| Diff / review | `7a6dd596-3d9d-4810-b1fb-c7a66d3ac67f`, `a9ac0c07-547a-4bbd-b2a1-6aa867524304` |
-| Passing check/test/build | `801bad3c-a9f7-479f-8e09-59e1eaadf9e8`, `c1a86bc8-7eba-48c5-a377-c65a0f488941`, `34d4070e-cd5d-450f-bd79-ca449f6b9511` |
-| Preview / staging | `53d8cd5e-0322-449e-a10d-9456633a23e2`, `20d26ddf-736e-49d6-abe0-25e7b0b843db` |
-| Compliance summary | Passed with no final violations after external target path normalization. |
-| Task Success Delta | Unknown / inconclusive because no comparable live no-memory control exists. |
+| 实际编码提供者 | `codex` / `local-codex-cli` |
+| 差异 / 审查 | `7a6dd596-3d9d-4810-b1fb-c7a66d3ac67f`, `a9ac0c07-547a-4bbd-b2a1-6aa867524304` |
+| 通过的 check/test/build | `801bad3c-a9f7-479f-8e09-59e1eaadf9e8`, `c1a86bc8-7eba-48c5-a377-c65a0f488941`, `34d4070e-cd5d-450f-bd79-ca449f6b9511` |
+| 预览 / 预发布 | `53d8cd5e-0322-449e-a10d-9456633a23e2`, `20d26ddf-736e-49d6-abe0-25e7b0b843db` |
+| 合规性摘要 | 通过，在外部目标路径规范化后无最终违规。 |
+| 任务成功增量 | 未知 / 不确定，因为没有可比较的实时无内存控制。 |
 
-### Limitations
+### 限制
 
-- The configured DeepSeek planner did not run because `DEEPSEEK_API_KEY` was not
-  visible to the API process environment.
-- Review evidence used deterministic scripted review; it was not used to claim
-  live coding provider success.
-- Preview/staging URLs were verified during the smoke process and may not remain
-  alive after the one-off smoke process exits.
+- 配置的 DeepSeek 规划器未运行，因为 `DEEPSEEK_API_KEY` 对 API 进程环境不可见。
+- 审查证据使用了确定性脚本化审查；未用于声称实时编码提供者成功。
+- Preview/staging URL 在冒烟过程中已验证，在一次性冒烟进程退出后可能无法保持存活。
 
 ---
 
-## P18c External Preview And Staging Evidence
+## P18c 外部预览和预发布证据
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/previews.py` | Made preview root resolution target-aware so external Vite targets start preview from the registered external project root instead of the demo workspace root. |
-| `apps/api/tests/test_previews.py` | Added regression coverage that an external Vite target preview starts from the external target root. |
-| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | Marked P18c-3.5 complete after collecting live evidence. |
+| `apps/api/app/previews.py` | 使预览根目录解析具有目标感知能力，以便外部 Vite 目标从注册的外部项目根目录（而非演示工作区根目录）启动预览。 |
+| `apps/api/tests/test_previews.py` | 添加了回归覆盖，确保外部 Vite 目标预览从外部目标根目录启动。 |
+| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | 在收集实时证据后将 P18c-3.5 标记为完成。 |
 
-### Evidence
+### 证据
 
-| Item | Value |
+| 项目 | 值 |
 |---|---|
 | TaskRun | `09d77fb3-f81a-44e0-9b47-3f403ac58579` |
-| Adapter / provider | `codex` / `local-codex-cli` |
-| Diff artifact | `7a6dd596-3d9d-4810-b1fb-c7a66d3ac67f` |
-| Review artifact | `a9ac0c07-547a-4bbd-b2a1-6aa867524304` |
-| Check / test / build evidence | `801bad3c-a9f7-479f-8e09-59e1eaadf9e8`, `c1a86bc8-7eba-48c5-a377-c65a0f488941`, `34d4070e-cd5d-450f-bd79-ca449f6b9511` |
-| Preview evidence | `53d8cd5e-0322-449e-a10d-9456633a23e2`, healthy at `http://127.0.0.1:60413` during the smoke |
-| Staging evidence | `20d26ddf-736e-49d6-abe0-25e7b0b843db`, ready at `http://127.0.0.1:60425` during the smoke |
+| 适配器 / 提供者 | `codex` / `local-codex-cli` |
+| 差异制品 | `7a6dd596-3d9d-4810-b1fb-c7a66d3ac67f` |
+| 审查制品 | `a9ac0c07-547a-4bbd-b2a1-6aa867524304` |
+| 检查 / 测试 / 构建证据 | `801bad3c-a9f7-479f-8e09-59e1eaadf9e8`, `c1a86bc8-7eba-48c5-a377-c65a0f488941`, `34d4070e-cd5d-450f-bd79-ca449f6b9511` |
+| 预览证据 | `53d8cd5e-0322-449e-a10d-9456633a23e2`，在冒烟期间于 `http://127.0.0.1:60413` 处健康 |
+| 预发布证据 | `20d26ddf-736e-49d6-abe0-25e7b0b843db`，在冒烟期间于 `http://127.0.0.1:60425` 处就绪 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_previews.py -q` | Pass, 7 tests |
-| P18c preview/staging smoke | Pass: preview healthy/reachable and local staging ready/reachable during the smoke process. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_previews.py -q` | 通过，7 个测试 |
+| P18c preview/staging 冒烟 | 通过：在冒烟过程中预览 healthy/reachable 和本地预发布 ready/reachable。 |
 
 ---
 
-## P18c Live Memory Follow-up Evidence
+## P18c 实时内存后续跟进证据
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Follow-up Record
+### 后续跟进记录
 
-| Step | Evidence |
+| 步骤 | 证据 |
 |---|---|
-| Initial validation failure | `pnpm check`, `pnpm test`, and `pnpm build` failed because the new external Vite project had no `node_modules`; artifacts `4b881975-1155-4ef1-94c8-86b1b3438289`, `15bebd6f-a0a7-489a-b889-bc44626f6b22`, and `91fda1a8-bb9d-4d05-9aac-71b21452fb77`. |
-| User-approved dependency install | After the user explicitly allowed installation for the external P18c project, `pnpm install` was run only in `/Users/luotianhang/Desktop/agenthub-rehearsals/p18c-library-app`. |
-| Follow-up validation success | `pnpm check`, `pnpm test`, and `pnpm build` passed; artifacts `801bad3c-a9f7-479f-8e09-59e1eaadf9e8`, `c1a86bc8-7eba-48c5-a377-c65a0f488941`, and `34d4070e-cd5d-450f-bd79-ca449f6b9511`. |
-| Preview/staging follow-up | External target preview initially required AgentHub path-resolution support; commit `15e4702` made preview target-aware, after which preview `53d8cd5e-0322-449e-a10d-9456633a23e2` and staging `20d26ddf-736e-49d6-abe0-25e7b0b843db` succeeded during the smoke. |
-
-No ScriptedMock result was used to claim live coding compliance. The coding
-TaskRun success evidence remains the real Codex run
-`09d77fb3-f81a-44e0-9b47-3f403ac58579`.
+| 初始验证失败 | `pnpm check`、`pnpm test` 和 `pnpm build` 失败，因为新的外部 Vite 项目没有 `node_modules`；制品 `4b881975-1155-4ef1-94c8-86b1b3438289`、`15bebd6f-a0a7-489a-b889-bc44626f6b22` 和 `91fda1a8-bb9d-4d05-9aac-71b21452fb77`。 |
+| 用户批准的依赖安装 | 在用户明确允许为外部 P18c 项目安装后，`pnpm install` 仅在 `/Users/luotianhang/Desktop/agenthub-rehearsals/p18c-library-app` 中运行。 |
+| 后续验证成功 | `pnpm check`、`pnpm test` 和 `pnpm build` 通过；制品 `801bad3c-a9f7-479f-8e09-59e1eaadf9e8`、`c1a86bc8-7eba-48c5-a377-c65a0f488941` 和 `34d4070e-cd5d-450f-bd79-ca449f6b9511`。 |
+| Preview/staging 后续跟进 | 外部目标预览最初需要 AgentHub 路径解析支持；提交 `15e4702` 使预览具有目标感知能力，之后预览 `53d8cd5e-0322-449e-a10d-9456633a23e2` 和预发布 `20d26ddf-736e-49d6-abe0-25e7b0b843db` 在冒烟期间成功。 |
+没有使用 ScriptedMock 结果来声称符合实时代码规范。编码 TaskRun 的成功证据仍然是真实的 Codex 运行结果 `09d77fb3-f81a-44e0-9b47-3f403ac58579`。
 
 ---
 
-## LLM Router External Frontend Fallback
+## LLM 路由器外部前端兜底
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added a fallback path for safe external frontend coding requests when the LLM conversation router incorrectly returns an `assistant_reply` instead of a task plan. |
-| `apps/api/tests/test_planning.py` | Added regression coverage that the fallback creates an auto-start frontend task with explicit planner fallback evidence while existing non-task chat outcomes remain non-executing. |
+| `apps/api/app/planning.py` | 当 LLM 对话路由器错误地返回 `assistant_reply` 而非任务计划时，为安全的外部前端编码请求添加了兜底路径。 |
+| `apps/api/tests/test_planning.py` | 添加了回归测试覆盖，确保兜底机制会创建一个带有显式规划器兜底证据的自动启动前端任务，而现有的非任务聊天结果仍保持不执行状态。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_llm_assistant_reply_creates_orchestrator_message_without_task tests/test_planning.py::test_api_planner_assistant_reply_creates_orchestrator_message_without_task tests/test_planning.py::test_non_task_conversation_outcomes_do_not_create_tasks tests/test_planning.py::test_conversation_task_plan_creates_validated_task tests/test_planning.py::test_orchestrator_can_create_auto_start_external_frontend_task tests/test_planning.py::test_llm_assistant_reply_for_safe_external_frontend_request_falls_back_to_task -q` | Pass, 8 tests |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_llm_assistant_reply_creates_orchestrator_message_without_task tests/test_planning.py::test_api_planner_assistant_reply_creates_orchestrator_message_without_task tests/test_planning.py::test_non_task_conversation_outcomes_do_not_create_tasks tests/test_planning.py::test_conversation_task_plan_creates_validated_task tests/test_planning.py::test_orchestrator_can_create_auto_start_external_frontend_task tests/test_planning.py::test_llm_assistant_reply_for_safe_external_frontend_request_falls_back_to_task -q` | 通过，8 个测试 |
 
 ---
 
-## P18c Memory Rule Simplification
+## P18c 内存规则简化
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/live_memory_compliance.py` | Replaced narrow English demo-scoped P18c memory rules with broader Chinese long-term memory rules and archived obsolete active P18c rules during seeding. |
-| `apps/api/tests/test_live_memory_compliance.py` | Added coverage that active P18c rules use the new Chinese wording and obsolete active rules are archived before new sessions are prepared. |
-| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/*` | Updated P18c proposal, design, and spec language so the live memory smoke evaluates general project/default behavior instead of only demo-specific wording. |
+| `apps/api/app/live_memory_compliance.py` | 将狭窄的、仅限英文演示范围的 P18c 内存规则替换为更广泛的中文长期内存规则，并在种子化过程中归档了已废弃的活跃 P18c 规则。 |
+| `apps/api/tests/test_live_memory_compliance.py` | 添加了测试覆盖，确保活跃的 P18c 规则使用新的中文措辞，并且在准备新会话之前，已废弃的活跃规则已被归档。 |
+| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/*` | 更新了 P18c 提案、设计和规范语言，使实时代理冒烟测试评估通用的 project/default 行为，而非仅限演示特定的措辞。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_live_memory_compliance.py -q` | Pass, 13 tests |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p18c-live-memory-compliance-library-app --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_live_memory_compliance.py -q` | 通过，13 个测试 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p18c-live-memory-compliance-library-app --strict` | 通过 |
 
 ---
 
-## P18c-3 Live Provider Blocker
+## P18c-3 实时代理提供者阻塞
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Evidence
+### 证据
 
-| Item | Value |
+| 项目 | 值 |
 |---|---|
-| Session | `b11777d4-3dea-47e0-8a71-da8e5749c38a` |
-| Message | `f9ded109-47ac-4ff8-9569-c450c189b67e` |
-| Task | `0d85e40e-9626-496b-bdff-234415e47ac1` |
+| 会话 | `b11777d4-3dea-47e0-8a71-da8e5749c38a` |
+| 消息 | `f9ded109-47ac-4ff8-9569-c450c189b67e` |
+| 任务 | `0d85e40e-9626-496b-bdff-234415e47ac1` |
 | TaskRun | `1f44056b-b1d9-420b-9bb3-98b984760d18` |
 | `memorySnapshotId` | `a27dec94-85c9-4d4d-b5be-6564b8320125` |
-| Adapter / provider | `claude_code` / `local-claude-code-cli` |
-| Final state | `failed` |
-| Error | `CLAUDE_CODE_EXIT_ERROR`: `API Error: Unable to connect to API (ConnectionRefused)` |
-| Artifacts | none |
+| 适配器 / 提供者 | `claude_code` / `local-claude-code-cli` |
+| 最终状态 | `failed` |
+| 错误 | `CLAUDE_CODE_EXIT_ERROR`: `API Error: Unable to connect to API (ConnectionRefused)` |
+| 制品 | 无 |
 
-The simplified memory rules allowed P18c-3 to progress from planner-only
-failure to a real frontend Task and real ClaudeCodeAdapter TaskRun. Execution
-stopped at the Claude Code runtime connection error. ScriptedMock was not used
-to claim live compliance.
+简化的内存规则使 P18c-3 能够从仅规划器失败进展到真实的前端任务和真实的 ClaudeCodeAdapter TaskRun。执行在 Claude Code 运行时连接错误处停止。未使用 ScriptedMock 来声称符合实时代码规范。
 
 ---
 
-## P18c-2 Session And External Target Setup
+## P18c-2 会话和外部目标设置
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/live_memory_compliance.py` | Added P18c setup evidence model and helper to prepare the desktop rehearsal root, register/reuse the external frontend target, create a fresh session, and capture memory snapshot/hash evidence. |
-| `apps/api/tests/test_live_memory_compliance.py` | Added coverage for P18c setup target/session/snapshot creation and target reuse. |
-| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | Marked P18c-2 complete. |
+| `apps/api/app/live_memory_compliance.py` | 添加了 P18c 设置证据模型和辅助函数，用于准备桌面排练根目录、register/reuse 外部前端目标、创建新会话，并捕获内存 snapshot/hash 证据。 |
+| `apps/api/tests/test_live_memory_compliance.py` | 添加了 P18c 设置 target/session/snapshot 创建和目标复用的测试覆盖。 |
+| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | 标记 P18c-2 为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_live_memory_compliance.py -q` | Pass |
-| P18c setup smoke | Pass: prepared `/Users/luotianhang/Desktop/agenthub-rehearsals/p18c-library-app`, target `external-p18c-library-app`, fresh session, `memorySnapshotId`, 6 active memory rule IDs, AGENTS/CLAUDE hashes, and context pack hash. |
-| `pnpm check` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p18c-live-memory-compliance-library-app --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_live_memory_compliance.py -q` | 通过 |
+| P18c 设置冒烟测试 | 通过：准备了 `/Users/luotianhang/Desktop/agenthub-rehearsals/p18c-library-app`、目标 `external-p18c-library-app`、新会话、`memorySnapshotId`、6 个活跃内存规则 ID、AGENTS/CLAUDE 哈希值和上下文包哈希值。 |
+| `pnpm check` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p18c-live-memory-compliance-library-app --strict` | 通过 |
 
 ---
 
-## P18c-1 Memory Compliance Harness
+## P18c-1 内存合规性测试框架
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/live_memory_compliance.py` | Added P18c Library Management App prompt constants, active memory rule definitions, memory-rule seeding helper, provider evidence model, compliance evidence model, compliance report output, and violation checker. |
-| `apps/api/tests/test_live_memory_compliance.py` | Added deterministic coverage for compliant evidence, missing change-log update, platform path modification, unexpected backend/database creation, wrong project location, missing frontend stack, missing provider evidence, snapshot mismatch, prompt boundary, and active canonical memory rule creation. |
-| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | Marked P18c-1 complete. |
+| `apps/api/app/live_memory_compliance.py` | 添加了 P18c 库管理应用提示常量、活跃内存规则定义、内存规则种子化辅助函数、提供者证据模型、合规性证据模型、合规性报告输出和违规检查器。 |
+| `apps/api/tests/test_live_memory_compliance.py` | 添加了确定性测试覆盖，涵盖合规证据、缺失的变更日志更新、平台路径修改、意外的 backend/database 创建、错误项目位置、缺失的前端栈、缺失的提供者证据、快照不匹配、提示边界和活跃规范内存规则创建。 |
+| `openspec/changes/agenthub-p18c-live-memory-compliance-library-app/tasks.md` | 标记 P18c-1 完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_live_memory_compliance.py -q` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `pnpm demo:api:test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p18c-live-memory-compliance-library-app --strict` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_live_memory_compliance.py -q` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `pnpm demo:api:test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p18c-live-memory-compliance-library-app --strict` | 通过 |
 
 ---
 
-## P18b Memory Effectiveness Rehearsal
+## P18b 记忆有效性演练
 
-**Date:** 2026-06-05
+**日期：** 2026-06-05
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/memory_rehearsal.py` | Added P18b scenario fixtures, control/treatment evaluator, structured rehearsal report, provider availability evidence, and aggregate metric reporting. |
-| `apps/api/tests/test_memory_rehearsal.py` | Added coverage for scenario stability, private-data rejection, control/treatment comparison, stale/untrusted exclusion, deterministic report serialization, provider-unavailable evidence, and limitation reasons. |
-| `docs/p18b-freeze-review.md` | Added P18b scenario evidence, metrics, provider availability, validation, and limitations. |
-| `openspec/changes/agenthub-p18b-memory-effectiveness-rehearsal/*` | Added and completed the P18b OpenSpec proposal, design, spec, and task checklist. |
+| `apps/api/app/memory_rehearsal.py` | 添加了 P18b 场景固件、control/treatment 评估器、结构化演练报告、提供者可用性证据以及聚合指标报告。 |
+| `apps/api/tests/test_memory_rehearsal.py` | 增加了对场景稳定性、私有数据拒绝、control/treatment 比较、stale/untrusted 排除、确定性报告序列化、提供者不可用证据以及限制原因的覆盖。 |
+| `docs/p18b-freeze-review.md` | 添加了 P18b 场景证据、指标、提供者可用性、验证和限制。 |
+| `openspec/changes/agenthub-p18b-memory-effectiveness-rehearsal/*` | 添加并完成了 P18b OpenSpec 提案、设计、规范和任务清单。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `pnpm demo:api:test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p18b-memory-effectiveness-rehearsal --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `pnpm demo:api:test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p18b-memory-effectiveness-rehearsal --strict` | 通过 |
 
 ---
 
-## P18 Memory and Instruction Control Plane
+## P18 记忆与指令控制平面
 
-**Date:** 2026-06-04
+**日期：** 2026-06-04
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/memory_instructions.py` | Added deterministic managed instruction bridge for AGENTS/CLAUDE outlet artifacts. |
-| `apps/api/app/memory_snapshots.py` | Added session memory snapshot creation, refresh, and metadata. |
-| `apps/api/app/memory_store.py` | Added canonical memory item model service, lifecycle states, versions, and filters. |
-| `apps/api/app/memory_write_policy.py` | Added explicit user write policy and prompt-injection guard. |
-| `apps/api/app/memory_retrieval.py` | Added keyword/BM25-style retrieval with scoring and metadata filters. |
-| `apps/api/app/external_memory_scan.py` | Added external AGENTS/CLAUDE scan into pending suggestions with conflict detection. |
-| `apps/api/app/memory_evals.py` | Added deterministic memory effectiveness metric helpers. |
-| `apps/web/src/app/settings/memory/page.tsx` / `apps/web/src/components/memory-settings-page-client.tsx` | Added memory management settings UI. |
-| `docs/p18-freeze-review.md` | Added freeze review, metric evidence, validation, and caveats. |
-| `openspec/changes/agenthub-p18-memory-instruction-control-plane/tasks.md` | Marked P18 implementation, eval, non-goal, and freeze tasks complete. |
+| `apps/api/app/memory_instructions.py` | 为 AGENTS/CLAUDE 输出制品添加了确定性托管指令桥接。 |
+| `apps/api/app/memory_snapshots.py` | 添加了会话记忆快照创建、刷新和元数据。 |
+| `apps/api/app/memory_store.py` | 添加了规范记忆项模型服务、生命周期状态、版本和过滤器。 |
+| `apps/api/app/memory_write_policy.py` | 添加了显式用户写入策略和提示注入防护。 |
+| `apps/api/app/memory_retrieval.py` | 添加了带评分和元数据过滤器的 keyword/BM25-style 检索。 |
+| `apps/api/app/external_memory_scan.py` | 添加了将外部 AGENTS/CLAUDE 扫描结果导入待处理建议并附带冲突检测的功能。 |
+| `apps/api/app/memory_evals.py` | 添加了确定性记忆有效性指标辅助函数。 |
+| `apps/web/src/app/settings/memory/page.tsx` / `apps/web/src/components/memory-settings-page-client.tsx` | 添加了记忆管理设置 UI。 |
+| `docs/p18-freeze-review.md` | 添加了冻结审查、指标证据、验证和注意事项。 |
+| `openspec/changes/agenthub-p18-memory-instruction-control-plane/tasks.md` | 标记 P18 实现、评估、非目标和冻结任务为完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p18-memory-instruction-control-plane --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p18-memory-instruction-control-plane --strict` | 通过 |
 
 ---
 
-## Subtle Sidebar Gradient Tuning
+## 微妙的侧边栏渐变调优
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/globals.css` | Reduced palette saturation and softened shared muted/background colors for a more even reference-style gray and pale-cyan tone. |
-| `apps/web/src/components/session-sidebar.tsx` | Tuned the sidebar to a simple, uniform pale-cyan-to-white gradient inspired by the reference UI. |
-| `apps/web/src/components/contact-settings-page-client.tsx` | Matched the contact settings panel to the same subtle gradient family. |
-| `docs/change-log.md` | Recorded the gradient tuning update. |
+| `apps/web/src/app/globals.css` | 降低了调色板饱和度，柔化了共享的 muted/background 颜色，以获得更均匀的参考风格灰色和淡青色色调。 |
+| `apps/web/src/components/session-sidebar.tsx` | 将侧边栏调整为受参考 UI 启发的简单、统一的淡青色到白色渐变。 |
+| `apps/web/src/components/contact-settings-page-client.tsx` | 使联系人设置面板与相同的微妙渐变系列相匹配。 |
+| `docs/change-log.md` | 记录了渐变调优更新。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 10 files / 55 tests. |
-| `git diff --check -- apps/web/src/app/globals.css apps/web/src/components/session-sidebar.tsx apps/web/src/components/contact-settings-page-client.tsx docs/change-log.md` | Pass. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- workspace-shell` | 通过：10 个文件 / 55 个测试。 |
+| `git diff --check -- apps/web/src/app/globals.css apps/web/src/components/session-sidebar.tsx apps/web/src/components/contact-settings-page-client.tsx docs/change-log.md` | 通过。 |
 
 ---
 
-## Project State Governance Refresh
+## 项目状态治理刷新
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/project-state.md` | Recorded the post-P17c UI/settings updates that are present in the working tree but were not part of the original P17c OpenSpec scope. |
-| `README.md` | Clarified that AgentHub is still a local single-user Agent Coding Workspace / multi-agent coding platform prototype, not a complete multi-user IM platform. |
-| `docs/change-log.md` | Recorded this governance refresh. |
+| `docs/project-state.md` | 记录了工作树中存在但不在原始 P17c OpenSpec 范围内的 P17c 后 UI/settings 更新。 |
+| `README.md` | 澄清 AgentHub 仍然是一个本地单用户 Agent 编码工作区/多 Agent 编码平台原型，而非完整的多用户 IM 平台。 |
+| `docs/change-log.md` | 记录了本次治理刷新。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17c-runtime-settings-page --strict` | Pass. |
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | Pass: 10 files / 55 tests. |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17c-runtime-settings-page --strict` | 通过。 |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | 通过：10 个文件 / 55 个测试。 |
 
 ---
 
-## Sidebar Settings Page Navigation
+## 侧边栏设置页面导航
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/session-sidebar.tsx` | Changed Contact Settings, Runtime Settings, and Other Settings into reference-style sidebar links that each navigate to their own settings page, while leaving New Session and scrollable recent sessions in the sidebar. |
-| `apps/web/src/app/settings/contacts/page.tsx` | Added a dedicated Contact Settings page that loads the demo workspace and built-in Agent contacts. |
-| `apps/web/src/components/contact-settings-page-client.tsx` | Added the client-side contact settings view with the compact Agent contact list and Direct/Group visual mode switch. |
-| `apps/web/src/app/settings/other/page.tsx` | Added a dedicated placeholder page for Other Settings. |
-| `apps/web/src/components/agent-contact-list.tsx` | Tightened the built-in Agent contact view so it works as a compact settings page list. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Updated sidebar assertions for settings-page navigation while keeping detailed settings content out of the chat workspace. |
-| `docs/change-log.md` | Recorded the sidebar settings page navigation update. |
+| `apps/web/src/components/session-sidebar.tsx` | 将“更改联系人设置”、“运行时设置”和其他设置改为引用式侧边栏链接，每个链接导航至各自的设置页面，同时将“新建会话”和可滚动的最近会话保留在侧边栏中。 |
+| `apps/web/src/app/settings/contacts/page.tsx` | 新增了专用的“联系人设置”页面，该页面加载演示工作区和内置的 Agent 联系人。 |
+| `apps/web/src/components/contact-settings-page-client.tsx` | 添加了客户端联系人设置视图，包含紧凑的 Agent 联系人列表和 Direct/Group 视觉模式切换开关。 |
+| `apps/web/src/app/settings/other/page.tsx` | 为“其他设置”添加了专用的占位页面。 |
+| `apps/web/src/components/agent-contact-list.tsx` | 收紧了内置 Agent 联系人视图，使其作为紧凑的设置页面列表运行。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 更新了设置页面导航的侧边栏断言，同时将详细的设置内容保留在聊天工作区之外。 |
+| `docs/change-log.md` | 记录了侧边栏设置页面导航的更新。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 10 files / 55 tests. |
-| Browser smoke | Pass: sidebar links route to `/settings/contacts`, `/settings/runtime`, and `/settings/other`; the contact page shows 6 built-in contacts, runtime settings loads, and other settings shows the placeholder page. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- workspace-shell` | 通过：10 个文件 / 55 个测试。 |
+| 浏览器冒烟测试 | 通过：侧边栏链接路由至 `/settings/contacts`、`/settings/runtime` 和 `/settings/other`；联系人页面显示 6 个内置联系人，运行时设置正常加载，其他设置显示占位页面。 |
 
 ---
 
-## Runtime Workspace Target Settings
+## 运行时工作区目标设置
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/lib/api.ts` | Added client APIs and types for workspace targets, external project analysis/registration, and session target selection. |
-| `apps/web/src/components/workspace-target-settings.tsx` | Added a compact workspace settings panel inside runtime settings for external project registration and per-session frontend/backend target selection. |
-| `apps/web/src/components/runtime-settings-page-client.tsx` | Loaded workspace sessions/targets alongside runtime config and wired target save, external project analyze, and external project register actions. |
-| `apps/web/src/components/runtime-settings-page-client.test.tsx` | Covered workspace target loading, session target save, and external project analyze/register flows. |
-| `apps/web/src/lib/api.test.ts` | Covered the new workspace target and external project client APIs. |
-| `docs/change-log.md` | Recorded the runtime workspace target settings update. |
+| `apps/web/src/lib/api.ts` | 为工作区目标、外部项目 analysis/registration 和会话目标选择添加了客户端 API 和类型。 |
+| `apps/web/src/components/workspace-target-settings.tsx` | 在运行时设置中添加了一个紧凑的工作区设置面板，用于外部项目注册和按会话 frontend/backend 的目标选择。 |
+| `apps/web/src/components/runtime-settings-page-client.tsx` | 将工作区 sessions/targets 与运行时配置一同加载，并连接了目标保存、外部项目分析和外部项目注册操作。 |
+| `apps/web/src/components/runtime-settings-page-client.test.tsx` | 覆盖了工作区目标加载、会话目标保存和外部项目 analyze/register 流程。 |
+| `apps/web/src/lib/api.test.ts` | 覆盖了新的工作区目标和外部项目客户端 API。 |
+| `docs/change-log.md` | 记录了运行时工作区目标设置的更新。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- runtime-settings-page-client api` | Pass: 10 files / 55 tests. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client api` | 通过：10 个文件 / 55 个测试。 |
 
 ---
 
-## Workspace Layout Refresh
+## 工作区布局刷新
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/globals.css` | Shifted the workspace palette toward the reference design's gray desktop backdrop, white surfaces, black primary actions, and pale cyan navigation accents. |
-| `apps/web/src/components/workspace-shell.tsx` | Reframed the chat workspace as a rounded three-panel app shell, moved top-header content into the central session panel, and restyled the demo pipeline as compact pills. |
-| `apps/web/src/components/session-sidebar.tsx` | Restyled the sidebar as a soft navigation rail with compact workspace metadata, a stronger new-session action, and cleaner session rows. |
-| `apps/web/src/components/agent-contact-list.tsx` | Simplified the Agent contact list into lighter IM-style rows with bounded metadata pills and compact mode controls. |
-| `apps/web/src/components/chat-thread.tsx` | Tuned chat and orchestrator plan cards to match the new neutral workbench surface and 8px card rhythm. |
-| `apps/web/src/components/mission-panel.tsx` | Aligned the session context strip with the wider central work area. |
-| `apps/web/src/components/message-composer.tsx` | Aligned the composer and follow-up context bar with the refreshed central panel width and radius. |
-| `apps/web/src/components/preview-card.tsx` | Restyled the right-side artifact/preview panel with neutral surfaces, black active tabs, and a simpler empty state. |
-| `apps/web/src/components/task-card-list.tsx` | Matched task timeline cards, labels, and run sections to the refreshed neutral layout. |
-| `docs/change-log.md` | Recorded the workspace layout refresh. |
+| `apps/web/src/app/globals.css` | 将工作区调色板转向参考设计的灰色桌面背景、白色表面、黑色主要操作和浅青色导航强调色。 |
+| `apps/web/src/components/workspace-shell.tsx` | 将聊天工作区重构为圆角三面板应用外壳，将顶部标题内容移至中央会话面板，并将演示流水线重新样式化为紧凑的药丸形状。 |
+| `apps/web/src/components/session-sidebar.tsx` | 将侧边栏重新样式化为柔和的导航轨道，包含紧凑的工作区元数据、更突出的新建会话操作和更清晰的会话行。 |
+| `apps/web/src/components/agent-contact-list.tsx` | 将 Agent 联系人列表简化为更轻量的 IM 风格行，带有有界元数据药丸和紧凑模式控件。 |
+| `apps/web/src/components/chat-thread.tsx` | 调整了聊天和编排器计划卡片，以匹配新的中性工作台表面和 8px 卡片节奏。 |
+| `apps/web/src/components/mission-panel.tsx` | 将会话上下文条与更宽的中央工作区域对齐。 |
+| `apps/web/src/components/message-composer.tsx` | 将编辑器与后续上下文条与刷新后的中央面板宽度和圆角对齐。 |
+| `apps/web/src/components/preview-card.tsx` | 将右侧 artifact/preview 面板重新样式化为中性表面、黑色活动标签和更简单的空状态。 |
+| `apps/web/src/components/task-card-list.tsx` | 使任务时间线卡片、标签和运行部分与刷新后的中性布局相匹配。 |
+| `docs/change-log.md` | 记录了工作区布局刷新。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- workspace-shell page` | Pass: 10 files / 51 tests. |
-| `git diff --check -- apps/web/src/app/globals.css apps/web/src/components/workspace-shell.tsx apps/web/src/components/session-sidebar.tsx apps/web/src/components/agent-contact-list.tsx apps/web/src/components/chat-thread.tsx apps/web/src/components/mission-panel.tsx apps/web/src/components/message-composer.tsx apps/web/src/components/preview-card.tsx apps/web/src/components/task-card-list.tsx docs/change-log.md` | Pass. |
-| Browser smoke | Pass: `http://127.0.0.1:3000` renders the refreshed three-panel workspace without the header text collapse or visible horizontal scrollbars seen in the first smoke pass. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- workspace-shell page` | 通过：10 个文件 / 51 个测试。 |
+| `git diff --check -- apps/web/src/app/globals.css apps/web/src/components/workspace-shell.tsx apps/web/src/components/session-sidebar.tsx apps/web/src/components/agent-contact-list.tsx apps/web/src/components/chat-thread.tsx apps/web/src/components/mission-panel.tsx apps/web/src/components/message-composer.tsx apps/web/src/components/preview-card.tsx apps/web/src/components/task-card-list.tsx docs/change-log.md` | 通过。 |
+| 浏览器冒烟测试 | 通过：`http://127.0.0.1:3000` 渲染了刷新后的三面板工作区，没有出现首次冒烟测试中看到的标题文本折叠或水平滚动条。 |
 
 ---
 
-## Non-task ConversationOutcome Normalization
+## 非任务对话结果规范化
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/llm_planner.py` | Normalized non-task ConversationOutcome payloads by dropping accidental `planDraft`/`codingAgentProvider` noise before schema validation, while keeping `task_plan` strict. |
-| `apps/api/tests/test_planner_contracts.py` | Added coverage for assistant replies that include accidental non-task plan metadata. |
-| `docs/change-log.md` | Recorded the non-task ConversationOutcome normalization fix. |
+| `apps/api/app/llm_planner.py` | 在模式验证前，通过丢弃意外的 `planDraft`/`codingAgentProvider` 噪声，规范化了非任务对话结果负载，同时保持 `task_plan` 严格。 |
+| `apps/api/tests/test_planner_contracts.py` | 增加了对包含意外非任务计划元数据的助手回复的覆盖。 |
+| `docs/change-log.md` | 记录了非任务对话结果规范化修复。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `bash scripts/check-api.sh` | Pass. |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py::test_parse_conversation_outcome_output_ignores_non_task_plan_draft_noise tests/test_planner_contracts.py::test_parse_conversation_outcome_output_accepts_task_plan_wrapper tests/test_planner_contracts.py::test_parse_llm_plan_output_rejects_missing_required_fields -q` | Pass: 3 tests. |
-| `bash scripts/test-api.sh` | Pass: 385 tests. |
-| `pnpm --filter @agenthub/web check` | Pass. |
+| `bash scripts/check-api.sh` | 通过。 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py::test_parse_conversation_outcome_output_ignores_non_task_plan_draft_noise tests/test_planner_contracts.py::test_parse_conversation_outcome_output_accepts_task_plan_wrapper tests/test_planner_contracts.py::test_parse_llm_plan_output_rejects_missing_required_fields -q` | 通过：3 个测试。 |
+| `bash scripts/test-api.sh` | 通过：385 个测试。 |
+| `pnpm --filter @agenthub/web check` | 通过。 |
 
 ---
 
-## Loose Planner Assistant Reply Normalization
+## 宽松规划器助手回复规范化
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/llm_planner.py` | Normalized safe loose assistant JSON such as `{ "reply": "..." }` into `assistant_reply` ConversationOutcome instead of treating it as a legacy PlannerResponse. |
-| `apps/api/tests/test_planner_contracts.py` | Added parser coverage for loose assistant replies while keeping task-plan output strict. |
-| `docs/change-log.md` | Recorded the planner assistant reply normalization fix. |
+| `apps/api/app/llm_planner.py` | 将安全的宽松助手 JSON（例如 `{ "reply": "..." }`）规范化为 `assistant_reply` 对话结果，而不是将其视为旧的规划器响应。 |
+| `apps/api/tests/test_planner_contracts.py` | 增加了对宽松助手回复的解析器覆盖，同时保持任务计划输出严格。 |
+| `docs/change-log.md` | 记录了规划器助手回复规范化修复。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `bash scripts/check-api.sh` | Pass. |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py::test_parse_conversation_outcome_output_normalizes_loose_assistant_reply tests/test_planner_contracts.py::test_parse_llm_plan_output_rejects_missing_required_fields tests/test_llm_planner.py::test_api_planner_invalid_output_creates_no_task -q` | Pass: 4 tests. |
-| `bash scripts/test-api.sh` | Pass: 384 tests. |
-| `pnpm --filter @agenthub/web check` | Pass. |
+| `bash scripts/check-api.sh` | 通过。 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py::test_parse_conversation_outcome_output_normalizes_loose_assistant_reply tests/test_planner_contracts.py::test_parse_llm_plan_output_rejects_missing_required_fields tests/test_llm_planner.py::test_api_planner_invalid_output_creates_no_task -q` | 通过：4 个测试。 |
+| `bash scripts/test-api.sh` | 通过：384 个测试。 |
+| `pnpm --filter @agenthub/web check` | 通过。 |
 
 ---
 
-## Planner Fallback Transparency
+## 规划器兜底透明化
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Changed chat fallback replies to include Planner failure details when the LLM provider call fails, and localized unsupported/unregistered-target fallback copy. |
-| `apps/api/tests/test_planning.py` | Added coverage that failed Planner calls expose an error summary instead of the generic fixed reply. |
-| `apps/api/tests/test_chat_events.py` | Updated message persistence coverage for the localized fallback reply. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Updated UI message refresh coverage for the localized fallback reply. |
-| `docs/change-log.md` | Recorded Planner fallback transparency improvements. |
+| `apps/api/app/planning.py` | 修改了聊天兜底回复，使其在 LLM 提供商调用失败时包含规划器失败详情，并本地化了 unsupported/unregistered-target 兜底文案。 |
+| `apps/api/tests/test_planning.py` | 增加了覆盖，确保失败的规划器调用会暴露错误摘要，而不是通用的固定回复。 |
+| `apps/api/tests/test_chat_events.py` | 更新了本地化兜底回复的消息持久化覆盖。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 更新了本地化兜底回复的 UI 消息刷新覆盖。 |
+| `docs/change-log.md` | 记录了规划器兜底透明化改进。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `bash scripts/check-api.sh` | Pass. |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_failed_llm_router_exposes_error_summary_in_chat_fallback tests/test_planning.py::test_disabled_llm_router_returns_friendly_chat_fallback_without_task tests/test_planning.py::test_unsupported_broad_saas_request_is_handled_honestly tests/test_chat_events.py -q` | Pass: 5 tests. |
-| `bash scripts/test-api.sh` | Pass: 383 tests. |
-| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 10 files, 51 tests. |
+| `bash scripts/check-api.sh` | 通过。 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_failed_llm_router_exposes_error_summary_in_chat_fallback tests/test_planning.py::test_disabled_llm_router_returns_friendly_chat_fallback_without_task tests/test_planning.py::test_unsupported_broad_saas_request_is_handled_honestly tests/test_chat_events.py -q` | 通过：5 个测试。 |
+| `bash scripts/test-api.sh` | 通过：383 个测试。 |
+| `pnpm --filter @agenthub/web test -- workspace-shell` | 通过：10 个文件，51 个测试。 |
 
 ---
 
-## Runtime Planner API Routing Fix
+## 运行时规划器 API 路由修复
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_providers.py` | Made runtime `providerPresetId`, `model`, `baseUrl`, `apiKeyEnv`, and `timeoutSeconds` override the global disabled planner default when resolving Planner API providers. |
-| `apps/api/app/planning.py` | Passed complete Planner runtime configuration into the LLM conversation router. |
-| `apps/api/app/agent_runtime_config.py` | Included Planner API preset/model/base URL/env metadata in runtime config resolution evidence without exposing raw secrets. |
-| `apps/api/tests/test_planner_providers.py` | Covered resolving a runtime DeepSeek-style API preset while the global planner default remains disabled. |
-| `apps/api/tests/test_planning.py` | Covered no-mention routing passing Planner runtime preset/model/baseUrl/apiKeyEnv into the resolver. |
-| `docs/change-log.md` | Recorded the runtime Planner API routing fix. |
+| `apps/api/app/planner_providers.py` | 使运行时 `providerPresetId`、`model`、`baseUrl`、`apiKeyEnv` 和 `timeoutSeconds` 在解析规划器 API 提供商时覆盖全局禁用的规划器默认值。 |
+| `apps/api/app/planning.py` | 将完整的规划器运行时配置传递到 LLM 对话路由器中。 |
+| `apps/api/app/agent_runtime_config.py` | 在运行时配置解析证据中包含了规划器 API preset/model/base URL/env 元数据，而不暴露原始密钥。 |
+| `apps/api/tests/test_planner_providers.py` | 覆盖了在全局规划器默认值保持禁用时解析运行时 DeepSeek 风格 API 预设的情况。 |
+| `apps/api/tests/test_planning.py` | 覆盖了无提及路由将规划器运行时 preset/model/baseUrl/apiKeyEnv 传递到解析器的情况。 |
+| `docs/change-log.md` | 记录了运行时规划器 API 路由修复。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `bash scripts/check-api.sh` | Pass. |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_resolve_planner_provider_supports_runtime_api_preset_over_disabled_default tests/test_planning.py::test_runtime_config_selects_planner_provider_for_no_mention_message tests/test_planning.py::test_disabled_llm_router_returns_friendly_chat_fallback_without_task -q` | Pass: 3 tests. |
-| `bash scripts/test-api.sh` | Pass: 382 tests. |
-| `pnpm --filter @agenthub/web check` | Pass. |
+| `bash scripts/check-api.sh` | 通过。 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_resolve_planner_provider_supports_runtime_api_preset_over_disabled_default tests/test_planning.py::test_runtime_config_selects_planner_provider_for_no_mention_message tests/test_planning.py::test_disabled_llm_router_returns_friendly_chat_fallback_without_task -q` | 通过：3 个测试。 |
+| `bash scripts/test-api.sh` | 通过：382 个测试。 |
+| `pnpm --filter @agenthub/web check` | 通过。 |
 
 ---
 
-## Runtime Profile Provider Warning Cleanup
+## 运行时配置文件提供程序警告清理
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_runtime_config.py` | Stopped warning when a role profile's historical adapter metadata differs from the selected runtime provider adapter; runtime provider remains the execution source of truth. |
-| `apps/api/tests/test_agent_runtime_config.py` | Added coverage that Frontend Agent profile plus Claude Code provider validates without adapter mismatch warnings. |
-| `docs/change-log.md` | Recorded the runtime profile/provider warning cleanup. |
+| `apps/api/app/agent_runtime_config.py` | 当角色配置文件的旧适配器元数据与所选运行时提供程序适配器不同时，停止发出警告；运行时提供程序仍然是执行的事实来源。 |
+| `apps/api/tests/test_agent_runtime_config.py` | 增加了覆盖范围，确保前端代理配置文件与 Claude Code 提供程序组合时，不会出现适配器不匹配的警告。 |
+| `docs/change-log.md` | 记录了运行时 profile/provider 警告清理。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `bash scripts/check-api.sh` | Pass. |
-| `bash scripts/test-api.sh` | Pass: 381 tests. |
-| `git diff --check` | Pass. |
+| `bash scripts/check-api.sh` | 通过。 |
+| `bash scripts/test-api.sh` | 通过：381 个测试。 |
+| `git diff --check` | 通过。 |
 
 ---
 
-## Runtime Settings Save CORS Fix
+## 运行时设置保存 CORS 修复
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/main.py` | Added `PUT` and `OPTIONS` to the API CORS allowlist so browser saves to `/runtime-config` pass preflight. |
-| `apps/api/tests/test_agent_runtime_config.py` | Added a CORS preflight regression test for the runtime config save endpoint. |
-| `docs/change-log.md` | Recorded the runtime settings save fix. |
+| `apps/api/app/main.py` | 将 `PUT` 和 `OPTIONS` 添加到 API CORS 允许列表中，以便浏览器保存到 `/runtime-config` 时能通过预检请求。 |
+| `apps/api/tests/test_agent_runtime_config.py` | 为运行时配置保存端点添加了一个 CORS 预检回归测试。 |
+| `docs/change-log.md` | 记录了运行时设置保存修复。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `bash scripts/check-api.sh` | Pass. |
-| `bash scripts/test-api.sh` | Pass: 381 tests. |
-| `git diff --check` | Pass. |
+| `bash scripts/check-api.sh` | 通过。 |
+| `bash scripts/test-api.sh` | 通过：381 个测试。 |
+| `git diff --check` | 通过。 |
 
 ---
 
-## Runtime Provider Availability Check
+## 运行时提供程序可用性检查
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/provider_health.py` | Added a read-only provider health check helper for Planner API presets, local Claude/Codex CLI providers, and ScriptedMock. |
-| `apps/api/app/schemas.py` | Added runtime provider check request/response schemas. |
-| `apps/api/app/main.py` | Added `POST /workspaces/{workspace_id}/runtime-config/check-provider`. |
-| `apps/api/tests/test_agent_runtime_config.py` | Covered missing Planner API key, auth-free ScriptedMock, and local CLI version probing. |
-| `apps/web/src/lib/api.ts` | Added the runtime provider check client API. |
-| `apps/web/src/lib/api.test.ts` | Covered the provider check client request/response. |
-| `apps/web/src/components/runtime-settings-page-client.tsx` | Wired provider check results into runtime settings draft/config state. |
-| `apps/web/src/components/agent-runtime-settings.tsx` | Added per-role `检测` buttons and visible availability pills. |
-| `apps/web/src/components/runtime-settings-page-client.test.tsx` | Covered checking a provider from the settings page. |
-| `docs/change-log.md` | Recorded the provider availability check feature. |
+| `apps/api/app/provider_health.py` | 为 Planner API 预设、本地 Claude/Codex CLI 提供程序和 ScriptedMock 添加了一个只读的提供程序健康检查辅助函数。 |
+| `apps/api/app/schemas.py` | 添加了运行时提供程序检查 request/response 模式。 |
+| `apps/api/app/main.py` | 添加了 `POST /workspaces/{workspace_id}/runtime-config/check-provider`。 |
+| `apps/api/tests/test_agent_runtime_config.py` | 覆盖了缺少 Planner API 密钥、无需认证的 ScriptedMock 以及本地 CLI 版本探测的情况。 |
+| `apps/web/src/lib/api.ts` | 添加了运行时提供程序检查客户端 API。 |
+| `apps/web/src/lib/api.test.ts` | 覆盖了提供程序检查客户端 request/response. |
+| `apps/web/src/components/runtime-settings-page-client.tsx` | 将提供程序检查结果接入运行时设置 draft/config 状态。 |
+| `apps/web/src/components/agent-runtime-settings.tsx` | 添加了每个角色的 `检测` 按钮和可见的可用性状态标签。 |
+| `检测` | 覆盖了从设置页面检查提供程序的功能。 |
+| `apps/web/src/components/runtime-settings-page-client.test.tsx` | 记录了提供程序可用性检查功能。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `bash scripts/check-api.sh` | Pass. |
-| `bash scripts/test-api.sh` | Pass: 379 tests. |
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- runtime-settings-page-client api` | Pass: 10 files, 51 tests. |
-| `pnpm check` | Pass. |
-| `pnpm test` | Pass: web 10 files / 51 tests; API 379 tests; demo API 5 tests. |
-| `git diff --check` | Pass. |
-| Browser rehearsal | Pass: runtime settings page shows four per-role `检测` buttons with the simplified Chinese settings copy. |
+| `bash scripts/check-api.sh` | 通过。 |
+| `bash scripts/test-api.sh` | 通过：379 个测试。 |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client api` | 通过：10 个文件，51 个测试。 |
+| `pnpm check` | 通过。 |
+| `pnpm test` | 通过：Web 10 个文件 / 51 个测试；API 379 个测试；演示 API 5 个测试。 |
+| `git diff --check` | 通过。 |
+| 浏览器演练 | 通过：运行时设置页面显示四个每个角色的 `检测` 按钮，并带有简体中文设置文案。 |
 
 ---
 
-## Runtime Settings Chinese Copy
+## 运行时设置中文文案
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/settings/runtime/page.tsx` | Changed the runtime settings page header and navigation copy to Chinese. |
-| `apps/web/src/components/agent-runtime-settings.tsx` | Localized the main role labels, form labels, status labels, validation copy, and planner API controls to Chinese while preserving provider proper nouns. |
-| `apps/web/src/components/runtime-settings-page-client.tsx` | Kept loading, save, cancel, and error status messages in Chinese. |
-| `apps/web/src/components/runtime-settings-page-client.test.tsx` | Updated runtime settings tests to assert the Chinese labels. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Updated chat sidebar settings assertions to the Chinese settings labels. |
-| `docs/change-log.md` | Recorded the Chinese copy update. |
+| `apps/web/src/app/settings/runtime/page.tsx` | 将运行时设置页面的标题和导航文案改为中文。 |
+| `apps/web/src/components/agent-runtime-settings.tsx` | 将主要角色标签、表单标签、状态标签、验证文案和 Planner API 控件本地化为中文，同时保留提供程序专有名词。 |
+| `apps/web/src/components/runtime-settings-page-client.tsx` | 保持加载、保存、取消和错误状态消息为中文。 |
+| `apps/web/src/components/runtime-settings-page-client.test.tsx` | 更新了运行时设置测试，以断言中文标签。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 更新了聊天侧边栏设置断言，以使用中文设置标签。 |
+| `docs/change-log.md` | 记录了中文文案更新。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | Pass: 10 files, 49 tests. |
-| `git diff --check` | Pass. |
-| Browser rehearsal | Pass: runtime settings page shows Chinese labels for the main headings, controls, status labels, and actions; old English setting labels are absent. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | 通过：10 个文件，49 个测试。 |
+| `git diff --check` | 通过。 |
+| 浏览器演练 | 通过：运行时设置页面显示中文的主标题、控件、状态标签和操作；旧的英文设置标签已不存在。 |
 
 ---
 
-## Runtime Settings Page Simplification
+## 运行时设置页面简化
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/settings/runtime/page.tsx` | Removed the extra explanatory card and kept the settings page focused on the main form. |
-| `apps/web/src/components/agent-runtime-settings.tsx` | Removed role descriptions, capability/target decoration, and long API key helper copy from the runtime settings form. |
-| `apps/web/src/components/runtime-settings-page-client.test.tsx` | Updated coverage for the simplified status presentation. |
-| `docs/change-log.md` | Recorded this UI simplification. |
+| `apps/web/src/app/settings/runtime/page.tsx` | 移除了额外的说明卡片，使设置页面专注于主表单。 |
+| `apps/web/src/components/agent-runtime-settings.tsx` | 从运行时设置表单中移除了角色描述、capability/target 装饰和冗长的 API 密钥辅助文案。 |
+| `apps/web/src/components/runtime-settings-page-client.test.tsx` | 更新了简化状态展示的覆盖范围。 |
+| `docs/change-log.md` | 记录了此 UI 简化。 |
 
-### Validation
-
-| Command | Result |
+### 验证
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | Pass: 10 files, 49 tests. |
-| `git diff --check` | Pass. |
-| Browser rehearsal | Pass: main roles and Save/Cancel remain visible; explanatory copy is removed; settings page still scrolls. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | 通过：10 个文件，49 个测试。 |
+| `git diff --check` | 通过。 |
+| 浏览器预演 | 通过：主要角色和 Save/Cancel 保持可见；说明性文字已移除；设置页面仍可滚动。 |
 
 ---
 
-## Runtime Settings Page Scroll Fix
+## 运行时设置页面滚动修复
 
-**Date:** 2026-06-02
+**日期：** 2026-06-02
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/settings/runtime/page.tsx` | Changed the settings page scroll container to fixed viewport height so it can scroll under the app-wide hidden body overflow layout. |
-| `docs/change-log.md` | Recorded this UI fix. |
+| `apps/web/src/app/settings/runtime/page.tsx` | 将设置页面滚动容器改为固定视口高度，使其能在应用级隐藏 body 溢出的布局下滚动。 |
+| `docs/change-log.md` | 记录此 UI 修复。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | Pass: 10 files, 49 tests. |
-| `git diff --check` | Pass. |
-| Browser rehearsal | Pass: settings page `<main>` scrolls; measured `scrollHeight` greater than `clientHeight` and scroll position changes. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | 通过：10 个文件，49 个测试。 |
+| `git diff --check` | 通过。 |
+| 浏览器预演 | 通过：设置页面 `<main>` 可滚动；测量到 `scrollHeight` 大于 `clientHeight` 且滚动位置发生变化。 |
 
 ---
 
-## Runtime Settings Navigation Responsiveness
+## 运行时设置导航响应性
 
-**Date:** 2026-06-01
+**日期：** 2026-06-01
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/settings/runtime/page.tsx` | Made the runtime settings route render its page shell immediately instead of awaiting backend workspace fetch before navigation. |
-| `apps/web/src/components/runtime-settings-page-client.tsx` | Moved demo workspace/runtime config loading into the client settings component with an explicit loading message. |
-| `docs/change-log.md` | Recorded this UI responsiveness fix. |
+| `apps/web/src/app/settings/runtime/page.tsx` | 使运行时设置路由立即渲染页面外壳，而不是在导航前等待后端工作区获取。 |
+| `apps/web/src/components/runtime-settings-page-client.tsx` | 将演示 workspace/runtime 配置加载移至客户端设置组件，并附带显式加载消息。 |
+| `docs/change-log.md` | 记录此 UI 响应性修复。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | Pass: 10 files, 48 tests. |
-| `git diff --check` | Pass. |
-| Browser rehearsal | Pass: settings page shell visible shortly after clicking the chat-page settings entry; form loads afterward. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client workspace-shell` | 通过：10 个文件，48 个测试。 |
+| `git diff --check` | 通过。 |
+| 浏览器预演 | 通过：点击聊天页面设置入口后，设置页面外壳很快可见；表单随后加载。 |
 
 ---
 
-## P17c Runtime Settings Page
+## P17c 运行时设置页面
 
-**Date:** 2026-06-01
+**日期：** 2026-06-01
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/session-sidebar.tsx` | Removed the inline runtime settings panel and added a compact settings entry point. |
-| `apps/web/src/app/settings/runtime/page.tsx` | Added the dedicated runtime settings route. |
-| `apps/web/src/components/runtime-settings-page-client.tsx` | Loaded runtime config on the settings page and implemented draft, save, and cancel behavior. |
-| `apps/web/src/components/agent-runtime-settings.tsx` | Organized Planner/Frontend/Backend/Review settings and translated provider status labels. |
-| `apps/web/src/components/workspace-shell.test.tsx` / `apps/web/src/components/runtime-settings-page-client.test.tsx` | Added coverage for chat simplification, save/cancel, draft isolation, and user-facing status labels. |
-| `docs/project-state.md` | Recorded the P17c runtime settings page baseline. |
-| `openspec/changes/agenthub-p17c-runtime-settings-page/tasks.md` | Marked all P17c implementation, validation, rehearsal, and completion tasks done. |
+| `apps/web/src/components/session-sidebar.tsx` | 移除内联运行时设置面板，添加紧凑型设置入口。 |
+| `apps/web/src/app/settings/runtime/page.tsx` | 添加专用运行时设置路由。 |
+| `apps/web/src/components/runtime-settings-page-client.tsx` | 在设置页面上加载运行时配置，并实现草稿、保存和取消行为。 |
+| `apps/web/src/components/agent-runtime-settings.tsx` | 组织 Planner/Frontend/Backend/Review 设置并翻译提供商状态标签。 |
+| `apps/web/src/components/workspace-shell.test.tsx` / `apps/web/src/components/runtime-settings-page-client.test.tsx` | 添加对聊天简化、save/cancel、草稿隔离和面向用户状态标签的覆盖。 |
+| `docs/project-state.md` | 记录 P17c 运行时设置页面基线。 |
+| `openspec/changes/agenthub-p17c-runtime-settings-page/tasks.md` | 标记所有 P17c 实现、验证、预演和完成任务为已完成。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 9 files, 44 tests. |
-| `pnpm --filter @agenthub/web test -- runtime-settings-page-client` | Pass: 10 files, 48 tests. |
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17c-runtime-settings-page --strict` | Pass. |
+| `pnpm --filter @agenthub/web test -- workspace-shell` | 通过：9 个文件，44 个测试。 |
+| `pnpm --filter @agenthub/web test -- runtime-settings-page-client` | 通过：10 个文件，48 个测试。 |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17c-runtime-settings-page --strict` | 通过。 |
 
 ---
 
-## P17b-2.2 Planner Preset Protocol Mapping
+## P17b-2.2 规划器预设协议映射
 
-**Date:** 2026-06-01
+**日期：** 2026-06-01
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_providers.py` | Mapped Planner provider presets to protocol identifiers. |
-| `apps/api/tests/test_planner_providers.py` | Added coverage for preset-to-protocol mapping. |
-| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-2.2 complete. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/planner_providers.py` | 将规划器提供商预设映射到协议标识符。 |
+| `apps/api/tests/test_planner_providers.py` | 添加对预设到协议映射的覆盖。 |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | 标记 P17b-2.2 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_presets_map_to_protocols -q` | Pass: 1 test. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_presets_map_to_protocols -q` | 通过：1 个测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | 通过。 |
 
 ---
 
-## P17b-2.1 Planner Provider Presets
+## P17b-2.1 规划器提供商预设
 
-**Date:** 2026-06-01
+**日期：** 2026-06-01
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_providers.py` | Added built-in Planner provider preset metadata for OpenAI, DeepSeek, MiMo, Anthropic, and custom OpenAI-compatible APIs. |
-| `apps/api/tests/test_planner_providers.py` | Added preset registry coverage. |
-| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-2.1 complete. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/planner_providers.py` | 为 OpenAI、DeepSeek、MiMo、Anthropic 和自定义 OpenAI 兼容 API 添加内置规划器提供商预设元数据。 |
+| `apps/api/tests/test_planner_providers.py` | 添加预设注册表覆盖。 |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | 标记 P17b-2.1 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_preset_registry_lists_builtin_presets -q` | Pass: 1 test. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_preset_registry_lists_builtin_presets -q` | 通过：1 个测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | 通过。 |
 
 ---
-
-## P17b-1.4 Planner Protocol Registry Tests
 
-**Date:** 2026-06-01
+## P17b-1.4 规划器协议注册表测试
 
-### Modified Files
+**日期：** 2026-06-01
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_planner_providers.py` | Added full registry no-secret metadata coverage for planner provider protocols. |
-| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-1.4 complete. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/tests/test_planner_providers.py` | 为规划器提供者协议添加了完整的注册表无密钥元数据覆盖。 |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | 标记 P17b-1.4 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py -q` | Pass: 17 tests. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py -q` | 通过：17 个测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | 通过。 |
 
 ---
 
-## P17b-1.3 Preserve Existing Planner Providers
+## P17b-1.3 保留现有规划器提供者
 
-**Date:** 2026-06-01
+**日期：** 2026-06-01
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_planner_providers.py` | Added regression coverage proving `claude_cli`, `fake_test`, and `disabled` provider resolution remains compatible. |
-| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-1.3 complete. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/tests/test_planner_providers.py` | 添加了回归覆盖，证明 `claude_cli`、`fake_test` 和 `disabled` 提供者解析仍然兼容。 |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | 标记 P17b-1.3 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_existing_planner_provider_resolution_stays_compatible -q` | Pass: 1 test. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_existing_planner_provider_resolution_stays_compatible -q` | 通过：1 个测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | 通过。 |
 
 ---
 
-## P17b-1.2 Planner Provider Capability Flags
+## P17b-1.2 规划器提供者能力标志
 
-**Date:** 2026-06-01
+**日期：** 2026-06-01
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_providers.py` | Added capability flags to PlannerProvider protocol metadata. |
-| `apps/api/tests/test_planner_providers.py` | Added coverage for capability metadata and no-secret fields. |
-| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | Marked P17b-1.2 complete. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/planner_providers.py` | 向 PlannerProvider 协议元数据添加了能力标志。 |
+| `apps/api/tests/test_planner_providers.py` | 添加了能力元数据和无密钥字段的覆盖。 |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/tasks.md` | 标记 P17b-1.2 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_protocol_metadata_exposes_capability_flags -q` | Pass: 1 test. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_protocol_metadata_exposes_capability_flags -q` | 通过：1 个测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | 通过。 |
 
 ---
 
-## P17b-1.1 Planner Provider Protocol Metadata
+## P17b-1.1 规划器提供者协议元数据
 
-**Date:** 2026-06-01
+**日期：** 2026-06-01
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_providers.py` | Added protocol-level PlannerProvider metadata for OpenAI Responses, OpenAI-compatible chat, Anthropic Messages, Claude CLI, fake test, and disabled planner protocols. |
-| `apps/api/tests/test_planner_providers.py` | Added registry coverage for supported planner protocols. |
-| `openspec/changes/agenthub-p17b-multi-provider-planner-api/*` | Added the P17b OpenSpec artifacts and marked P17b-1.1 complete. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/planner_providers.py` | 为 OpenAI Responses、OpenAI 兼容聊天、Anthropic Messages、Claude CLI、假测试和禁用的规划器协议添加了协议级别的 PlannerProvider 元数据。 |
+| `apps/api/tests/test_planner_providers.py` | 添加了受支持规划器协议的注册表覆盖。 |
+| `openspec/changes/agenthub-p17b-multi-provider-planner-api/*` | 添加了 P17b OpenSpec 制品并标记 P17b-1.1 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_protocol_registry_lists_supported_protocols -q` | Pass: 1 test. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | Pass. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_providers.py::test_planner_provider_protocol_registry_lists_supported_protocols -q` | 通过：1 个测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17b-multi-provider-planner-api --strict` | 通过。 |
 
 ---
 
-## SQLite External Target Schema Compatibility
+## SQLite 外部目标模式兼容性
 
-**Date:** 2026-05-31
+**日期：** 2026-05-31
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/db.py` | Added SQLite compatibility columns for legacy `externalprojecttarget` tables, including staging deploy metadata. |
-| `apps/api/tests/test_models.py` | Added a legacy-table regression test that verifies external target queries work after schema compatibility runs. |
-| `docs/change-log.md` | Recorded this bug fix. |
+| `apps/api/app/db.py` | 为遗留的 `externalprojecttarget` 表添加了 SQLite 兼容性列，包括暂存部署元数据。 |
+| `apps/api/tests/test_models.py` | 添加了一个遗留表回归测试，验证模式兼容性运行后外部目标查询是否正常工作。 |
+| `docs/change-log.md` | 记录此错误修复。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_models.py::test_sqlite_schema_compatibility_adds_external_target_staging_columns tests/test_planning.py::test_llm_assistant_reply_creates_orchestrator_message_without_task -q` | Pass: 2 tests. |
-| `pnpm db:init` | Pass; updated the local demo SQLite schema. |
-| `pnpm check:api` | Pass. |
-| `pnpm test:api` | Pass: 320 tests. |
-| `git diff --check` | Pass. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_models.py::test_sqlite_schema_compatibility_adds_external_target_staging_columns tests/test_planning.py::test_llm_assistant_reply_creates_orchestrator_message_without_task -q` | 通过：2 个测试。 |
+| `pnpm db:init` | 通过；更新了本地演示 SQLite 模式。 |
+| `pnpm check:api` | 通过。 |
+| `pnpm test:api` | 通过：320 个测试。 |
+| `git diff --check` | 通过。 |
 
 ---
 
-## P17-8 Rehearsal And Freeze Review
+## P17-8 预演与冻结审查
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_planning.py` | Updated runtime config planner-provider test to use the new ConversationOutcome provider path. |
-| `docs/p17-freeze-review.md` | Added P17 freeze evidence, runtime boundary, validation results, caveats, and recommended tag. |
-| `docs/project-state.md` | Recorded P17 freeze readiness and conversational routing baseline. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-8, non-goals, and validation complete after verification. |
+| `apps/api/tests/test_planning.py` | 更新了运行时配置规划器提供者测试，以使用新的 ConversationOutcome 提供者路径。 |
+| `docs/p17-freeze-review.md` | 添加了 P17 冻结证据、运行时边界、验证结果、注意事项和推荐标签。 |
+| `docs/project-state.md` | 记录了 P17 冻结就绪状态和对话路由基线。 |
+| `docs/change-log.md` | 记录此冻结审查。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 验证后标记 P17-8、非目标和验证完成。 |
 
-### What Changed
+### 变更内容
 
-P17 freeze review confirms AgentHub now treats no-mention and `@orchestrator`
-messages as conversation outcomes first: chat stays chat, task plans are
-validated before scheduling, and coding agents are not invoked for normal
-conversation.
+P17 冻结审查确认 AgentHub 现在将无提及和 `@orchestrator` 消息首先视为对话结果：聊天保持为聊天，任务计划在调度前进行验证，且编码代理不会因正常对话而被调用。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P17 targeted conversational router/schema/reply/plan/fallback/follow-up tests | Pass: 44 tests. |
-| `pnpm check` | Pass. |
-| `pnpm test` | Pass: web 44 tests, API 319 tests, demo-api 5 tests. |
-| `pnpm demo:api:test` | Pass: 5 tests. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p17-conversational-orchestrator-routing --strict` | Pass. |
+| P17 目标对话 router/schema/reply/plan/fallback/follow-up 测试 | 通过：44 个测试。 |
+| `pnpm check` | 通过。 |
+| `pnpm test` | 通过：Web 44 项测试，API 319 项测试，demo-api 5 项测试。 |
+| `pnpm demo:api:test` | 通过：5 项测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p17-conversational-orchestrator-routing --strict` | 通过。 |
 
 ---
 
-## P17-7 Friendly Fallback
+## P17-7 友好兜底
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added friendly pure-chat fallback when LLM routing is disabled/unavailable and marked fallback frontend tasks with `plannerSource: fallback`. |
-| `apps/api/tests/test_planning.py` | Added coverage for disabled-router chat fallback and audited frontend fallback metadata. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-7 complete after targeted validation. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/planning.py` | 当 LLM 路由为 disabled/unavailable 时，添加了友好的纯聊天兜底，并用 `plannerSource: fallback` 标记了前端兜底任务。 |
+| `apps/api/tests/test_planning.py` | 添加了对禁用路由的聊天兜底的覆盖，并审计了前端兜底元数据。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 在定向验证后标记 P17-7 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_disabled_llm_router_returns_friendly_chat_fallback_without_task tests/test_planning.py::test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task -q` | Pass: 2 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_disabled_llm_router_returns_friendly_chat_fallback_without_task tests/test_planning.py::test_no_mention_message_routes_to_orchestrator_and_auto_starts_demo_task -q` | 通过：2 项测试。 |
 
 ---
 
-## P17-6 Follow-up Routing Context
+## P17-6 后续路由上下文
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/canonical_context.py` | Added `missionTrace` to CanonicalSharedContext provider-visible fields. |
-| `apps/api/app/llm_planner.py` | Added mission trace to planner context and allowed follow-up sessions to preserve current task evidence. |
-| `apps/api/app/planning.py` | Allowed Orchestrator messages with existing tasks to enter the LLM router instead of limiting LLM routing to empty sessions. |
-| `apps/api/tests/test_llm_planner.py` | Added planner input coverage for follow-up mission trace context. |
-| `apps/api/tests/test_planning.py` | Added coverage that follow-up messages still call the LLM router. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-6 complete after targeted validation. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/canonical_context.py` | 将 `missionTrace` 添加到 CanonicalSharedContext 提供者可见字段中。 |
+| `apps/api/app/llm_planner.py` | 将任务追踪添加到规划器上下文，并允许后续会话保留当前任务证据。 |
+| `apps/api/app/planning.py` | 允许包含现有任务的编排器消息进入 LLM 路由器，而不是将 LLM 路由限制为空会话。 |
+| `apps/api/tests/test_llm_planner.py` | 为后续任务追踪上下文的规划器输入添加了覆盖。 |
+| `apps/api/tests/test_planning.py` | 添加了覆盖，确保后续消息仍会调用 LLM 路由器。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 在定向验证后标记 P17-6 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_llm_planner_input_includes_followup_mission_trace -q` | Pass: 1 test. |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_followup_message_still_routes_through_llm_router -q` | Pass: 1 test. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py::test_llm_planner_input_includes_followup_mission_trace -q` | 通过：1 项测试。 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_followup_message_still_routes_through_llm_router -q` | 通过：1 项测试。 |
 
 ---
 
-## P17-5 Clarification Refusal And Approval Outcomes
+## P17-5 澄清、拒绝与审批结果
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_planning.py` | Added coverage for clarification, refusal, and approval-required ConversationOutcome replies creating no tasks. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-5 complete after targeted validation. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/tests/test_planning.py` | 添加了对澄清、拒绝和需要审批的 ConversationOutcome 回复不创建任务的覆盖。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 在定向验证后标记 P17-5 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_non_task_conversation_outcomes_do_not_create_tasks -q` | Pass: 3 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_non_task_conversation_outcomes_do_not_create_tasks -q` | 通过：3 项测试。 |
 
 ---
 
-## P17-4 Task Plan Path
+## P17-4 任务规划路径
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_planning.py` | Added coverage for `ConversationOutcome(task_plan)` producing a validated frontend task through the LLM path. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-4 complete after targeted validation. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/tests/test_planning.py` | 添加了对 `ConversationOutcome(task_plan)` 通过 LLM 路径生成已验证前端任务的覆盖。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 在定向验证后标记 P17-4 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_conversation_task_plan_creates_validated_task tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | Pass: 2 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_conversation_task_plan_creates_validated_task tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | 通过：2 项测试。 |
 
 ---
 
-## P17-3 Conversational Reply Path
+## P17-3 对话回复路径
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/llm_planner.py` | Split provider output handling into ConversationOutcome parsing and task-plan persistence so non-task outcomes can stop before task creation. |
-| `apps/api/app/planning.py` | Persisted non-task ConversationOutcome replies as `orchestrator` chat messages with no TaskRun. |
-| `apps/api/tests/test_planning.py` | Added coverage for `你好` producing an orchestrator reply and no tasks. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-3 complete after targeted validation. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/llm_planner.py` | 将提供者输出处理拆分为 ConversationOutcome 解析和任务规划持久化，以便非任务结果可以在任务创建前停止。 |
+| `apps/api/app/planning.py` | 将非任务的 ConversationOutcome 回复持久化为 `orchestrator` 聊天消息，且不包含 TaskRun。 |
+| `apps/api/tests/test_planning.py` | 添加了对 `你好` 生成编排器回复且不创建任务的覆盖。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 在定向验证后标记 P17-3 完成。 |
+| `docs/change-log.md` | 记录此实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_llm_assistant_reply_creates_orchestrator_message_without_task tests/test_planning.py::test_no_mention_message_uses_configured_llm_planner_provider -q` | Pass: 2 tests. |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py -q` | Pass: 5 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_llm_assistant_reply_creates_orchestrator_message_without_task tests/test_planning.py::test_no_mention_message_uses_configured_llm_planner_provider -q` | 通过：2 项测试。 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_llm_planner.py -q` | 通过：5 项测试。 |
 
 ---
 
-## P17-2b LLM-first Orchestrator Entry
+## P17-2b LLM 优先的编排器入口
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/llm_planner.py` | Added ConversationOutcome parsing for LLM planner output while preserving PlannerResponse compatibility for existing tests and fake providers. |
-| `apps/api/app/planner_providers.py` | Updated the Claude CLI planner prompt to request a single ConversationOutcome and separate chat/routing decisions from coding execution. |
-| `apps/api/tests/test_planner_contracts.py` | Added ConversationOutcome parser coverage for task plans and assistant replies. |
-| `apps/api/tests/test_planner_providers.py` | Updated prompt assertions for the ConversationOutcome contract. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-2b complete after targeted validation. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/llm_planner.py` | 为 LLM 规划器输出添加了 ConversationOutcome 解析，同时保持现有测试和模拟提供商的 PlannerResponse 兼容性。 |
+| `apps/api/app/planner_providers.py` | 更新了 Claude CLI 规划器提示，要求返回单个 ConversationOutcome，并将 chat/routing 决策与编码执行分离。 |
+| `apps/api/tests/test_planner_contracts.py` | 为任务计划和助手回复添加了 ConversationOutcome 解析器覆盖。 |
+| `apps/api/tests/test_planner_providers.py` | 更新了针对 ConversationOutcome 契约的提示断言。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 在定向验证后标记 P17-2b 完成。 |
+| `docs/change-log.md` | 记录了本次实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py tests/test_planner_providers.py tests/test_llm_planner.py -q` | Pass: 34 tests. |
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_no_mention_message_uses_configured_llm_planner_provider tests/test_planning.py::test_runtime_config_selects_planner_provider_for_no_mention_message tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | Pass: 3 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py tests/test_planner_providers.py tests/test_llm_planner.py -q` | 通过：34 个测试。 |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_no_mention_message_uses_configured_llm_planner_provider tests/test_planning.py::test_runtime_config_selects_planner_provider_for_no_mention_message tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | 通过：3 个测试。 |
 
 ---
 
-## P17-2a Retire Legacy Signal Gates From Primary Routing
+## P17-2a 从主路由中淘汰旧版信号门
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_planning.py` | Added coverage proving an LLM `task_plan` bypasses legacy safe/unsupported signal gates and reaches PlanValidator/task persistence directly. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-2a complete after targeted validation. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/tests/test_planning.py` | 添加了覆盖测试，证明 LLM `task_plan` 绕过旧版 safe/unsupported 信号门，直接到达 PlanValidator/task 持久化层。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 在定向验证后标记 P17-2a 完成。 |
+| `docs/change-log.md` | 记录了本次实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | Pass: 1 test. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planning.py::test_llm_task_plan_bypasses_legacy_signal_gates -q` | 通过：1 个测试。 |
 
 ---
 
-## P17-1 ConversationOutcome Schema
+## P17-1 ConversationOutcome 模式
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_contracts.py` | Added the `ConversationOutcome` contract for assistant replies, task plans, clarification, refusal, approval-required, unsupported, planner provider evidence, validation result, and fallback/error metadata. |
-| `apps/api/tests/test_planner_contracts.py` | Added schema tests for assistant replies, required task plan drafts, and planner/coding provider evidence separation. |
-| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | Marked P17-1 complete after targeted validation. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/planner_contracts.py` | 为助手回复、任务计划、澄清、拒绝、需要审批、不支持、规划器提供者证据、验证结果和 fallback/error 元数据添加了 `ConversationOutcome` 契约。 |
+| `apps/api/tests/test_planner_contracts.py` | 为助手回复、必需的任务计划草稿以及 planner/coding 提供者证据分离添加了模式测试。 |
+| `openspec/changes/agenthub-p17-conversational-orchestrator-routing/tasks.md` | 在定向验证后标记 P17-1 完成。 |
+| `docs/change-log.md` | 记录了本次实现。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py -q` | Pass: 14 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_planner_contracts.py -q` | 通过：14 个测试。 |
 
 ---
 
-## Chat Message Sync Fix
+## 聊天消息同步修复
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/workspace-shell.tsx` | Refreshed session messages after sending so backend-created Orchestrator replies appear immediately. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added coverage for backend-created replies becoming visible after send. |
-| `docs/change-log.md` | Recorded this fix. |
+| `apps/web/src/components/workspace-shell.tsx` | 在发送消息后刷新会话消息，使后端创建的 Orchestrator 回复立即显示。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 添加了覆盖测试，验证后端创建的回复在发送后可见。 |
+| `docs/change-log.md` | 记录了本次修复。 |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web test -- workspace-shell` | Pass: 9 test files, 44 tests. |
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `git diff --check` | Pass. |
+| `pnpm --filter @agenthub/web test -- workspace-shell` | 通过：9 个测试文件，44 个测试。 |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `git diff --check` | 通过。 |
 
 ---
 
-## P16-7 Rehearsal And Freeze Review
+## P16-7 预演与冻结审查
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p16-freeze-review.md` | Added P16 freeze decision, runtime config evidence, safety caveats, and recommended tag. |
-| `docs/project-state.md` | Recorded P16 freeze readiness and configured role/provider target. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-7, non-goals, and validation complete after verification. |
+| `docs/p16-freeze-review.md` | 添加了 P16 冻结决策、运行时配置证据、安全注意事项和推荐标签。 |
+| `docs/project-state.md` | 记录了 P16 冻结就绪状态，并配置了 role/provider 目标。 |
+| `docs/change-log.md` | 记录了本次冻结审查。 |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | 在验证后标记 P16-7、非目标和验证完成。 |
 
-### What Changed
+### 变更内容
 
-P16 freeze review confirms that runtime config can configure Planner,
-Frontend, and Backend provider defaults while preserving P6-P15b baselines and
-the existing target/approval safety model.
+P16 冻结审查确认运行时配置可以配置 Planner、前端和后端提供者默认值，同时保留 P6-P15b 基线和现有的 target/approval 安全模型。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass. |
-| `pnpm test` | Pass: web 43 tests, API 304 tests, demo-api 5 tests. |
-| `pnpm demo:api:test` | Pass: 5 tests. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p16-agent-runtime-configuration --strict` | Pass. |
+| `pnpm check` | 通过。 |
+| `pnpm test` | 通过：Web 43 个测试，API 304 个测试，demo-api 5 个测试。 |
+| `pnpm demo:api:test` | 通过：5 个测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p16-agent-runtime-configuration --strict` | 通过。 |
 
 ---
 
-## P16-6 Safety And Policy Enforcement
+## P16-6 安全与策略执行
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_runtime_config.py` | Added role/mode policy validation so runtime config cannot assign backend to platform maintenance mode. |
-| `apps/api/tests/test_agent_runtime_config.py` | Added negative API validation coverage for backend platform maintenance mode. |
-| `apps/api/tests/test_task_runs.py` | Added execution coverage proving backend runtime config does not bypass platform approval. |
-| `docs/project-state.md` | Recorded P16-6 safety policy behavior. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-6 complete after validation. |
+| `apps/api/app/agent_runtime_config.py` | 添加了 role/mode 策略验证，确保运行时配置不能将后端分配给平台维护模式。 |
+| `apps/api/tests/test_agent_runtime_config.py` | 为后端平台维护模式添加了负向 API 验证覆盖。 |
+| `apps/api/tests/test_task_runs.py` | 添加了执行覆盖测试，证明后端运行时配置不会绕过平台审批。 |
+| `docs/project-state.md` | 记录了 P16-6 安全策略行为。 |
+| `docs/change-log.md` | 已记录此实现。 |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | 验证后标记 P16-6 完成。 |
 
-### What Changed
+### 变更内容
 
-Runtime config remains subordinate to existing Target Registry, platform mode,
-and approval policy. It can choose safe role providers, but it cannot turn an
-ordinary backend role into unapproved AgentHub platform maintenance.
+运行时配置仍从属于现有的目标注册表、平台模式和审批策略。它可以选择安全的角色提供者，但无法将普通后端角色转变为未经批准的 AgentHub 平台维护。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P16-6 targeted negative policy tests | Pass: 2 tests. |
+| P16-6 定向负向策略测试 | 通过：2 个测试。 |
 
 ---
 
-## P16-5 Runtime Config Evidence
+## P16-5 运行时配置证据
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/schemas.py` | Added top-level `providerAssignment` and `runtimeConfigResolution` fields to TaskRun responses. |
-| `apps/api/app/main.py` | Returned provider/runtime config resolution metadata in TaskRun API responses. |
-| `apps/api/app/mission_trace.py` | Included runtime config resolution in mission trace task-run entries. |
-| `apps/api/app/planning.py` | Attached runtime config resolution to planner evidence for runtime-selected planner runs. |
-| `apps/api/tests/test_planning.py` | Added planner evidence assertions for runtime-selected Planner provider. |
-| `apps/api/tests/test_task_runs.py` | Added TaskRun response and mission trace runtime config evidence coverage. |
-| `docs/project-state.md` | Recorded P16-5 evidence behavior. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-5 complete after validation. |
+| `apps/api/app/schemas.py` | 在 TaskRun 响应中添加了顶层 `providerAssignment` 和 `runtimeConfigResolution` 字段。 |
+| `apps/api/app/main.py` | 在 TaskRun API 响应中返回了 provider/runtime 配置解析元数据。 |
+| `apps/api/app/mission_trace.py` | 在任务追踪的任务运行条目中包含了运行时配置解析信息。 |
+| `apps/api/app/planning.py` | 将运行时配置解析附加到规划器的证据中，用于运行时选择的规划器运行。 |
+| `apps/api/tests/test_planning.py` | 为运行时选择的 Planner 提供者添加了规划器证据断言。 |
+| `apps/api/tests/test_task_runs.py` | 添加了 TaskRun 响应和任务追踪运行时配置证据覆盖。 |
+| `docs/project-state.md` | 记录了 P16-5 证据行为。 |
+| `docs/change-log.md` | 已记录此实现。 |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | 验证后标记 P16-5 完成。 |
 
-### What Changed
+### 变更内容
 
-Runtime config choices are now visible in API and mission trace evidence, making
-Planner/Frontend/Backend provider resolution auditable without exposing
-secrets or protected paths.
+运行时配置选择现在在 API 和任务追踪证据中可见，使得 Planner/Frontend/Backend 提供者解析可审计，同时不暴露密钥或受保护路径。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P16-5 targeted planner/task-run/mission-trace tests | Pass: 3 tests. |
+| P16-5 定向 planner/task-run/mission-trace 测试 | 通过：3 个测试。 |
 
 ---
 
-## P16-4 Runtime Config Resolution
+## P16-4 运行时配置解析
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_runtime_config.py` | Added enabled role resolution metadata for workspace runtime config. |
-| `apps/api/app/planner_providers.py` | Allowed explicit runtime provider IDs such as `claude-cli-planner` to resolve the real Claude CLI planner. |
-| `apps/api/app/planning.py` | Routed no-mention Orchestrator planning through enabled Planner runtime config when present. |
-| `apps/api/app/provider_assignments.py` | Added runtime-config provider assignment source before legacy matrix/default selection. |
-| `apps/api/app/task_runs.py` | Applied enabled Frontend/Backend runtime config to TaskRun adapter/provider selection. |
-| `apps/api/tests/test_planner_providers.py` | Added runtime provider ID resolver coverage. |
-| `apps/api/tests/test_planning.py` | Added Planner runtime config routing coverage. |
-| `apps/api/tests/test_task_runs.py` | Added Frontend/Backend runtime adapter override coverage. |
-| `docs/project-state.md` | Recorded P16-4 behavior and next evidence step. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-4 complete after validation. |
+| `apps/api/app/agent_runtime_config.py` | 为工作区运行时配置添加了已启用的角色解析元数据。 |
+| `apps/api/app/planner_providers.py` | 允许显式的运行时提供者 ID（如 `claude-cli-planner`）解析真实的 Claude CLI 规划器。 |
+| `apps/api/app/planning.py` | 当存在已启用的 Planner 运行时配置时，将无提及的 Orchestrator 规划路由到该配置。 |
+| `apps/api/app/provider_assignments.py` | 在传统的 matrix/default 选择之前添加了运行时配置提供者分配来源。 |
+| `apps/api/app/task_runs.py` | 将已启用的 Frontend/Backend 运行时配置应用于 TaskRun adapter/provider 选择。 |
+| `apps/api/tests/test_planner_providers.py` | 添加了运行时提供者 ID 解析器覆盖。 |
+| `apps/api/tests/test_planning.py` | 添加了 Planner 运行时配置路由覆盖。 |
+| `apps/api/tests/test_task_runs.py` | 添加了 Frontend/Backend 运行时适配器覆盖覆盖。 |
+| `docs/project-state.md` | 记录了 P16-4 行为和下一步证据步骤。 |
+| `docs/change-log.md` | 已记录此实现。 |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | 验证后标记 P16-4 完成。 |
 
-### What Changed
+### 变更内容
 
-Runtime config now affects actual planner and code-agent resolution while
-preserving explicit adapter overrides and legacy defaults when no config exists.
+运行时配置现在影响实际的规划器和代码代理解析，同时保留显式适配器覆盖和不存在配置时的传统默认值。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P16-4 targeted planner/provider/task-run tests | Pass: 5 tests. |
+| P16-4 定向 planner/provider/task-run 测试 | 通过：5 个测试。 |
 
 ---
 
-## P16-3 Agent Runtime Settings UI
+## P16-3 代理运行时设置 UI
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/lib/api.ts` | Added Agent Runtime Config types plus GET/PUT client helpers. |
-| `apps/web/src/components/agent-runtime-settings.tsx` | Added the sidebar runtime settings UI for Planner, Frontend, and Backend roles. |
-| `apps/web/src/components/session-sidebar.tsx` | Added a slot for the runtime settings panel. |
-| `apps/web/src/components/workspace-shell.tsx` | Loaded/saved workspace runtime config and wired the runtime settings panel. |
-| `apps/web/src/lib/api.test.ts` | Added runtime config client helper coverage. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added runtime settings render coverage. |
-| `docs/project-state.md` | Recorded P16-3 behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-3 complete after validation. |
+| `apps/web/src/lib/api.ts` | 添加了代理运行时配置类型及 GET/PUT 客户端辅助函数。 |
+| `apps/web/src/components/agent-runtime-settings.tsx` | 为 Planner、Frontend 和 Backend 角色添加了侧边栏运行时设置 UI。 |
+| `apps/web/src/components/session-sidebar.tsx` | 为运行时设置面板添加了一个插槽。 |
+| `apps/web/src/components/workspace-shell.tsx` | Loaded/saved 工作区运行时配置并连接了运行时设置面板。 |
+| `apps/web/src/lib/api.test.ts` | 添加了运行时配置客户端辅助函数覆盖。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 添加了运行时设置渲染覆盖。 |
+| `docs/project-state.md` | 记录了 P16-3 行为和限制。 |
+| `docs/change-log.md` | 已记录此实现。 |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | 验证后标记 P16-3 完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub now has a user-facing runtime settings panel for configuring Planner,
-Frontend, and Backend Agent defaults from existing safe profile/provider
-metadata. The UI persists through the runtime config API but does not yet affect
-actual provider resolution.
+AgentHub 现在拥有面向用户的运行时设置面板，用于从现有安全的 profile/provider 元数据配置 Planner、Frontend 和 Backend 代理默认值。UI 通过运行时配置 API 持久化，但尚未影响实际的提供者解析。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass. |
-| `pnpm --filter @agenthub/web test` | Pass: 43 tests. |
+| `pnpm --filter @agenthub/web check` | 通过。 |
+| `pnpm --filter @agenthub/web test` | 通过：43 个测试。 |
 
 ---
 
-## P16-2 Runtime Config API
+## P16-2 运行时配置 API
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/provider_configs.py` | Added `claude-cli-planner` provider metadata for configurable Planner Agent selection. |
-| `apps/api/app/agent_runtime_config.py` | Added runtime config validation against AgentProfile and ProviderConfig metadata. |
-| `apps/api/app/schemas.py` | Added runtime config request/response and validation schemas. |
-| `apps/api/app/main.py` | Added runtime config GET, validate, and PUT workspace endpoints. |
-| `apps/api/tests/test_agent_runtime_config.py` | Added runtime config API default, validation, persistence, and invalid-assignment tests. |
-| `apps/api/tests/test_models.py` | Updated the model boundary whitelist for `AgentRuntimeConfig`. |
-| `apps/api/tests/test_provider_configs.py` | Updated provider registry expectations for the planner provider. |
-| `docs/project-state.md` | Recorded P16-2 behavior and remaining limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | Marked P16-2 complete after validation. |
+| `apps/api/app/provider_configs.py` | 添加了 `claude-cli-planner` 提供者元数据，用于可配置的 Planner 代理选择。 |
+| `apps/api/app/agent_runtime_config.py` | 新增针对 AgentProfile 和 ProviderConfig 元数据的运行时配置验证。 |
+| `apps/api/app/schemas.py` | 新增运行时配置 request/response 和验证模式。 |
+| `apps/api/app/main.py` | 新增运行时配置 GET、validate 和 PUT 工作区端点。 |
+| `apps/api/tests/test_agent_runtime_config.py` | 新增运行时配置 API 默认值、验证、持久化和无效赋值测试。 |
+| `apps/api/tests/test_models.py` | 更新了 `AgentRuntimeConfig` 的模型边界白名单。 |
+| `apps/api/tests/test_provider_configs.py` | 更新了规划器提供者的提供者注册表预期。 |
+| `docs/project-state.md` | 记录了 P16-2 行为及剩余限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/tasks.md` | 验证后将 P16-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Workspace runtime config can now be read, validated, and persisted through API
-endpoints. The API exposes safe selectable provider/profile metadata and blocks
-invalid role/profile/provider/mode combinations before persistence.
+现在可以通过 API 端点读取、验证和持久化工作区运行时配置。该 API 暴露了安全可选的 provider/profile 元数据，并在持久化之前阻止无效的 role/profile/provider/mode 组合。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py tests/test_provider_configs.py -q` | Pass: 9 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py tests/test_provider_configs.py -q` | 通过：9 个测试。 |
 
 ---
 
-## P16-1 Agent Runtime Config Model
+## P16-1 Agent 运行时配置模型
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added `AgentRuntimeConfig` table model for workspace/global-scoped runtime role defaults. |
-| `apps/api/app/agent_runtime_config.py` | Added runtime role config dataclasses, default effective config, workspace config upsert, JSON serialization, and unsupported-role validation. |
-| `apps/api/tests/test_agent_runtime_config.py` | Added model/default/round-trip/serialization tests. |
-| `docs/project-state.md` | Recorded P16-1 behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p16-agent-runtime-configuration/*` | Added P16 OpenSpec artifacts and marked P16-1 complete after validation. |
+| `apps/api/app/models.py` | 为 workspace/global-scoped 运行时角色默认值新增了 `AgentRuntimeConfig` 表模型。 |
+| `apps/api/app/agent_runtime_config.py` | 新增了运行时角色配置数据类、默认有效配置、工作区配置 upsert、JSON 序列化以及不支持角色的验证。 |
+| `apps/api/tests/test_agent_runtime_config.py` | 新增了 model/default/round-trip/serialization 测试。 |
+| `docs/project-state.md` | 记录了 P16-1 行为及限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p16-agent-runtime-configuration/*` | 新增了 P16 OpenSpec 制品，并在验证后将 P16-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub can now persist a workspace-level runtime configuration skeleton for
-planner, frontend, backend, and review roles. If no config exists, effective
-runtime config reports `configSource=default` with disabled overrides, so
-existing provider behavior remains unchanged.
+AgentHub 现在可以为规划器、前端、后端和审查角色持久化工作区级别的运行时配置骨架。如果不存在配置，有效运行时配置会报告 `configSource=default` 并禁用覆盖，因此现有提供者行为保持不变。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py -q` | Pass: 4 tests. |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_agent_runtime_config.py -q` | 通过：4 个测试。 |
 
 ---
 
-## P15b-7 Real LLM Planner Breakout Rehearsal And Freeze Review
+## P15b-7 真实 LLM 规划器突破预演与冻结审查
 
-**Date:** 2026-05-29
+**日期：** 2026-05-29
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Wired no-mention orchestrator planning to the real LLM planner provider when enabled; preserved deterministic fallback on planner failure; included safe explicitly referenced demo frontend files in direct assignment plans. |
-| `apps/api/app/planner_providers.py` | Tightened the Claude CLI planner prompt to require one PlannerResponse JSON object, bounded tasks, valid roles, valid artifact types, and stable dependency aliases. |
-| `apps/api/app/planner_contracts.py` | Safely normalized real-provider `version` and `guardrailNotes` variants that appeared during smoke. |
-| `apps/api/app/plan_validator.py` | Allowed configured validation commands with safe result suffixes such as `pnpm build succeeds` while still rejecting unsupported commands. |
-| `apps/api/app/llm_planner.py` | Normalized safe target-based dependency aliases before task graph validation. |
-| `apps/api/app/main.py` | Allowed planned `llm_v1` review tasks to be satisfied by generated review artifacts. |
-| `apps/api/app/scheduler.py` | Treated completed upstream dependency diff files as safe dirty-worktree context for downstream follow-up tasks. |
-| `apps/api/tests/test_llm_planner.py` | Added dependency-alias normalization and safe command-note validation coverage. |
-| `apps/api/tests/test_planner_contracts.py` | Added safe scalar normalization coverage. |
-| `apps/api/tests/test_planner_providers.py` | Updated Claude CLI planner prompt assertions. |
-| `apps/api/tests/test_planning.py` | Added real planner routing test coverage and safe referenced demo file coverage. |
-| `apps/api/tests/test_scheduler.py` | Added downstream dirty-worktree inheritance coverage for completed dependency diffs. |
-| `apps/api/tests/test_task_runs.py` | Added coverage for generated review artifacts satisfying planned `llm_v1` review tasks. |
-| `docs/p15b-freeze-review.md` | Added P15b freeze decision, first failed run evidence, follow-up fix evidence, build/preview/staging evidence, caveats, and recommended tag. |
-| `docs/project-state.md` | Recorded P15b-7 behavior, evidence, and remaining caveats. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-7 and validation complete after verification. |
+| `apps/api/app/planning.py` | 在启用时，将无提及编排器规划连接到真实 LLM 规划器提供者；在规划器失败时保留确定性兜底；在直接分配计划中包含安全且明确引用的演示前端文件。 |
+| `apps/api/app/planner_providers.py` | 收紧 Claude CLI 规划器提示，要求一个 PlannerResponse JSON 对象、有界任务、有效角色、有效制品类型以及稳定的依赖别名。 |
+| `apps/api/app/planner_contracts.py` | 安全地规范化了冒烟测试期间出现的真实提供者 `version` 和 `guardrailNotes` 变体。 |
+| `apps/api/app/plan_validator.py` | 允许配置的验证命令带有安全结果后缀，例如 `pnpm build succeeds`，同时仍拒绝不支持的命令。 |
+| `pnpm build succeeds` | 在任务图验证之前规范化了安全的基于目标的依赖别名。 |
+| `apps/api/app/llm_planner.py` | 允许计划的 `llm_v1` 审查任务由生成的审查制品满足。 |
+| `apps/api/app/main.py` | 将已完成的上级依赖差异文件视为下游后续任务的安全脏工作区上下文。 |
+| `llm_v1` | 新增了依赖别名规范化和安全命令注释验证覆盖。 |
+| `apps/api/app/scheduler.py` | 新增了安全标量规范化覆盖。 |
+| `apps/api/tests/test_llm_planner.py` | 更新了 Claude CLI 规划器提示断言。 |
+| `apps/api/tests/test_planner_contracts.py` | 新增了真实规划器路由测试覆盖和安全引用的演示文件覆盖。 |
+| `apps/api/tests/test_planner_providers.py` | 新增了已完成依赖差异的下游脏工作区继承覆盖。 |
+| `apps/api/tests/test_planning.py` | 新增了生成的审查制品满足计划 `llm_v1` 审查任务的覆盖。 |
+| `apps/api/tests/test_scheduler.py` | 新增了 P15b 冻结决策、首次失败运行证据、后续修复证据、build/preview/staging 证据、注意事项和推荐标签。 |
+| `apps/api/tests/test_task_runs.py` | 记录了 P15b-7 行为、证据和剩余注意事项。 |
+| `llm_v1` | 记录了本次冻结审查。 |
+| `docs/p15b-freeze-review.md` | 在验证后将 P15b-7 和验证标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P15b now proves the real LLM planner path end to end: the Breakout request was
-planned by the Claude CLI planner provider with planner source `real_llm`, then
-executed through real coding adapters. The initial Claude Code implementation
-produced diff/review/preview evidence but failed local staging deploy because
-`pnpm build` caught a TypeScript strictness error. A follow-up fix used the same
-AgentHub task/run path; Claude Code recorded a real provider runtime error, then
-Codex completed the fix, build passed, preview was healthy, and local staging
-deploy was ready.
+P15b 现在端到端地证明了真实 LLM 规划器路径：Breakout 请求被
+由 Claude CLI 规划器提供者规划，规划源为 `real_llm`，然后
+通过真实编码适配器执行。最初的 Claude Code 实现产生了 diff/review/preview 证据，但因 `pnpm build` 捕获到 TypeScript 严格性错误而导致本地暂存部署失败。后续修复使用了相同的 AgentHub task/run 路径；Claude Code 记录了一个真实的提供者运行时错误，然后 Codex 完成了修复，构建通过，预览健康，本地暂存部署准备就绪。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15b-7 real planner / Breakout smoke | Pass after follow-up: staging deploy `f26b64e1-0174-46be-8040-e978b7eacd22` ready at `http://127.0.0.1:65495`. |
-| P15b-7 targeted planner / scheduler / task-run tests | Pass: 31 tests. |
-| `pnpm check` | Pass. |
-| `pnpm test` | Pass: web 41 tests, API 289 tests, demo-api 5 tests. |
-| `pnpm demo:api:test` | Pass: 5 tests. |
-| `git diff --check` | Pass. |
-| `openspec validate agenthub-p15b-real-llm-planner-engine --strict` | Pass. |
+| P15b-7 真实规划器 / 冒烟测试 | 后续修复后通过：暂存部署 `f26b64e1-0174-46be-8040-e978b7eacd22` 在 `http://127.0.0.1:65495` 就绪。 |
+| P15b-7 定向规划器 / 调度器 / 任务运行测试 | 通过：31 个测试。 |
+| `pnpm check` | 通过。 |
+| `pnpm test` | 通过：web 41 个测试，API 289 个测试，demo-api 5 个测试。 |
+| `pnpm demo:api:test` | 通过：5 个测试。 |
+| `git diff --check` | 通过。 |
+| `openspec validate agenthub-p15b-real-llm-planner-engine --strict` | 通过。 |
 
 ---
 
-## P15b-6 Planner Evidence And Mission Trace
+## P15b-6 规划器证据与任务追踪
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/llm_planner.py` | Recorded safe planner evidence on created `llm_v1` tasks, including provider identity, source, duration, validation result, rationale, plan ID, and created task IDs. |
-| `apps/api/app/mission_trace.py` | Exposed planner evidence for real/fake LLM, disabled/fallback, and deterministic planning paths in mission trace task entries. |
-| `apps/api/tests/test_llm_planner.py` | Added planner evidence and mission trace coverage for fake/test planner output without raw provider output leakage. |
-| `docs/project-state.md` | Recorded P15b-6 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-6 complete after verification. |
+| `apps/api/app/llm_planner.py` | 在创建的 `llm_v1` 个任务上记录了安全的规划器证据，包括提供者身份、来源、持续时间、验证结果、理由、计划 ID 和创建的任务 ID。 |
+| `apps/api/app/mission_trace.py` | 在任务追踪条目中，为 real/fake LLM、disabled/fallback 和确定性规划路径暴露了规划器证据。 |
+| `apps/api/tests/test_llm_planner.py` | 为 fake/test 规划器输出添加了规划器证据和任务追踪覆盖，且不泄露原始提供者输出。 |
+| `docs/project-state.md` | 记录了 P15b-6 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | 验证后将 P15b-6 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-`llm_v1` task plans now keep auditable planner evidence after successful schema
-and policy validation. Mission trace exposes planner source as real/fake,
-disabled/fallback, or deterministic depending on the path. Evidence is metadata
-only; raw provider output and credentials are not included.
+`llm_v1` 个任务计划在通过模式和政策验证后，现在保留可审计的规划器证据。任务追踪根据路径将规划器来源暴露为 real/fake、disabled/fallback 或确定性。证据仅为元数据；不包含原始提供者输出和凭据。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15b-6 targeted planner evidence / mission trace tests | Pass: 6 tests. |
+| P15b-6 定向规划器证据 / 任务追踪测试 | 通过：6 个测试。 |
 
 ---
 
-## P15b-5 PlanValidator Hardening For Real LLM Output
+## P15b-5 针对真实 LLM 输出的 PlanValidator 强化
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/plan_validator.py` | Hardened task graph validation for registered target policy, platform mode, agent profile capability/safety, validation command policy, and dependency keys. |
-| `apps/api/app/llm_planner.py` | Passed enabled AgentProfile metadata into PlanValidator for `llm_v1` task creation. |
-| `apps/api/tests/test_llm_planner.py` | Added rejection coverage for unsafe role/write capability and unsupported validation command output. |
-| `docs/project-state.md` | Recorded P15b-5 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-5 complete after verification. |
+| `apps/api/app/plan_validator.py` | 强化了针对已注册目标策略、平台模式、AgentProfile capability/safety、验证命令策略和依赖键的任务图验证。 |
+| `apps/api/app/llm_planner.py` | 将启用的 AgentProfile 元数据传递给 PlanValidator，用于 `llm_v1` 任务创建。 |
+| `apps/api/tests/test_llm_planner.py` | 添加了对不安全 role/write 能力和不支持的验证命令输出的拒绝覆盖。 |
+| `docs/project-state.md` | 记录了 P15b-5 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | 验证后将 P15b-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Real LLM candidate task graphs now pass through stricter policy validation
-before tasks are persisted. Validation checks known targets, target path policy,
-platform mode/approval requirements, AgentProfile supported targets/modes,
-safe-for-write and safe-for-review flags, dependency key references, and
-target-scoped validation command policy.
+真实的 LLM 候选任务图在任务持久化之前，现在会通过更严格的策略验证。验证检查已知目标、目标路径策略、平台 mode/approval 要求、AgentProfile 支持的 targets/modes、安全写入和安全审查标志、依赖键引用以及目标范围的验证命令策略。
 
-Unsafe plans fail honestly before TaskRun auto-start or persistence.
+不安全的计划会在 TaskRun 自动启动或持久化之前诚实地失败。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15b-5 targeted LLM planner/contract/planning tests | Pass: 40 tests. |
+| P15b-5 定向 LLM planner/contract/planning 测试 | 通过：40 个测试。 |
 
 ---
 
-## P15b-4 Structured Output Parsing And Validation
+## P15b-4 结构化输出解析与验证
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/llm_planner.py` | Added safe JSON extraction for a single embedded planner JSON object and rejection for ambiguous multiple payloads. |
-| `apps/api/tests/test_planner_contracts.py` | Added embedded JSON extraction, ambiguous JSON rejection, missing-field rejection, and no-silent-normalization coverage. |
-| `docs/project-state.md` | Recorded P15b-4 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-4 complete after verification. |
+| `apps/api/app/llm_planner.py` | 为单个嵌入的规划器 JSON 对象添加了安全的 JSON 提取，并拒绝歧义的多个负载。 |
+| `apps/api/tests/test_planner_contracts.py` | 添加了嵌入的 JSON 提取、歧义 JSON 拒绝、缺失字段拒绝和无静默归一化覆盖。 |
+| `docs/project-state.md` | 记录了 P15b-4 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | 验证后将 P15b-4 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Planner output parsing now accepts either direct JSON or one safely extracted
-outer JSON object from provider prose/fenced output. Multiple outer JSON
-payloads are treated as ambiguous and rejected. The extracted payload still
-must satisfy the `PlannerResponse` schema before task graph validation.
+规划器输出解析现在接受直接的 JSON 或从提供者 prose/fenced 输出中安全提取的一个外层 JSON 对象。多个外层 JSON 负载被视为歧义并被拒绝。提取的负载在任务图验证之前仍必须满足 `PlannerResponse` 模式。
 
-The parser does not silently rewrite unknown targets, roles, paths, or unsafe
-values into allowed values; those continue into policy validation unchanged and
-must be rejected there.
+解析器不会静默地将未知目标、角色、路径或不安全值重写为允许的值；这些值会原封不动地进入策略验证，并必须在那里被拒绝。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15b-4 targeted planner contract/LLM planner/provider tests | Pass: 24 tests. |
+| P15b-4 定向规划器 contract/LLM planner/provider 测试 | 通过：24 个测试。 |
 
 ---
 
-## P15b-3 Real Planner Provider Implementation
+## P15b-3 真实规划器提供者实现
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_providers.py` | Added `claude_cli` real planner provider path, constrained command shape, timeout handling, and normalized auth/quota/runtime/unavailable errors. |
-| `apps/api/app/config.py` | Added `AGENTHUB_LLM_PLANNER_TIMEOUT_SEC` for real planner provider timeout control. |
-| `apps/api/tests/test_planner_providers.py` | Added `claude_cli` resolver, command-shape, success, timeout, missing binary, and normalized error coverage. |
-| `docs/project-state.md` | Recorded P15b-3 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-3 complete after verification. |
+| `apps/api/app/planner_providers.py` | 添加了 `claude_cli` 真实规划器提供者路径，约束了命令形态，超时处理，并规范化了 auth/quota/runtime/unavailable 错误。 |
+| `apps/api/app/config.py` | 为真实规划器提供者超时控制添加了 `AGENTHUB_LLM_PLANNER_TIMEOUT_SEC`。 |
+| `apps/api/tests/test_planner_providers.py` | 添加了 `claude_cli` 解析器、命令形态、成功、超时、缺少二进制文件和规范化错误覆盖。 |
+| `docs/project-state.md` | 记录了 P15b-3 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | 验证后将 P15b-3 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub can now explicitly select `AGENTHUB_LLM_PLANNER_PROVIDER=claude_cli`
-as a real planner provider. The provider invokes Claude CLI in print mode with
-a planning-only prompt, captures stdout/stderr, applies a timeout, and records
-normalized failures for auth, quota, timeout, unavailable executable, empty
-output, and runtime errors.
+AgentHub 现在可以显式选择 `AGENTHUB_LLM_PLANNER_PROVIDER=claude_cli`
+作为真实规划器提供者。该提供者以打印模式调用 Claude CLI，并附带
+仅用于规划的提示词，捕获 stdout/stderr，应用超时，并记录
+针对认证、配额、超时、可执行文件不可用、空输出
+和运行时错误的规范化失败。
 
-This only adds the real provider path. It does not run a real planner smoke,
-does not claim planner success, and still requires structured parsing,
-validation, and later rehearsal before freeze.
+这仅添加了真实提供者路径。它不会运行真实规划器的冒烟测试，
+不会声称规划成功，并且在冻结之前仍然需要结构化解析、
+验证和后续演练。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15b-3 targeted planner provider/contract/LLM planner tests | Pass: 20 tests. |
+| P15b-3 目标规划器 provider/contract/LLM 规划器测试 | 通过：20 个测试。 |
 
 ---
 
-## P15b-2 Planner Request / Response Contract
+## P15b-2 规划器请求/响应契约
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_contracts.py` | Added `PlannerRequest`, `PlannerResponse`, planner task response schema, and provider-visible redaction helper. |
-| `apps/api/app/llm_planner.py` | Added `build_llm_planner_request`, routed existing planner input through the request contract, and schema-validates planner output with `PlannerResponse`. |
-| `apps/api/tests/test_planner_contracts.py` | Added request context, protected-value redaction, response schema, incomplete response rejection, and parse integration coverage. |
-| `apps/api/tests/test_llm_planner.py` | Updated fake planner payloads to the formal response contract. |
-| `docs/project-state.md` | Recorded P15b-2 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-2 complete after verification. |
+| `apps/api/app/planner_contracts.py` | 添加了 `PlannerRequest`、`PlannerResponse`、规划器任务响应模式，以及提供者可见的编辑辅助函数。 |
+| `apps/api/app/llm_planner.py` | 添加了 `build_llm_planner_request`，将现有规划器输入通过请求契约路由，并使用 `PlannerResponse` 对规划器输出进行模式验证。 |
+| `apps/api/tests/test_planner_contracts.py` | 添加了请求上下文、受保护值编辑、响应模式、不完整响应拒绝以及解析集成覆盖。 |
+| `apps/api/tests/test_llm_planner.py` | 将伪造规划器负载更新为正式响应契约。 |
+| `docs/project-state.md` | 记录了 P15b-2 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | 验证后将 P15b-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-`llm_v1` planning now has formal request and response contracts. The request
-preserves the original user request, includes canonical context, target
-registry/project analyzer summaries, recent messages, artifact references,
-supported roles/modes/capabilities, and guardrails, then redacts provider-visible
-secret-like values and protected absolute paths.
+`llm_v1` 规划现在具有正式的请求和响应契约。请求
+保留原始用户请求，包含规范上下文、目标
+registry/project 分析器摘要、最近消息、制品引用、
+支持的 roles/modes/capabilities 和护栏，然后编辑提供者可见的
+类似秘密的值和受保护的绝对路径。
 
-Planner output is now checked against `PlannerResponse` before the existing
-PlanValidator path. This defines the required plan/task fields that later real
-provider output must satisfy.
+规划器输出现在在现有的 PlanValidator 路径之前，根据 `PlannerResponse` 进行检查。
+这定义了后续真实提供者输出必须满足的必需 plan/task 字段。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15b-2 targeted planner contract/provider/planning tests | Pass: 40 tests. |
+| P15b-2 目标规划器 contract/provider/planning 测试 | 通过：40 个测试。 |
 
 ---
 
-## P15b-1 Planner Provider Abstraction
+## P15b-1 规划器提供者抽象
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planner_providers.py` | Added planner provider interface, result/error metadata, disabled provider, fake/test provider, and explicit provider resolver. |
-| `apps/api/app/config.py` | Added `AGENTHUB_LLM_PLANNER_PROVIDER` setting with disabled default. |
-| `apps/api/app/llm_planner.py` | Wired planner provider result metadata into LLM planner task metadata and fallback metadata. |
-| `apps/api/app/planning.py` | Recorded selected planner provider metadata in deterministic fallback plans and rejected unknown planner provider configuration honestly. |
-| `apps/api/tests/test_planner_providers.py` | Added provider abstraction, disabled/fake provider, selection, invalid provider, and fallback metadata coverage. |
-| `apps/api/tests/test_llm_planner.py` | Updated LLM planner tests to use the fake/test planner provider result contract. |
-| `apps/api/tests/test_planning.py` | Updated fallback metadata expectations to include planner provider identity and source. |
-| `docs/project-state.md` | Recorded P15b-1 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | Marked P15b-1 complete after verification. |
+| `apps/api/app/planner_providers.py` | 添加了规划器提供者接口、result/error 元数据、禁用提供者、fake/test 提供者和显式提供者解析器。 |
+| `apps/api/app/config.py` | 添加了默认值为禁用的 `AGENTHUB_LLM_PLANNER_PROVIDER` 设置。 |
+| `apps/api/app/llm_planner.py` | 将规划器提供者结果元数据接入 LLM 规划器任务元数据和兜底元数据。 |
+| `apps/api/app/planning.py` | 在确定性兜底规划中记录了所选规划器提供者元数据，并诚实地拒绝了未知的规划器提供者配置。 |
+| `apps/api/tests/test_planner_providers.py` | 添加了提供者抽象、disabled/fake 提供者、选择、无效提供者和兜底元数据覆盖。 |
+| `apps/api/tests/test_llm_planner.py` | 更新了 LLM 规划器测试以使用 fake/test 规划器提供者结果契约。 |
+| `apps/api/tests/test_planning.py` | 更新了兜底元数据期望以包含规划器提供者身份和来源。 |
+| `docs/project-state.md` | 记录了 P15b-1 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p15b-real-llm-planner-engine/tasks.md` | 验证后将 P15b-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub now has an explicit planner-provider foundation for `llm_v1`:
-disabled and fake/test providers, standard provider result/error metadata,
-explicit provider selection by `AGENTHUB_LLM_PLANNER_PROVIDER`, and planner
-fallback metadata that records provider ID, provider type, planner source, and
-status.
+AgentHub 现在拥有针对 `llm_v1` 的显式规划器提供者基础：
+禁用和 fake/test 提供者、标准提供者 result/error 元数据、
+通过 `AGENTHUB_LLM_PLANNER_PROVIDER` 进行的显式提供者选择，以及规划器
+兜底元数据，用于记录提供者 ID、提供者类型、规划器来源和
+状态。
 
-This does not add a real LLM planner call yet. Unknown provider configuration
-is reported as an invalid provider fallback instead of silently substituting a
-different provider.
+这尚未添加真实的 LLM 规划器调用。未知的提供者配置
+会被报告为无效提供者兜底，而不是静默地替换为
+不同的提供者。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15b-1 targeted planner/provider tests | Pass: 35 tests. |
+| P15b-1 目标 planner/provider 测试 | 通过：35 个测试。 |
 
 ---
 
-## P15-7 Freeze Review
+## P15-7 冻结审查
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p15-freeze-review.md` | Added P15 freeze decision, Breakout evidence, non-goals, caveats, and recommended tag. |
-| `docs/project-state.md` | Recorded P15 freeze status. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-7, explicit non-goals, and validation complete after verification. |
+| `docs/p15-freeze-review.md` | 添加了 P15 冻结决策、Breakout 证据、非目标、注意事项和推荐标签。 |
+| `docs/project-state.md` | 记录了 P15 冻结状态。 |
+| `docs/change-log.md` | 记录了本次冻结审查。 |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | 验证完成后标记 P15-7、明确的非目标和验证完成。 |
 
-### What Changed
+### 变更内容
 
-P15 freeze review confirms AgentHub is ready to freeze as Real Coding Assistant
-Upgrade. The phase preserves prior baselines while enabling bounded
-target-scoped frontend implementation requests to run through passthrough
-instructions and real Claude Code execution.
+P15 冻结审查确认 AgentHub 已准备好作为真实编码助手升级版进行冻结。该阶段在保留先前基线的同时，允许通过透传指令和真实的 Claude Code 执行来处理有界的目标限定前端实现请求。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Final P15 validation suite | Pass. |
+| 最终 P15 验证套件 | 通过。 |
 
 ---
 
-## P15-6 Breakout Game Real Coding Smoke
+## P15-6 Breakout 游戏真实编码冒烟测试
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added generic `passthrough_v1` routing for bounded frontend implementation requests inside the registered demo frontend target. |
-| `apps/api/app/claude_code_adapter.py` | Allowed Claude Code to use `Write` alongside `Read`, `Edit`, and `MultiEdit` so real runs can create new files inside the assigned worktree. |
-| `apps/api/app/guardrails.py` | Updated the documented Claude Code command allowlist to permit the expanded write tool set. |
-| `apps/api/app/diffs.py` | Included untracked files in diff artifacts, stats, changed files, and downstream review/ledger evidence. |
-| `apps/api/tests/test_planning.py` | Added no-mention Breakout request coverage for `passthrough_v1` routing. |
-| `apps/api/tests/test_claude_code_adapter.py` | Updated Claude Code command-shape coverage for `Write`. |
-| `apps/api/tests/test_guardrails.py` | Updated runtime command policy coverage for the expanded Claude Code tool list. |
-| `apps/api/tests/test_diffs.py` | Added untracked file diff collection coverage. |
-| `docs/p15-breakout-smoke.md` | Recorded real Claude Code Breakout smoke evidence and caveats. |
-| `docs/project-state.md` | Recorded P15-6 behavior, evidence, and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-6 complete after targeted verification and smoke evidence. |
+| `apps/api/app/planning.py` | 在已注册的演示前端目标内，为有界的前端实现请求添加了通用的 `passthrough_v1` 路由。 |
+| `apps/api/app/claude_code_adapter.py` | 允许 Claude Code 在 `Read`、`Edit` 和 `MultiEdit` 之外使用 `Write`，以便真实运行能在分配的工作树内创建新文件。 |
+| `apps/api/app/guardrails.py` | 更新了文档化的 Claude Code 命令允许列表，以允许扩展后的写入工具集。 |
+| `apps/api/app/diffs.py` | 在差异制品、统计信息、变更文件以及下游的 review/ledger 证据中包含了未跟踪的文件。 |
+| `apps/api/tests/test_planning.py` | 为 `passthrough_v1` 路由添加了无提及的 Breakout 请求覆盖。 |
+| `apps/api/tests/test_claude_code_adapter.py` | 更新了针对 `Write` 的 Claude Code 命令形态覆盖。 |
+| `Write` | 更新了针对扩展后的 Claude Code 工具列表的运行时命令策略覆盖。 |
+| `apps/api/tests/test_guardrails.py` | 添加了未跟踪文件差异收集覆盖。 |
+| `apps/api/tests/test_diffs.py` | 记录了真实的 Claude Code Breakout 冒烟测试证据和注意事项。 |
+| `docs/p15-breakout-smoke.md` | 记录了 P15-6 的行为、证据和限制。 |
+| `docs/project-state.md` | 记录了本次实现。 |
+| `docs/change-log.md` | 在目标验证和冒烟测试证据完成后标记 P15-6 完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub can now route a bounded frontend implementation request into
-`passthrough_v1` without rewriting it into the old demo template. The Breakout
-smoke used real `ClaudeCodeAdapter` execution and produced a completed run,
-real diff, scripted review, target-scoped build evidence, healthy preview, and
-local staging deployment.
+AgentHub 现在可以将有界的前端实现请求路由到 `passthrough_v1`，而无需将其重写为旧的演示模板。Breakout 冒烟测试使用了真实的 `ClaudeCodeAdapter` 执行，并生成了完整的运行、真实差异、脚本化审查、目标限定构建证据、健康的预览以及本地暂存部署。
 
-The smoke also fixed two practical execution blockers discovered by real use:
-Claude Code needed `Write` permission for new files, and diff collection needed
-to include untracked agent-created files.
+该冒烟测试还修复了实际使用中发现的两个执行障碍：Claude Code 需要 `Write` 权限来创建新文件，并且差异收集需要包含未跟踪的代理创建文件。
 
-### Validation
+### 验证
 
-| Command / Smoke | Result |
+| 命令 / 冒烟测试 | 结果 |
 |---|---|
-| P15-6 targeted planning/adapter/guardrail/diff tests | Pass: 6 tests. |
-| Real Breakout smoke | Pass with caveat: browser-click automation unavailable. |
+| P15-6 目标限定 planning/adapter/guardrail/diff 测试 | 通过：6 个测试。 |
+| 真实 Breakout 冒烟测试 | 通过，但有注意事项：浏览器点击自动化不可用。 |
 
 ---
 
-## P15-5 Planner Rationale And Task Review Metadata
+## P15-5 规划器原理与任务审查元数据
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/schemas.py` | Added `planReviewMetadata` to task responses. |
-| `apps/api/app/main.py` | Derived read-only plan review metadata from `planJson`, `planDraft`, task graph, dependencies, planned files, acceptance criteria, and validation expectations. |
-| `apps/api/tests/test_planning.py` | Added API coverage for planner mode, rationale, target, planned files, task graph, and read-only metadata. |
-| `apps/web/src/lib/api.ts` | Added client type support for plan review metadata. |
-| `apps/web/src/components/task-card-list.tsx` | Rendered a compact read-only plan review summary in task cards. |
-| `apps/web/src/components/task-card-list.test.tsx` | Added UI coverage for planner rationale, task graph count, target, planned files, acceptance, validation, and read-only state. |
-| `docs/project-state.md` | Recorded P15-5 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-5 complete after targeted verification. |
+| `apps/api/app/schemas.py` | 向任务响应中添加了 `planReviewMetadata`。 |
+| `apps/api/app/main.py` | 从 `planJson`、`planDraft`、任务图、依赖关系、计划文件、验收标准和验证期望中派生出只读的计划审查元数据。 |
+| `apps/api/tests/test_planning.py` | 为规划器模式、原理、目标、计划文件、任务图和只读元数据添加了 API 覆盖。 |
+| `apps/web/src/lib/api.ts` | 为计划审查元数据添加了客户端类型支持。 |
+| `apps/web/src/components/task-card-list.tsx` | 在任务卡片中渲染了紧凑的只读计划审查摘要。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 为规划器原理、任务图计数、目标、计划文件、验收、验证和只读状态添加了 UI 覆盖。 |
+| `docs/project-state.md` | 记录了 P15-5 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | 在目标验证完成后标记 P15-5 完成。 |
 
-### What Changed
+### 变更内容
 
-Task responses now expose a read-only `planReviewMetadata` summary so the UI can
-show how a task was planned without mutating the plan. The task card timeline
-shows planner mode, target, rationale, assigned role, planned files, task graph
-count, acceptance criteria count, and validation expectation count.
+任务响应现在公开了一个只读的 `planReviewMetadata` 摘要，以便 UI 能够在不修改计划的情况下显示任务的规划方式。任务卡片时间线显示了规划器模式、目标、原理、分配的角色、计划文件、任务图计数、验收标准计数和验证期望计数。
 
-The metadata is derived from existing plan data and does not alter scheduling,
-adapter dispatch, task execution, or plan editing behavior.
+元数据从现有计划数据派生，不会改变调度、适配器分发、任务执行或计划编辑行为。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15-5 targeted API/UI metadata tests | Pass: 46 tests. |
+| P15-5 目标限定 API/UI 元数据测试 | 通过：46 个测试。 |
 
 ---
 
-## P15-4 Project Command Policy
+## P15-4 项目命令策略
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/project_command_policy.py` | Added target-scoped command policy evaluation derived from Target Registry check/test/build commands. |
-| `apps/api/app/external_evidence.py` | Validated target-scoped command evidence against the selected target policy and recorded `targetId` in artifact metadata/events. |
-| `apps/api/app/schemas.py` | Added optional `targetId` to command evidence create/response schemas. |
-| `apps/api/app/main.py` | Passed `targetId` through the command evidence API and response mapping. |
-| `apps/api/tests/test_external_evidence.py` | Added coverage for target-scoped command evidence acceptance, target ID recording, and wrong-command rejection. |
-| `docs/project-state.md` | Recorded P15-4 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-4 complete after targeted verification. |
+| `apps/api/app/project_command_policy.py` | 添加了从目标注册表 check/test/build 命令派生的目标限定命令策略评估。 |
+| `apps/api/app/external_evidence.py` | 已根据所选目标策略验证目标作用域的命令证据，并在制品 metadata/events. 中记录了 `targetId` |
+| `apps/api/app/schemas.py` | 向命令证据 create/response 模式中添加了可选的 `targetId` |
+| `apps/api/app/main.py` | 已通过命令证据 API 和响应映射传递了 `targetId` |
+| `apps/api/tests/test_external_evidence.py` | 增加了对目标作用域命令证据验收、目标 ID 记录和错误命令拒绝的覆盖 |
+| `docs/project-state.md` | 记录了 P15-4 的行为和限制 |
+| `docs/change-log.md` | 记录了本次实现 |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | 在定向验证后将 P15-4 标记为完成 |
 
-### What Changed
+### 变更内容
 
-Command evidence can now be target-aware. When a command evidence request or
-task plan identifies a target, AgentHub checks the command against that target's
-registered `checkCommand`, `testCommand`, or `buildCommand` before storing the
-evidence. Stored command evidence records stdout, stderr, exit code, status,
-command type, command string, and target ID honestly.
+命令证据现在可以感知目标。当命令证据请求或任务计划识别出目标时，AgentHub 会在存储证据前，根据该目标注册的 `checkCommand`、`testCommand` 或 `buildCommand` 检查命令。存储的命令证据会如实记录 stdout、stderr、退出码、状态、命令类型、命令字符串和目标 ID。
 
-Legacy command evidence without a target remains compatible with the existing
-global allowlist path.
+没有目标的传统命令证据仍与现有的全局允许列表路径兼容。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15-4 targeted command evidence/review/instruction tests | Pass: 9 tests. |
+| P15-4 定向命令 evidence/review/instruction 测试 | 通过：9 个测试 |
 
 ---
 
-## P15-3 Permissive Target Guardrails
+## P15-3 宽松目标护栏
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/guardrails.py` | Added target-aware path evaluation that combines registered target allowed/denied paths with existing protected path checks. |
-| `apps/api/app/main.py` | Updated orchestrator auto-start safety checks to use Target Registry path policy instead of the older narrow demo file allowlist. |
-| `apps/api/tests/test_guardrails.py` | Added target path policy coverage for allowed target files, cross-target files, and protected dependency paths. |
-| `apps/api/tests/test_planning.py` | Added auto-start policy coverage for broader frontend target files under registered allowed paths. |
-| `docs/project-state.md` | Recorded P15-3 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-3 complete after targeted verification. |
+| `apps/api/app/guardrails.py` | 添加了目标感知路径评估，将注册的目标 allowed/denied 路径与现有受保护路径检查相结合 |
+| `apps/api/app/main.py` | 更新了编排器自动启动安全检查，使用目标注册表路径策略替代旧的窄范围演示文件允许列表 |
+| `apps/api/tests/test_guardrails.py` | 增加了对允许的目标文件、跨目标文件和受保护依赖路径的目标路径策略覆盖 |
+| `apps/api/tests/test_planning.py` | 在注册的允许路径下，增加了对更广泛前端目标文件的自动启动策略覆盖 |
+| `docs/project-state.md` | 记录了 P15-3 的行为和限制 |
+| `docs/change-log.md` | 记录了本次实现 |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | 在定向验证后将 P15-3 标记为完成 |
 
-### What Changed
+### 变更内容
 
-Registered target metadata now drives the safety boundary for broader coding
-tasks. Safe frontend auto-run can cover meaningful files inside
-`demo-frontend` allowed paths, such as new components under `apps/demo/src`,
-without falling back to the old login-page-only file list.
+注册的目标元数据现在驱动更广泛编码任务的安全边界。安全的前端自动运行可以覆盖 `demo-frontend` 允许路径内的有意义文件，例如 `apps/demo/src` 下的新组件，而无需回退到旧的仅限登录页面的文件列表。
 
-The broader permission is still target-scoped. Protected paths, denied paths,
-cross-target backend/platform paths, absolute paths, traversal paths, and
-ordinary platform-code modification remain blocked.
+更广泛的权限仍然限定在目标范围内。受保护路径、拒绝路径、跨目标 backend/platform 路径、绝对路径、遍历路径和普通平台代码修改仍然被阻止。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15-3 targeted guardrail and planning tests | Pass: 5 tests. |
+| P15-3 定向护栏和规划测试 | 通过：5 个测试 |
 
 ---
 
-## P15-2 Passthrough Instruction Mode
+## P15-2 透传指令模式
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/instruction_builder.py` | Added passthrough instruction rendering for `llm_v1` / `passthrough_v1` plans before deterministic demo-template branches. |
-| `apps/api/tests/test_task_runs.py` | Added Breakout-style instruction coverage proving the original request is preserved and old demo-slot rewrite is skipped. |
-| `docs/project-state.md` | Recorded P15-2 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-2 complete after targeted verification. |
+| `apps/api/app/instruction_builder.py` | 在确定性演示模板分支之前，为 `llm_v1` / `passthrough_v1` 计划添加了透传指令渲染 |
+| `apps/api/tests/test_task_runs.py` | 添加了 Breakout 风格的指令覆盖证明，证明原始请求被保留，旧的演示槽重写被跳过 |
+| `docs/project-state.md` | 记录了 P15-2 的行为和限制 |
+| `docs/change-log.md` | 记录了本次实现 |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | 在定向验证后将 P15-2 标记为完成 |
 
-### What Changed
+### 变更内容
 
-Provider instructions now preserve original request/task descriptions for
-`llm_v1` and `passthrough_v1` plans. The shared target, context, contract,
-artifact, acceptance, validation, and guardrail sections still render through
-the existing provider-specific wrappers, but old login-page/button/demo-slot
-instructions no longer override passthrough plans.
+提供者指令现在为 `llm_v1` 和 `passthrough_v1` 计划保留原始的 request/task 描述。共享的目标、上下文、契约、制品、验收、验证和护栏部分仍然通过现有的提供者特定包装器渲染，但旧的 login-page/button/demo-slot 指令不再覆盖透传计划。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15-2 targeted instruction tests | Pass: 4 tests. |
+| P15-2 定向指令测试 | 通过：4 个测试 |
 
 ---
 
-## P15-1 LLM Planner v1
+## P15-1 LLM 规划器 v1
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/llm_planner.py` | Added LLM planner input builder, structured JSON parser, PlanDraft/task creation service, target/role validation, and fallback metadata helper. |
-| `apps/api/app/planner_service.py` | Extended PlanDraft metadata with planner mode, acceptance criteria, validation expectations, guardrail notes, and fallback reason. |
-| `apps/api/app/plan_validator.py` | Allowed validation against registered target allowed paths for LLM planner outputs while preserving old demo defaults. |
-| `apps/api/app/config.py` | Added `AGENTHUB_LLM_PLANNER_ENABLED` setting, disabled by default. |
-| `apps/api/app/planning.py` | Recorded explicit `llm_v1` fallback metadata on orchestrator deterministic fallback plans. |
-| `apps/api/tests/test_llm_planner.py` | Added LLM planner input, valid output, task persistence, and unsafe output rejection coverage. |
-| `apps/api/tests/test_planning.py` | Added regression assertions for PlanDraft planner mode and disabled LLM fallback metadata. |
-| `docs/project-state.md` | Recorded P15-1 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | Marked P15-1 complete after targeted verification. |
+| `apps/api/app/llm_planner.py` | 添加了 LLM 规划器输入构建器、结构化 JSON 解析器、PlanDraft/task 创建服务、target/role 验证和兜底元数据辅助函数 |
+| `apps/api/app/planner_service.py` | 扩展了 PlanDraft 元数据，包含规划器模式、验收标准、验证期望、护栏说明和兜底原因 |
+| `apps/api/app/plan_validator.py` | 允许针对注册的目标允许路径进行 LLM 规划器输出的验证，同时保留旧的演示默认值 |
+| `apps/api/app/config.py` | 添加了 `AGENTHUB_LLM_PLANNER_ENABLED` 设置，默认禁用 |
+| `apps/api/app/planning.py` | 在编排器确定性兜底计划上记录了显式的 `llm_v1` 兜底元数据 |
+| `apps/api/tests/test_llm_planner.py` | 增加了对 LLM 规划器输入、有效输出、任务持久化和不安全输出拒绝的覆盖 |
+| `apps/api/tests/test_planning.py` | 为 PlanDraft 规划器模式添加了回归断言，并禁用了 LLM 兜底元数据。 |
+| `docs/project-state.md` | 记录了 P15-1 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p15-real-coding-assistant-upgrade/tasks.md` | 在针对性验证后将 P15-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P15 now has an `llm_v1` planning foundation without claiming a live LLM planner
-success. The new planner service can build provider-visible planning context,
-parse structured JSON output, validate target/role/file safety through
-PlanValidator, and persist validated tasks. Existing deterministic paths remain
-the runtime default and now record why `llm_v1` was not used.
+P15 现在拥有一个 `llm_v1` 规划基础，而无需声称成功的实时 LLM 规划器。
+新的规划器服务可以构建对提供者可见的规划上下文，
+解析结构化的 JSON 输出，
+通过 PlanValidator 验证 target/role/file 安全性，
+并持久化已验证的任务。现有的确定性路径仍然是运行时默认选项，并且现在会记录未使用 `llm_v1` 的原因。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P15-1 targeted planner tests | Pass: 7 tests. |
+| P15-1 针对性规划器测试 | 通过：7 个测试。 |
 
 ---
 
-## P14-7 Rehearsal And Freeze Review
+## P14-7 演练与冻结审查
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p14-freeze-review.md` | Added P14 freeze decision, rehearsal evidence, caveats, and recommended tag. |
-| `docs/project-state.md` | Recorded P14-7 freeze result and current P14 status. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-7, explicit non-goals, and validation complete after verification. |
+| `docs/p14-freeze-review.md` | 添加了 P14 冻结决策、演练证据、注意事项和推荐标签。 |
+| `docs/project-state.md` | 记录了 P14-7 冻结结果和当前 P14 状态。 |
+| `docs/change-log.md` | 记录了本次冻结审查。 |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | 在验证后将 P14-7、明确的非目标和验证标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P14 freeze review confirmed the custom agent/provider foundation is complete
-without adding marketplace behavior or unsafe custom execution. The review
-verified built-in profiles, provider-aware selection, capability/target
-rejection, Agent Contact UI metadata, safe draft metadata, deterministic
-mixed-provider evidence, and P6-P13 baseline preservation.
+P14 冻结审查确认了自定义 agent/provider 基础已完成，无需添加市场行为或不安全的自定义执行。
+审查验证了内置配置文件、提供者感知选择、capability/target 拒绝、
+Agent Contact UI 元数据、安全草稿元数据、确定性混合提供者证据
+以及 P6-P13 基线保留。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P14 targeted backend rehearsal tests | Pass: 11 tests. |
-| P14 targeted frontend UI/API tests | Pass: 9 files / 40 tests. |
+| P14 针对性后端演练测试 | 通过：11 个测试。 |
+| P14 针对性前端 UI/API 测试 | 通过：9 个文件 / 40 个测试。 |
 
 ---
 
-## P14-6 Safe Custom Agent Draft
+## P14-6 安全自定义 Agent 草稿
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added `AgentProfileDraft` metadata table for safe draft profiles. |
-| `apps/api/app/agent_profile_drafts.py` | Added draft creation/listing service with safety validation. |
-| `apps/api/app/agent_profiles.py` | Converted draft rows into AgentProfile registry responses. |
-| `apps/api/app/schemas.py` | Added draft creation request schema. |
-| `apps/api/app/main.py` | Added draft create/list endpoints and included drafts in workspace AgentProfile registry responses. |
-| `apps/api/tests/test_agent_profile_drafts.py` | Added API coverage for review-only draft creation and unsafe draft rejection. |
-| `apps/api/tests/test_models.py` | Updated model boundary coverage for the new metadata table. |
-| `docs/project-state.md` | Recorded P14-6 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-6 complete after targeted verification. |
+| `apps/api/app/models.py` | 为安全草稿配置文件添加了 `AgentProfileDraft` 元数据表。 |
+| `apps/api/app/agent_profile_drafts.py` | 添加了带有安全验证的草稿 creation/listing 服务。 |
+| `apps/api/app/agent_profiles.py` | 将草稿行转换为 AgentProfile 注册表响应。 |
+| `apps/api/app/schemas.py` | 添加了草稿创建请求模式。 |
+| `apps/api/app/main.py` | 添加了草稿 create/list 端点，并将草稿包含在工作区 AgentProfile 注册表响应中。 |
+| `apps/api/tests/test_agent_profile_drafts.py` | 添加了仅审查草稿创建和不安全草稿拒绝的 API 覆盖。 |
+| `apps/api/tests/test_models.py` | 更新了新元数据表的模型边界覆盖。 |
+| `docs/project-state.md` | 记录了 P14-6 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | 在针对性验证后将 P14-6 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub can now define safe custom AgentProfile draft metadata without making
-drafts executable write agents. Draft profiles are forced to review-only or
-disabled states and are included in the AgentProfile registry for inspection.
+AgentHub 现在可以定义安全的自定义 AgentProfile 草稿元数据，而无需使草稿成为可执行的写入 Agent。
+草稿配置文件被强制设置为仅审查或禁用状态，并包含在 AgentProfile 注册表中以供检查。
 
-Draft creation rejects arbitrary shell commands, unsafe tool permissions,
-unrestricted filesystem access, write capability, unknown providers, and
-adapter/provider mismatch.
+草稿创建会拒绝任意 shell 命令、不安全的工具权限、
+不受限制的文件系统访问、写入能力、未知提供者以及
+adapter/provider 不匹配。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Safe draft/model/profile targeted tests | Pass: 6 tests. |
+| 安全 draft/model/profile 针对性测试 | 通过：6 个测试。 |
 
 ---
 
-## P14-5 Agent Contact UI Upgrade
+## P14-5 Agent Contact UI 升级
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/schemas.py` | Added provider ID, supported targets, and supported modes to the Agent contact response contract. |
-| `apps/api/app/main.py` | Returned P14 profile metadata from `/workspaces/{workspace_id}/agents`, including virtual review/fallback contacts. |
-| `apps/api/tests/test_planning.py` | Added contact API assertions for provider and target/mode metadata. |
-| `apps/web/src/lib/api.ts` | Added provider/target/mode fields to the AgentContact client type. |
-| `apps/web/src/components/agent-contact-list.tsx` | Rendered provider badges, supported target chips, capability chips, and unavailable/auth/draft/disabled status labels. |
-| `apps/web/src/lib/api.test.ts` | Updated contact API client fixture coverage for provider and target metadata. |
-| `apps/web/src/app/page.test.tsx` | Updated page fixture AgentContact metadata. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added UI assertions for provider and supported target display. |
-| `docs/project-state.md` | Recorded P14-5 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-5 complete after targeted verification. |
+| `apps/api/app/schemas.py` | 向 Agent 联系响应合约添加了提供者 ID、支持的目标和支持的模式。 |
+| `apps/api/app/main.py` | 从 `/workspaces/{workspace_id}/agents` 返回了 P14 配置文件元数据，包括虚拟 review/fallback 联系人。 |
+| `apps/api/tests/test_planning.py` | 为提供者和 target/mode 元数据添加了联系 API 断言。 |
+| `apps/web/src/lib/api.ts` | 向 AgentContact 客户端类型添加了 provider/target/mode 字段。 |
+| `apps/web/src/components/agent-contact-list.tsx` | 渲染了提供者徽章、支持的目标芯片、能力芯片和 unavailable/auth/draft/disabled 状态标签。 |
+| `apps/web/src/lib/api.test.ts` | 更新了联系 API 客户端夹具覆盖，以包含提供者和目标元数据。 |
+| `apps/web/src/app/page.test.tsx` | 更新了页面夹具 AgentContact 元数据。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 为提供者和支持的目标显示添加了 UI 断言。 |
+| `docs/project-state.md` | 记录了 P14-5 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | 在针对性验证后将 P14-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-The existing Agent Contact UI now exposes the P14 registry metadata already
-used by backend policy: provider identity, adapter type, supported targets,
-capability tags, and availability status. The visual Direct chat / Group
-workflow modes and all task execution controls are unchanged.
+现有的 Agent Contact UI 现在公开了后端策略已使用的 P14 注册表元数据：提供者身份、适配器类型、支持的目标、
+能力标签和可用性状态。视觉上的 直接聊天 / 群组
+工作流模式及所有任务执行控制保持不变。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Web contact/API/page targeted tests | Pass: 40 tests. |
-| Workspace agent contact API targeted test | Pass: 1 test. |
+| Web contact/API/page 定向测试 | 通过：40 个测试。 |
+| 工作区代理联系 API 定向测试 | 通过：1 个测试。 |
 
 ---
 
-## P14-4 Agent Selection Policy
+## P14-4 代理选择策略
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_selection_policy.py` | Added target, mode, capability, write-safety, and review-safety validation for TaskRun agent selection. |
-| `apps/api/app/task_runs.py` | Applied Agent Selection Policy during TaskRun creation and recorded selection metadata in TaskRun metrics. |
-| `apps/api/app/agent_profiles.py` | Added explicit platform-maintenance support metadata to the backend profile while preserving scheduler approval gates. |
-| `apps/api/tests/test_agent_selection_policy.py` | Added selection-policy coverage for metadata, unsupported targets, missing capabilities, and unsafe review assignment. |
-| `docs/project-state.md` | Recorded P14-4 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-4 complete after verification. |
+| `apps/api/app/agent_selection_policy.py` | 为 TaskRun 代理选择添加了目标、模式、能力、写入安全性和审查安全性的验证。 |
+| `apps/api/app/task_runs.py` | 在 TaskRun 创建期间应用代理选择策略，并在 TaskRun 指标中记录选择元数据。 |
+| `apps/api/app/agent_profiles.py` | 向后端配置文件添加了显式的平台维护支持元数据，同时保留了调度器审批关卡。 |
+| `apps/api/tests/test_agent_selection_policy.py` | 为元数据、不支持的目标、缺失的能力以及不安全的审查分配添加了选择策略覆盖。 |
+| `docs/project-state.md` | 记录了 P14-4 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | 验证后将 P14-4 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-TaskRun creation now validates the assigned agent profile against the task's
-target, required mode, required capabilities, and write/review safety flags.
-Invalid target or capability assignments fail honestly before adapter
-execution. Successful runs record `agentSelection` metadata in
-`TaskRun.metricsJson`.
+TaskRun 创建现在会根据任务的目标、所需模式、所需能力以及 write/review 安全标志来验证分配的代理配置文件。无效的目标或能力分配会在适配器执行前诚实地失败。成功的运行会在 `TaskRun.metricsJson` 中记录 `agentSelection` 元数据。
 
-Platform maintenance remains approval-gated by the existing scheduler and
-guardrail path; P14-4 only makes profile support explicit enough for the
-selection policy.
+平台维护仍然需要通过现有调度器和护栏路径的审批；P14-4 仅使配置文件支持足够明确，以便选择策略使用。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted agent selection policy tests | Pass: 4 tests. |
-| Platform maintenance TaskRun regression test | Pass: 1 test. |
+| 定向代理选择策略测试 | 通过：4 个测试。 |
+| 平台维护 TaskRun 回归测试 | 通过：1 个测试。 |
 
 ---
 
-## P14-3 Capability And Mode Schema
+## P14-3 能力与模式模式
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_capabilities.py` | Added controlled supported modes and capability tags with validation helpers. |
-| `apps/api/app/agent_profiles.py` | Aligned built-in AgentProfile capability tags and supported modes to the controlled schema. |
-| `apps/api/app/provider_configs.py` | Validated provider config supported modes against the controlled schema. |
-| `apps/api/tests/test_agent_capabilities.py` | Added schema and rejection coverage for unsupported modes/capability tags. |
-| `apps/api/tests/test_planning.py` | Updated AgentProfile and contact assertions to controlled capability/mode values. |
-| `apps/web/src/lib/api.test.ts` | Updated API fixtures for controlled capability/mode values. |
-| `docs/project-state.md` | Recorded P14-3 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-3 complete after verification. |
+| `apps/api/app/agent_capabilities.py` | 添加了受控的支持模式和能力标签，并附带验证辅助函数。 |
+| `apps/api/app/agent_profiles.py` | 将内置的 AgentProfile 能力标签和支持模式与受控模式对齐。 |
+| `apps/api/app/provider_configs.py` | 根据受控模式验证了提供者配置的支持模式。 |
+| `apps/api/tests/test_agent_capabilities.py` | 为不支持的 modes/capability 标签添加了模式及拒绝覆盖。 |
+| `apps/api/tests/test_planning.py` | 将 AgentProfile 和联系断言更新为受控的 capability/mode 值。 |
+| `apps/web/src/lib/api.test.ts` | 更新了 API 测试夹具以使用受控的 capability/mode 值。 |
+| `docs/project-state.md` | 记录了 P14-3 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | 验证后将 P14-3 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub now defines controlled execution modes:
+AgentHub 现在定义了受控的执行模式：
 
-- `frontend`;
-- `backend`;
-- `qa`;
-- `review`;
-- `platform_maintenance`;
-- `read_only`;
-- `debug`.
+- `frontend`；
+- `backend`；
+- `qa`；
+- `review`；
+- `platform_maintenance`；
+- `read_only`；
+- `debug`。
 
-AgentHub also defines controlled capability tags:
+AgentHub 还定义了受控的能力标签：
 
-- `code_write`;
-- `code_review`;
-- `test_run`;
-- `diff_analysis`;
-- `preview`;
-- `deploy_staging`;
-- `platform_change`.
+- `code_write`；
+- `code_review`；
+- `test_run`；
+- `diff_analysis`；
+- `preview`；
+- `deploy_staging`；
+- `platform_change`。
 
-Built-in AgentProfile and ProviderConfig metadata now uses these controlled
-values. Unsupported values fail validation instead of becoming free-form
-permissions.
+内置的 AgentProfile 和 ProviderConfig 元数据现在使用这些受控值。不支持的值将导致验证失败，而不会成为自由形式的权限。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted capability/profile/provider tests | Pass: 5 tests. |
-| Targeted web API tests | Pass: 40 tests. |
+| 定向 capability/profile/provider 测试 | 通过：5 个测试。 |
+| 定向 Web API 测试 | 通过：40 个测试。 |
 
 ---
 
-## P14-2 Provider Config Registry
+## P14-2 提供者配置注册表
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/provider_configs.py` | Added non-secret provider config metadata for Claude Code CLI, Codex CLI, and Scripted Mock. |
-| `apps/api/app/schemas.py` | Added ProviderConfig API response schema. |
-| `apps/api/app/main.py` | Added read-only `/provider-configs` endpoint. |
-| `apps/api/tests/test_provider_configs.py` | Added provider config API coverage and secret-field guard. |
-| `apps/web/src/lib/api.ts` | Added ProviderConfig client type and `listProviderConfigs`. |
-| `apps/web/src/lib/api.test.ts` | Added web API coverage for provider config metadata. |
-| `docs/project-state.md` | Recorded P14-2 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-2 complete after verification. |
+| `apps/api/app/provider_configs.py` | 为 Claude Code CLI、Codex CLI 和 Scripted Mock 添加了非机密提供者配置元数据。 |
+| `apps/api/app/schemas.py` | 添加了 ProviderConfig API 响应模式。 |
+| `apps/api/app/main.py` | 添加了只读的 `/provider-configs` 端点。 |
+| `apps/api/tests/test_provider_configs.py` | 添加了提供者配置 API 覆盖和机密字段防护。 |
+| `apps/web/src/lib/api.ts` | 添加了 ProviderConfig 客户端类型和 `listProviderConfigs`。 |
+| `apps/web/src/lib/api.test.ts` | 为提供者配置元数据添加了 Web API 覆盖。 |
+| `docs/project-state.md` | 记录了 P14-2 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | 验证后将 P14-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub now exposes a read-only Provider Config Registry for current local
-providers:
+AgentHub 现在为当前本地提供者公开了一个只读的提供者配置注册表：
 
-- Claude Code CLI;
-- Codex CLI;
-- Scripted Mock.
+- Claude Code CLI；
+- Codex CLI；
+- Scripted Mock。
 
-Provider config metadata includes provider ID, display name, adapter type,
-auth status, availability, default roles, and supported modes. The registry
-does not store or expose secrets, tokens, API keys, or raw credentials.
+提供者配置元数据包括提供者 ID、显示名称、适配器类型、认证状态、可用性、默认角色和支持的模式。该注册表不存储或暴露机密、令牌、API 密钥或原始凭据。
 
-P14-2 does not implement cloud token management, provider marketplace behavior,
-provider installation, or adapter dispatch changes.
+P14-2 不实现云令牌管理、提供者市场行为、提供者安装或适配器调度变更。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted provider config API test | Pass: 1 test. |
-| Targeted web API tests | Pass: 40 tests. |
+| 定向提供者配置 API 测试 | 通过：1 个测试。 |
+| 针对性 Web API 测试 | 通过：40 项测试。 |
 
 ---
 
-## P14-1 Agent Profile Registry
+## P14-1 代理配置文件注册表
 
-**Date:** 2026-05-28
+**日期：** 2026-05-28
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_profiles.py` | Promoted AgentProfile into a registry-style service, added status, and added virtual review/fallback profiles. |
-| `apps/api/app/schemas.py` | Added AgentProfile `status` to API responses. |
-| `apps/api/app/main.py` | Returned registry profiles, including built-in review and fallback profiles, from the workspace profile API. |
-| `apps/api/tests/test_planning.py` | Updated profile API coverage for registry fields, status, review profile, and fallback profile. |
-| `apps/web/src/lib/api.ts` | Added `status` to the AgentProfile client type. |
-| `apps/web/src/lib/api.test.ts` | Updated client API fixture coverage for AgentProfile status. |
-| `docs/project-state.md` | Recorded P14-1 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md` | Marked P14-1 complete after verification. |
+| `apps/api/app/agent_profiles.py` | 将 AgentProfile 升级为注册表风格的服务，新增状态字段，并添加了虚拟的 review/fallback 配置文件。 |
+| `apps/api/app/schemas.py` | 在 API 响应中新增了 AgentProfile `status`。 |
+| `status` | 从工作区配置文件 API 返回注册表配置文件，包括内置的审查和兜底配置文件。 |
+| `apps/api/app/main.py` | 更新了配置文件 API 对注册表字段、状态、审查配置文件和兜底配置文件的覆盖范围。 |
+| `apps/api/tests/test_planning.py` | 在 AgentProfile 客户端类型中新增了 `apps/web/src/lib/api.ts`。 |
+| `apps/web/src/lib/api.ts` | 更新了客户端 API 夹具对 AgentProfile 状态的覆盖范围。 |
+| `status` | 记录了 P14-1 的行为和限制。 |
+| `apps/web/src/lib/api.test.ts` | 记录了本次实现。 |
+| `docs/project-state.md` | 验证完成后将 P14-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-AgentHub now exposes a stable Agent Profile Registry contract for built-in
-profiles. The workspace profile API includes active database-backed agents plus
-virtual review and fallback profiles. Profiles now include `status` so
-available, planned, disabled, or future draft-only states can be represented
-without implying write execution.
+AgentHub 现在为内置配置文件提供了一个稳定的代理配置文件注册表契约。工作区配置文件 API 包含基于数据库的活动代理以及虚拟的审查和兜底配置文件。配置文件现在包含 `openspec/changes/agenthub-p14-custom-agent-provider-foundation/tasks.md`，因此可以表示可用、计划中、已禁用或未来草稿状态，而无需暗示写入执行。
 
-P14-1 does not add provider config, capability enforcement, custom draft
-creation, marketplace behavior, or adapter dispatch changes.
+P14-1 不包含提供者配置、能力强制、自定义草稿创建、市场行为或适配器调度变更。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted profile API tests | Pass: 2 tests. |
-| Targeted web API tests | Pass: 39 tests. |
+| 针对性配置文件 API 测试 | 通过：2 项测试。 |
+| 针对性 Web API 测试 | 通过：39 项测试。 |
 
 ---
 
-## P13-8 Mixed-provider Rehearsal and Freeze Review
+## P13-8 混合提供者预演与冻结审查
 
-**Date:** 2026-05-27
+**日期：** 2026-05-27
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_cross_provider_rehearsal.py` | Added deterministic P13 freeze rehearsal for backend=Codex and frontend=Claude Code provider assignments through diff/review/preview/local staging deploy evidence. |
-| `docs/p13-freeze-review.md` | Recorded P13 freeze decision, rehearsal path, evidence, and caveats. |
-| `docs/project-state.md` | Recorded P13-8 freeze result and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-8 and explicit non-goals complete after verification. |
+| `status` | 通过 review/fallback 阶段部署证据，为后端=Codex 和前端=Claude Code 的提供者分配添加了确定性的 P13 冻结预演。 |
+| `apps/api/tests/test_cross_provider_rehearsal.py` | 记录了 P13 冻结决策、预演路径、证据和注意事项。 |
+| `docs/p13-freeze-review.md` | 记录了 P13-8 冻结结果和限制。 |
+| `docs/project-state.md` | 记录了本次实现。 |
+| `docs/change-log.md` | 验证完成后将 P13-8 和明确的非目标标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P13 now has a deterministic freeze rehearsal that simulates a bounded mixed
-provider workflow without claiming live Claude/Codex execution. The rehearsal
-creates a shared mini CRM contract, assigns backend work to Codex and frontend
-work to Claude Code, verifies provider-aware handoff metadata, captures diff
-and review evidence, starts a healthy preview, records a local staging
-deployment, and checks mission trace provider visibility.
+P13 现在拥有一个确定性的冻结预演，该预演模拟了一个有界的混合提供者工作流，但不声称具有实时的 diff/review/preview/local 执行能力。该预演创建一个共享的迷你 CRM 契约，将后端工作分配给 Codex，前端工作分配给 Claude Code，验证提供者感知的交接元数据，捕获差异和审查证据，启动一个健康的预览，记录本地阶段部署，并检查任务轨迹中提供者的可见性。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P13 mixed-provider rehearsal test | Pass: 1 test. |
+| P13 混合提供者预演测试 | 通过：1 项测试。 |
 
 ---
 
-## P13-7 Mixed-provider Scheduler Integration
+## P13-7 混合提供者调度器集成
 
-**Date:** 2026-05-27
+**日期：** 2026-05-27
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/scheduler.py` | Preserved provider ID, provider assignment, retry ID, and fallback ID in terminal scheduler metadata. |
-| `apps/api/tests/test_scheduler.py` | Added mixed-provider scheduler coverage for dependencies, target locks, different-target concurrency, and failure metadata. |
-| `docs/project-state.md` | Recorded P13-7 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-7 complete after verification. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | 在终端调度器元数据中保留了提供者 ID、提供者分配、重试 ID 和兜底 ID。 |
+| `apps/api/app/scheduler.py` | 为混合提供者调度器增加了对依赖项、目标锁、不同目标并发和失败元数据的覆盖。 |
+| `apps/api/tests/test_scheduler.py` | 记录了 P13-7 的行为和限制。 |
+| `docs/project-state.md` | 记录了本次实现。 |
+| `docs/change-log.md` | 验证完成后将 P13-7 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Scheduler terminal metadata now keeps provider assignment details alongside the
-existing adapter type. Retry and fallback references are also preserved when
-present, so recovery state remains auditable in mixed-provider workflows.
+调度器终端元数据现在在现有适配器类型之外，还保留了提供者分配详情。当存在重试和兜底引用时，它们也会被保留，因此恢复状态在混合提供者工作流中保持可审计。
 
-Regression coverage verifies:
+回归覆盖验证了：
 
-- frontend Claude Code tasks wait for backend Codex dependencies;
-- same-target write locks are provider independent;
-- different frontend/backend targets can queue with different providers;
-- failed mixed-provider runs preserve provider assignment in scheduler state.
+- 前端 Claude Code 任务等待后端 Codex 依赖项；
+- 相同目标写锁与提供者无关；
+- 不同的 Claude/Codex 目标可以与不同的提供者排队；
+- 失败的混合提供者运行在调度器状态中保留提供者分配。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted mixed-provider scheduler tests | Pass: 4 tests. |
-| Full scheduler tests | Pass: 23 tests. |
+| 针对性混合提供者调度器测试 | 通过：4 项测试。 |
+| 完整调度器测试 | 通过：23 项测试。 |
 
 ---
 
-## P13-6 Cross-provider Evidence Normalization
+## P13-6 跨提供者证据标准化
 
-**Date:** 2026-05-27
+**日期：** 2026-05-27
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/provider_evidence.py` | Added a shared provider evidence normalizer for TaskRun-backed artifacts. |
-| `apps/api/app/diffs.py` | Added provider evidence to diff artifact metadata and diff-ready events. |
-| `apps/api/app/reviews.py` | Added scripted review provider evidence and origin provider evidence to review artifacts/events. |
-| `apps/api/app/previews.py` | Added provider evidence to preview artifact metadata and preview-ready events. |
-| `apps/api/app/deployments.py` | Added provider evidence to deployment artifact metadata and deploy events. |
-| `apps/api/tests/test_diffs.py` | Added coverage for diff and review evidence metadata. |
-| `apps/api/tests/test_previews.py` | Added coverage for preview evidence metadata. |
-| `apps/api/tests/test_deployments.py` | Added coverage for deployment evidence metadata. |
-| `docs/project-state.md` | Recorded P13-6 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-6 complete after verification. |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | 为基于 TaskRun 的制品添加了一个共享的提供者证据标准化器。 |
+| `apps/api/app/provider_evidence.py` | 在差异制品元数据和差异就绪事件中增加了提供者证据。 |
+| `apps/api/app/diffs.py` | 在审查 frontend/backend 中增加了脚本化审查提供者证据和来源提供者证据。 |
+| `apps/api/app/reviews.py` | 在预览制品元数据和预览就绪事件中增加了提供者证据。 |
+| `apps/api/app/previews.py` | 在部署制品元数据和部署事件中增加了提供者证据。 |
+| `apps/api/app/deployments.py` | 增加了对差异和审查证据元数据的覆盖。 |
+| `apps/api/tests/test_previews.py` | 新增对预览证据元数据的覆盖。 |
+| `apps/api/tests/test_deployments.py` | 新增对部署证据元数据的覆盖。 |
+| `docs/project-state.md` | 记录了 P13-6 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | 验证后标记 P13-6 为完成。 |
 
-### What Changed
+### 变更内容
 
-Diff, scripted review, preview, and deployment artifacts now include normalized
-provider evidence derived from TaskRun metadata. The evidence records task run
-ID, run status, adapter type, provider ID, provider assignment metadata,
-changed files, logs where relevant, artifact references, and retry/fallback
-references when present.
+Diff、脚本审查、预览和部署制品现在包含从 TaskRun 元数据派生的标准化提供者证据。该证据记录了任务运行 ID、运行状态、适配器类型、提供者 ID、提供者分配元数据、变更文件、相关日志、制品引用以及存在的 retry/fallback 引用。
 
-Scripted review artifacts also record `originProviderEvidence`, preserving the
-identity of the provider-backed coding run that produced the reviewed diff
-instead of masking it behind the deterministic review adapter.
+脚本审查制品还记录了 `originProviderEvidence`，保留了产生被审查 diff 的提供者支持编码运行的身份，而不是将其隐藏在确定性审查适配器之后。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted diff/review/preview/deploy evidence tests | Pass: 4 tests. |
+| 定向 diff/review/preview/deploy 证据测试 | 通过：4 个测试。 |
 
 ---
 
-## P13-5 Provider-specific Instruction Mapping
+## P13-5 提供者特定指令映射
 
-**Date:** 2026-05-27
+**日期：** 2026-05-27
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/instruction_adapters/codex.py` | Added a Codex-specific instruction wrapper while preserving the shared core instruction. |
-| `apps/api/app/instruction_adapters/claude_code.py` | Added a Claude Code-specific instruction wrapper while preserving the shared core instruction. |
-| `apps/api/tests/test_task_runs.py` | Added regression coverage that Codex and Claude Code instructions preserve the same canonical contract, target, handoff, validation, and guardrail facts. |
-| `docs/project-state.md` | Recorded P13-5 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-5 complete after verification. |
+| `apps/api/app/instruction_adapters/codex.py` | 在保留共享核心指令的同时，添加了 Codex 特定的指令包装器。 |
+| `apps/api/app/instruction_adapters/claude_code.py` | 在保留共享核心指令的同时，添加了 Claude Code 特定的指令包装器。 |
+| `apps/api/tests/test_task_runs.py` | 新增回归覆盖，验证 Codex 和 Claude Code 指令保留相同的规范契约、目标、交接、验证和护栏事实。 |
+| `docs/project-state.md` | 记录了 P13-5 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | 验证后标记 P13-5 为完成。 |
 
-### What Changed
+### 变更内容
 
-Codex and Claude Code instruction adapters now apply provider-specific wrapper
-text while keeping the shared role instruction and Canonical Shared Context
-unchanged. This lets provider prompt formatting differ without dropping shared
-mission facts.
+Codex 和 Claude Code 指令适配器现在应用提供者特定的包装文本，同时保持共享角色指令和规范共享上下文不变。这使得提供者提示格式可以不同，而不会丢失共享的任务事实。
 
-Regression coverage verifies both providers preserve the same contract ID,
-frontend/backend target IDs, upstream handoff references, implemented route
-details, validation expectations, and guardrails.
+回归覆盖验证了两个提供者保留相同的契约 ID、frontend/backend 目标 ID、上游交接引用、已实现路由详情、验证期望和护栏。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted provider instruction mapping tests | Pass: 2 tests. |
-| Full TaskRun tests | Pass: 52 tests. |
+| 定向提供者指令映射测试 | 通过：2 个测试。 |
+| 完整 TaskRun 测试 | 通过：52 个测试。 |
 
 ---
 
-## P13-4 Handoff Protocol v1
+## P13-4 交接协议 v1
 
-**Date:** 2026-05-27
+**日期：** 2026-05-27
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/handoffs.py` | Added provider-aware handoff metadata, diff-based changed files, implemented route/component hints, review warnings, and suggested follow-up scope. |
-| `apps/api/tests/test_task_runs.py` | Added handoff protocol coverage for frontend-to-review and review-to-fix transitions, downstream canonical context, and mission trace visibility. |
-| `docs/project-state.md` | Recorded P13-4 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-4 complete after verification. |
+| `apps/api/app/handoffs.py` | 新增了感知提供者的交接元数据、基于 diff 的变更文件、已实现的 route/component 提示、审查警告和建议的后续范围。 |
+| `apps/api/tests/test_task_runs.py` | 新增了前端到审查和审查到修复转换的交接协议覆盖、下游规范上下文和任务追踪可见性。 |
+| `docs/project-state.md` | 记录了 P13-4 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | 验证后标记 P13-4 为完成。 |
 
-### What Changed
+### 变更内容
 
-Handoff artifacts now carry provider-aware metadata for cross-provider
-transitions:
+交接制品现在携带感知提供者的元数据，用于跨提供者转换：
 
-- `fromProviderId` / `fromAdapterType`;
-- `toProviderId` / `toAdapterType`;
-- changed files from the latest diff artifact when available;
-- implemented route and component hints;
-- artifact references;
-- review warnings and suggested follow-up scope;
-- verification status and risk notes.
+- `fromProviderId` / `fromAdapterType`；
+- `toProviderId` / `toAdapterType`；
+- 来自最新 diff 制品（如果可用）的变更文件；
+- 已实现的路由和组件提示；
+- 制品引用；
+- 审查警告和建议的后续范围；
+- 验证状态和风险说明。
 
-Downstream session context and Canonical Shared Context include the enriched
-handoff metadata, and mission trace exposes the same artifact metadata through
-existing artifact navigation.
+下游会话上下文和规范共享上下文包含丰富的交接元数据，任务追踪通过现有制品导航公开相同的制品元数据。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted handoff protocol tests | Pass: 2 tests. |
-| Full TaskRun tests | Pass: 51 tests. |
+| 定向交接协议测试 | 通过：2 个测试。 |
+| 完整 TaskRun 测试 | 通过：51 个测试。 |
 
 ---
 
-## P13-3 Canonical Context Usage Enforcement
+## P13-3 规范上下文使用强制
 
-**Date:** 2026-05-27
+**日期：** 2026-05-27
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/instruction_adapters/shared_sections.py` | Rendered provider-visible instruction context from the filtered Canonical Shared Context instead of the legacy session context payload. |
-| `apps/api/app/instruction_builder.py` | Used canonical safe paths when listing preferred frontend files so protected plan paths are not copied into provider instructions. |
-| `apps/api/tests/test_task_runs.py` | Added coverage for Canonical Shared Context rendering, legacy context exclusion, protected path filtering, and snapshot persistence. |
-| `docs/project-state.md` | Recorded P13-3 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-3 complete after verification. |
+| `apps/api/app/instruction_adapters/shared_sections.py` | 从过滤后的规范共享上下文（而非旧版会话上下文负载）渲染提供者可见的指令上下文。 |
+| `apps/api/app/instruction_builder.py` | 在列出首选前端文件时使用规范安全路径，以便受保护的计划路径不会被复制到提供者指令中。 |
+| `apps/api/tests/test_task_runs.py` | 新增了对规范共享上下文渲染、旧版上下文排除、受保护路径过滤和快照持久化的覆盖。 |
+| `docs/project-state.md` | 记录了 P13-3 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | 验证后标记 P13-3 为完成。 |
 
-### What Changed
+### 变更内容
 
-CodexAdapter and ClaudeCodeAdapter TaskRun instructions now include a
-`Canonical Shared Context` JSON section sourced from the filtered
-`canonical_shared_context_v1` contract. The old `legacyContext` payload is no
-longer rendered into provider instructions.
+CodexAdapter 和 ClaudeCodeAdapter 的 TaskRun 指令现在包含一个源自过滤后的 `Canonical Shared Context` JSON 部分。
+`canonical_shared_context_v1` 合约。旧的 `legacyContext` 载荷不再渲染到提供者指令中。
 
-Frontend role instructions now derive preferred file lists from canonical safe
-paths instead of raw plan files, preventing protected values such as dependency
-directory paths, host absolute paths, or secret-bearing metadata from leaking
-through the human-readable instruction body.
+前端角色指令现在从规范安全路径而非原始计划文件中推导首选文件列表，从而防止受保护的值（如依赖目录路径、主机绝对路径或包含机密的元数据）通过人类可读的指令体泄露。
 
-TaskRun metadata continues to persist `canonicalContextSnapshot`, preserving an
-auditable record of what context was prepared for provider execution.
+TaskRun 元数据继续持久化 `canonicalContextSnapshot`，保留一份可供审计的记录，说明为提供者执行准备了哪些上下文。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted canonical-context instruction tests | Pass: 3 tests. |
-| Full TaskRun tests | Pass: 50 tests. |
+| 针对性的规范上下文指令测试 | 通过：3 个测试。 |
+| 完整的 TaskRun 测试 | 通过：50 个测试。 |
 
 ---
 
-## P13-2 Provider-aware Agent Profile
+## P13-2 感知提供者的代理配置文件
 
-**Date:** 2026-05-26
+**日期：** 2026-05-26
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_profiles.py` | Added supported role metadata and aligned AgentProfile adapter/provider fields with P13 provider assignment policy. |
-| `apps/api/app/provider_assignments.py` | Added read-only profile provider assignment resolution using configured role assignments or built-in provider defaults. |
-| `apps/api/app/schemas.py` | Added `supportedRoles` to AgentProfile API responses. |
-| `apps/api/app/main.py` | Returned supported roles in workspace agent profile responses. |
-| `apps/api/tests/test_planning.py` | Added API coverage for provider-aware profiles and assignment-matched profile metadata. |
-| `apps/web/src/lib/api.ts` | Added `supportedRoles` to the AgentProfile client type. |
-| `apps/web/src/lib/api.test.ts` | Updated profile API fixture coverage for provider-aware metadata. |
-| `docs/project-state.md` | Recorded P13-2 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-2 complete after verification. |
+| `apps/api/app/agent_profiles.py` | 添加了支持的角色元数据，并使 AgentProfile adapter/provider 字段与 P13 提供者分配策略对齐。 |
+| `apps/api/app/provider_assignments.py` | 添加了只读配置文件提供者分配解析，使用已配置的角色分配或内置提供者默认值。 |
+| `apps/api/app/schemas.py` | 在 AgentProfile API 响应中添加了 `supportedRoles`。 |
+| `apps/api/app/main.py` | 在工作区代理配置文件响应中返回了支持的角色。 |
+| `apps/api/tests/test_planning.py` | 为感知提供者的配置文件和分配匹配的配置文件元数据添加了 API 覆盖。 |
+| `apps/web/src/lib/api.ts` | 在 AgentProfile 客户端类型中添加了 `supportedRoles`。 |
+| `apps/web/src/lib/api.test.ts` | 更新了配置文件 API 夹具覆盖范围，以包含感知提供者的元数据。 |
+| `docs/project-state.md` | 记录了 P13-2 的行为和限制。 |
+| `docs/change-log.md` | 记录了此实现。 |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | 验证后将 P13-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-AgentProfile responses now expose `supportedRoles` in addition to provider ID,
-adapter type, supported targets, supported modes, and safety flags.
-Built-in profiles map current role agents to provider-aware defaults such as
-`frontend -> local-codex-cli`, `backend -> local-codex-cli`, and
-`qa/review -> local-scripted-review`.
+AgentProfile 响应现在除了提供者 ID、适配器类型、支持的目标、支持的模式和安全标志之外，还公开了 `supportedRoles`。内置配置文件将当前角色代理映射到感知提供者的默认值，例如 `frontend -> local-codex-cli`、`backend -> local-codex-cli` 和 `qa/review -> local-scripted-review`。
 
-When `AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.roles` configures a built-in role,
-the corresponding AgentProfile reflects that configured adapter/provider
-choice. This keeps profile metadata compatible with the P13-1 provider
-assignment matrix without adding user-created custom agents or changing
-execution dispatch behavior.
+当 `AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.roles` 配置了一个内置角色时，相应的 AgentProfile 会反映该已配置的 adapter/provider 选择。这使配置文件元数据与 P13-1 提供者分配矩阵保持兼容，而无需添加用户创建的自定义代理或更改执行调度行为。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted agent profile API tests | Pass: 2 tests. |
-| Targeted web API tests | Pass: 39 tests. |
+| 针对性的代理配置文件 API 测试 | 通过：2 个测试。 |
+| 针对性的 Web API 测试 | 通过：39 个测试。 |
 
 ---
 
-## P13-1 Provider Assignment Matrix
+## P13-1 提供者分配矩阵
 
-**Date:** 2026-05-26
+**日期：** 2026-05-26
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/provider_assignments.py` | Added provider assignment matrix resolution for role defaults, target overrides, explicit adapter selection, and legacy default fallback metadata. |
-| `apps/api/app/task_runs.py` | Routed TaskRun adapter selection through provider assignment resolution and recorded assignment metadata on runs and state events. |
-| `apps/api/app/mission_trace.py` | Exposed provider assignment metadata in mission trace TaskRun entries. |
-| `apps/api/tests/test_task_runs.py` | Added Provider Assignment Matrix tests for frontend, backend, review, target override, legacy fallback, invalid assignment rejection, and mission trace visibility. |
-| `docs/project-state.md` | Recorded P13-1 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | Marked P13-1 complete after targeted verification. |
+| `apps/api/app/provider_assignments.py` | 为角色默认值、目标覆盖、显式适配器选择以及旧版默认兜底元数据添加了提供者分配矩阵解析。 |
+| `apps/api/app/task_runs.py` | 将 TaskRun 适配器选择路由到提供者分配解析，并在运行和状态事件上记录分配元数据。 |
+| `apps/api/app/mission_trace.py` | 在任务追踪 TaskRun 条目中公开了提供者分配元数据。 |
+| `apps/api/tests/test_task_runs.py` | 为前端、后端、审查、目标覆盖、旧版兜底、无效分配拒绝以及任务追踪可见性添加了提供者分配矩阵测试。 |
+| `docs/project-state.md` | 记录了 P13-1 的行为和限制。 |
+| `docs/change-log.md` | 记录了此实现。 |
+| `openspec/changes/agenthub-p13-cross-provider-agent-coordination/tasks.md` | 在针对性验证后将 P13-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P13-1 adds an explicit and auditable provider assignment foundation. Runtime
-configuration may assign providers by role through
-`AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.roles` and may override by target through
-`AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.targets`. Target-specific assignments
-take precedence over role defaults.
+P13-1 添加了一个显式且可审计的提供者分配基础。运行时配置可以通过 `AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.roles` 按角色分配提供者，并可以通过 `AGENTHUB_PROVIDER_ASSIGNMENT_MATRIX.targets` 按目标覆盖。特定于目标的分配优先于角色默认值。
 
-TaskRuns now record a `providerAssignment` payload in `metricsJson` with role,
-adapter type, provider ID, source, target ID, supported mode, and fallback
-policy. Mission trace TaskRun entries expose the same assignment metadata.
+TaskRun 现在在 `metricsJson` 中记录一个 `providerAssignment` 载荷，包含角色、适配器类型、提供者 ID、来源、目标 ID、支持的模式和兜底策略。任务追踪 TaskRun 条目公开相同的分配元数据。
 
-Existing adapter selection remains compatible: when no P13 matrix assignment
-is configured, AgentHub preserves the legacy Agent metadata and
-`AGENTHUB_DEFAULT_CODE_ADAPTER` behavior.
+现有的适配器选择保持兼容：当没有配置 P13 矩阵分配时，AgentHub 保留旧版 Agent 元数据和 `AGENTHUB_DEFAULT_CODE_ADAPTER` 行为。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted provider assignment tests | Pass: 5 tests. |
-| Targeted task run / scheduler / planning tests | Pass: 92 tests. |
+| 针对性的提供者分配测试 | 通过：5 个测试。 |
+| 针对性的任务运行 / 调度器 / 规划测试 | 通过：92 个测试。 |
 
 ---
 
-## P12-10 E2E Rehearsal And Freeze Review
+## P12-10 端到端演练与冻结审查
 
-**Date:** 2026-05-26
+**日期：** 2026-05-26
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p12-freeze-review.md` | Added P12 freeze evidence, caveats, validation notes, and recommended tag. |
-| `docs/project-state.md` | Recorded P12 freeze status and evidence IDs. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p12-platform-core-consolidation/tasks.md` | Marked P12-10, non-goals, and validation complete after verification. |
+| `docs/p12-freeze-review.md` | 添加了 P12 冻结证据、注意事项、验证说明和推荐标签。 |
+| `docs/project-state.md` | 记录了 P12 冻结状态和证据 ID。 |
+| `docs/change-log.md` | 记录了此冻结审查。 |
+| `openspec/changes/agenthub-p12-platform-core-consolidation/tasks.md` | 验证后将 P12-10、非目标和验证标记为完成。 |
+### 审查结果
 
-### Review Result
+P12 已准备好冻结，作为平台核心整合。
 
-P12 is ready to freeze as Platform Core Consolidation.
+冻结预演验证了从新会话开始的整合本地演示路径，涵盖编排器规划、ScriptedMock 前端执行、差异对比、审查、交接、预览、本地暂存部署、后续修改、制品版本 v2、更新后的预览以及更新后的本地暂存部署。
 
-The freeze rehearsal verified the consolidated local demo path from a new
-session through orchestrator planning, ScriptedMock frontend execution, diff,
-review, handoff, preview, local staging deploy, follow-up modification,
-artifact version v2, updated preview, and updated local staging deploy.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P12 freeze rehearsal | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `pnpm demo:api:test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p12-platform-core-consolidation --strict` | Pass |
+| P12 冻结预演 | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `pnpm demo:api:test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p12-platform-core-consolidation --strict` | 通过 |
 
-Recommended freeze tag:
-`p12-platform-core-consolidation-freeze`.
+推荐的冻结标签：
+`p12-platform-core-consolidation-freeze`。
 
 ---
 
-## Repository Hygiene
+## 仓库卫生
 
-**Date:** 2026-05-25
+**日期：** 2026-05-25
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `.gitignore` | Added public-doc allowlist rules and ignored internal planning, OpenSpec, research, PDF, Office, and demo evidence documents. |
-| `docs/change-log.md` | Recorded repository hygiene cleanup. |
+| `.gitignore` | 添加了公共文档允许列表规则，并忽略了内部规划、OpenSpec、研究、PDF、Office 和演示证据文档。 |
+| `docs/change-log.md` | 记录了仓库卫生清理。 |
 
-### What Changed
+### 变更内容
 
-The repository now keeps common public project documents visible while ignoring
-internal planning and research documents by default. This keeps future GitHub
-pushes focused on source, configuration, tests, and public project entrypoints.
+仓库现在默认保留常见的公共项目文档可见，同时忽略内部规划和研究文档。这使未来的 GitHub 推送专注于源代码、配置、测试和公共项目入口点。
 
 ---
 
-## P11-6 E2E Rehearsal And Freeze Review
+## P11-6 端到端预演与冻结审查
 
-**Date:** 2026-05-25
+**日期：** 2026-05-25
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/deployments.py` | Fixed local static serving to use `sys.executable` instead of assuming `python` exists on the host. |
-| `apps/api/tests/test_deployments.py` | Added regression coverage for the static server interpreter command. |
-| `docs/p11-freeze-review.md` | Added P11 freeze evidence, caveats, validation notes, and recommended tag. |
-| `docs/project-state.md` | Recorded P11-6 freeze result and evidence IDs. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-6, non-goals, and validation complete after verification. |
+| `apps/api/app/deployments.py` | 修复了本地静态服务，使其使用 `sys.executable` 而不是假设主机上存在 `python`。 |
+| `apps/api/tests/test_deployments.py` | 为静态服务器解释器命令添加了回归测试覆盖。 |
+| `docs/p11-freeze-review.md` | 添加了 P11 冻结证据、注意事项、验证说明和推荐标签。 |
+| `docs/project-state.md` | 记录了 P11-6 冻结结果和证据 ID。 |
+| `docs/change-log.md` | 记录了本次冻结审查。 |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | 验证后将 P11-6、非目标和验证标记为完成。 |
 
-### Review Result
+### 审查结果
 
-P11 is ready to freeze as Real Staging Deploy Provider.
+P11 已准备好冻结，作为真实暂存部署提供者。
 
-The freeze rehearsal used a real local staging deploy for the built-in
-`demo-frontend` target. It ran `pnpm build`, served the built `dist` directory
-on a local URL, verified the URL returned HTML, and recorded deployment logs,
-status history, target metadata, and source artifact references.
+冻结预演对内置的 `demo-frontend` 目标使用了真实的本地暂存部署。它运行了 `pnpm build`，在本地 URL 上提供构建后的 `dist` 目录，验证了该 URL 返回了 HTML，并记录了部署日志、状态历史、目标元数据和源制品引用。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Real local staging rehearsal | Pass |
-| Targeted deployment regression tests | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p11-real-staging-deploy-provider --strict` | Pass |
+| 真实本地暂存预演 | 通过 |
+| 目标部署回归测试 | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p11-real-staging-deploy-provider --strict` | 通过 |
 
-Recommended freeze tag:
-`p11-real-staging-deploy-provider-freeze`.
+推荐的冻结标签：
+`p11-real-staging-deploy-provider-freeze`。
 
 ---
 
-## P11-5 Deploy Gate
+## P11-5 部署门控
 
-**Date:** 2026-05-25
+**日期：** 2026-05-25
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/deployments.py` | Added staging deploy gates for production requests, preview health, failed review, and target policy violations. |
-| `apps/api/app/schemas.py` | Added deployment environment request field. |
-| `apps/api/app/main.py` | Passed requested deployment environment to `DeployService`. |
-| `apps/api/tests/test_deployments.py` | Added deploy gate tests for failed review, unhealthy preview, target policy violation, production rejection, and successful staging path. |
-| `docs/project-state.md` | Recorded P11-5 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-5 complete after targeted verification. |
+| `apps/api/app/deployments.py` | 为生产请求、预览健康检查、审查失败和目标策略违规添加了暂存部署门控。 |
+| `apps/api/app/schemas.py` | 添加了部署环境请求字段。 |
+| `apps/api/app/main.py` | 将请求的部署环境传递给 `DeployService`。 |
+| `apps/api/tests/test_deployments.py` | 为审查失败、预览不健康、目标策略违规、生产拒绝和成功暂存路径添加了部署门控测试。 |
+| `docs/project-state.md` | 记录了 P11-5 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | 在目标验证后将 P11-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P11-5 adds conservative staging deploy gates before the local staging provider
-runs. Staging deploy now rejects production/prod environment requests, failed
-or unhealthy preview prerequisites, failed latest review artifacts, and
-changed files outside the target registry path policy.
+P11-5 在本地暂存提供者运行之前添加了保守的暂存部署门控。暂存部署现在拒绝 production/prod 环境请求、失败或不健康的预览先决条件、失败的最新审查制品，以及目标注册表路径策略之外的已更改文件。
 
-Mock deploy remains available for existing demo and fallback paths.
+模拟部署仍可用于现有的演示和兜底路径。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted deployment tests | Pass: 17 tests. |
+| 目标部署测试 | 通过：17 个测试。 |
 
 ---
 
-## P11-4 Deploy Logs And Status Artifact
+## P11-4 部署日志与状态制品
 
-**Date:** 2026-05-25
+**日期：** 2026-05-25
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/deployments.py` | Added deployment source metadata, logs, status history, failed deployment artifact persistence, and expanded deployment response mapping. |
-| `apps/api/app/main.py` | Returned deploy provider type, target/source references, logs, and status history in deployment responses. |
-| `apps/api/app/schemas.py` | Added deployment response fields for deploy evidence and status history. |
-| `apps/api/tests/test_deployments.py` | Added deployment evidence, failed artifact, and API response coverage. |
-| `apps/web/src/lib/api.ts` | Added deploy evidence fields to the frontend API type. |
-| `apps/web/src/lib/api.test.ts` | Updated deployment fixture payload coverage. |
-| `apps/web/src/components/deploy-card.tsx` | Rendered target/source references, status history, and logs in deployment cards. |
-| `apps/web/src/components/deploy-card.test.tsx` | Added deploy card evidence assertions. |
-| `apps/web/src/components/__fixtures__/sample-deployment.ts` | Added sample deploy evidence metadata. |
-| `docs/project-state.md` | Recorded P11-4 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-4 complete after targeted verification. |
+| `apps/api/app/deployments.py` | 添加了部署源元数据、日志、状态历史、失败部署制品持久化以及扩展的部署响应映射。 |
+| `apps/api/app/main.py` | 在部署响应中返回了部署提供者类型、target/source 引用、日志和状态历史。 |
+| `apps/api/app/schemas.py` | 为部署证据和状态历史添加了部署响应字段。 |
+| `apps/api/tests/test_deployments.py` | 添加了部署证据、失败制品和 API 响应覆盖。 |
+| `apps/web/src/lib/api.ts` | 为前端 API 类型添加了部署证据字段。 |
+| `apps/web/src/lib/api.test.ts` | 更新了部署夹具负载覆盖。 |
+| `apps/web/src/components/deploy-card.tsx` | 在部署卡片中渲染了 target/source 引用、状态历史和日志。 |
+| `apps/web/src/components/deploy-card.test.tsx` | 添加了部署卡片证据断言。 |
+| `apps/web/src/components/__fixtures__/sample-deployment.ts` | 添加了示例部署证据元数据。 |
+| `docs/project-state.md` | 记录了 P11-4 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | 在定向验证后标记 P11-4 完成。 |
 
-### What Changed
+### 变更内容
 
-P11-4 makes deployment evidence visible and durable. Deployment artifacts and
-API responses now include target ID, provider type, source preview/diff/review
-references, logs, and status history. The deploy card renders those details
-inline so staging deploys can be reviewed like other AgentHub artifacts.
+P11-4 使部署证据可见且持久。部署制品和 API 响应现在包含目标 ID、提供者类型、源 preview/diff/review 引用、日志和状态历史。部署卡片内联渲染这些细节，因此暂存部署可以像其他 AgentHub 制品一样被审查。
 
-Local staging provider failures now persist failed deployment artifacts with
-diagnostic logs instead of disappearing behind an exception. Unknown providers
-still fail before artifact creation.
+本地暂存提供者失败时，现在会持久化带有诊断日志的失败部署制品，而不是在异常后消失。未知提供者仍会在制品创建前失败。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted deployment tests | Pass: 13 tests. |
-| Targeted deploy card/frontend tests | Pass: 37 tests. |
+| 定向部署测试 | 通过：13 个测试。 |
+| 定向部署 card/frontend 测试 | 通过：37 个测试。 |
 
 ---
 
-## P11-3 Local Staging Deploy Provider
+## P11-3 本地暂存部署提供者
 
-**Date:** 2026-05-25
+**日期：** 2026-05-25
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/deployments.py` | Added `local_staging` provider, build runner, static directory server runner, target/worktree resolution, health checking, and provider-selected deploy creation. |
-| `apps/api/app/main.py` | Allowed `POST /previews/{previewId}/deploy` to accept `providerId` while preserving mock as the default. |
-| `apps/api/app/schemas.py` | Added deploy create request schema. |
-| `apps/api/app/target_registry.py` | Aligned demo frontend build command with target-root execution. |
-| `apps/api/tests/test_deployments.py` | Added local staging success, build failure, missing output, and API provider selection tests. |
-| `apps/api/tests/test_target_registry.py` | Updated deploy config assertions for target-root build execution. |
-| `docs/project-state.md` | Recorded P11-3 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-3 complete after targeted verification. |
+| `apps/api/app/deployments.py` | 添加了 `local_staging` 提供者、构建运行器、静态目录服务器运行器、target/worktree 解析、健康检查以及提供者选择的部署创建。 |
+| `apps/api/app/main.py` | 允许 `POST /previews/{previewId}/deploy` 接受 `providerId`，同时保留 mock 作为默认值。 |
+| `apps/api/app/schemas.py` | 添加了部署创建请求模式。 |
+| `apps/api/app/target_registry.py` | 使演示前端构建命令与目标根目录执行对齐。 |
+| `apps/api/tests/test_deployments.py` | 添加了本地暂存成功、构建失败、缺少输出和 API 提供者选择测试。 |
+| `apps/api/tests/test_target_registry.py` | 更新了部署配置断言，以支持目标根目录构建执行。 |
+| `docs/project-state.md` | 记录了 P11-3 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | 在定向验证后标记 P11-3 完成。 |
 
-### What Changed
+### 变更内容
 
-P11-3 adds a real local staging provider path. It reads deploy configuration
-from Target Registry, runs the target build command, checks the configured
-output directory, starts a local static server, performs a URL health check,
-and records a staging deployment when the URL is ready.
+P11-3 添加了一个真实的本地暂存提供者路径。它从目标注册表读取部署配置，运行目标构建命令，检查配置的输出目录，启动本地静态服务器，执行 URL 健康检查，并在 URL 就绪时记录暂存部署。
 
-The API remains compatible with existing mock deploy callers and now accepts
-`providerId: local_staging` for staging deploy requests. Deterministic
-TestClient smoke coverage verifies the local provider selection without
-starting long-lived external services.
+API 仍与现有 mock 部署调用者兼容，现在接受 `providerId: local_staging` 用于暂存部署请求。确定性 TestClient 冒烟覆盖验证了本地提供者选择，无需启动长期运行的外部服务。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted deployment / target registry tests | Pass: 24 tests. |
+| 定向部署 / 目标注册表测试 | 通过：24 个测试。 |
 
 ---
 
-## P11-2 Target-aware Deploy Configuration
+## P11-2 目标感知的部署配置
 
-**Date:** 2026-05-25
+**日期：** 2026-05-25
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/target_registry.py` | Added deploy metadata to target projects and `resolve_deploy_config()` for deployable frontend targets. |
-| `apps/api/app/models.py` | Added external target deploy metadata fields for staging output, staging serve command, and deploy provider IDs. |
-| `apps/api/app/external_workspaces.py` | Accepted and persisted external target deploy provider metadata. |
-| `apps/api/app/schemas.py` | Exposed deploy metadata in external target and target project request/response schemas. |
-| `apps/api/app/main.py` | Returned deploy metadata through target registry and external target APIs. |
-| `apps/api/tests/test_target_registry.py` | Added deploy config resolution and non-deployable target tests. |
-| `apps/api/tests/test_external_workspaces.py` | Added external target deploy metadata API coverage. |
-| `docs/project-state.md` | Recorded P11-2 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-2 complete after targeted verification. |
+| `apps/api/app/target_registry.py` | 为目标项目添加了部署元数据，并为可部署的前端目标添加了 `resolve_deploy_config()`。 |
+| `apps/api/app/models.py` | 为外部目标添加了部署元数据字段，用于暂存输出、暂存服务命令和部署提供者 ID。 |
+| `apps/api/app/external_workspaces.py` | 接受并持久化了外部目标部署提供者元数据。 |
+| `apps/api/app/schemas.py` | 在外部目标和目标项目 request/response 模式中暴露了部署元数据。 |
+| `apps/api/app/main.py` | 通过目标注册表和外部目标 API 返回部署元数据。 |
+| `apps/api/tests/test_target_registry.py` | 添加了部署配置解析和不可部署目标测试。 |
+| `apps/api/tests/test_external_workspaces.py` | 添加了外部目标部署元数据 API 覆盖。 |
+| `docs/project-state.md` | 记录了 P11-2 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | 在定向验证后标记 P11-2 完成。 |
 
-### What Changed
+### 变更内容
 
-P11-2 makes Target Registry the source of truth for deploy configuration.
-Deployable frontend targets can now expose build command, staging output
-directory, staging serve command, and allowed deploy provider IDs. The built-in
-demo frontend advertises mock and local staging provider availability, while
-backend/platform targets fail honestly through `resolve_deploy_config()`.
+P11-2 使目标注册表成为部署配置的单一事实来源。可部署的前端目标现在可以暴露构建命令、暂存输出目录、暂存服务命令和允许的部署提供者 ID。内置演示前端宣传 mock 和本地暂存提供者的可用性，而 backend/platform 目标通过 `resolve_deploy_config()` 诚实地失败。
 
-External frontend targets may carry deploy metadata through registration and
-workspace target APIs. P11-2 does not execute deploy commands yet.
+外部前端目标可以通过注册和工作区目标 API 携带部署元数据。P11-2 尚未执行部署命令。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted target registry / external workspace tests | Pass: 16 tests. |
+| 定向目标注册表 / 外部工作区测试 | 通过：16 个测试。 |
 
 ---
 
-## P11-1 Deploy Provider Abstraction
+## P11-1 部署提供者抽象
 
-**Date:** 2026-05-25
+**日期：** 2026-05-25
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/deployments.py` | Added a deploy provider result contract, provider selection, mock provider compatibility path, and failed/unknown provider handling. |
-| `apps/api/tests/test_deployments.py` | Added deploy provider abstraction tests for metadata, provider selection, unknown provider rejection, failed provider results, and mock compatibility. |
-| `docs/project-state.md` | Recorded P11-1 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | Marked P11-1 complete after targeted verification. |
+| `apps/api/app/deployments.py` | 添加了部署提供者结果契约、提供者选择、mock 提供者兼容路径和 failed/unknown 提供者处理。 |
+| `apps/api/tests/test_deployments.py` | 添加了部署提供者抽象测试，涵盖元数据、提供者选择、未知提供者拒绝、失败提供者结果和 mock 兼容性。 |
+| `docs/project-state.md` | 记录了 P11-1 的行为与限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p11-real-staging-deploy-provider/tasks.md` | 在定向验证后将 P11-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P11-1 introduces the first deploy provider abstraction without changing the
-current runtime deploy semantics. Existing mock deploy behavior remains
-available through `create_mock_deployment()`, while the newer
-`create_deployment()` path selects a provider by ID and records standardized
-provider metadata in the deployment artifact.
+P11-1 引入了首个部署提供者抽象，但未改变当前运行时部署语义。现有的模拟部署行为仍可通过 `create_mock_deployment()` 使用，而较新的 `create_deployment()` 路径则通过 ID 选择提供者，并在部署制品中记录标准化的提供者元数据。
 
-Unknown providers are rejected before artifact creation. Failed provider
-results are reported honestly and do not create ready deployment artifacts.
+未知的提供者会在制品创建前被拒绝。失败的提供者结果会被如实报告，且不会创建就绪的部署制品。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted deployment tests | Pass: 9 tests. |
+| 定向部署测试 | 通过：9 个测试。 |
 
 ---
 
-## P10-8 Robustness Rehearsal And Freeze Review
+## P10-8 健壮性预演与冻结审查
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p10-freeze-review.md` | Added P10 freeze evidence, validation notes, caveats, and recommended tag. |
-| `docs/project-state.md` | Recorded P10-8 freeze result and recommended tag. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-8 complete after validation. |
+| `docs/p10-freeze-review.md` | 添加了 P10 冻结证据、验证说明、注意事项及推荐标签。 |
+| `docs/project-state.md` | 记录了 P10-8 冻结结果及推荐标签。 |
+| `docs/change-log.md` | 记录了本次冻结审查。 |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | 在验证后将 P10-8 标记为完成。 |
 
-### Review Result
+### 审查结果
 
-P10 is ready to freeze as Scheduler Robustness and Conflict Recovery.
+P10 已准备好冻结为“调度器健壮性与冲突恢复”。
 
-The freeze review used deterministic local tests and existing P6/P7/P8/P9
-baseline coverage. It did not run a fresh real Claude/Codex mutation.
+本次冻结审查使用了确定性本地测试及现有的 P6/P7/P8/P9 基线覆盖率。未运行全新的真实 Claude/Codex 变异测试。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted P10 rehearsal tests | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+| 定向 P10 预演测试 | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | 通过 |
 
-Recommended freeze tag:
-`p10-scheduler-robustness-conflict-recovery-freeze`.
+推荐冻结标签：
+`p10-scheduler-robustness-conflict-recovery-freeze`。
 
 ---
 
-## P10-7 Recovery Actions
+## P10-7 恢复操作
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/recovery.py` | Added auditable recovery actions for stale task failure, stale lock release, retry, and downstream stop/resume. |
-| `apps/api/app/task_runs.py` | Allowed recovery to request checkpoint retry mode while preserving retry safety checks. |
-| `apps/api/tests/test_recovery.py` | Added recovery action audit and behavior tests. |
-| `docs/project-state.md` | Recorded P10-7 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-7 complete after validation. |
+| `apps/api/app/recovery.py` | 为过期任务失败、过期锁释放、重试及下游 stop/resume. 添加了可审计的恢复操作。 |
+| `apps/api/app/task_runs.py` | 允许恢复操作请求检查点重试模式，同时保留重试安全检查。 |
+| `apps/api/tests/test_recovery.py` | 添加了恢复操作审计及行为测试。 |
+| `docs/project-state.md` | 记录了 P10-7 的行为与限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | 在验证后将 P10-7 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P10-7 adds explicit service-level recovery actions. Stale task failure, stale
-lock release, retry from current state, retry from checkpoint, downstream stop,
-and downstream resume now produce `recovery.action` audit events. Recovery
-actions reuse P10 heartbeat, stale lock, checkpoint, retry, and scheduler
-readiness safeguards rather than adding automatic merge/reset behavior.
+P10-7 添加了显式的服务级恢复操作。过期任务失败、过期锁释放、从当前状态重试、从检查点重试、下游停止及下游恢复现在都会产生 `recovery.action` 审计事件。恢复操作复用了 P10 的心跳、过期锁、检查点、重试及调度器就绪状态保护机制，而非添加自动的 merge/reset 行为。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted recovery action tests | Pass: 4 tests. |
-| Targeted recovery/scheduler/task-run regression tests | Pass: 61 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+| 定向恢复操作测试 | 通过：4 个测试。 |
+| 定向 recovery/scheduler/task-run 回归测试 | 通过：61 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | 通过 |
 
 ---
 
-## P10-6 Conflict Detection
+## P10-6 冲突检测
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/scheduler.py` | Added scheduler-level file overlap, dirty worktree, and contract drift conflict detection. |
-| `apps/api/app/task_runs.py` | Uses full scheduler readiness before TaskRun creation so conflicts block execution. |
-| `apps/api/tests/test_scheduler.py` | Added file overlap, dirty worktree, and contract drift conflict tests. |
-| `apps/api/tests/test_task_runs.py` | Adjusted checkpoint fixture to avoid intentionally dirty denied files now covered by conflict tests. |
-| `docs/project-state.md` | Recorded P10-6 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-6 complete after validation. |
+| `apps/api/app/scheduler.py` | 在调度器层面添加了文件重叠、脏工作区及合约漂移冲突检测。 |
+| `apps/api/app/task_runs.py` | 在创建 TaskRun 前使用完整的调度器就绪状态检查，使冲突能够阻止执行。 |
+| `apps/api/tests/test_scheduler.py` | 添加了文件重叠、脏工作区及合约漂移冲突测试。 |
+| `apps/api/tests/test_task_runs.py` | 调整了检查点测试夹具，以避免因冲突测试覆盖而故意污染被拒绝的文件。 |
+| `docs/project-state.md` | 记录了 P10-6 的行为与限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | 在验证后将 P10-6 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Scheduler readiness now blocks common conflicts before write execution:
-unsequenced overlapping planned files, dirty worktree files outside planned
-safe files, and stale/mismatched contract context. Conflicts are recorded in
-task scheduler metadata and are not auto-merged.
+调度器就绪状态现在会在写入执行前阻止常见冲突：未排序的重叠计划文件、计划安全文件之外的脏工作区文件，以及 stale/mismatched 合约上下文。冲突会记录在任务调度器元数据中，且不会自动合并。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted conflict detection tests | Pass: 3 tests. |
-| Targeted scheduler/task-run regression tests | Pass: 57 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+| 定向冲突检测测试 | 通过：3 个测试。 |
+| 定向 scheduler/task-run 回归测试 | 通过：57 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | 通过 |
 
 ---
 
-## P10-5 Failure Propagation Hardening
+## P10-5 故障传播加固
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/previews.py` | Gated preview creation on completed TaskRun and completed dependencies. |
-| `apps/api/app/deployments.py` | Gated mock deploy on completed TaskRun and completed dependencies behind the preview. |
-| `apps/api/tests/test_previews.py` | Added failed TaskRun and failed dependency preview rejection tests. |
-| `apps/api/tests/test_deployments.py` | Added failed TaskRun and failed dependency mock deploy rejection tests. |
-| `docs/project-state.md` | Recorded P10-5 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-5 complete after validation. |
+| `apps/api/app/previews.py` | 将预览创建的条件限定为 TaskRun 已完成且依赖项也已完成。 |
+| `apps/api/app/deployments.py` | 在预览功能后，对已完成的 TaskRun 及其已完成的依赖项进行门控模拟部署。 |
+| `apps/api/tests/test_previews.py` | 添加了失败的 TaskRun 和失败的依赖项预览拒绝测试。 |
+| `apps/api/tests/test_deployments.py` | 添加了失败的 TaskRun 和失败的依赖项模拟部署拒绝测试。 |
+| `docs/project-state.md` | 记录了 P10-5 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | 验证后将 P10-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Preview and mock deploy no longer proceed after failed or incomplete
-prerequisites. Manual preview now requires a completed TaskRun and completed
-dependencies. Mock deploy keeps its healthy-preview requirement and also
-requires the backing TaskRun and dependencies to be complete.
+预览和模拟部署不再在前置条件失败或不完整时继续执行。手动预览现在要求 TaskRun 及其依赖项均已完成。模拟部署保留了其健康预览的要求，并且还要求其支撑的 TaskRun 和依赖项均已完成。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted preview/deploy prerequisite rejection tests | Pass: 4 tests. |
-| Targeted scheduler/preview/deploy/fallback recovery tests | Pass: 29 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+| 针对性的 preview/deploy 前置条件拒绝测试 | 通过：4 个测试。 |
+| 针对性的 scheduler/preview/deploy/fallback 恢复测试 | 通过：29 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | 通过 |
 
 ---
 
-## P10-4 Retry Idempotency
+## P10-4 重试幂等性
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/task_runs.py` | Added retry metadata, dirty worktree retry safety checks, and unsafe retry blocking. |
-| `apps/api/tests/test_task_runs.py` | Added retry idempotency metadata and unsafe external dirty-worktree retry tests. |
-| `docs/project-state.md` | Recorded P10-4 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-4 complete after validation. |
+| `apps/api/app/task_runs.py` | 添加了重试元数据、脏工作区重试安全检查以及不安全重试的阻止。 |
+| `apps/api/tests/test_task_runs.py` | 添加了重试幂等性元数据以及不安全的脏工作区外部重试测试。 |
+| `docs/project-state.md` | 记录了 P10-4 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | 验证后将 P10-4 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Retries now record `previousRunId`, failure summary, retry mode, checkpoint
-reference, and dirty worktree decision. Automatic retry is blocked when current
-dirty files fall outside the prior checkpoint or planned safe paths, preventing
-blind retries into external project local edits.
+重试现在会记录 `previousRunId`、失败摘要、重试模式、检查点引用以及脏工作区决策。当当前脏文件超出先前检查点或计划的安全路径范围时，自动重试将被阻止，从而防止盲目重试进入外部项目的本地编辑。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted retry idempotency tests | Pass: 2 tests. |
-| Targeted task-run retry/checkpoint/liveness tests | Pass: 10 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+| 针对性的重试幂等性测试 | 通过：2 个测试。 |
+| 针对性的任务运行 retry/checkpoint/liveness 测试 | 通过：10 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | 通过 |
 
 ---
 
-## P10-3 Pre-run Snapshot / Checkpoint
+## P10-3 运行前快照 / 检查点
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/task_runs.py` | Added pre-run checkpoint creation for write TaskRuns and checkpoint audit events. |
-| `apps/api/tests/test_task_runs.py` | Added demo and external target checkpoint coverage. |
-| `docs/project-state.md` | Recorded P10-3 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-3 complete after validation. |
+| `apps/api/app/task_runs.py` | 为写入型 TaskRun 添加了运行前检查点创建和检查点审计事件。 |
+| `apps/api/tests/test_task_runs.py` | 添加了演示和外部目标的检查点覆盖。 |
+| `docs/project-state.md` | 记录了 P10-3 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | 验证后将 P10-3 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Write TaskRuns now store `metrics_json.preRunCheckpoint` and emit
-`task.checkpoint.created` before execution. Checkpoints include target metadata,
-Target Registry path policy, base commit when available, scoped dirty files,
-planned files, contract ID/hash, and creation time. External targets use their
-registered root and path policy.
+写入型 TaskRun 现在在执行前存储 `metrics_json.preRunCheckpoint` 并发出 `task.checkpoint.created`。检查点包括目标元数据、目标注册表路径策略、可用的基础提交、限定的脏文件、计划文件、合约 ID/hash 以及创建时间。外部目标使用其注册的根目录和路径策略。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted checkpoint tests | Pass: 2 tests. |
-| Targeted task-run/scheduler liveness and lock tests | Pass: 16 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+| 针对性的检查点测试 | 通过：2 个测试。 |
+| 针对性的 task-run/scheduler 存活性和锁测试 | 通过：16 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | 通过 |
 
 ---
 
-## P10-2 Stale Target Lock Cleanup
+## P10-2 过期目标锁清理
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/scheduler.py` | Added stale target lock cleanup for stale write-lock owner TaskRuns with audit events and scheduler refresh. |
-| `apps/api/tests/test_scheduler.py` | Added coverage that active owners are not released and stale owners release derived target locks. |
-| `docs/project-state.md` | Recorded P10-2 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-2 complete after validation. |
+| `apps/api/app/scheduler.py` | 为过期的写锁持有者 TaskRun 添加了过期目标锁清理，包含审计事件和调度器刷新。 |
+| `apps/api/tests/test_scheduler.py` | 添加了覆盖测试，确保活跃持有者不会被释放，而过期持有者会释放派生目标锁。 |
+| `docs/project-state.md` | 记录了 P10-2 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | 验证后将 P10-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P10-2 keeps the existing P8 derived target-lock model, but adds an explicit
-cleanup path:
+P10-2 保留了现有的 P8 派生目标锁模型，但增加了一个显式的清理路径：
 
-- active TaskRuns with valid leases remain lock holders;
-- expired write-lock owner TaskRuns can be marked stale and failed;
-- cleanup writes `target_lock.released` events with target, owner, lock mode,
-  lease, release timestamp, and reason;
-- waiting tasks are re-evaluated after stale owner cleanup.
+- 具有有效租约的活跃 TaskRun 仍然是锁持有者；
+- 过期的写锁持有者 TaskRun 可以被标记为过期并失败；
+- 清理操作会写入 `target_lock.released` 事件，包含目标、持有者、锁模式、租约、释放时间戳和原因；
+- 在清理过期持有者后，等待中的任务会被重新评估。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted stale lock cleanup tests | Pass: 2 tests. |
-| Targeted scheduler/task-run lock and liveness tests | Pass: 14 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+| 针对性的过期锁清理测试 | 通过：2 个测试。 |
+| 针对性的 scheduler/task-run 锁和存活测试 | 通过：14 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | 通过 |
 
 ---
-
-## P10-1 TaskRun Heartbeat And Lease
+## P10-1 TaskRun 心跳与租约
 
-**Date:** 2026-05-24
+**日期:** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added TaskRun liveness fields for runner identity, heartbeat, lease expiry, and stale metadata. |
-| `apps/api/app/db.py` | Added SQLite backfill for TaskRun heartbeat/lease/stale columns. |
-| `apps/api/app/task_runs.py` | Added runner lease initialization, heartbeat refresh, stale run detection, and honest stale failure marking. |
-| `apps/api/app/schemas.py` | Exposed TaskRun liveness metadata in API response schema. |
-| `apps/api/app/main.py` | Included liveness metadata in TaskRun API responses. |
-| `apps/api/tests/test_task_runs.py` | Added heartbeat, lease, and stale detection tests. |
-| `apps/api/tests/test_models.py` | Updated model boundary and response alias tests for liveness fields. |
-| `docs/project-state.md` | Recorded P10-1 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | Marked P10-1 complete after validation. |
+| `apps/api/app/models.py` | 新增 TaskRun 存活字段，用于运行器标识、心跳、租约过期和过期元数据。 |
+| `apps/api/app/db.py` | 新增 TaskRun heartbeat/lease/stale 列的 SQLite 回填。 |
+| `apps/api/app/task_runs.py` | 新增运行器租约初始化、心跳刷新、过期运行检测和诚实的过期失败标记。 |
+| `apps/api/app/schemas.py` | 在 API 响应模式中暴露 TaskRun 存活元数据。 |
+| `apps/api/app/main.py` | 在 TaskRun API 响应中包含存活元数据。 |
+| `apps/api/tests/test_task_runs.py` | 新增心跳、租约和过期检测测试。 |
+| `apps/api/tests/test_models.py` | 更新模型边界和响应别名测试以支持存活字段。 |
+| `docs/project-state.md` | 记录 P10-1 行为和限制。 |
+| `docs/change-log.md` | 记录本次实现。 |
+| `openspec/changes/agenthub-p10-scheduler-robustness-conflict-recovery/tasks.md` | 验证后标记 P10-1 完成。 |
 
-### What Changed
+### 变更内容
 
-TaskRuns now have local runner liveness metadata:
+TaskRun 现在拥有本地运行器存活元数据：
 
-- new runs get `runner_id`, `last_heartbeat_at`, and `lease_expires_at`;
-- active runs can refresh heartbeat and lease metadata;
-- expired active leases can be marked failed with `TASK_RUN_STALE`;
-- stale transitions write audit events and do not claim adapter success.
+- 新运行获得 `runner_id`、`last_heartbeat_at` 和 `lease_expires_at`；
+- 活跃运行可以刷新心跳和租约元数据；
+- 过期的活跃租约可以用 `TASK_RUN_STALE` 标记为失败；
+- 过期状态转换会写入审计事件，且不声明适配器成功。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted heartbeat/stale tests | Pass: 4 tests. |
-| Targeted model/task-run tests | Pass: 6 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | Pass |
+| 定向 heartbeat/stale 测试 | 通过：4 个测试。 |
+| 定向 model/task-run 测试 | 通过：6 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p10-scheduler-robustness-conflict-recovery --strict` | 通过 |
 
 ---
 
-## P9-8 External Project E2E Rehearsal And Freeze Review
+## P9-8 外部项目端到端预演与冻结审查
 
-**Date:** 2026-05-24
+**日期:** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p9-freeze-review.md` | Added P9 freeze evidence, rehearsal IDs, validation notes, caveats, and recommended tag. |
-| `docs/project-state.md` | Recorded P9-8 freeze result and recommended tag. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-8 complete after validation. |
+| `docs/p9-freeze-review.md` | 新增 P9 冻结证据、预演 ID、验证说明、注意事项和推荐标签。 |
+| `docs/project-state.md` | 记录 P9-8 冻结结果和推荐标签。 |
+| `docs/change-log.md` | 记录本次冻结审查。 |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | 验证后标记 P9-8 完成。 |
 
-### Review Result
+### 审查结果
 
-P9 is ready to freeze as External Project Workspace Mode.
+P9 已准备好作为外部项目工作区模式冻结。
 
-P9 did not run a fresh real Claude/Codex mutation. It used a temporary local
-Vite-style external project and controlled service calls to verify analysis,
-registration, target selection, external task/run routing, diff, command
-evidence, and review policy.
+P9 未运行全新的真实 Claude/Codex 变更。它使用了一个临时的本地
+Vite 风格外部项目，并通过受控服务调用来验证分析、
+注册、目标选择、外部 task/run 路由、差异、命令
+证据和审查策略。
 
-### P9 Rehearsal Evidence
+### P9 预演证据
 
-| Field | Value |
+| 字段 | 值 |
 |---|---|
-| Sample root | `/tmp/agenthub-p9-external-sample` |
-| Session ID | `09977dc0-1eac-49f6-ae78-cb7ae7aa9ccc` |
-| Target ID | `external-p9-sample` |
-| Analysis status / type | `ready`, `vite-react` |
-| Task / run | `ce8fe3de-6969-4273-84e9-274ab440f39b`, `1d6d2916-b179-4bb7-ad7a-642733dfd175` |
-| Adapter type | `scripted_mock` controlled rehearsal |
-| Changed files | `src/App.tsx` |
-| Diff artifact | `7bf6efa3-289b-4cb8-9644-6ca6e283b230` |
-| Command evidence | `c6d581bf-e80a-4fb9-bb21-f0db1cb9ff4d`, `b01ccc78-b3d4-44fc-b758-4c9558d2f594`, `9a256f14-fe1f-4e4b-9dc7-78c4402edd01` |
-| Review artifact / status | `383e7822-0145-4950-9bd1-b3dffb170b36`, `passed` |
+| 示例根目录 | `/tmp/agenthub-p9-external-sample` |
+| 会话 ID | `09977dc0-1eac-49f6-ae78-cb7ae7aa9ccc` |
+| 目标 ID | `external-p9-sample` |
+| 分析状态 / 类型 | `ready`, `vite-react` |
+| 任务 / 运行 | `ce8fe3de-6969-4273-84e9-274ab440f39b`, `1d6d2916-b179-4bb7-ad7a-642733dfd175` |
+| 适配器类型 | `scripted_mock` 受控预演 |
+| 变更的文件 | `src/App.tsx` |
+| 差异制品 | `7bf6efa3-289b-4cb8-9644-6ca6e283b230` |
+| 命令证据 | `c6d581bf-e80a-4fb9-bb21-f0db1cb9ff4d`, `b01ccc78-b3d4-44fc-b758-4c9558d2f594`, `9a256f14-fe1f-4e4b-9dc7-78c4402edd01` |
+| 审查制品 / 状态 | `383e7822-0145-4950-9bd1-b3dffb170b36`, `passed` |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P9 temporary external rehearsal | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `pnpm demo:api:test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+| P9 临时外部预演 | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `pnpm demo:api:test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | 通过 |
 
-Recommended freeze tag:
-`p9-external-project-workspace-mode-freeze`.
+推荐冻结标签：
+`p9-external-project-workspace-mode-freeze`。
 
 ---
 
-## P9-7 External Project Review
+## P9-7 外部项目审查
 
-**Date:** 2026-05-24
+**日期:** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/reviews.py` | Added external target allowed/denied path review and command evidence findings. |
-| `apps/api/tests/test_external_reviews.py` | Added denied-path, outside-allowed-path, failed-evidence, missing-evidence, and clean-pass review tests. |
-| `docs/project-state.md` | Recorded P9-7 behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-7 complete after validation. |
+| `apps/api/app/reviews.py` | 新增外部目标 allowed/denied 路径审查和命令证据发现。 |
+| `apps/api/tests/test_external_reviews.py` | 新增拒绝路径、超出允许路径、证据失败、证据缺失和完全通过的审查测试。 |
+| `docs/project-state.md` | 记录 P9-7 行为和限制。 |
+| `docs/change-log.md` | 记录本次实现。 |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | 验证后标记 P9-7 完成。 |
 
-### What Changed
+### 变更内容
 
-P9-7 makes external reviews policy-aware:
+P9-7 使外部审查具备策略感知能力：
 
-- denied path edits fail or warn explicitly;
-- outside-allowed-path edits produce findings;
-- missing or failed configured check/test/build evidence is reported honestly;
-- clean external target diffs with passing evidence can pass review.
+- 拒绝路径的编辑会明确失败或发出警告；
+- 超出允许路径的编辑会产生发现；
+- 缺失或失败的已配置 check/test/build 证据会被诚实报告；
+- 通过证据的干净外部目标差异可以通过审查。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted external review/evidence/diff tests | Pass: 13 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+| 定向外部 review/evidence/diff 测试 | 通过：13 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | 通过 |
 
 ---
 
-## P9-6 External Evidence Pipeline
+## P9-6 外部证据管道
 
-**Date:** 2026-05-24
+**日期:** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/diffs.py` | Scoped external diff collection to target allowed paths while excluding denied/dependency paths. |
-| `apps/api/app/external_evidence.py` | Added command evidence artifact recording for check/test/build output. |
-| `apps/api/app/schemas.py` | Added command evidence request/response schemas. |
-| `apps/api/app/main.py` | Added create/list API endpoints for command evidence artifacts. |
-| `apps/api/app/context_pack.py` | Added latest command evidence metadata to session context packs. |
-| `apps/api/tests/test_diffs.py` | Added external diff path policy coverage. |
-| `apps/api/tests/test_external_evidence.py` | Added command evidence service/API tests for passed and failed outputs. |
-| `docs/project-state.md` | Recorded P9-6 behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-6 complete after validation. |
+| `apps/api/app/diffs.py` | 将外部差异收集范围限定为目标允许路径，同时排除 denied/dependency 路径。 |
+| `apps/api/app/external_evidence.py` | 为 check/test/build 输出添加了命令证据制品记录。 |
+| `apps/api/app/schemas.py` | 添加了命令证据 request/response 模式。 |
+| `apps/api/app/main.py` | 为命令证据制品添加了 create/list API 端点。 |
+| `apps/api/app/context_pack.py` | 将会话上下文包中添加了最新命令证据元数据。 |
+| `apps/api/tests/test_diffs.py` | 添加了外部差异路径策略覆盖。 |
+| `apps/api/tests/test_external_evidence.py` | 为通过和失败的输出添加了命令证据 service/API 测试。 |
+| `docs/project-state.md` | 记录了 P9-6 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | 验证后将 P9-6 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P9-6 adds capability-based external evidence:
+P9-6 增加了基于能力的外部证据：
 
-- external diffs respect target path policy;
-- check/test/build command outputs can be stored as `command_evidence`
-  artifacts;
-- failed command exits remain failed evidence;
-- preview remains optional for external targets.
+- 外部差异遵循目标路径策略；
+- check/test/build 命令输出可作为 `command_evidence` 制品存储；
+- 失败的命令退出仍保留为失败证据；
+- 外部目标的预览保持可选。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted external evidence/diff tests | Pass: 41 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+| 定向外部 evidence/diff 测试 | 通过：41 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | 通过 |
 
 ---
 
-## P9-5 External Project Task Execution
+## P9-5 外部项目任务执行
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added session active frontend/backend target IDs. |
-| `apps/api/app/db.py` | Added SQLite column backfill for existing local session tables. |
-| `apps/api/app/schemas.py` | Added active target fields and session target selection request schema. |
-| `apps/api/app/main.py` | Added session target selection API and external frontend auto-start safety check. |
-| `apps/api/app/planning.py` | Routed direct mentions and bounded Orchestrator frontend requests to selected external targets. |
-| `apps/api/app/task_runs.py` | Uses external target root as TaskRun worktree path for external target tasks. |
-| `apps/api/tests/test_external_workspaces.py` | Added session target selection tests. |
-| `apps/api/tests/test_planning.py` | Added external direct frontend and Orchestrator auto-start routing tests. |
-| `apps/api/tests/test_task_runs.py` | Added external TaskRun worktree-path assertion. |
-| `apps/api/tests/test_models.py` | Updated model boundary expectations for active target fields. |
-| `docs/project-state.md` | Recorded P9-5 behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-5 complete after validation. |
+| `apps/api/app/models.py` | 添加了会话活跃 frontend/backend 目标 ID。 |
+| `apps/api/app/db.py` | 为现有本地会话表添加了 SQLite 列回填。 |
+| `apps/api/app/schemas.py` | 添加了活跃目标字段和会话目标选择请求模式。 |
+| `apps/api/app/main.py` | 添加了会话目标选择 API 和外部前端自动启动安全检查。 |
+| `apps/api/app/planning.py` | 将直接提及和受限的 Orchestrator 前端请求路由到选定的外部目标。 |
+| `apps/api/app/task_runs.py` | 对外部目标任务使用外部目标根目录作为 TaskRun 工作树路径。 |
+| `apps/api/tests/test_external_workspaces.py` | 添加了会话目标选择测试。 |
+| `apps/api/tests/test_planning.py` | 添加了外部直接前端和 Orchestrator 自动启动路由测试。 |
+| `apps/api/tests/test_task_runs.py` | 添加了外部 TaskRun 工作树路径断言。 |
+| `apps/api/tests/test_models.py` | 更新了活跃目标字段的模型边界预期。 |
+| `docs/project-state.md` | 记录了 P9-5 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | 验证后将 P9-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P9-5 gives registered external targets an executable task path:
+P9-5 为已注册的外部目标提供了可执行的任务路径：
 
-- sessions can select active external frontend/backend targets;
-- direct assignment tasks target active external projects when selected;
-- bounded no-mention UI requests can be routed by Orchestrator to active
-  external frontend targets and auto-started through TaskRun;
-- TaskRun execution requests use the external target root as worktree path;
-- unsupported broad requests remain rejected instead of silently executing.
+- 会话可以选择活跃的外部 frontend/backend 目标；
+- 选定后，直接分配任务将目标指向活跃的外部项目；
+- 受限的无提及 UI 请求可由 Orchestrator 路由到活跃的外部前端目标，并通过 TaskRun 自动启动；
+- TaskRun 执行请求使用外部目标根目录作为工作树路径；
+- 不支持的广泛请求将被拒绝，而非静默执行。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted external execution/routing tests | Pass: 64 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+| 定向外部 execution/routing 测试 | 通过：64 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | 通过 |
 
 ---
 
-## P9-4 External Target Instruction Builder
+## P9-4 外部目标指令构建器
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/instruction_builder.py` | Added external frontend/backend/review instruction bodies using registered target metadata and configured command evidence. |
-| `apps/api/tests/test_task_runs.py` | Added external frontend, backend, and review instruction coverage. |
-| `docs/project-state.md` | Recorded P9-4 behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-4 complete after validation. |
+| `apps/api/app/instruction_builder.py` | 使用已注册的目标元数据和配置的命令证据，添加了外部 frontend/backend/review 指令主体。 |
+| `apps/api/tests/test_task_runs.py` | 添加了外部前端、后端和审查指令覆盖。 |
+| `docs/project-state.md` | 记录了 P9-4 的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | 验证后将 P9-4 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P9-4 makes role instructions target-aware for registered external projects:
+P9-4 使角色指令对已注册的外部项目具有目标感知能力：
 
-- frontend/backend instructions no longer reduce external targets to demo app
-  paths;
-- target root, allowed paths, denied paths, project type, package manager,
-  detected framework, and configured validation commands are included;
-- review instructions stay read-oriented and call out command evidence honesty;
-- built-in demo instructions are preserved.
+- frontend/backend 指令不再将外部目标简化为演示应用路径；
+- 包含目标根目录、允许路径、拒绝路径、项目类型、包管理器、检测到的框架以及配置的验证命令；
+- 审查指令保持面向阅读，并强调命令证据的真实性；
+- 内置演示指令得以保留。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted task-run/instruction tests | Pass: 44 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+| 定向 task-run/instruction 测试 | 通过：44 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | 通过 |
 
 ---
 
-## P9-3 External Target Registry Integration
+## P9-3 外部目标注册表集成
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/target_registry.py` | Added workspace-aware merged registry reads and external-target-to-`TargetProject` mapping. |
-| `apps/api/app/main.py` | Added merged workspace target list API. |
-| `apps/api/app/schemas.py` | Added target project response schema. |
-| `apps/api/app/context_pack.py` | Resolves external `targetId` metadata into session context packs. |
-| `apps/api/app/instruction_builder.py` | Allows instruction generation to use target metadata from context packs. |
-| `apps/api/app/scheduler.py` | Makes target write locks validate registered external targets. |
-| `apps/api/tests/test_target_registry.py` | Added merged registry and external backend/frontend mapping tests. |
-| `apps/api/tests/test_external_workspaces.py` | Added merged targets API coverage. |
-| `apps/api/tests/test_scheduler.py` | Added external target write-lock coverage. |
-| `apps/api/tests/test_task_runs.py` | Added context-pack-to-instruction external target coverage. |
-| `docs/project-state.md` | Recorded P9-3 behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-3 complete after validation. |
+| `apps/api/app/target_registry.py` | 添加了工作区感知的合并注册表读取，以及外部目标到 `TargetProject` 的映射。 |
+| `apps/api/app/main.py` | 新增合并工作区目标列表 API。 |
+| `apps/api/app/schemas.py` | 新增目标项目响应模式。 |
+| `apps/api/app/context_pack.py` | 将外部 `targetId` 元数据解析为会话上下文包。 |
+| `targetId` | 允许指令生成使用上下文包中的目标元数据。 |
+| `apps/api/app/instruction_builder.py` | 使目标写锁能够验证已注册的外部目标。 |
+| `apps/api/app/scheduler.py` | 新增合并注册表与外部 backend/frontend 映射测试。 |
+| `apps/api/tests/test_target_registry.py` | 新增合并目标 API 覆盖测试。 |
+| `apps/api/tests/test_external_workspaces.py` | 新增外部目标写锁覆盖测试。 |
+| `apps/api/tests/test_scheduler.py` | 新增上下文包到指令的外部目标覆盖测试。 |
+| `apps/api/tests/test_task_runs.py` | 记录 P9-3 行为与限制。 |
+| `docs/project-state.md` | 记录本次实现。 |
+| `docs/change-log.md` | 验证完成后将 P9-3 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P9-3 integrates registered external targets into AgentHub's existing target
-metadata path:
+P9-3 将已注册的外部目标集成到 AgentHub 现有的目标元数据路径中：
 
-- merged registry reads include built-in and external targets;
-- external targets carry path policy and command metadata in the same shape as
-  built-in targets;
-- context packs and role instructions can reference external target metadata;
-- scheduler target locks apply to registered external target IDs.
+- 合并注册表读取包含内置目标和外部目标；
+- 外部目标以与内置目标相同的结构携带路径策略和命令元数据；
+- 上下文包和角色指令可引用外部目标元数据；
+- 调度器目标锁适用于已注册的外部目标 ID。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted registry/scheduler/task-run tests | Pass: 56 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+| 定向 registry/scheduler/task-run 测试 | 通过：56 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | 通过 |
 
 ---
 
-## P9-2 Project Analyzer
+## P9-2 项目分析器
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/project_analyzer.py` | Added read-only analyzer for common JS/Python project shapes, safe path inference, command inference, denied-path defaults, and uncertainty status. |
-| `apps/api/app/schemas.py` | Added external project analysis request/response schemas. |
-| `apps/api/app/main.py` | Added workspace-scoped external target analysis API. |
-| `apps/api/tests/test_project_analyzer.py` | Added Vite React, Next.js, FastAPI, Node API, Python package, unknown-project, and API response tests. |
-| `docs/project-state.md` | Recorded P9-2 behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-2 complete after validation. |
+| `apps/api/app/project_analyzer.py` | 新增只读分析器，用于处理常见 JS/Python 项目结构、安全路径推断、命令推断、拒绝路径默认值及不确定性状态。 |
+| `apps/api/app/schemas.py` | 新增外部项目分析 request/response 模式。 |
+| `apps/api/app/main.py` | 新增工作区作用域的外部目标分析 API。 |
+| `apps/api/tests/test_project_analyzer.py` | 新增 Vite React、Next.js、FastAPI、Node API、Python 包、未知项目及 API 响应测试。 |
+| `docs/project-state.md` | 记录 P9-2 行为与限制。 |
+| `docs/change-log.md` | 记录本次实现。 |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | 验证完成后将 P9-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P9-2 adds project analysis without granting execution permissions:
+P9-2 在不授予执行权限的情况下添加项目分析功能：
 
-- analyzes `package.json`, lockfiles, Vite/Next config, Python project files,
-  FastAPI entry points, and source/test directories;
-- infers project type, package manager, detected framework, allowed paths,
-  denied paths, and command candidates;
-- returns `needs_confirmation` with warnings for unknown or incomplete
-  projects;
-- never installs dependencies or runs arbitrary commands.
+- 分析 `package.json`、锁文件、Vite/Next 配置、Python 项目文件、FastAPI 入口点及 source/test 目录；
+- 推断项目类型、包管理器、检测到的框架、允许路径、拒绝路径及命令候选；
+- 对未知或不完整的项目返回带有警告的 `needs_confirmation`；
+- 从不安装依赖项或运行任意命令。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted analyzer tests | Pass: 11 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+| 定向分析器测试 | 通过：11 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | 通过 |
 
 ---
 
-## P9-1 External Workspace Registration
+## P9-1 外部工作区注册
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added persisted `ExternalProjectTarget` model for external workspace target registration. |
-| `apps/api/app/external_workspaces.py` | Added registration service, root/path validation, denied-path defaults, and list/read helpers. |
-| `apps/api/app/schemas.py` | Added external target create and response schemas. |
-| `apps/api/app/main.py` | Added workspace-scoped create/list/read APIs for external targets. |
-| `apps/api/tests/test_external_workspaces.py` | Added registration, unsafe-root, bounded-path, and built-in registry regression tests. |
-| `apps/api/tests/test_models.py` | Updated model boundary expectations for the new external target table. |
-| `docs/project-state.md` | Recorded P9-1 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | Marked P9-1 complete after validation. |
+| `apps/api/app/models.py` | 新增持久化 `ExternalProjectTarget` 模型，用于外部工作区目标注册。 |
+| `apps/api/app/external_workspaces.py` | 新增注册服务、root/path 验证、拒绝路径默认值及 list/read 辅助函数。 |
+| `apps/api/app/schemas.py` | 新增外部目标创建与响应模式。 |
+| `apps/api/app/main.py` | 新增工作区作用域的 create/list/read API，用于外部目标。 |
+| `apps/api/tests/test_external_workspaces.py` | 新增注册、不安全根目录、有界路径及内置注册表回归测试。 |
+| `apps/api/tests/test_models.py` | 更新模型边界预期，以适配新的外部目标表。 |
+| `docs/project-state.md` | 记录 P9-1 行为与限制。 |
+| `docs/change-log.md` | 记录本次实现。 |
+| `openspec/changes/agenthub-p9-external-project-workspace-mode/tasks.md` | 验证完成后将 P9-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P9-1 adds the external workspace registration layer without changing execution
-semantics:
+P9-1 在不改变执行语义的情况下添加外部工作区注册层：
 
-- local external project roots can be registered as workspace-scoped external
-  targets;
-- registration stores target metadata, commands, package manager, detected
-  framework, allowed paths, and denied paths;
-- unsafe broad roots and unbounded allowed paths are rejected;
-- built-in P7/P8 target registry entries remain unchanged.
+- 本地外部项目根目录可注册为工作区作用域的外部目标；
+- 注册存储目标元数据、命令、包管理器、检测到的框架、允许路径及拒绝路径；
+- 不安全的宽泛根目录和无界允许路径将被拒绝；
+- 内置 P7/P8 目标注册表条目保持不变。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted external workspace tests | Pass: 18 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | Pass |
+| 定向外部工作区测试 | 通过：18 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p9-external-project-workspace-mode --strict` | 通过 |
 
 ---
 
-## P8-6 P8 E2E Rehearsal And Freeze Review
+## P8-6 P8 端到端演练与冻结审查
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
+### 修改的文件
 
-### Modified Files
-
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p8-freeze-review.md` | Added P8 freeze evidence, scheduler rehearsal IDs, validation notes, caveats, and recommended tag. |
-| `docs/project-state.md` | Recorded P8-6 freeze result and recommended tag. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-6 complete after validation. |
+| `docs/p8-freeze-review.md` | 添加了 P8 冻结证据、调度器排练 ID、验证说明、注意事项和推荐标签。 |
+| `docs/project-state.md` | 记录了 P8-6 冻结结果和推荐标签。 |
+| `docs/change-log.md` | 记录了本次冻结审查。 |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | 验证后将 P8-6 标记为完成。 |
 
-### Review Result
+### 审查结果
 
-P8 is ready to freeze as Dependency-aware Scheduler and Target Locks.
+P8 已准备好作为依赖感知调度器和目标锁进行冻结。
 
-P8 did not run a fresh real Claude/Codex mutation. It used a temporary git
-worktree and controlled local fake adapter to verify scheduler order, target
-locks, failed dependency blocking, review artifact creation, healthy preview
-plumbing, and mock deploy plumbing. P6 remains the latest real
-`ClaudeCodeAdapter` mini CRM execution evidence.
+P8 未运行全新的真实 Claude/Codex 变异。它使用临时 git 工作区和受控的本地伪造适配器来验证调度器顺序、目标锁、失败依赖阻塞、审查制品创建、健康预览管道和模拟部署管道。P6 仍然是最新的真实 `ClaudeCodeAdapter` 迷你 CRM 执行证据。
 
-### P8 Rehearsal Evidence
+### P8 排练证据
 
-| Field | Value |
+| 字段 | 值 |
 |---|---|
-| Session ID | `3fad4108-f0ea-4134-8b31-fb2ab911fadd` |
-| Contract ID | `contract-mini_crm_contacts` |
-| Backend task / run | `e7f85f87-fa8a-4203-a33f-682e568a6d50`, `72cf0f92-1c65-460e-b697-4e37cbcefed0` |
-| Frontend task / run | `e37a46b0-834b-4396-b703-8ecdfd1bf27b`, `bb28106d-d1f8-4431-8245-d40db304edfa` |
-| Review task | `336a0c82-6caf-4d84-b421-4ccfcdd17ad7` |
-| Diff artifacts | `104f1a7b-fa6f-4842-9152-a8e2acc0bbce`, `e92f2e27-c463-4a41-8dad-c7fce2eb87ce` |
-| Preview / health | `56d01fc3-affb-4f6a-bf46-973469a81e1d`, `healthy` |
-| Mock deploy / provider | `d94dade3-8b3e-4ea0-a0a9-61b2b085ce9e`, `mock` |
-| Target lock evidence | waiting task `7e507b15-3cd6-4be3-89d1-893e3777045a`, holder run `3c241653-2a4e-4782-b58c-729cdc98d1bf` |
-| Failed dependency evidence | failed task `39d5151f-888a-4790-bd66-9044f6328053`, blocked task `84e11005-0148-4926-993c-6c002555507b` |
-| Platform protection | task `4ed028eb-998c-4ca4-8aa0-e0c2dd9dd2f8`, run `ca3f70d9-d4aa-49ed-9e47-c757c432bde5`, state `waiting_approval` |
+| 会话 ID | `3fad4108-f0ea-4134-8b31-fb2ab911fadd` |
+| 合约 ID | `contract-mini_crm_contacts` |
+| 后端任务/运行 | `e7f85f87-fa8a-4203-a33f-682e568a6d50`, `72cf0f92-1c65-460e-b697-4e37cbcefed0` |
+| 前端任务/运行 | `e37a46b0-834b-4396-b703-8ecdfd1bf27b`, `bb28106d-d1f8-4431-8245-d40db304edfa` |
+| 审查任务 | `336a0c82-6caf-4d84-b421-4ccfcdd17ad7` |
+| 差异制品 | `104f1a7b-fa6f-4842-9152-a8e2acc0bbce`, `e92f2e27-c463-4a41-8dad-c7fce2eb87ce` |
+| 预览/健康检查 | `56d01fc3-affb-4f6a-bf46-973469a81e1d`, `healthy` |
+| 模拟部署/提供者 | `d94dade3-8b3e-4ea0-a0a9-61b2b085ce9e`, `mock` |
+| 目标锁证据 | 等待任务 `7e507b15-3cd6-4be3-89d1-893e3777045a`, 持有者运行 `3c241653-2a4e-4782-b58c-729cdc98d1bf` |
+| 失败依赖证据 | 失败任务 `39d5151f-888a-4790-bd66-9044f6328053`, 阻塞任务 `84e11005-0148-4926-993c-6c002555507b` |
+| 平台保护 | 任务 `4ed028eb-998c-4ca4-8aa0-e0c2dd9dd2f8`, 运行 `ca3f70d9-d4aa-49ed-9e47-c757c432bde5`, 状态 `waiting_approval` |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P8 temporary API rehearsal | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 37 web tests, 155 API tests, 5 demo-api tests. |
-| `pnpm demo:api:test` | Pass: 5 tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+| P8 临时 API 排练 | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：37 个 Web 测试，155 个 API 测试，5 个 demo-api 测试。 |
+| `pnpm demo:api:test` | 通过：5 个测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | 通过 |
 
-Recommended freeze tag:
-`p8-dependency-scheduler-target-locks-freeze`.
+推荐冻结标签：
+`p8-dependency-scheduler-target-locks-freeze`。
 
 ---
 
-## P8-5 Scheduler UI Trace
+## P8-5 调度器 UI 追踪
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/task-card-list.tsx` | Added scheduler status labels, task-card scheduler summary, and execution-trace flags for waits/blocks. |
-| `apps/web/src/components/task-card-list.test.tsx` | Added coverage for scheduler target-lock, retry, and fallback metadata rendering. |
-| `docs/project-state.md` | Recorded P8-5 UI trace behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-5 complete after validation. |
+| `apps/web/src/components/task-card-list.tsx` | 为 waits/blocks. 添加了调度器状态标签、任务卡片调度器摘要和执行追踪标志 |
+| `apps/web/src/components/task-card-list.test.tsx` | 添加了对调度器目标锁、重试和兜底元数据渲染的覆盖。 |
+| `docs/project-state.md` | 记录了 P8-5 UI 追踪行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | 验证后将 P8-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P8-5 makes scheduler decisions visible in the existing UI:
+P8-5 使调度器决策在现有 UI 中可见：
 
-- task cards show scheduler state, reason, target ID, blocking dependencies,
-  target lock holder run IDs, write-lock state, retryable state, and fallback
-  availability;
-- the execution trace flags dependency waits, target lock waits, and blocked
-  states;
-- existing artifact and run controls remain in place.
+- 任务卡片显示调度器状态、原因、目标 ID、阻塞依赖、目标锁持有者运行 ID、写锁状态、可重试状态和兜底可用性；
+- 执行追踪标记依赖等待、目标锁等待和阻塞状态；
+- 现有的制品和运行控件保持不变。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted task-card-list tests | Pass: 37 web tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 37 web tests, 155 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+| 定向任务卡片列表测试 | 通过：37 个 Web 测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：37 个 Web 测试，155 个 API 测试，5 个 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | 通过 |
 
 ---
 
-## P8-4 Failure Recovery And Blocked States
+## P8-4 故障恢复与阻塞状态
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/scheduler.py` | Added terminal TaskRun scheduler metadata for completed, retryable, and fallback-available states. |
-| `apps/api/app/task_runs.py` | Records terminal scheduler state before refreshing downstream dependency and lock state. |
-| `apps/api/tests/test_scheduler.py` | Added coverage for fallback availability, retryable state, and fallback completion unblocking downstream tasks. |
-| `docs/project-state.md` | Recorded P8-4 failure recovery behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-4 complete after validation. |
+| `apps/api/app/scheduler.py` | 为已完成、可重试和兜底可用状态添加了终端 TaskRun 调度器元数据。 |
+| `apps/api/app/task_runs.py` | 在刷新下游依赖和锁状态之前记录终端调度器状态。 |
+| `apps/api/tests/test_scheduler.py` | 添加了对兜底可用性、可重试状态以及兜底完成解除下游任务阻塞的覆盖。 |
+| `docs/project-state.md` | 记录了 P8-4 故障恢复行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | 验证后将 P8-4 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P8-4 makes scheduler failure recovery states explicit:
+P8-4 使调度器故障恢复状态显式化：
 
-- completed TaskRuns write `planJson.scheduler.state: completed`;
-- failed/interrupted Codex coding runs expose `fallback_available`;
-- failed/interrupted non-Codex runs expose `retryable`;
-- downstream tasks remain blocked after upstream failure;
-- completed retry/fallback runs re-evaluate downstream tasks and can unblock
-  them when dependency and target-lock rules are satisfied.
+- 已完成的 TaskRun 写入 `planJson.scheduler.state: completed`；
+- failed/interrupted Codex 编码运行暴露 `fallback_available`；
+- failed/interrupted 非 Codex 运行暴露 `retryable`；
+- 上游故障后下游任务保持阻塞；
+- 已完成的 retry/fallback 运行会重新评估下游任务，并在满足依赖和目标锁规则时解除其阻塞。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted scheduler failure tests | Pass: 13 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 155 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+| 定向调度器故障测试 | 通过：13 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，155 个 API 测试，5 个 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | 通过 |
 
 ---
 
-## P8-3 Auto-run Pipeline
+## P8-3 自动运行流水线
 
-**Date:** 2026-05-24
+**日期:** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Marks contract-first backend/frontend tasks as auto-startable. |
-| `apps/api/app/main.py` | Extends safe auto-start to demo backend tasks and adds contract-first pipeline progression after coding TaskRun completion. |
-| `apps/api/tests/test_planning.py` | Updated mini CRM planning expectations to cover backend auto-start through TaskRun. |
-| `docs/project-state.md` | Recorded P8-3 pipeline behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-3 complete after validation. |
+| `apps/api/app/planning.py` | 将契约优先的 backend/frontend 任务标记为可自动启动。 |
+| `apps/api/app/main.py` | 将安全自动启动扩展到演示后端任务，并在编码 TaskRun 完成后添加契约优先的流水线推进。 |
+| `apps/api/tests/test_planning.py` | 更新了迷你 CRM 规划预期，以涵盖通过 TaskRun 实现的后端自动启动。 |
+| `docs/project-state.md` | 记录了 P8-3 流水线的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | 验证后将 P8-3 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P8-3 wires the bounded contract-first pipeline into existing execution paths:
+P8-3 将受约束的契约优先流水线接入现有的执行路径：
 
-- backend and frontend contract-first tasks can auto-start when dependencies
-  and locks allow;
-- backend completion can trigger the frontend coding task;
-- coding completion still uses existing diff collection, scripted review, and
-  ledger refresh;
-- ready contract review / QA tasks are completed from generated review
-  artifacts instead of running a mutating QA adapter;
-- frontend completion attempts existing Vite preview and creates mock deploy
-  only from a healthy preview.
+- 当依赖和锁允许时，后端和前端契约优先任务可以自动启动；
+- 后端完成可以触发前端编码任务；
+- 编码完成仍使用现有的差异收集、脚本化审查和账本刷新；
+- 就绪的契约审查/QA 任务通过生成的审查制品完成，而不是运行一个可变的 QA 适配器；
+- 前端完成会尝试现有的 Vite 预览，并且仅从健康的预览创建模拟部署。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted mini CRM planning / scheduler tests | Pass: 11 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 152 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+| 定向迷你 CRM 规划/调度器测试 | 通过：11 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，152 个 API 测试，5 个演示 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | 通过 |
 
 ---
 
-## P8-2 Target Write Locks
+## P8-2 目标写入锁
 
-**Date:** 2026-05-24
+**日期:** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/scheduler.py` | Added target ID resolution, write-lock detection, lock-holder metadata, platform target blocking, and combined scheduler readiness. |
-| `apps/api/app/main.py` | Uses combined scheduler readiness before safe task auto-start. |
-| `apps/api/app/task_runs.py` | Enforces target write locks before manual TaskRun creation and refreshes session scheduler state after terminal runs. |
-| `apps/api/tests/test_scheduler.py` | Added frontend/backend lock, lock release, read-only review, and platform lock protection tests. |
-| `docs/project-state.md` | Recorded P8-2 target lock behavior and limitation. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-2 complete after validation. |
+| `apps/api/app/scheduler.py` | 添加了目标 ID 解析、写入锁检测、锁持有者元数据、平台目标阻塞以及组合调度器就绪状态。 |
+| `apps/api/app/main.py` | 在安全任务自动启动前使用组合调度器就绪状态。 |
+| `apps/api/app/task_runs.py` | 在手动创建 TaskRun 前强制目标写入锁，并在终端运行后刷新会话调度器状态。 |
+| `apps/api/tests/test_scheduler.py` | 添加了 frontend/backend 锁、锁释放、只读审查和平台锁保护测试。 |
+| `docs/project-state.md` | 记录了 P8-2 目标锁的行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | 验证后将 P8-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P8-2 adds target write locks on top of the P8-1 dependency scheduler:
+P8-2 在 P8-1 依赖调度器之上添加了目标写入锁：
 
-- active same-session write TaskRuns hold a target lock for their resolved
-  `targetId`;
-- another runnable write task for the same target becomes
-  `waiting_target_lock` instead of starting;
-- waiting lock metadata identifies the target and active holder TaskRun IDs;
-- terminal TaskRuns release locks by re-evaluating session scheduler state;
-- read-only Review / QA tasks do not acquire target write locks by default;
-- ordinary app backend tasks cannot acquire an `agenthub-platform` write lock
-  without explicit platform mode and approval.
+- 活跃的同一会话写入 TaskRun 会为其解析的 `targetId` 持有目标锁；
+- 针对同一目标的另一个可运行写入任务会变为 `waiting_target_lock` 状态，而不是启动；
+- 等待锁的元数据标识了目标和活跃持有者的 TaskRun ID；
+- 终端 TaskRun 通过重新评估会话调度器状态来释放锁；
+- 只读的审查/QA 任务默认不获取目标写入锁；
+- 普通的应用后端任务在没有显式平台模式和批准的情况下，无法获取 `agenthub-platform` 写入锁。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted scheduler lock tests | Pass: 10 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 152 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+| 定向调度器锁测试 | 通过：10 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，152 个 API 测试，5 个演示 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | 通过 |
 
 ---
 
-## P8-1 Dependency-aware Task Scheduler
+## P8-1 依赖感知的任务调度器
 
-**Date:** 2026-05-24
+**日期:** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/scheduler.py` | Added dependency readiness decisions, scheduler metadata persistence, session refresh, and downstream refresh helpers. |
-| `apps/api/app/main.py` | Evaluates scheduler dependency readiness after planning and before auto-starting safe tasks. |
-| `apps/api/app/task_runs.py` | Refreshes downstream scheduler state when an upstream TaskRun reaches a terminal state. |
-| `apps/api/tests/test_scheduler.py` | Added dependency readiness, auto-start blocking, ready auto-start, and downstream blocking coverage. |
-| `apps/api/tests/test_planning.py` | Updated planning API expectations to expose `waiting_dependency` state and scheduler metadata for dependent tasks. |
-| `docs/project-state.md` | Recorded P8-1 baseline behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | Marked P8-1 complete after validation. |
+| `apps/api/app/scheduler.py` | 添加了依赖就绪决策、调度器元数据持久化、会话刷新以及下游刷新辅助函数。 |
+| `apps/api/app/main.py` | 在规划后和安全任务自动启动前评估调度器依赖就绪状态。 |
+| `apps/api/app/task_runs.py` | 当上游 TaskRun 达到终端状态时，刷新下游调度器状态。 |
+| `apps/api/tests/test_scheduler.py` | 添加了依赖就绪、自动启动阻塞、就绪自动启动和下游阻塞覆盖。 |
+| `apps/api/tests/test_planning.py` | 更新了规划 API 预期，以暴露 `waiting_dependency` 状态和依赖任务的调度器元数据。 |
+| `docs/project-state.md` | 记录了 P8-1 基线行为和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p8-dependency-scheduler-target-locks/tasks.md` | 验证后将 P8-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P8-1 makes declared task dependencies operational for the scheduler path:
+P8-1 使声明的任务依赖在调度器路径中生效：
 
-- incomplete dependencies prevent automatic TaskRun creation;
-- completed dependencies allow an auto-start-eligible task to queue;
-- synthetic Manager planning tasks are marked `completed` when the task graph
-  is created, preserving the existing no-mention frontend auto-run path;
-- failed, interrupted, or blocked dependencies mark downstream tasks
-  `blocked`;
-- dependency state is visible through `planJson.scheduler`;
-- manual TaskRun creation remains unchanged outside scheduled auto-start.
+- 未完成的依赖会阻止自动创建 TaskRun；
+- 已完成的依赖允许符合自动启动条件的任务入队；
+- 合成管理器规划任务在任务图创建时被标记为 `completed`，保留了现有的无提及前端自动运行路径；
+- 失败、中断或阻塞的依赖会将下游任务标记为 `blocked`；
+- 依赖状态可通过 `planJson.scheduler` 查看；
+- 在计划自动启动之外，手动创建 TaskRun 保持不变。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted scheduler/planning tests | Pass: 7 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 147 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | Pass |
+| 定向的 scheduler/planning 测试 | 通过：7 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，147 个 API 测试，5 个 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | 通过 |
 
 ---
 
-## P7-6 E2E Rehearsal And Freeze Review
+## P7-6 E2E 预演与冻结评审
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p7-freeze-review.md` | Added P7 freeze evidence, reused P6 real execution evidence, API rehearsal IDs, validation notes, and caveats. |
-| `docs/project-state.md` | Recorded P7-6 freeze result and recommended tag. |
-| `docs/change-log.md` | Recorded this freeze review. |
-| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-6 complete after validation. |
+| `docs/p7-freeze-review.md` | 添加了 P7 冻结证据，复用了 P6 真实执行证据、API 预演 ID、验证说明和注意事项。 |
+| `docs/project-state.md` | 记录了 P7-6 冻结结果和推荐标签。 |
+| `docs/change-log.md` | 记录了本次冻结评审。 |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | 验证后将 P7-6 标记为完成。 |
 
-### Review Result
+### 评审结果
 
-P7 is ready to freeze as Target Project Registry + Permissioned Execution.
+P7 已准备好作为目标项目注册表 + 权限化执行进行冻结。
 
-P7 did not run a fresh real Claude/Codex mutation. It reused the P6 final
-`ClaudeCodeAdapter` mini CRM evidence for diff, review, preview, and mock
-deploy, then verified P7-specific behavior through API rehearsal and regression
-validation.
+P7 未运行全新的真实 Claude/Codex 变更。它复用了 P6 最终的
+`ClaudeCodeAdapter` mini CRM 证据用于差异、评审、预览和模拟
+部署，然后通过 API 预演和回归验证验证了 P7 特定的行为。
 
-### P7 API Rehearsal Evidence
+### P7 API 预演证据
 
-| Field | Value |
+| 字段 | 值 |
 |---|---|
-| Mini CRM session ID | `d0500f2c-a480-4903-aea5-5d2d72b2bf31` |
-| Contract ID | `contract-mini_crm_contacts` |
-| Frontend / backend target IDs | `demo-frontend`, `demo-backend` |
-| Demo API base URL | `http://127.0.0.1:5174` |
-| Mini CRM task IDs | `952bcfd1-12b9-41ca-b81d-694a66b4dcea`, `d382a368-0cd2-4d46-86c6-790b691d4b58`, `5966d060-0df4-463d-94e1-d7bebdddf729`, `634bb541-3b0e-47ad-a408-13392b6dea11` |
-| Platform session ID | `57d92dde-710f-484e-b86a-f7c0e06e22e6` |
-| Platform task / run | `fc86452a-a92b-4894-844d-372b5df799e1`, `7ef6efcb-979c-4984-a1a2-2f29f893bc79` |
-| Platform target / state | `agenthub-platform`, `waiting_approval` |
-| Platform approval | `security_approval`, `high` |
+| Mini CRM 会话 ID | `d0500f2c-a480-4903-aea5-5d2d72b2bf31` |
+| 合约 ID | `contract-mini_crm_contacts` |
+| 前端 / 后端目标 ID | `demo-frontend`, `demo-backend` |
+| Demo API 基础 URL | `http://127.0.0.1:5174` |
+| Mini CRM 任务 ID | `952bcfd1-12b9-41ca-b81d-694a66b4dcea`, `d382a368-0cd2-4d46-86c6-790b691d4b58`, `5966d060-0df4-463d-94e1-d7bebdddf729`, `634bb541-3b0e-47ad-a408-13392b6dea11` |
+| 平台会话 ID | `57d92dde-710f-484e-b86a-f7c0e06e22e6` |
+| 平台任务 / 运行 | `fc86452a-a92b-4894-844d-372b5df799e1`, `7ef6efcb-979c-4984-a1a2-2f29f893bc79` |
+| 平台目标 / 状态 | `agenthub-platform`, `waiting_approval` |
+| 平台审批 | `security_approval`, `high` |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| P7 API rehearsal script | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 142 API tests, 5 demo-api tests. |
-| `pnpm demo:api:test` | Pass: 5 tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+| P7 API 预演脚本 | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，142 个 API 测试，5 个 demo-api 测试。 |
+| `pnpm demo:api:test` | 通过：5 个测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | 通过 |
 
-Recommended freeze tag:
-`p7-target-registry-permissioned-execution-freeze`.
+推荐的冻结标签：
+`p7-target-registry-permissioned-execution-freeze`。
 
 ---
 
-## P7-5 Platform Maintenance Mode
+## P7-5 平台维护模式
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added explicit platform maintenance routing while preserving ordinary `@backend` routing to `demo-backend`. |
-| `apps/api/app/task_runs.py` | Added approval-gated TaskRun creation for `agenthub-platform` tasks. |
-| `apps/api/tests/test_planning.py` | Added coverage for ordinary backend routing and explicit platform mode task creation. |
-| `apps/api/tests/test_task_runs.py` | Added coverage for platform maintenance TaskRun approval requests. |
-| `docs/project-state.md` | Recorded P7-5 platform mode behavior. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-5 complete after validation. |
+| `apps/api/app/planning.py` | 添加了显式的平台维护路由，同时保留普通的 `@backend` 路由到 `demo-backend`。 |
+| `apps/api/app/task_runs.py` | 为 `agenthub-platform` 任务添加了需要审批的 TaskRun 创建。 |
+| `apps/api/tests/test_planning.py` | 增加了对普通后端路由和显式平台模式任务创建的覆盖。 |
+| `apps/api/tests/test_task_runs.py` | 增加了对平台维护 TaskRun 审批请求的覆盖。 |
+| `docs/project-state.md` | 记录了 P7-5 平台模式行为。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | 验证后将 P7-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P7-5 introduces explicit AgentHub platform maintenance mode:
+P7-5 引入了显式的 AgentHub 平台维护模式：
 
-- ordinary `@backend` requests target `demo-backend` / `apps/demo-api`;
-- explicit `platform mode` or platform-maintenance phrasing creates
-  `agenthub-platform` tasks;
-- platform tasks require `platformMode: true` and `requiresApproval: true`;
-- platform TaskRuns start in `waiting_approval` and emit a
-  `security_approval` request instead of queueing execution immediately.
+- 普通的 `@backend` 请求目标为 `demo-backend` / `apps/demo-api`；
+- 显式的 `platform mode` 或平台维护措辞会创建
+  `agenthub-platform` 任务；
+- 平台任务需要 `platformMode: true` 和 `requiresApproval: true`；
+- 平台 TaskRun 以 `waiting_approval` 状态启动，并发出
+  `security_approval` 请求，而不是立即排队执行。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| Targeted routing/approval tests | Pass: 3 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 142 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+| 定向的 routing/approval 测试 | 通过：3 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，142 个 API 测试，5 个 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | 通过 |
 
 ---
 
-## P7-4 Target-aware Review / QA
+## P7-4 目标感知的评审 / QA
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/reviews.py` | Added target-registry review checks for allowed paths, denied paths, API-base consistency, and contract/task target consistency. |
-| `apps/api/tests/test_task_runs.py` | Added review coverage for platform-code mutation failures and task target mismatch failures. |
-| `docs/project-state.md` | Recorded P7-4 review behavior. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-4 complete after validation. |
+| `apps/api/app/reviews.py` | 为目标注册表评审检查添加了允许路径、拒绝路径、API 基础一致性以及 contract/task 目标一致性。 |
+| `apps/api/tests/test_task_runs.py` | 增加了对平台代码变更失败和任务目标不匹配失败的评审覆盖。 |
+| `docs/project-state.md` | 记录了 P7-4 评审行为。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | 验证后将 P7-4 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P7-4 makes the deterministic review artifact target-aware:
+P7-4 使确定性评审制品具有目标感知能力：
 
-- full-stack diffs that stay inside `demo-frontend` and `demo-backend`
-  allowed paths pass;
-- frontend local API base URLs must match the registry-resolved
-  `demo-backend` base URL;
-- ordinary app diffs that modify `apps/api` fail review with high risk;
-- task target IDs are checked against contract target IDs.
+- 保持在 `demo-frontend` 和 `demo-backend` 允许路径内的全栈差异通过；
+- 前端本地 API 基础 URL 必须与注册表解析的
+  `demo-backend` 基础 URL 匹配；
+- 修改 `apps/api` 的普通应用差异评审失败，风险较高；
+- 任务目标 ID 会与合约目标 ID 进行核对。
 
-Review remains advisory and non-blocking for preview/mock deploy in this phase.
+在此阶段，评审对于 preview/mock 部署仍然是建议性的且非阻塞的。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
+|---|---|
+| 定向的 scheduler/planning 测试 | 通过：7 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，147 个 API 测试，5 个 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p8-dependency-scheduler-target-locks --strict` | 通过 |
 |---|---|
-| Targeted review tests in `tests/test_task_runs.py` | Pass: 4 tests. |
-| `bash scripts/check-api.sh` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 141 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+| `tests/test_task_runs.py` 中的定向审查测试 | 通过：4 项测试。 |
+| `bash scripts/check-api.sh` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 项 Web 测试、141 项 API 测试、5 项 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | 通过 |
 
 ---
 
-## P7-3 Target-aware Contract Planner
+## P7-3 目标感知契约规划器
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Updated contract-first planning to derive frontend/backend target IDs, safe paths, raw target compatibility fields, and demo backend base URL from the registry. |
-| `apps/api/tests/test_planning.py` | Added coverage for target IDs, registry-derived contract metadata, and target IDs in generated task graphs. |
-| `docs/project-state.md` | Recorded P7-3 planner behavior. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-3 complete after validation. |
+| `apps/api/app/planning.py` | 更新了契约优先规划，以从注册表中推导出 frontend/backend 目标 ID、安全路径、原始目标兼容性字段以及演示后端基础 URL。 |
+| `apps/api/tests/test_planning.py` | 在生成的任务图中增加了对目标 ID、注册表派生的契约元数据以及目标 ID 的覆盖。 |
+| `docs/project-state.md` | 记录了 P7-3 规划器的行为。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | 验证后标记 P7-3 完成。 |
 
-### What Changed
+### 变更内容
 
-P7-3 keeps the existing P6 mini CRM path compatible while making contract-first
-plans target-aware:
+P7-3 在保持现有 P6 迷你 CRM 路径兼容的同时，使契约优先计划具备目标感知能力：
 
-- app contracts now include `frontendTargetId: demo-frontend` and
-  `backendTargetId: demo-backend`;
-- `backendTarget`, `frontendTarget`, `backendAllowedPaths`,
-  `frontendAllowedPaths`, `backendBaseUrl`, and `demoApiBaseUrl` are derived
-  from registry metadata;
-- backend, frontend, and review task plans include target IDs;
-- task graph metadata includes target IDs for target-bound execution steps.
+- 应用契约现在包含 `frontendTargetId: demo-frontend` 和 `backendTargetId: demo-backend`；
+- `backendTarget`、`frontendTarget`、`backendAllowedPaths`、`frontendAllowedPaths`、`backendBaseUrl` 和 `demoApiBaseUrl` 从注册表元数据中派生；
+- 后端、前端和审查任务计划包含目标 ID；
+- 任务图元数据包含目标绑定执行步骤的目标 ID。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pytest tests/test_planning.py -q` | Pass: 18 tests. |
-| `bash scripts/check-api.sh` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 139 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+| `pytest tests/test_planning.py -q` | 通过：18 项测试。 |
+| `bash scripts/check-api.sh` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 项 Web 测试、139 项 API 测试、5 项 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | 通过 |
 
 ---
 
-## P7-2 Target-aware Instruction Builder
+## P7-2 目标感知指令构建器
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/instruction_builder.py` | Resolved role instructions through target registry metadata, including target IDs, allowed paths, commands, related backend base URL, and platform-mode requirements. |
-| `apps/api/app/context_pack.py` | Added resolved target metadata and related target metadata to session context packs when target IDs are present. |
-| `apps/api/app/main.py` | Removed the unused legacy `instruction_for_task` helper so instruction generation has one backend boundary. |
-| `apps/api/tests/test_task_runs.py` | Added instruction/request coverage for target-aware backend, frontend, contract, context pack, and platform-maintenance behavior. |
-| `docs/project-state.md` | Recorded P7-2 behavior and remaining migration caveats. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-2 complete after validation. |
+| `apps/api/app/instruction_builder.py` | 通过目标注册表元数据解析角色指令，包括目标 ID、允许的路径、命令、相关后端基础 URL 以及平台模式要求。 |
+| `apps/api/app/context_pack.py` | 当存在目标 ID 时，将已解析的目标元数据和相关目标元数据添加到会话上下文包中。 |
+| `apps/api/app/main.py` | 移除了未使用的旧版 `instruction_for_task` 辅助函数，使指令生成只有一个后端边界。 |
+| `instruction_for_task` | 增加了对目标感知后端、前端、契约、上下文包和平台维护行为的 instruction/request 覆盖。 |
+| `apps/api/tests/test_task_runs.py` | 记录了 P7-2 的行为和剩余的迁移注意事项。 |
+| `docs/project-state.md` | 记录了本次实现。 |
+| `docs/change-log.md` | 验证后标记 P7-2 完成。 |
 
-### What Changed
+### 变更内容
 
-P7-2 keeps P6 instruction behavior compatible while allowing P7 target-aware
-plans to drive instruction construction:
+P7-2 在保持 P6 指令行为兼容的同时，允许 P7 目标感知计划驱动指令构建：
 
-- frontend instructions reference `demo-frontend`, `apps/demo/src`, and the
-  registry-resolved `demo-backend` base URL;
-- backend instructions reference `demo-backend`, `apps/demo-api`, and
-  `pnpm demo:api:test`;
-- explicit `agenthub-platform` tasks produce platform-maintenance instructions
-  that require platform mode and approval;
-- context packs expose `targetProject` and `relatedTargetProjects` metadata for
-  adapter request construction.
+- 前端指令引用 `demo-frontend`、`apps/demo/src` 以及注册表解析的 `demo-backend` 基础 URL；
+- 后端指令引用 `demo-backend`、`apps/demo-api` 和 `pnpm demo:api:test`；
+- 显式的 `agenthub-platform` 任务生成需要平台模式和审批的平台维护指令；
+- 上下文包暴露 `targetProject` 和 `relatedTargetProjects` 元数据，用于适配器请求构建。
 
-P7-3 still needs to update planner output so target IDs are emitted by default.
+P7-3 仍需更新规划器输出，以便默认发出目标 ID。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pytest tests/test_task_runs.py -q` | Pass: 26 tests. |
-| `bash scripts/check-api.sh` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 139 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+| `pytest tests/test_task_runs.py -q` | 通过：26 项测试。 |
+| `bash scripts/check-api.sh` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 项 Web 测试、139 项 API 测试、5 项 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | 通过 |
 
 ---
 
-## P7-1 Target Project Registry
+## P7-1 目标项目注册表
 
-**Date:** 2026-05-24
+**日期：** 2026-05-24
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/target_registry.py` | Added a static Target Project Registry with demo frontend, demo backend, and AgentHub platform target records. |
-| `apps/api/tests/test_target_registry.py` | Added registry coverage for target metadata, related backend lookup, denied paths, and platform approval requirements. |
-| `docs/project-state.md` | Recorded P7-1 target registry baseline and remaining migration caveat. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | Marked P7-1 complete after focused registry validation. |
+| `apps/api/app/target_registry.py` | 添加了一个静态目标项目注册表，包含演示前端、演示后端和 AgentHub 平台目标记录。 |
+| `apps/api/tests/test_target_registry.py` | 增加了对目标元数据、相关后端查找、拒绝路径和平台审批要求的注册表覆盖。 |
+| `docs/project-state.md` | 记录了 P7-1 目标注册表基线和剩余的迁移注意事项。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p7-target-registry-permissioned-execution/tasks.md` | 在完成聚焦的注册表验证后标记 P7-1 完成。 |
 
-### What Changed
+### 变更内容
 
-P7-1 creates a single backend registry boundary for target metadata:
+P7-1 为目标元数据创建了一个单一的后端注册表边界：
 
-- `demo-frontend` maps to `apps/demo`, allows frontend app work under
-  `apps/demo/src`, and relates to `demo-backend`;
-- `demo-backend` maps to `apps/demo-api`, exposes
-  `http://127.0.0.1:5174` as the demo backend base URL, and denies `apps/api`;
-- `agenthub-platform` represents AgentHub platform maintenance and requires
-  explicit platform mode plus approval.
+- `demo-frontend` 映射到 `apps/demo`，允许在 `apps/demo/src` 下进行前端应用工作，并与 `demo-backend` 关联；
+- `demo-backend` 映射到 `apps/demo-api`，将 `http://127.0.0.1:5174` 暴露为演示后端基础 URL，并拒绝 `apps/api`；
+- `agenthub-platform` 代表 AgentHub 平台维护，需要显式的平台模式加审批。
+默认拒绝路径包括 `.env*`、`node_modules`、`.git` 和 `secrets`。
+P7-1 尚未将规划器、指令构建器或审查逻辑迁移至消费注册表；该工作从 P7-2 和 P7-3/P7-4. 开始。
 
-Default denied paths include `.env*`, `node_modules`, `.git`, and `secrets`.
-P7-1 does not yet migrate planner, instruction builder, or review logic to
-consume the registry; that starts in P7-2 and P7-3/P7-4.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pytest tests/test_target_registry.py -q` | Pass: 7 tests. |
-| `bash scripts/check-api.sh` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 138 API tests, 5 demo-api tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | Pass |
+| `pytest tests/test_target_registry.py -q` | 通过：7 项测试。 |
+| `bash scripts/check-api.sh` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 项 Web 测试、138 项 API 测试、5 项 demo-api 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p7-target-registry-permissioned-execution --strict` | 通过 |
 
 ---
 
-## P6-7 Final Full-stack Rehearsal And Freeze Review
+## P6-7 最终全栈演练与冻结审查
 
-**Date:** 2026-05-23
+**日期：** 2026-05-23
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/demo-api/app/main.py` | Added local-preview CORS support so Vite previews can call the safe demo backend. |
-| `apps/demo-api/tests/test_contacts.py` | Added CORS preflight coverage for local preview origins. |
-| `docs/project-state.md` | Recorded final P6-7 freeze evidence and remaining caveats. |
-| `docs/change-log.md` | Recorded this final rehearsal. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-7 complete after the final rehearsal passed. |
-
-### Review Result
+| `apps/demo-api/app/main.py` | 新增本地预览 CORS 支持，使 Vite 预览能够调用安全的演示后端。 |
+| `apps/demo-api/tests/test_contacts.py` | 为本地预览来源新增 CORS 预检覆盖。 |
+| `docs/project-state.md` | 记录最终 P6-7 冻结证据及剩余注意事项。 |
+| `docs/change-log.md` | 记录本次最终演练。 |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | 在最终演练通过后标记 P6-7 完成。 |
 
-P6 is ready to freeze as a practical agent execution capability upgrade for the
-local single-user Agent Coding Workspace.
+### 审查结果
 
-Fresh no-mention request:
+P6 已准备好作为本地单用户 Agent 编码工作区的实用 Agent 执行能力升级进行冻结。
 
+全新无提及请求：
 ```text
 帮我做一个 mini CRM，包含联系人和备注
 ```
+最终彩排对后端 Agent 和前端 Agent 的运行均使用了真实的 `ClaudeCodeAdapter` 执行。生成的前端使用了合约演示 API 基础 URL `http://127.0.0.1:5174`，最终差异中不包含 `http://localhost:8000` 或 `http://127.0.0.1:8000`。
 
-The final rehearsal used real `ClaudeCodeAdapter` execution for both Backend
-Agent and Frontend Agent runs. The generated frontend used the contract demo
-API base URL `http://127.0.0.1:5174`, and the final diff did not contain
-`http://localhost:8000` or `http://127.0.0.1:8000`.
+对预览的浏览器检查显示联系人列表包含 `Ada Lovelace` 和 `Grace Hopper`，验证了迷你 CRM 从演示 API 加载了数据。
 
-Browser inspection of the preview showed the contacts list with `Ada Lovelace`
-and `Grace Hopper`, verifying that the mini CRM loaded data from the demo API.
+### 证据
 
-### Evidence
-
-| Field | Value |
+| 字段 | 值 |
 |---|---|
-| Session ID | `d39ed32a-8426-4c75-86a1-9fd10a57f44c` |
-| Contract ID | `contract-mini_crm_contacts` |
-| Demo API base URL | `http://127.0.0.1:5174` |
-| Backend task / run | `efe6482b-b2e3-43a7-bae9-2aa0b44dde41`, `908a5708-3334-474c-8af6-b18e6ceaa319` |
-| Frontend task / run | `f1d141d1-7fcb-4629-9ed1-20fd957d6ef4`, `7a01e9ea-8d5d-4690-ae4c-35fbca0b6309` |
-| Adapter type | `claude_code` for both coding runs |
-| Final diff artifact | `a89dba5d-cc92-490c-aca1-6c00cd20cc5c` |
-| Final review artifact | `076f01c5-1949-4fa6-9715-623e41642edb` |
-| Final review status / risk | `passed`, `low` |
-| Preview | `d515ffaf-bf9d-481d-9b51-77aa57eb2cef`, `http://127.0.0.1:62947`, healthy |
-| Mock deployment | `ff54062e-35ca-462d-a5f7-e9a4786517ec`, `mock`, `ready` |
+| 会话 ID | `d39ed32a-8426-4c75-86a1-9fd10a57f44c` |
+| 合约 ID | `contract-mini_crm_contacts` |
+| 演示 API 基础 URL | `http://127.0.0.1:5174` |
+| 后端任务 / 运行 | `efe6482b-b2e3-43a7-bae9-2aa0b44dde41`, `908a5708-3334-474c-8af6-b18e6ceaa319` |
+| 前端任务 / 运行 | `f1d141d1-7fcb-4629-9ed1-20fd957d6ef4`, `7a01e9ea-8d5d-4690-ae4c-35fbca0b6309` |
+| 适配器类型 | 两次编码运行均为 `claude_code` |
+| 最终差异制品 | `a89dba5d-cc92-490c-aca1-6c00cd20cc5c` |
+| 最终审查制品 | `076f01c5-1949-4fa6-9715-623e41642edb` |
+| 最终审查状态 / 风险 | `passed`, `low` |
+| 预览 | `d515ffaf-bf9d-481d-9b51-77aa57eb2cef`, `http://127.0.0.1:62947`, 健康 |
+| 模拟部署 | `ff54062e-35ca-462d-a5f7-e9a4786517ec`, `mock`, `ready` |
 
-### Remaining Caveats
+### 剩余注意事项
 
-- The planned QA/Review task remains pending; automatic post-diff review
-  supplies contract consistency evidence.
-- Review remains deterministic `scripted_mock`, not real Claude review.
-- Deployment remains mock-labeled and is not production deployment.
-- P6 remains bounded to supported mini app families, not arbitrary SaaS
-  generation.
+- 计划的 QA/Review 任务仍待处理；自动差异后审查提供合约一致性证据。
+- 审查仍然是确定性的 `scripted_mock`，而非真实的 Claude 审查。
+- 部署仍标记为模拟，并非生产部署。
+- P6 仍局限于支持的迷你应用系列，而非任意 SaaS 生成。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 131 API tests, 5 demo-api tests. |
-| `pnpm demo:api:test` | Pass: 5 tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，131 个 API 测试，5 个演示 API 测试。 |
+| `pnpm demo:api:test` | 通过：5 个测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | 通过 |
 
-Recommended freeze tag: `p6-agent-execution-upgrade-freeze`.
+推荐冻结标签：`p6-agent-execution-upgrade-freeze`。
 
 ---
 
-## P6-7a Demo API Base Alignment Fix
+## P6-7a 演示 API 基础对齐修复
 
-**Date:** 2026-05-23
+**日期：** 2026-05-23
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added `demoApiBaseUrl` to contract-first app contracts and validation expectations. |
-| `apps/api/app/instruction_builder.py` | Updated contract-aware Frontend Agent instructions to require the demo backend base URL and forbid AgentHub platform API base URLs for generated app data. |
-| `apps/api/app/reviews.py` | Added scripted review detection for frontend diffs that reference the AgentHub platform API instead of the demo API base. |
-| `apps/api/tests/test_planning.py` | Added contract coverage for `demoApiBaseUrl` and validation expectations. |
-| `apps/api/tests/test_task_runs.py` | Added instruction and review coverage for demo API base alignment. |
-| `apps/demo-api/app/main.py` | Added local-preview CORS support so Vite previews can call the safe demo backend. |
-| `apps/demo-api/tests/test_contacts.py` | Added CORS preflight coverage for local preview origins. |
-| `docs/project-state.md` | Recorded P6-7a behavior and remaining freeze caveat. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/planning.py` | 在合约优先应用合约和验证期望中添加了 `demoApiBaseUrl`。 |
+| `apps/api/app/instruction_builder.py` | 更新了合约感知的前端 Agent 指令，要求使用演示后端基础 URL，并禁止为生成的应用数据使用 AgentHub 平台 API 基础 URL。 |
+| `apps/api/app/reviews.py` | 为引用 AgentHub 平台 API 而非演示 API 基础的前端差异添加了脚本化审查检测。 |
+| `apps/api/tests/test_planning.py` | 为 `demoApiBaseUrl` 和验证期望添加了合约覆盖。 |
+| `apps/api/tests/test_task_runs.py` | 为演示 API 基础对齐添加了指令和审查覆盖。 |
+| `apps/demo-api/app/main.py` | 添加了本地预览 CORS 支持，以便 Vite 预览可以调用安全的演示后端。 |
+| `apps/demo-api/tests/test_contacts.py` | 为本地预览来源添加了 CORS 预检覆盖。 |
+| `docs/project-state.md` | 记录了 P6-7a 行为和剩余冻结注意事项。 |
+| `docs/change-log.md` | 记录了此实现。 |
 
-### What Changed
+### 变更内容
 
-P6-7a fixes the P6-7 freeze blocker at the planning, instruction, and review
-layers:
+P6-7a 在规划、指令和审查层面修复了 P6-7 冻结阻塞器：
 
-- mini app `appContract` payloads now include
-  `demoApiBaseUrl: "http://127.0.0.1:5174"`;
-- Frontend Agent instructions for contract-aware full-stack tasks now require
-  using that demo backend base URL for app data calls;
-- Frontend Agent instructions explicitly forbid calling
-  `http://localhost:8000` or `http://127.0.0.1:8000` for generated app data;
-- scripted review now warns when a contract-aware frontend diff references the
-  AgentHub platform API base instead of the demo API base.
-- the demo API now allows local preview origins through CORS.
+- 迷你应用 `appContract` 负载现在包含 `demoApiBaseUrl: "http://127.0.0.1:5174"`；
+- 合约感知的全栈任务的前端 Agent 指令现在要求使用该演示后端基础 URL 进行应用数据调用；
+- 前端 Agent 指令明确禁止为生成的应用数据调用 `http://localhost:8000` 或 `http://127.0.0.1:8000`；
+- 当合约感知的前端差异引用 AgentHub 平台 API 基础而非演示 API 基础时，脚本化审查现在会发出警告。
+- 演示 API 现在通过 CORS 允许本地预览来源。
 
-P6-7a originally did not run a new real Claude/Codex mutation. A later final
-P6-7 rehearsal verified that generated frontend code uses the demo API base and
-browser-visible mini CRM data loads from `apps/demo-api`.
+P6-7a 最初并未运行新的真实 Claude/Codex 变更。后续的最终 P6-7 彩排验证了生成的前端代码使用了演示 API 基础，并且浏览器可见的迷你 CRM 数据从 `apps/demo-api` 加载。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pytest tests/test_planning.py tests/test_task_runs.py -q` | Pass: 43 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 131 API tests, 4 demo-api tests. |
-| `pnpm demo:api:test` | Pass: 4 tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+| `pytest tests/test_planning.py tests/test_task_runs.py -q` | 通过：43 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，131 个 API 测试，4 个演示 API 测试。 |
+| `pnpm demo:api:test` | 通过：4 个测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | 通过 |
 
 ---
 
-## P6-7 Full-stack Vertical Slice Rehearsal And Freeze Review
+## P6-7 全栈垂直切片彩排及冻结审查
 
-**Date:** 2026-05-23
+**日期：** 2026-05-23
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/project-state.md` | Recorded the P6-7 freeze review result, persistent preview evidence, and integration blocker. |
-| `docs/change-log.md` | Recorded this freeze review. |
+| `docs/project-state.md` | 记录了 P6-7 冻结审查结果、持久预览证据和集成阻塞器。 |
+| `docs/change-log.md` | 记录了此冻结审查。 |
 
-### Review Result
+### 审查结果
 
-P6 is not ready to freeze yet.
+P6 尚未准备好冻结。
 
-P6-7 reused the P6-6 real execution evidence instead of running another
-Claude/Codex mutation. The existing P6-6 backend and frontend coding TaskRuns
-both used `ClaudeCodeAdapter` and completed successfully. The final diff and
-review artifacts still show a shared `contract-mini_crm_contacts` contract and
-target-aware changes under both `apps/demo-api` and `apps/demo/src`.
+P6-7 复用了 P6-6 的真实执行证据，而不是运行另一个 Claude/Codex 变更。现有的 P6-6 后端和前端编码 TaskRun 均使用了 `ClaudeCodeAdapter` 并成功完成。最终差异和审查制品仍然显示共享的 `contract-mini_crm_contacts` 合约以及在 `apps/demo-api` 和 `apps/demo/src` 下的目标感知变更。
 
-### Persistent Preview Evidence
+### 持久预览证据
+旧的 `127.0.0.1:8000` 进程接受了 TCP 连接，但未响应
+`/health`，因此演练在
+`127.0.0.1:8010` 上使用 `pnpm dev:api` 启动了一个新的持久化 AgentHub API。
 
-The old `127.0.0.1:8000` process accepted TCP connections but did not respond
-to `/health`, so the rehearsal started a fresh persistent AgentHub API on
-`127.0.0.1:8010` using `pnpm dev:api`.
+预览是通过持久化 API 为前端任务运行
+`ade5c49c-097d-448e-831c-d10c6bdc3a71` 启动的。
 
-Preview was started through the persistent API for frontend task run
-`ade5c49c-097d-448e-831c-d10c6bdc3a71`.
-
-| Field | Value |
+| 字段 | 值 |
 |---|---|
-| Preview ID | `3e500940-4d46-423b-af66-b36f1e6ba604` |
-| Preview URL | `http://127.0.0.1:65046` |
-| Preview health | `healthy` |
-| Immediate `curl -I` | `200 OK` |
-| Delayed `curl -I` after 20 seconds | `200 OK` |
-| Mock deployment ID | `6b14e81b-c1d6-40ed-b6c4-88a3f846db60` |
-| Mock deployment provider/status | `mock`, `ready` |
+| 预览 ID | `3e500940-4d46-423b-af66-b36f1e6ba604` |
+| 预览 URL | `http://127.0.0.1:65046` |
+| 预览健康状态 | `healthy` |
+| 即时 `curl -I` | `200 OK` |
+| 延迟 20 秒后的 `curl -I` | `200 OK` |
+| 模拟部署 ID | `6b14e81b-c1d6-40ed-b6c4-88a3f846db60` |
+| 模拟部署 provider/status | `mock`, `ready` |
 
-The temporary preview process and the temporary `8010` / `5174` dev services
-were stopped after verification.
+临时预览进程和临时的 `8010` / `5174` 开发服务
+在验证后已停止。
 
-### Freeze Blocker
+### 冻结阻塞项
 
-The generated frontend preview is reachable, but the app is not fully
-integrated with the safe demo backend by default:
+生成的前端预览可访问，但应用默认情况下未与
+安全演示后端完全集成：
 
-- `apps/demo-api` serves correctly on `http://127.0.0.1:5174`;
-- `GET /health` and `GET /contacts` worked against `5174`;
-- the generated P6-6 frontend code hardcodes
-  `const API_BASE = "http://localhost:8000"`;
-- browser inspection showed the preview stuck at `Loading contacts...`;
-- `curl http://127.0.0.1:8000/contacts` timed out against the stale AgentHub API
-  process.
+- `apps/demo-api` 在 `http://127.0.0.1:5174` 上正确提供服务；
+- `GET /health` 和 `GET /contacts` 针对 `5174` 工作正常；
+- 生成的 P6-6 前端代码硬编码了
+  `const API_BASE = "http://localhost:8000"`；
+- 浏览器检查显示预览卡在 `Loading contacts...`；
+- `curl http://127.0.0.1:8000/contacts` 针对过时的 AgentHub API
+  进程超时。
 
-The OpenSpec P6-7 checkbox remains unchecked. The recommended next task is a
-targeted fix to pass the demo API base URL into contract-aware frontend
-instructions and to add review/test coverage for frontend/backend API-base
-consistency.
+OpenSpec P6-7 复选框仍处于未选中状态。建议的下一个任务是
+进行针对性修复，将演示 API 基础 URL 传递给契约感知的前端
+指令，并为 frontend/backend API 基础
+一致性添加 review/test 覆盖。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 130 API tests, 4 demo-api tests. |
-| `pnpm demo:api:test` | Pass: 4 tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试，130 个 API 测试，4 个演示 API 测试。 |
+| `pnpm demo:api:test` | 通过：4 个测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | 通过 |
 
 ---
 
-## P6-6 Mini CRM Full-stack Vertical Slice
+## P6-6 迷你 CRM 全栈垂直切片
 
-**Date:** 2026-05-22
+**日期：** 2026-05-22
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/reviews.py` | Added contract-aware scripted review checks so review artifacts can verify that final full-stack diffs include both backend and frontend contract targets. |
-| `apps/api/tests/test_task_runs.py` | Added coverage for contract-aware review validation of backend and frontend changed files. |
-| `docs/p6-mini-crm-vertical-slice.md` | Recorded P6-6 smoke evidence, IDs, changed files, validation notes, and caveats. |
-| `docs/project-state.md` | Recorded the P6-6 vertical slice result and remaining caveats. |
-| `docs/change-log.md` | Recorded this implementation and rehearsal. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-6 complete after validation. |
+| `apps/api/app/reviews.py` | 添加了契约感知的脚本化审查检查，以便审查制品可以验证最终的全栈差异是否包含后端和前端契约目标。 |
+| `apps/api/tests/test_task_runs.py` | 添加了对后端和前端变更文件的契约感知审查验证覆盖。 |
+| `docs/p6-mini-crm-vertical-slice.md` | 记录了 P6-6 冒烟证据、ID、变更文件、验证说明和注意事项。 |
+| `docs/project-state.md` | 记录了 P6-6 垂直切片结果和剩余注意事项。 |
+| `docs/change-log.md` | 记录了本次实现和演练。 |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | 验证后将 P6-6 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-P6-6 verified a bounded mini CRM full-stack vertical slice with the request:
-
+P6-6 通过以下请求验证了一个有界的迷你 CRM 全栈垂直切片：
 ```text
 帮我做一个 mini CRM，包含联系人和备注
 ```
+编排器生成了共享的 `contract-mini_crm_contacts` 应用合约。
+后端 Agent 任务的目标是 `apps/demo-api`，前端 Agent 任务的目标是 `apps/demo/src`，两个编码 TaskRun 均使用了 `ClaudeCodeAdapter`。
 
-Orchestrator generated the shared `contract-mini_crm_contacts` app contract.
-The Backend Agent task targeted `apps/demo-api`, the Frontend Agent task
-targeted `apps/demo/src`, and both coding TaskRuns used `ClaudeCodeAdapter`.
+最终累积的差异覆盖了：
 
-The final accumulated diff covered:
+- `apps/demo-api/app/main.py`；
+- `apps/demo-api/tests/test_contacts.py`；
+- `apps/demo/src/App.tsx`；
+- `apps/demo/src/styles.css`。
 
-- `apps/demo-api/app/main.py`;
-- `apps/demo-api/tests/test_contacts.py`;
-- `apps/demo/src/App.tsx`;
-- `apps/demo/src/styles.css`.
+最终自动审查制品以低风险通过，并验证了 `contract-mini_crm_contacts` 的合约一致性。预览制品在创建时状态健康，部署制品仍保持模拟标记。
 
-The final automatic review artifact passed with low risk and verified contract
-consistency for `contract-mini_crm_contacts`. The preview artifact was healthy
-at creation and the deploy artifact remained mock-labeled.
+### 证据
 
-### Evidence
-
-| Field | Value |
+| 字段 | 值 |
 |---|---|
-| Session ID | `ad122cf7-afe7-4921-bbd9-b7e815539427` |
-| Contract ID | `contract-mini_crm_contacts` |
-| Backend task / run | `590cb06b-4a47-422e-b68f-79a873d4c84a`, `d6779d0f-afa3-4124-9117-c40b651dd79a` |
-| Frontend task / run | `12ffc19d-f483-4f8d-a541-4c5b935a49b4`, `ade5c49c-097d-448e-831c-d10c6bdc3a71` |
-| Adapter type | `claude_code` for both coding runs |
-| Final diff artifact | `db403329-7f0c-4b2c-9134-d2d7ee652564` |
-| Final review artifact | `1782b85d-c7f9-4d93-b699-27bd27a05ef7` |
-| Preview | `79bfff4f-4991-470b-8862-eb43e7dac852`, `http://127.0.0.1:55592`, healthy at creation |
-| Mock deployment | `e7b676d6-1505-43f8-be78-7120bfaef831`, `mock`, `ready` |
+| 会话 ID | `ad122cf7-afe7-4921-bbd9-b7e815539427` |
+| 合约 ID | `contract-mini_crm_contacts` |
+| 后端任务/运行 | `590cb06b-4a47-422e-b68f-79a873d4c84a`, `d6779d0f-afa3-4124-9117-c40b651dd79a` |
+| 前端任务/运行 | `12ffc19d-f483-4f8d-a541-4c5b935a49b4`, `ade5c49c-097d-448e-831c-d10c6bdc3a71` |
+| 适配器类型 | 两个编码运行均为 `claude_code` |
+| 最终差异制品 | `db403329-7f0c-4b2c-9134-d2d7ee652564` |
+| 最终审查制品 | `1782b85d-c7f9-4d93-b699-27bd27a05ef7` |
+| 预览 | `79bfff4f-4991-470b-8862-eb43e7dac852`, `http://127.0.0.1:55592`，创建时健康 |
+| 模拟部署 | `e7b676d6-1505-43f8-be78-7120bfaef831`, `mock`, `ready` |
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pytest tests/test_task_runs.py -q` | Pass: 24 tests. |
-| smoke worktree `apps/demo-api` tests | Pass: 6 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests, 130 API tests, 4 demo-api tests. |
-| `pnpm demo:api:test` | Pass: 4 tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+| `pytest tests/test_task_runs.py -q` | 通过：24 项测试。 |
+| smoke worktree `apps/demo-api` 测试 | 通过：6 项测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 项 Web 测试，130 项 API 测试，4 项 demo-api 测试。 |
+| `pnpm demo:api:test` | 通过：4 项测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | 通过 |
 
-### Caveats
+### 注意事项
 
-- This was API-driven rehearsal, not browser click rehearsal.
-- The review path used deterministic `ScriptedMockAdapter` review behavior.
-- The planned QA/Review task remained pending because the automatic post-diff
-  review artifact supplied contract consistency evidence.
-- A later `curl` to the recorded preview URL could not connect after the
-  one-shot TestClient process exited, so long-lived preview availability should
-  be checked under persistent `pnpm dev:api` during P6-7.
-- Mock deploy remained mock-labeled and did not perform production deployment.
+- 这是 API 驱动的演练，而非浏览器点击演练。
+- 审查路径使用了确定性的 `ScriptedMockAdapter` 审查行为。
+- 计划中的 QA/Review 任务保持待处理状态，因为自动差异后审查制品提供了合约一致性证据。
+- 在一次性 TestClient 进程退出后，后续对记录预览 URL 的 `curl` 无法连接，因此应在 P6-7 期间在持久化 `pnpm dev:api` 下检查长期预览可用性。
+- 模拟部署保持模拟标记，未执行生产部署。
 
 ---
 
-## P6-5 Target-Aware Contract-First Orchestrator
+## P6-5 目标感知的合约优先编排器
 
-**Date:** 2026-05-22
+**日期：** 2026-05-22
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added bounded app intent detection and contract-first task graph generation for todo, notes, and mini CRM contacts apps. |
-| `apps/api/app/context_pack.py` | Added explicit `appContract` context in session context packs. |
-| `apps/api/app/instruction_builder.py` | Added contract-aware role guidance for Manager, Backend, Frontend, and QA/Review instructions. |
-| `apps/api/tests/test_planning.py` | Added coverage for bounded app parsing, no-mention mini CRM contract planning, target mapping, and unsupported SaaS boundaries. |
-| `apps/api/tests/test_task_runs.py` | Added coverage that backend, frontend, and review instructions reference the same shared contract. |
-| `docs/project-state.md` | Recorded P6-5 behavior, targets, and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-5 complete after validation. |
+| `apps/api/app/planning.py` | 为待办事项、笔记和迷你 CRM 联系人应用添加了有界应用意图检测和合约优先任务图生成。 |
+| `apps/api/app/context_pack.py` | 在会话上下文包中添加了显式的 `appContract` 上下文。 |
+| `apps/api/app/instruction_builder.py` | 为 Manager、Backend、Frontend 和 QA/Review 指令添加了合约感知的角色指导。 |
+| `apps/api/tests/test_planning.py` | 添加了对有界应用解析、无提及迷你 CRM 合约规划、目标映射和不受支持的 SaaS 边界的覆盖。 |
+| `apps/api/tests/test_task_runs.py` | 添加了对后端、前端和审查指令引用同一共享合约的覆盖。 |
+| `docs/project-state.md` | 记录了 P6-5 的行为、目标和限制。 |
+| `docs/change-log.md` | 记录了本次实现。 |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | 验证后将 P6-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Orchestrator can now recognize bounded full-stack mini app requests for todo,
-notes, and mini CRM contacts. For those requests, it generates a shared
-`appContract` plan payload and creates a serial task graph:
-
+编排器现在能够识别针对待办事项、笔记和迷你 CRM 联系人的有界全栈迷你应用请求。对于这些请求，它会生成一个共享的 `appContract` 计划负载，并创建一个串行任务图：
 ```text
 Manager / Contract task -> Backend Agent task -> Frontend Agent task -> QA / Review task
 ```
+该合约包含应用 name/type、用户目标、实体、字段、API 路由、
+前端页面、`backendTarget: apps/demo-api`、`frontendTarget: apps/demo`、
+验证预期以及任务图。后端、前端和审查
+任务都引用相同的 `contractId` 和 `appContract`。
 
-The contract contains app name/type, user goal, entities, fields, API routes,
-frontend pages, `backendTarget: apps/demo-api`, `frontendTarget: apps/demo`,
-validation expectations, and the task graph. Backend, frontend, and review
-tasks all reference the same `contractId` and `appContract`.
+P6-5 默认将生成的任务保持为待处理状态。它不实现实际的
+全栈应用生成、合约制品持久化、生产部署、
+认证、支付、多租户、Docker、提供商市场、PR 创建或
+允许应用后端任务编辑 `apps/api`。
 
-P6-5 keeps the generated tasks pending by default. It does not implement actual
-full-stack app generation, contract artifact persistence, production deploy,
-auth, payments, multi-tenancy, Docker, provider marketplace, PR creation, or
-permission for app backend tasks to edit `apps/api`.
+现有的登录页面、有边界的前端、未提及的仪表盘自动运行、直接的
+`@frontend` 和直接的 `@backend` 路径保持不变。
 
-Existing login-page, bounded frontend, no-mention dashboard auto-run, direct
-`@frontend`, and direct `@backend` paths remain intact.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pytest tests/test_planning.py tests/test_task_runs.py -q` | Pass: 41 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+| `pytest tests/test_planning.py tests/test_task_runs.py -q` | 通过：41 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | 通过 |
 
-Manual real Claude/Codex execution was not run for P6-5. The task is scoped to
-contract-first planning and contract-aware instruction generation.
+手动真实的 Claude/Codex 执行未针对 P6-5 运行。该任务的范围限定为
+合约优先的规划和合约感知的指令生成。
 
 ---
 
-## P6-4 Safe Demo Backend Target Scaffold
+## P6-4 安全演示后端目标脚手架
 
-**Date:** 2026-05-22
+**日期：** 2026-05-22
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/demo-api/app/main.py` | Added isolated FastAPI demo backend with health and contacts endpoints. |
-| `apps/demo-api/tests/test_contacts.py` | Added demo backend endpoint tests. |
-| `apps/demo-api/README.md` | Documented demo backend purpose, endpoints, and commands. |
-| `scripts/check-demo-api.sh` | Added compile check wrapper for the demo backend. |
-| `scripts/test-demo-api.sh` | Added pytest wrapper for the demo backend. |
-| `scripts/dev-demo-api.sh` | Added local uvicorn dev wrapper for the demo backend. |
-| `package.json` | Added `check:demo-api`, `demo:api:test`, and `demo:api:dev`; included demo-api checks/tests in root validation. |
-| `apps/api/app/planning.py` | Updated direct `@backend` assignment to create a safe `apps/demo-api` task when the scaffold exists. |
-| `apps/api/app/instruction_builder.py` | Updated Backend Agent instructions to target `apps/demo-api` and keep `apps/api` protected. |
-| `apps/api/tests/test_planning.py` | Updated direct backend mention coverage for safe demo backend task creation. |
-| `apps/api/tests/test_task_runs.py` | Updated backend instruction coverage for the available demo backend target. |
-| `AGENTS.md` | Added demo-api commands and scaffold description to project guardrails. |
-| `docs/project-state.md` | Recorded P6-4 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-4 complete after validation. |
+| `apps/demo-api/app/main.py` | 添加了独立的 FastAPI 演示后端，包含健康检查和联系人端点。 |
+| `apps/demo-api/tests/test_contacts.py` | 添加了演示后端端点测试。 |
+| `apps/demo-api/README.md` | 记录了演示后端的用途、端点和命令。 |
+| `scripts/check-demo-api.sh` | 为演示后端添加了编译检查包装器。 |
+| `scripts/test-demo-api.sh` | 为演示后端添加了 pytest 包装器。 |
+| `scripts/dev-demo-api.sh` | 为演示后端添加了本地 uvicorn 开发包装器。 |
+| `package.json` | 添加了 `check:demo-api`、`demo:api:test` 和 `demo:api:dev`；在根验证中包含了 demo-api checks/tests。 |
+| `apps/api/app/planning.py` | 更新了直接的 `@backend` 分配，以便在脚手架存在时创建一个安全的 `apps/demo-api` 任务。 |
+| `apps/api/app/instruction_builder.py` | 更新了后端代理指令，以目标 `apps/demo-api` 并保持 `apps/api` 受保护。 |
+| `apps/api/tests/test_planning.py` | 更新了直接的后端提及覆盖率，以创建安全的演示后端任务。 |
+| `apps/api/tests/test_task_runs.py` | 更新了后端指令覆盖率，以覆盖可用的演示后端目标。 |
+| `AGENTS.md` | 将 demo-api 命令和脚手架描述添加到项目护栏中。 |
+| `docs/project-state.md` | 记录了 P6-4 的行为和限制。 |
+| `docs/change-log.md` | 记录了此实现。 |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | 在验证后将 P6-4 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Added `apps/demo-api` as a safe application backend target for Backend Agent
-work. The scaffold is intentionally small: a FastAPI contacts API with
-in-memory data and `GET /health`, `GET /contacts`, and `POST /contacts`.
+添加了 `apps/demo-api` 作为后端代理工作的安全应用后端目标。
+该脚手架故意很小：一个使用内存数据和 `GET /health`、`GET /contacts` 以及 `POST /contacts` 的 FastAPI 联系人 API。
 
-Direct `@backend` requests now create a pending `backend_change` task assigned
-to the Backend Agent when `apps/demo-api` exists. The task is bounded to
-`apps/demo-api` files and does not auto-start in P6-4. AgentHub platform
-backend files under `apps/api` remain protected by instruction and planning
-metadata.
+当 `apps/demo-api` 存在时，直接的 `@backend` 请求现在会创建一个分配给后端代理的待处理 `backend_change` 任务。该任务的范围限定为
+`apps/demo-api` 文件，并且在 P6-4 中不会自动启动。AgentHub 平台
+位于 `apps/api` 下的后端文件通过指令和规划元数据保持受保护。
 
-P6-4 does not implement contract-first orchestration, full-stack generation,
-production deploy, Docker, cloud database, auth, payments, multi-tenancy, or
-automatic frontend integration with the demo API.
+P6-4 不实现合约优先编排、全栈生成、
+生产部署、Docker、云数据库、认证、支付、多租户或
+与演示 API 的自动前端集成。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check:demo-api` | Pass |
-| `pnpm demo:api:test` | Pass: 4 tests. |
-| `pytest tests/test_planning.py tests/test_task_runs.py -q` | Pass: 37 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+| `pnpm check:demo-api` | 通过 |
+| `pnpm demo:api:test` | 通过：4 个测试。 |
+| `pytest tests/test_planning.py tests/test_task_runs.py -q` | 通过：37 个测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | 通过 |
 
 ---
 
-## P6-2 / P6-3 Session Context Pack And Role-Based Instructions
+## P6-2 / P6-3 会话上下文包和基于角色的指令
 
-**Date:** 2026-05-22
+**日期：** 2026-05-22
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/context_pack.py` | Added a reusable session context pack builder for adapter execution. |
-| `apps/api/app/instruction_builder.py` | Added role-specific instruction generation for manager, frontend, backend, and QA/review tasks. |
-| `apps/api/app/main.py` | Updated TaskRun request construction to attach `sessionContext` and use role-based instructions. |
-| `apps/api/tests/test_task_runs.py` | Added coverage for context pack contents, artifact metadata, selected artifact validation, frontend request preservation, backend missing-target honesty, and review diff context. |
-| `docs/project-state.md` | Recorded P6-2/P6-3 behavior and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-2 and P6-3 complete after validation. |
+| `apps/api/app/context_pack.py` | 为适配器执行添加了可重用的会话上下文包构建器。 |
+| `apps/api/app/instruction_builder.py` | 为经理、前端、后端和 QA/review 任务添加了特定角色的指令生成。 |
+| `apps/api/app/main.py` | 更新了 TaskRun 请求构建，以附加 `sessionContext` 并使用基于角色的指令。 |
+| `sessionContext` | 添加了对上下文包内容、制品元数据、选定制品验证、前端请求保留、后端缺失目标诚实性以及审查差异上下文的覆盖率。 |
+| `apps/api/tests/test_task_runs.py` | 记录了 P6-2/P6-3 的行为和限制。 |
+| `docs/project-state.md` | 记录了此实现。 |
+| `docs/change-log.md` | 在验证后将 P6-2 和 P6-3 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Implemented the P6 session context and instruction quality layer. Adapter
-requests now include a `sessionContext` object in `planContext`, and generated
-instructions embed the same context as JSON for Claude Code / Codex.
+实现了 P6 会话上下文和指令质量层。适配器
+请求现在在 `planContext` 中包含一个 `sessionContext` 对象，并且生成的
+指令将相同的上下文作为 JSON 嵌入到 Claude Code / Codex 中。
 
-The context pack includes the original user request, current task metadata,
-recent same-session messages, ledger summary, latest changed files, latest diff
-metadata, latest review summary, latest preview/deploy state, selected artifact
-context when provided, safe target paths, and validation expectations.
+上下文包包括原始用户请求、当前任务元数据、
+最近同会话消息、账本摘要、最新变更文件、最新差异元数据、最新审查摘要、最新 preview/deploy 状态、选定制品（若提供）、安全目标路径及验证预期。
 
-Role-specific instruction behavior:
+按角色划分的指令行为：
 
-- Manager / Orchestrator: plan, route, clarify, or reject unsupported requests
-  honestly.
-- Frontend: preserve the original request, include session context, keep
-  legacy login-page/button/title paths intact, and allow meaningful bounded
-  changes inside `apps/demo/src`.
-- Backend: prepare for `apps/demo-api` while clearly stating that the target is
-  unavailable and `apps/api` must not be modified.
-- QA / Review: remain read-oriented and focus on diff, changed files, ledger,
-  preview/deploy status, and advisory findings.
+- **管理者/编排器**：规划、路由、澄清或诚实拒绝不支持的请求。
+- **前端**：保留原始请求，包含会话上下文，保持旧版 login-page/button/title 路径不变，并允许在 `apps/demo/src` 内进行有意义的有限变更。
+- **后端**：为 `apps/demo-api` 做准备，同时明确说明目标不可用，且 `apps/api` 不得修改。
+- **QA/审查**：保持只读导向，聚焦于差异、变更文件、账本、preview/deploy 状态及建议性发现。
 
-P6-2/P6-3 do not add a demo backend scaffold, full-stack generation,
-Manager/Worker scheduling, production deploy, new adapters, or broader
-guardrail permissions.
+P6-2/P6-3 不得添加演示后端脚手架、全栈生成、Manager/Worker 调度、生产部署、新适配器或更广泛的护栏权限。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pytest tests/test_planning.py tests/test_task_runs.py -q` | Pass: 37 tests. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+| `pytest tests/test_planning.py tests/test_task_runs.py -q` | 通过：37 项测试。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | 通过 |
 
-Manual follow-up smoke did not run a new real Claude/Codex mutation. Follow-up
-context support was verified through backend tests that inspect generated
-`sessionContext` and role instructions.
+手动跟进冒烟测试未执行新的真实 Claude/Codex 变更。跟进上下文支持已通过后端测试验证，该测试检查生成的 `sessionContext` 及角色指令。
 
 ---
 
-## P6-1b Orchestrator Autonomy Real Smoke
+## P6-1b 编排器自主性真实冒烟测试
 
-**Date:** 2026-05-22
+**日期：** 2026-05-22
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p6-orchestrator-autonomy-smoke.md` | Added detailed real smoke evidence for no-mention Orchestrator auto-run. |
-| `docs/project-state.md` | Recorded P6-1b smoke result, evidence IDs, and caveats. |
-| `docs/change-log.md` | Recorded this P6-1b smoke documentation update. |
+| `docs/p6-orchestrator-autonomy-smoke.md` | 为无提及的编排器自动运行添加了详细真实冒烟证据。 |
+| `docs/project-state.md` | 记录了 P6-1b 冒烟结果、证据 ID 及注意事项。 |
+| `docs/change-log.md` | 记录了本次 P6-1b 冒烟文档更新。 |
 
-### What Was Verified
+### 已验证内容
 
-Ran one API-driven real execution smoke with
-`AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` and the request:
-
+使用 `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` 及以下请求运行了一次 API 驱动的真实执行冒烟测试：
 ```text
 帮我把当前 demo app 改成一个 dashboard，有三张统计卡片和一个最近活动列表
 ```
+未提及角色的普通消息被路由到编排器/管理器，创建了一个安全的演示前端任务，自动启动了一个 TaskRun，调用了 `ClaudeCodeAdapter`，生成了真实的差异，创建了脚本化的审查制品，在冒烟测试期间启动了健康的预览，并创建了模拟部署卡片。
 
-The normal no-mention message routed to Orchestrator / Manager, created a safe
-demo frontend task, auto-started a TaskRun, invoked `ClaudeCodeAdapter`,
-produced a real diff, generated a scripted Review artifact, started a healthy
-preview during the smoke, and created a mock deploy card.
+证据：
 
-Evidence:
+- 会话 ID：`cca9af54-1338-4cdd-b239-7f8b6e1dcc76`；
+- 消息 ID：`48bad4c0-8ddf-4514-bf35-d2561082c22e`；
+- 任务 ID：`63a8aded-b311-40f3-a54c-a40d232102c5`；
+- 任务运行 ID：`210f3f89-df0f-4e72-8c20-d505faed5ea2`；
+- 适配器类型：`claude_code`；
+- 最终状态：`completed`；
+- 变更文件：`apps/demo/src/App.tsx`，
+  `apps/demo/src/styles.css`；
+- 差异制品 ID：`7114d52a-925a-4c4d-a00b-4d6c8775a20c`；
+- 审查制品 ID：`ce989818-5d85-4f88-9f70-8b9b5e69d606`；
+- 预览 ID / 冒烟期间健康状态：
+  `841f7fd6-bb75-4e80-b19c-9b228f5040fb`，`healthy`；
+- 模拟部署 ID / 状态：
+  `7c9fab78-2b5f-44b3-a9fc-2af0d912a757`，`ready`。
 
-- session ID: `cca9af54-1338-4cdd-b239-7f8b6e1dcc76`;
-- message ID: `48bad4c0-8ddf-4514-bf35-d2561082c22e`;
-- task ID: `63a8aded-b311-40f3-a54c-a40d232102c5`;
-- task run ID: `210f3f89-df0f-4e72-8c20-d505faed5ea2`;
-- adapter type: `claude_code`;
-- final state: `completed`;
-- changed files: `apps/demo/src/App.tsx`,
-  `apps/demo/src/styles.css`;
-- diff artifact ID: `7114d52a-925a-4c4d-a00b-4d6c8775a20c`;
-- review artifact ID: `ce989818-5d85-4f88-9f70-8b9b5e69d606`;
-- preview ID / health during smoke:
-  `841f7fd6-bb75-4e80-b19c-9b228f5040fb`, `healthy`;
-- mock deployment ID / status:
-  `7c9fab78-2b5f-44b3-a9fc-2af0d912a757`, `ready`.
+### 注意事项
 
-### Caveats
+本次冒烟测试使用了 FastAPI `TestClient`，而非浏览器点击自动化。预览在冒烟测试期间是健康的，但在一次性 TestClient 进程退出后的后续 `curl` 无法访问预览 URL。请在后续浏览器排练期间，在 `pnpm dev:api` 下再次验证长期预览的可用性。
 
-This smoke used FastAPI `TestClient`, not browser click automation. The
-preview was healthy during the smoke, but a follow-up `curl` after the
-one-shot TestClient process exited could not reach the preview URL. Verify
-long-lived preview availability again under `pnpm dev:api` during a later
-browser rehearsal.
-
-The Review artifact used deterministic `scripted_mock` review behavior.
-ScriptedMock fallback execution was not needed because real Claude Code
-completed successfully.
+审查制品使用了确定性的 `scripted_mock` 审查行为。由于真实的 Claude Code 已成功完成，因此未触发 ScriptedMock 兜底执行。
 
 ---
 
-## P6-1 Orchestrator Autonomy Spike
+## P6-1 编排器自主性冲刺
 
-**Date:** 2026-05-22
+**日期：** 2026-05-22
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added default Orchestrator routing, explicit direct assignment routing, safe demo frontend task creation, backend missing-target response, and `@review` routing through QA-backed review tasks. |
-| `apps/api/app/main.py` | Added safe demo task auto-start after message planning and a generic demo frontend instruction that preserves the original user request. |
-| `apps/api/tests/test_planning.py` | Added coverage for no-mention Orchestrator routing, auto-started demo frontend tasks, direct `@frontend`, `@backend`, and `@review` behavior. |
-| `apps/api/tests/test_task_runs.py` | Added coverage for generic demo frontend instructions and plan context preservation. |
-| `apps/api/tests/test_chat_events.py` | Updated message scoping expectations for Orchestrator boundary responses. |
-| `docs/project-state.md` | Recorded P6-1 behavior, validation, and limitations. |
-| `docs/change-log.md` | Recorded this P6-1 implementation. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/proposal.md` | Updated P6-1 wording for Orchestrator auto-run. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/design.md` | Documented the narrow auto-run spike decision and boundaries. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/specs/agent-execution/spec.md` | Added the auto-run requirement scenario for Orchestrator-created safe demo coding tasks. |
-| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | Marked P6-1 complete after validation. |
+| `apps/api/app/planning.py` | 添加了默认编排器路由、显式直接分配路由、安全演示前端任务创建、后端缺失目标响应，以及通过 QA 支持的审查任务进行 `@review` 路由。 |
+| `apps/api/app/main.py` | 在消息规划后添加了安全演示任务自动启动，以及保留原始用户请求的通用演示前端指令。 |
+| `apps/api/tests/test_planning.py` | 增加了对未提及角色的编排器路由、自动启动的演示前端任务、直接 `@frontend`、`@backend` 和 `@review` 行为的测试覆盖。 |
+| `apps/api/tests/test_task_runs.py` | 增加了对通用演示前端指令和计划上下文保留的测试覆盖。 |
+| `apps/api/tests/test_chat_events.py` | 更新了编排器边界响应的消息范围预期。 |
+| `docs/project-state.md` | 记录了 P6-1 的行为、验证和限制。 |
+| `docs/change-log.md` | 记录了本次 P6-1 的实现。 |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/proposal.md` | 更新了 P6-1 中关于编排器自动运行的措辞。 |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/design.md` | 记录了狭窄的自动运行冲刺决策及其边界。 |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/specs/agent-execution/spec.md` | 为编排器创建的安全演示编码任务添加了自动运行需求场景。 |
+| `openspec/changes/agenthub-p6-agent-execution-upgrade/tasks.md` | 验证后将 P6-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Implemented P6-1 as a narrow Orchestrator autonomy spike. Normal user messages
-without explicit role mentions now route to Orchestrator / Manager by default.
-When Orchestrator can map a request to a safe demo frontend target, it creates
-a frontend task and automatically starts a TaskRun through the existing
-execution path.
+将 P6-1 实现为一个狭窄的编排器自主性冲刺。没有显式角色提及的普通用户消息现在默认路由到编排器/管理器。当编排器能够将请求映射到安全演示前端目标时，它会创建一个前端任务，并通过现有执行路径自动启动一个 TaskRun。
 
-Explicit mentions now act as assignment shortcuts:
+显式提及现在充当分配快捷方式：
 
-- `@frontend` creates a pending frontend task for bounded demo UI requests;
-- `@backend` reports that a safe demo backend target is required before backend
-  execution can run;
-- `@qa` creates a QA review-style task;
-- `@review` creates a read-only review task backed by the QA agent path.
+- `@frontend` 为受限的演示 UI 请求创建一个待处理的前端任务；
+- `@backend` 报告在后台执行可以运行之前需要一个安全演示后端目标；
+- `@qa` 创建一个 QA 审查类型的任务；
+- `@review` 创建一个由 QA 代理路径支持的只读审查任务。
 
-Generic demo frontend instructions now preserve the original user request and
-allow broader edits inside `apps/demo/src`, while still blocking `.env`,
-secrets, `node_modules`, production deploy, dependency installation, arbitrary
-host commands, and AgentHub platform backend edits.
+通用演示前端指令现在保留原始用户请求，并允许在 `apps/demo/src` 内进行更广泛的编辑，同时仍然阻止 `.env`、密钥、`node_modules`、生产部署、依赖安装、任意主机命令和 AgentHub 平台后端编辑。
 
-P6-1 does not add a full approval/risk engine, Manager/Worker scheduler,
-full-stack app generation, production deploy, multi-user IM, provider
-marketplace, Docker sandbox, or PR creation.
+P6-1 未添加完整的 approval/risk 引擎、Manager/Worker 调度器、全栈应用生成、生产部署、多用户 IM、提供商市场、Docker 沙箱或 PR 创建。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests and 121 API tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试和 121 个 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p6-agent-execution-upgrade --strict` | 通过 |
 
-Manual browser smoke was not run for P6-1. No real Claude/Codex success was
-claimed in this task.
+P6-1 未运行手动浏览器冒烟测试。此任务中未声称任何真实的 Claude/Codex 成功。
 
 ---
 
-## P5-7 E2E Rehearsal And Freeze Review
+## P5-7 端到端排练与冻结审查
 
-**Date:** 2026-05-22
+**日期：** 2026-05-22
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `AGENTS.md` | Aligned baseline guardrails with the completed P5 ledger/review/artifact UI state. |
-| `docs/project-state.md` | Recorded P5 freeze readiness, evidence, caveats, validation, and recommended tag name. |
-| `docs/change-log.md` | Recorded this P5-7 freeze review. |
-| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-7 complete after validation. |
+| `AGENTS.md` | 使基线护栏与已完成的 P5 ledger/review/artifact UI 状态保持一致。 |
+| `docs/project-state.md` | 记录了 P5 冻结准备情况、证据、注意事项、验证和推荐的标签名称。 |
+| `docs/change-log.md` | 记录了本次 P5-7 冻结审查。 |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | 验证后将 P5-7 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Completed the P5 freeze review for
-`agenthub-p5-platform-evolution`. The review confirms AgentHub now presents as
-a local single-user IM-style multi-agent coding workspace v1 while preserving
-the P4 final demo loop:
-
+完成了针对 `agenthub-p5-platform-evolution` 的 P5 冻结审查。审查确认 AgentHub 现在呈现为
+一个本地单用户 IM 风格的多智能体编码工作区 v1，同时保留 P4 最终演示循环：
 ```text
 requirement -> plan -> agent execution -> diff -> preview -> mock deploy
 ```
+本次审查使用了 P4 浏览器证据，针对真实的 Claude Code 和兜底执行路径，以及 P5 backend/frontend 针对新工作区形状的测试覆盖率和代码审查：
 
-The review used the P4 browser evidence for real Claude Code and fallback
-execution paths, plus P5 backend/frontend test coverage and code review for the
-new workspace shape:
+- 智能体联系人列表和本地 Direct Chat / Group 工作流可视化模式；
+- 会话执行账本和工作区上下文卡片；
+- 有界动态管理器规划器 v1；
+- 非阻塞审查智能体制品；
+- 多智能体执行追踪；
+- Diff、Review、Preview 和 Mock Deploy 制品消息卡片。
 
-- Agent contact list and local Direct chat / Group workflow visual modes;
-- session execution ledger and Workspace Context card;
-- bounded Dynamic Manager Planner v1;
-- non-blocking Review Agent artifacts;
-- Multi-Agent Execution Trace;
-- Diff, Review, Preview, and Mock Deploy artifact message cards.
+P5-7 期间未运行新的 Claude/Codex 变异测试。P5 仍明确限定在本地单用户工作区范围内，不添加多用户 IM、外部 IM 集成、生产部署、提供商市场、Docker 沙箱、PR 创建或不受限制的任意编辑。
 
-No new Claude/Codex mutation was run during P5-7. P5 remains explicitly scoped
-to a local single-user workspace and does not add multi-user IM, external IM
-integration, production deploy, provider marketplace, Docker sandbox, PR
-creation, or unrestricted arbitrary editing.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests and 116 API tests. |
-| `git diff --check` | Pass |
+| `openspec validate agenthub-p5-platform-evolution --strict` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试和 116 个 API 测试。 |
+| `git diff --check` | 通过 |
 
-Recommended freeze tag after committing:
-
+提交后建议的冻结标签：
 ```text
 agenthub-p5-platform-evolution-freeze
 ```
+---
+
+## P5-6 制品消息卡片 v2
+
+**日期:** 2026-05-21
+
+### 修改的文件
+
+| 文件 | 变更 |
+|---|---|
+| `apps/web/src/components/task-card-list.tsx` | 为 Diff、Review、Preview 和 Mock Deploy 制品添加了内联消息样式卡片，并带有 panel/context/action 操作提示。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 为制品卡片、上下文选择、审查操作、预览打开和模拟部署操作行为添加了前端覆盖。 |
+| `apps/web/src/components/workspace-shell.tsx` | 添加了本地会话范围的后续制品上下文芯片，并将 review/deploy/preview 卡片操作连接到现有 API。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 更新了 Review 操作的 API 模拟。 |
+| `docs/project-state.md` | 记录了 P5-6 的行为、限制和验证。 |
+| `docs/change-log.md` | 记录了本次 P5-6 的实现。 |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | 验证后将 P5-6 标记为完成。 |
+
+### 变更内容
+
+为 P5 IM 风格工作区实现了前端优先的制品消息卡片。Diff、Review、Preview 和 Mock Deploy 制品现在在任务时间线内以内联卡片形式呈现，包含源 task/run 元数据、状态、关键制品详情和操作按钮。
+
+卡片操作仅映射到现有行为：
+
+- 在右侧制品面板中检查制品；
+- 使用 Diff 或 Review 作为本地后续上下文；
+- 当未加载审查时，触发现有 Review API 以处理 Diff；
+- 打开现有的 Preview；
+- 从健康的 Preview 创建现有的模拟部署卡片。
+
+编辑器现在为所选制品显示一个会话范围的本地后续上下文芯片。P5-6 不会在后端消息记录中持久化制品引用，也不会更改规划器或适配器语义。
+
+Mock Deploy 仍被明确标记为模拟证据，而非生产部署。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：36 个 Web 测试和 116 个 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p5-platform-evolution --strict` | 通过 |
 
 ---
 
-## P5-6 Artifact Message Cards v2
+## P5-5 动态管理器规划器 v1
 
-**Date:** 2026-05-21
+**日期:** 2026-05-21
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/task-card-list.tsx` | Added inline message-style cards for Diff, Review, Preview, and Mock Deploy artifacts with panel/context/action affordances. |
-| `apps/web/src/components/task-card-list.test.tsx` | Added frontend coverage for artifact cards, context selection, review action, preview open, and mock deploy action behavior. |
-| `apps/web/src/components/workspace-shell.tsx` | Added local session-scoped follow-up artifact context chip and wired review/deploy/preview card actions to existing APIs. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Updated API mocks for the Review action. |
-| `docs/project-state.md` | Recorded P5-6 behavior, limitations, and validation. |
-| `docs/change-log.md` | Recorded this P5-6 implementation. |
-| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-6 complete after validation. |
+| `apps/api/app/planning.py` | 添加了有界规则驱动的 Manager 规划器 v1、结构化任务图元数据、图验证和动态前端意图分类。 |
+| `apps/api/app/main.py` | 为新的前端变更目标添加了有界适配器指令。 |
+| `apps/api/tests/test_planning.py` | 添加了对动态意图、图元数据、后续审查任务和不支持的回退行为的覆盖。 |
+| `docs/project-state.md` | 记录了 P5-5 的行为、限制和验证。 |
+| `docs/change-log.md` | 记录了本次 P5-5 的实现。 |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | 验证后将 P5-5 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Implemented frontend-first artifact message cards for the P5 IM-style
-workspace. Diff, Review, Preview, and Mock Deploy artifacts now render as
-inline cards inside the task timeline with source task/run metadata, status,
-key artifact details, and action buttons.
+为有界前端变更意图实现了一个确定性的本地 Manager 规划器 v1。该规划器现在对以下支持的请求进行分类：
 
-Mapped card actions only to existing behavior:
+- 标题或标题文本更改；
+- 主要按钮文本更改；
+- theme/accent 颜色更改；
+- 简单输入字段添加；
+- 简单 status/help 文本添加；
+- 小型布局副本调整。
 
-- inspect artifact in the right Artifact Panel;
-- use Diff or Review as local follow-up context;
-- trigger the existing Review API for a Diff when no review is loaded;
-- open an existing Preview;
-- create an existing mock deploy card from a healthy Preview.
+由编排器支持的请求会产生一个结构化任务图，包含目标、规划器版本、意图、任务节点、分配的代理角色、优先级、依赖关系和预期的制品类型。该图创建 Manager、Frontend Coding 和 Review 任务。同会话的后续请求会创建一个串行的 Frontend Coding 任务，后跟一个 Review 任务。
 
-The composer now shows a session-scoped local follow-up context chip for the
-selected artifact. P5-6 does not persist artifact references in backend message
-records, and it does not change planner or adapter semantics.
+原始登录页面路径保持确定性，并标记为 `deterministic_login_v1`。不支持的广泛请求会回退到现有的确定性行为，不会创建任务或声称支持。
 
-Mock Deploy remains clearly labeled as mock evidence rather than production
-deployment.
+P5-5 不会调用 LLM 规划器、实现无限制的任意编辑、更改适配器调度、添加 Manager/Worker 调度、添加生产部署或添加真正的多用户 IM。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 36 web tests and 116 API tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：34 个 Web 测试和 116 个 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p5-platform-evolution --strict` | 通过 |
 
 ---
 
-## P5-5 Dynamic Manager Planner v1
+## P5-4 多代理执行跟踪 UI
 
-**Date:** 2026-05-21
+**日期:** 2026-05-21
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added a bounded rule-based Manager planner v1, structured task graph metadata, graph validation, and dynamic frontend intent classification. |
-| `apps/api/app/main.py` | Added bounded adapter instructions for the new frontend change targets. |
-| `apps/api/tests/test_planning.py` | Added coverage for dynamic intents, graph metadata, follow-up review tasks, and unsupported fallback behavior. |
-| `docs/project-state.md` | Recorded P5-5 behavior, limitations, and validation. |
-| `docs/change-log.md` | Recorded this P5-5 implementation. |
-| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-5 complete after validation. |
+| `apps/web/src/components/task-card-list.tsx` | 为 Manager、Coding Agent、Diff、Review、Preview 和 Mock Deploy 阶段添加了派生的多代理执行跟踪。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 添加了对跟踪渲染、回退高亮、审查警告高亮和制品链接的覆盖。 |
+| `docs/project-state.md` | 记录了 P5-4 的行为、限制和验证。 |
+| `docs/change-log.md` | 记录了本次 P5-4 的实现。 |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | 验证后将 P5-4 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Implemented a deterministic local Manager planner v1 for bounded frontend
-change intents. The planner now classifies these supported requests:
+在任务时间线中实现了一个前端优先的多代理执行跟踪。该跟踪从现有任务、任务运行、制品、审查、预览和部署中派生其状态。它显示：
 
-- title or heading text change;
-- primary button text change;
-- theme/accent color change;
-- simple input field addition;
-- simple status/help text addition;
-- small layout copy adjustment.
+- Manager 已规划；
+- Coding Agent 已运行；
+- Diff 已生成；
+- Review Agent 已审核；
+- 预览状态健康；
+- Mock 部署就绪。
 
-Supported orchestrator-led requests produce a structured task graph with goal,
-planner version, intent, task nodes, assigned agent role, priority,
-dependencies, and expected artifact types. The graph creates Manager, Frontend
-Coding, and Review tasks. Same-session follow-up requests create a serial
-Frontend Coding task followed by a Review task.
+每个阶段显示代理或服务标识、adapter/service 类型、状态以及可用的制品链接。Diff、Review、Preview 和 Mock Deploy 节点复用现有的制品选择行为，因此右侧的制品面板仍作为详细检查器。
 
-The original login-page path remains deterministic and is labeled
-`deterministic_login_v1`. Unsupported broad requests fall back to the existing
-deterministic behavior and do not create tasks or claim support.
+兜底恢复和审核警告状态会被高亮显示。系统生成的步骤被标记为服务而非自主代理。
 
-P5-5 does not call an LLM planner, implement unrestricted arbitrary editing,
-change adapter dispatch, add Manager/Worker scheduling, add production deploy,
-or add real multi-user IM.
+P5-4 不会改变适配器调度、任务执行、差异收集、预览、Mock 部署、Review Agent 语义或后端运行时行为。它不会新增 Manager/Worker 调度、动态规划、真实多用户 IM、生产部署或真实的 Claude/Codex 审核执行。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 34 web tests and 116 API tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：34 个 Web 测试和 113 个 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p5-platform-evolution --strict` | 通过 |
 
 ---
 
-## P5-4 Multi-Agent Execution Trace UI
+## P5-3 Review Agent 工作流
 
-**Date:** 2026-05-21
+**日期：** 2026-05-21
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/task-card-list.tsx` | Added a derived multi-agent execution trace for Manager, Coding Agent, Diff, Review, Preview, and Mock Deploy stages. |
-| `apps/web/src/components/task-card-list.test.tsx` | Added coverage for trace rendering, fallback highlighting, review warning highlighting, and artifact links. |
-| `docs/project-state.md` | Recorded P5-4 behavior, limitations, and validation. |
-| `docs/change-log.md` | Recorded this P5-4 implementation. |
-| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-4 complete after validation. |
+| `apps/api/app/models.py` | 新增持久化的 `Review` 记录，链接到审核制品和已审核的差异制品。 |
+| `apps/api/app/reviews.py` | 新增确定性的脚本化审核创建、列表、幂等性和事件发射。 |
+| `apps/api/app/ledger.py` | 在会话账本摘要中包含最新的审核摘要。 |
+| `apps/api/app/schemas.py` | 新增 Review 制品响应模式。 |
+| `apps/api/app/main.py` | 新增审核端点，以及在差异生成后自动进行非阻塞的脚本化审核创建。 |
+| `apps/api/tests/test_models.py` | 更新了 Review 的模型边界覆盖。 |
+| `apps/api/tests/test_diffs.py` | 覆盖了自动审核创建、manual/idempotent 审核创建和账本摘要更新。 |
+| `apps/web/src/lib/api.ts` | 新增 Review 制品类型和审核 API 辅助函数。 |
+| `apps/web/src/lib/api.test.ts` | 新增审核 create/list 端点的客户端 API 覆盖。 |
+| `apps/web/src/components/__fixtures__/sample-review.ts` | 新增一个可复用的审核制品夹具。 |
+| `apps/web/src/components/task-card-list.tsx` | 加载 Review 制品并渲染审核时间线芯片。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 覆盖了审核时间线芯片和制品面板交接行为。 |
+| `apps/web/src/components/preview-card.tsx` | 将 Review 制品添加到右侧制品面板。 |
+| `apps/web/src/components/preview-card.test.tsx` | 覆盖了 Review 制品渲染。 |
+| `docs/project-state.md` | 记录了 P5-3 的行为、限制和风险。 |
+| `docs/change-log.md` | 记录了本次 P5-3 实现。 |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | 验证后将 P5-3 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Implemented a frontend-first multi-agent execution trace in the task timeline.
-The trace derives its state from existing tasks, task runs, artifacts, reviews,
-previews, and deployments. It shows:
+在差异生成后实现了一个非阻塞的 Review Agent 工作流。当 TaskRun 产生差异时，AgentHub 现在会使用确定性的 `scripted_mock` 审核路径创建一个持久化的 Review 制品。该审核包含状态、风险等级、摘要、已审核文件、发现、建议的更改、已审核差异制品 ID 和适配器类型。
 
-- Manager planned;
-- Coding Agent ran;
-- Diff produced;
-- Review Agent reviewed;
-- Preview healthy;
-- Mock deploy ready.
+审核路径仅为建议性质。它不会阻止预览创建或 Mock 部署，也不会改变现有的编码适配器行为。此任务中未运行或声称执行了真实的 Claude 或 Codex 审核。
 
-Each stage shows agent or service identity, adapter/service type, status, and
-artifact links where available. Diff, Review, Preview, and Mock Deploy nodes
-reuse the existing artifact selection behavior so the right-side artifact panel
-remains the detailed inspector.
+右侧制品面板现在支持 Review 制品，与 Diff、Preview 和 Mock Deploy 并列。任务时间线会加载审核制品，并在可用时显示审核芯片。会话账本摘要会在刷新后包含最新的审核摘要。
 
-Fallback recovery and review warning states are highlighted. System-generated
-steps are labeled as services rather than autonomous agents.
+### 验证
 
-P5-4 does not change adapter dispatch, task execution, diff collection, preview,
-mock deployment, Review Agent semantics, or backend runtime behavior. It does
-not add Manager/Worker scheduling, dynamic planning, real multi-user IM,
-production deploy, or real Claude/Codex review execution.
-
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 34 web tests and 113 API tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：33 个 Web 测试和 113 个 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p5-platform-evolution --strict` | 通过 |
 
 ---
 
-## P5-3 Review Agent Workflow
+## P5-2 共享上下文和执行账本
 
-**Date:** 2026-05-21
+**日期：** 2026-05-21
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added persisted `Review` records linked to review artifacts and reviewed diff artifacts. |
-| `apps/api/app/reviews.py` | Added deterministic scripted review creation, listing, idempotency, and event emission. |
-| `apps/api/app/ledger.py` | Included latest review summary in session ledger summaries. |
-| `apps/api/app/schemas.py` | Added the Review artifact response schema. |
-| `apps/api/app/main.py` | Added review endpoints and automatic non-blocking scripted review creation after diff generation. |
-| `apps/api/tests/test_models.py` | Updated model boundary coverage for Review. |
-| `apps/api/tests/test_diffs.py` | Covered automatic review creation, manual/idempotent review creation, and ledger summary updates. |
-| `apps/web/src/lib/api.ts` | Added Review artifact types and review API helpers. |
-| `apps/web/src/lib/api.test.ts` | Added client API coverage for review create/list endpoints. |
-| `apps/web/src/components/__fixtures__/sample-review.ts` | Added a reusable review artifact fixture. |
-| `apps/web/src/components/task-card-list.tsx` | Loaded Review artifacts and rendered review timeline chips. |
-| `apps/web/src/components/task-card-list.test.tsx` | Covered review timeline chip and artifact panel handoff behavior. |
-| `apps/web/src/components/preview-card.tsx` | Added Review artifacts to the right-side artifact panel. |
-| `apps/web/src/components/preview-card.test.tsx` | Covered Review artifact rendering. |
-| `docs/project-state.md` | Recorded P5-3 behavior, limitations, and validation. |
-| `docs/change-log.md` | Recorded this P5-3 implementation. |
-| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-3 complete after validation. |
+| `apps/api/app/models.py` | 新增持久化的 `SessionExecutionLedger`，用于会话范围的上下文快照。 |
+| `apps/api/app/ledger.py` | 新增确定性的账本 refresh/read 辅助函数，从消息、任务、运行和制品中派生。 |
+| `apps/api/app/schemas.py` | 新增执行账本响应模式。 |
+| `apps/api/app/main.py` | 新增 `GET /sessions/{session_id}/ledger`，并在 message/planning、差异、预览和 Mock 部署事件后刷新账本。 |
+| `apps/api/tests/test_models.py` | 更新了新账本表的模型边界覆盖。 |
+| `apps/api/tests/test_planning.py` | 覆盖了需求规划后的账本创建。 |
+| `apps/api/tests/test_diffs.py` | 覆盖了差异收集后的账本更新。 |
+| `apps/api/tests/test_previews.py` | 覆盖了健康预览创建后的账本更新。 |
+| `apps/api/tests/test_deployments.py` | 覆盖了 Mock 部署创建后的账本更新。 |
+| `apps/web/src/lib/api.ts` | 新增了 `SessionExecutionLedger` 和 `getSessionLedger`。 |
+| `apps/web/src/lib/api.test.ts` | 新增了会话账本读取的客户端 API 覆盖。 |
+| `apps/web/src/components/workspace-shell.tsx` | 新增了所选会话 `Workspace Context` 卡片。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 为工作区上下文账本卡片添加了 UI 覆盖。 |
+| `docs/project-state.md` | 记录了 P5-2 状态、刷新点、限制和验证。 |
+| `docs/change-log.md` | 记录了本次 P5-2 实现。 |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | 验证后将 P5-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Implemented a non-blocking Review Agent workflow after diff generation. When a
-TaskRun produces a diff, AgentHub now creates a persisted Review artifact using
-the deterministic `scripted_mock` review path. The review includes status,
-risk level, summary, files reviewed, findings, suggested changes, reviewed diff
-artifact ID, and adapter type.
+为每个会话实现了一个轻量级持久化执行账本。该账本存储当前目标、活跃代理、最新 task/run/diff/preview/mock 部署引用、变更文件、上次成功适配器、摘要 Markdown 以及更新时间戳。
 
-The review path is advisory only. It does not prevent preview creation or mock
-deployment, and it does not change existing coding adapter behavior. No real
-Claude or Codex review execution was run or claimed in this task.
+在用户 message/planning、差异收集、健康预览创建或刷新以及模拟部署创建后，账本会从现有数据库记录中刷新。读取端点也会从持久化数据中刷新，以便无需跨会话记忆即可重建旧会话。
 
-The right artifact panel now supports Review artifacts alongside Diff, Preview,
-and Mock Deploy. The task timeline loads review artifacts and shows a review
-chip when one is available. The session ledger summary includes the latest
-review summary after refresh.
+前端现在在工作区外壳中为所选会话渲染一个紧凑的 `Workspace Context` 卡片。它显示当前目标、活跃代理、最新证据、适配器和变更文件，同时保持现有任务时间线和制品面板不变。
 
-### Validation
+P5-2 未添加向量数据库、嵌入、跨会话长期记忆、审查代理执行、Manager/Worker 调度或适配器执行变更。
 
-| Command | Result |
+### 验证
+
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 33 web tests and 113 API tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：30 个 Web 测试和 113 个 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p5-platform-evolution --strict` | 通过 |
 
 ---
 
-## P5-2 Shared Context and Execution Ledger
+## P5-1 代理注册表与即时通讯联系人 UI
 
-**Date:** 2026-05-21
+**日期：** 2026-05-21
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/models.py` | Added persisted `SessionExecutionLedger` for session-scoped context snapshots. |
-| `apps/api/app/ledger.py` | Added deterministic ledger refresh/read helpers derived from messages, tasks, runs, and artifacts. |
-| `apps/api/app/schemas.py` | Added the execution ledger response schema. |
-| `apps/api/app/main.py` | Added `GET /sessions/{session_id}/ledger` and refreshed ledger after message/planning, diff, preview, and mock deploy events. |
-| `apps/api/tests/test_models.py` | Updated model boundary coverage for the new ledger table. |
-| `apps/api/tests/test_planning.py` | Covered ledger creation after requirement planning. |
-| `apps/api/tests/test_diffs.py` | Covered ledger updates after diff collection. |
-| `apps/api/tests/test_previews.py` | Covered ledger updates after healthy preview creation. |
-| `apps/api/tests/test_deployments.py` | Covered ledger updates after mock deployment creation. |
-| `apps/web/src/lib/api.ts` | Added `SessionExecutionLedger` and `getSessionLedger`. |
-| `apps/web/src/lib/api.test.ts` | Added client API coverage for session ledger reads. |
-| `apps/web/src/components/workspace-shell.tsx` | Added the selected-session `Workspace Context` card. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added UI coverage for the workspace context ledger card. |
-| `docs/project-state.md` | Recorded P5-2 state, refresh points, limitations, and validation. |
-| `docs/change-log.md` | Recorded this P5-2 implementation. |
-| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-2 complete after validation. |
+| `apps/api/app/schemas.py` | 为即时通讯风格注册表元数据添加了代理联系人响应模式。 |
+| `apps/api/app/repositories.py` | 对已启用代理查找进行排序，以实现确定性注册表输出。 |
+| `apps/api/app/main.py` | 添加了工作区范围的代理联系人注册表端点及显示元数据映射。 |
+| `apps/api/tests/test_planning.py` | 为内置联系人、审查占位符和 ScriptedMock 兜底服务添加了后端覆盖。 |
+| `apps/web/src/lib/api.ts` | 添加了 `AgentContact` 和 `listWorkspaceAgents`。 |
+| `apps/web/src/lib/api.test.ts` | 为工作区代理联系人添加了客户端 API 覆盖。 |
+| `apps/web/src/app/page.tsx` | 为工作区外壳加载了代理联系人。 |
+| `apps/web/src/app/page.test.tsx` | 覆盖了将获取的联系人传入外壳的功能。 |
+| `apps/web/src/components/workspace-shell.tsx` | 添加了代理联系人 UI 以及直接聊天/群组工作流视觉模式。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 为联系人和视觉模式添加了 UI 覆盖。 |
+| `docs/project-state.md` | 记录了 P5-1 状态、限制和验证。 |
+| `docs/change-log.md` | 记录了本次 P5-1 实现。 |
+| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | 验证后将 P5-1 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Implemented a lightweight persisted execution ledger for each session. The
-ledger stores the current goal, active agents, latest task/run/diff/preview/mock
-deploy references, changed files, last successful adapter, summary Markdown,
-and update timestamp.
+实现了 P5-1，未更改运行时执行语义。AgentHub 现在拥有一个后端支持的注册表结构，用于已启用的内置代理，并在工作区侧边栏中将其渲染为头等即时通讯风格联系人。
 
-The ledger is refreshed from existing database records after user
-message/planning, diff collection, healthy preview creation or refresh, and mock
-deployment creation. The read endpoint also refreshes from persisted data so
-older sessions can be reconstructed without adding cross-session memory.
+注册表公开显示名称、头像首字母、角色、适配器类型、能力标签、状态、联系人类型和 write/review 安全标志。它保持现有的 `CodexAdapter`、`ClaudeCodeAdapter` 和 `ScriptedMockAdapter` 模型不变，为未来的 P5 审查工作流工作添加了审查代理占位符，并保持 ScriptedMock 作为兜底服务可见。
 
-The frontend now renders a compact `Workspace Context` card in the workspace
-shell for the selected session. It shows the current goal, active agents, latest
-evidence, adapter, and changed files while keeping the existing task timeline
-and artifact panel intact.
+UI 仅添加了直接聊天和群组工作流作为本地视觉模式。P5-1 未添加多用户账户、外部即时通讯集成、Manager/Worker 调度、动态规划、审查代理执行、提供商市场或生产部署。
 
-P5-2 does not add vector DB, embeddings, cross-session long-term memory, Review
-Agent execution, Manager/Worker scheduling, or adapter execution changes.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 30 web tests and 113 API tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：28 个 Web 测试和 114 个 API 测试。 |
+| `git diff --check` | 通过 |
+| `openspec validate agenthub-p5-platform-evolution --strict` | 通过 |
 
 ---
 
-## P5-1 Agent Registry and IM Contact UI
+## P4-6 最终冻结审查
 
-**Date:** 2026-05-21
+**日期：** 2026-05-20
 
-### Modified Files
+### 修改文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/schemas.py` | Added the agent contact response schema for IM-style registry metadata. |
-| `apps/api/app/repositories.py` | Ordered enabled agent lookup for deterministic registry output. |
-| `apps/api/app/main.py` | Added the workspace-scoped agent contact registry endpoint and display metadata mapping. |
-| `apps/api/tests/test_planning.py` | Added backend coverage for built-in contacts, Review placeholder, and ScriptedMock fallback service. |
-| `apps/web/src/lib/api.ts` | Added `AgentContact` and `listWorkspaceAgents`. |
-| `apps/web/src/lib/api.test.ts` | Added client API coverage for workspace agent contacts. |
-| `apps/web/src/app/page.tsx` | Loaded agent contacts for the workspace shell. |
-| `apps/web/src/app/page.test.tsx` | Covered passing fetched contacts into the shell. |
-| `apps/web/src/components/workspace-shell.tsx` | Added the Agent Contact UI and Direct chat / Group workflow visual modes. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added UI coverage for contacts and visual modes. |
-| `docs/project-state.md` | Recorded P5-1 state, limitations, and validation. |
-| `docs/change-log.md` | Recorded this P5-1 implementation. |
-| `openspec/changes/agenthub-p5-platform-evolution/tasks.md` | Marked P5-1 complete after validation. |
+| `docs/project-state.md` | 记录了最终冻结就绪状态、注意事项、验证结果及推荐标签名称。 |
+| `docs/change-log.md` | 记录了本次最终冻结审查。 |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | 验证后将 P4-6 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Implemented P5-1 without changing runtime execution semantics. AgentHub now
-has a backend-backed contact registry shape for enabled built-in agents and
-renders them as first-class IM-style contacts in the workspace sidebar.
+完成了 `agenthub-final-demo-hardening` 的最终冻结审查。
 
-The registry exposes display name, avatar initials, role, adapter type,
-capability tags, status, contact type, and write/review safety flags. It keeps
-the existing `CodexAdapter`, `ClaudeCodeAdapter`, and `ScriptedMockAdapter`
-model intact, adds a Review Agent placeholder for future P5 review workflow
-work, and keeps ScriptedMock visible as the fallback service.
+审查验证了基线文档一致地将 AgentHub 描述为本地单用户代理编码工作区/强演示 MVP，且未声称是完整的即时通讯多用户平台、生产部署、提供商市场、Docker 沙箱、PR 创建或广泛的任意自然语言编辑。
 
-The UI adds Direct chat and Group workflow as local visual modes only. P5-1
-does not add multi-user accounts, external IM integration, Manager/Worker
-scheduling, dynamic planning, Review Agent execution, provider marketplace, or
-production deploy.
+剩余注意事项已记录：
 
-### Validation
+- 部署基于模拟，非生产部署；
+- 浏览器点击自动化限制已记录；
+- `pnpm demo:reset` 不会删除 `.worktrees`；
+- `pnpm demo:reset` 不会停止过期的预览或开发服务器进程；
+- mobile/responsive 的打磨完善仍为后续工作。
 
-| Command | Result |
+未更改任何应用代码、运行时行为、适配器行为、UI 重新设计或生产部署工作。
+
+### 验证
+
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 28 web tests and 114 API tests. |
-| `git diff --check` | Pass |
-| `openspec validate agenthub-p5-platform-evolution --strict` | Pass |
+| `openspec validate agenthub-im-coding-mvp --strict` | 通过 |
+| `openspec validate agenthub-final-demo-hardening --strict` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：26 个 Web 测试和 113 个 API 测试。 |
+| `git diff --check` | 通过 |
 
----
-
-## P4-6 Final Freeze Review
-
-**Date:** 2026-05-20
-
-### Modified Files
-
-| File | Change |
-|---|---|
-| `docs/project-state.md` | Recorded final freeze readiness, caveats, validation results, and recommended tag name. |
-| `docs/change-log.md` | Recorded this final freeze review. |
-| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-6 complete after validation. |
-
-### What Changed
-
-Completed the final freeze review for `agenthub-final-demo-hardening`.
-
-The review verified that baseline docs consistently describe AgentHub as a
-local single-user Agent Coding Workspace / strong demo MVP and do not claim a
-full IM multi-user platform, production deploy, provider marketplace, Docker
-sandbox, PR creation, or broad arbitrary natural-language editing.
-
-Remaining caveats are documented:
-
-- deploy is mock-backed, not production deployment;
-- browser click automation limitations are recorded;
-- `pnpm demo:reset` does not delete `.worktrees`;
-- `pnpm demo:reset` does not stop stale preview or dev-server processes;
-- mobile/responsive polish remains future work.
-
-No app code, runtime behavior, adapter behavior, UI redesign, or production
-deployment work changed.
-
-### Validation
-
-| Command | Result |
-|---|---|
-| `openspec validate agenthub-im-coding-mvp --strict` | Pass |
-| `openspec validate agenthub-final-demo-hardening --strict` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 26 web tests and 113 API tests. |
-| `git diff --check` | Pass |
-
-Recommended final tag after committing this review:
-
+提交此审查后推荐的最终标签：
 ```text
 agenthub-final-demo-hardening-freeze
 ```
+---
+
+## P4-5 最终项目总结 / 面试说明
+
+**日期:** 2026-05-20
+
+### 修改的文件
+
+| 文件 | 变更 |
+|---|---|
+| `docs/project-summary-for-interview.md` | 添加了一份用于演示、评审和面试的真实最终总结。 |
+| `docs/project-state.md` | 记录了 P4-5 总结范围。 |
+| `docs/change-log.md` | 记录了本次文档更新。 |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | 在文档验证后标记 P4-5 完成。 |
+
+### 变更内容
+
+创建了一份最终项目总结，将 AgentHub 解释为一个本地单用户 Agent 编码工作区 / 强演示 MVP。该总结涵盖了问题、架构、会话工作树模型、适配器模型、制品流水线、故障恢复路径、后续文本变更流程、真实与模拟组件、明确的非目标、设计权衡以及面试讨论要点。
+
+该总结引用了 `docs/e2e-capability-audit.md` 作为证据，而非发明新的 ID。
+
+未更改任何应用代码或运行时行为。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `git diff --check` | 通过 |
 
 ---
 
-## P4-5 Final Project Summary / Interview Explanation
+## P4-4 最终演示检查清单
 
-**Date:** 2026-05-20
+**日期:** 2026-05-20
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/project-summary-for-interview.md` | Added a truthful final summary for demo, review, and interview use. |
-| `docs/project-state.md` | Recorded P4-5 summary scope. |
-| `docs/change-log.md` | Recorded this documentation update. |
-| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-5 complete after doc validation. |
+| `docs/final-demo-checklist.md` | 添加了一份以证据为先的最终演示检查清单，涵盖重置、启动、真实代理路径、兜底路径、后续路径、证据 ID 和故障排除。 |
+| `docs/demo-script.md` | 在设置说明中链接了最终演示检查清单。 |
+| `docs/project-state.md` | 记录了 P4-4 检查清单范围。 |
+| `docs/change-log.md` | 记录了本次文档更新。 |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | 在文档验证后标记 P4-4 完成。 |
 
-### What Changed
+### 变更内容
 
-Created a final project summary that explains AgentHub as a local single-user
-Agent Coding Workspace / strong demo MVP. The summary covers the problem,
-architecture, session worktree model, adapter model, artifact pipeline,
-failure-recovery path, follow-up text-change flow, real versus mock components,
-explicit non-goals, design trade-offs, and interview talking points.
+创建了一份最终演示检查清单，可在排练、录制或评审前遵循。它涵盖：
 
-The summary refers to `docs/e2e-capability-audit.md` for evidence rather than
-inventing new IDs.
+- `pnpm demo:reset`；
+- 后端和前端启动；
+- 可选的 `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`；
+- 固定请求 `@orchestrator build a login page for the demo app`；
+- 任务运行和适配器验证；
+- diff 制品、预览 iframe 和模拟部署卡片检查；
+- 通过 `ScriptedMockAdapter` 强制失败的兜底路径；
+- 后续请求 `把按钮文案改成 Sign in`；
+- 证据 ID 捕获；
+- 针对端口、API 可用性、Claude/Codex 认证或配额、过期预览以及在 API 持有 SQLite 打开句柄时重置被拒绝等问题的故障排除。
 
-No app code or runtime behavior changed.
+未更改任何应用代码或运行时行为。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `git diff --check` | Pass |
+| `git diff --check` | 通过 |
 
 ---
 
-## P4-4 Final Demo Checklist
+## P4-3 安全演示重置助手
 
-**Date:** 2026-05-20
+**日期:** 2026-05-20
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/final-demo-checklist.md` | Added an evidence-first final demo checklist for reset, startup, real-agent path, fallback path, follow-up path, evidence IDs, and troubleshooting. |
-| `docs/demo-script.md` | Linked the final demo checklist from setup instructions. |
-| `docs/project-state.md` | Recorded P4-4 checklist scope. |
-| `docs/change-log.md` | Recorded this documentation update. |
-| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-4 complete after doc validation. |
+| `scripts/demo-reset.sh` | 添加了一个非破坏性的本地演示重置助手，在重建种子数据库前备份 SQLite 状态。 |
+| `package.json` | 添加了 `pnpm demo:reset`。 |
+| `AGENTS.md` | 将 `pnpm demo:reset` 添加到已记录的项目命令允许列表中。 |
+| `README.md` | 记录了安全重置行为、备份位置和恢复方法。 |
+| `docs/demo-script.md` | 添加了干净的排练设置指南。 |
+| `docs/project-state.md` | 记录了 P4-3 重置助手行为。 |
+| `docs/change-log.md` | 记录了此任务。 |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | 在重置排练和验证后标记 P4-3 完成。 |
 
-### What Changed
+### 变更内容
 
-Created a final demo checklist that can be followed before rehearsal,
-recording, or review. It covers:
-
-- `pnpm demo:reset`;
-- backend and frontend startup;
-- optional `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`;
-- fixed request `@orchestrator build a login page for the demo app`;
-- task run and adapter verification;
-- diff artifact, preview iframe, and mock deploy card checks;
-- forced-failure fallback through `ScriptedMockAdapter`;
-- follow-up request `把按钮文案改成 Sign in`;
-- evidence ID capture;
-- troubleshooting for ports, API availability, Claude/Codex auth or quota,
-  stale preview, and reset refusal while the API has SQLite open.
-
-No app code or runtime behavior changed.
-
-### Validation
-
-| Command | Result |
-|---|---|
-| `git diff --check` | Pass |
-
----
-
-## P4-3 Safe Demo Reset Helper
-
-**Date:** 2026-05-20
-
-### Modified Files
-
-| File | Change |
-|---|---|
-| `scripts/demo-reset.sh` | Added a non-destructive local demo reset helper that backs up SQLite state before rebuilding the seeded DB. |
-| `package.json` | Added `pnpm demo:reset`. |
-| `AGENTS.md` | Added `pnpm demo:reset` to the documented project command allowlist. |
-| `README.md` | Documented safe reset behavior, backup location, and restore method. |
-| `docs/demo-script.md` | Added clean rehearsal setup guidance. |
-| `docs/project-state.md` | Recorded P4-3 reset helper behavior. |
-| `docs/change-log.md` | Recorded this task. |
-| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-3 complete after reset rehearsal and validation. |
-
-### What Changed
-
-Added a repeatable reset workflow for local demo state:
-
+为本地演示状态添加了一个可重复的重置工作流：
 ```bash
 pnpm demo:reset
 ```
+该辅助程序会备份 `apps/api/data/agenthub.sqlite3` 以及 `apps/api/data/backups/demo-reset-<timestamp>/` 下的所有 SQLite WAL/SHM 文件，备份后仅删除活跃的 SQLite 文件，然后通过现有的 SQLModel 初始化路径重新创建并填充数据库。
 
-The helper backs up `apps/api/data/agenthub.sqlite3` and any SQLite WAL/SHM
-files under `apps/api/data/backups/demo-reset-<timestamp>/`, removes only the
-active SQLite files after backup, then recreates and seeds the DB with the
-existing SQLModel initialization path.
+该辅助程序不会删除 `.worktrees`、源代码、依赖项或预览文件，也不会停止正在运行的预览或开发服务器进程。当 SQLite 数据库被 API 进程打开时，它会拒绝运行，并打印所创建备份的恢复说明。
 
-The helper does not delete `.worktrees`, source code, dependencies, or preview
-files, and it does not stop running preview or dev-server processes. It refuses
-to run while the SQLite database is open by the API process and prints restore
-instructions for the backup it created.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm demo:reset` while API had SQLite open | Pass: refused reset and printed the owning process. |
-| `pnpm demo:reset` after stopping API | Pass: backed up the DB and recreated seeded SQLite state. |
-| SQLite seed check | Pass: 1 user, 1 workspace, 4 agents, 0 sessions, 0 task runs, 0 previews. |
-| `.worktrees` check | Pass: `.worktrees` remained present and was not deleted. |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass: 26 web tests and 113 API tests. |
-| `git diff --check` | Pass |
+| `pnpm demo:reset` 当 API 持有 SQLite 打开状态时 | 通过：拒绝重置并打印了持有进程。 |
+| `pnpm demo:reset` 停止 API 后 | 通过：备份了数据库并重新创建了已填充的 SQLite 状态。 |
+| SQLite 种子数据检查 | 通过：1 个用户、1 个工作区、4 个代理、0 个会话、0 个任务运行、0 个预览。 |
+| `.worktrees` 检查 | 通过：`.worktrees` 仍然存在且未被删除。 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过：26 个 Web 测试和 113 个 API 测试。 |
+| `git diff --check` | 通过 |
 
-Reset rehearsal backup:
-
+重置演练备份：
 ```text
 apps/api/data/backups/demo-reset-20260520-124612/
 ```
+---
+
+## 长期平台路线图
+
+**日期:** 2026-05-20
+
+### 修改的文件
+
+| 文件 | 变更 |
+|---|---|
+| `docs/platform-roadmap.md` | 新增了从当前本地演示基线到 IM 风格多智能体协作平台的长期 AgentHub 平台路线图。 |
+| `docs/change-log.md` | 记录了本次路线图文档的更新。 |
+
+### 变更内容
+
+创建了一份战略路线图，将当前的最终演示加固范围与未来的平台工作分开。它涵盖了动态编排器规划、共享上下文与记忆、manager/worker 调度、Claude Code 安全审查智能体、多用户 IM 集成、plugin/skill 生态系统以及真实的部署提供商。
+
+该路线图明确指出，这些阶段并非当前三周内的任务，在实施之前应成为聚焦的 OpenSpec 变更。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| `git diff --check` | 通过 |
 
 ---
 
-## Long-Term Platform Roadmap
+## P4-2 浏览器端到端点击演练
 
-**Date:** 2026-05-20
+**日期:** 2026-05-20
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/platform-roadmap.md` | Added a long-term AgentHub platform roadmap from current local demo baseline to IM-style multi-agent collaboration platform. |
-| `docs/change-log.md` | Recorded this roadmap documentation update. |
+| `docs/e2e-capability-audit.md` | 为真实的 Claude Code 和兜底路径新增了 P4-2 浏览器点击演练证据，以及重载和 UI 注意事项。 |
+| `docs/project-state.md` | 在稳定的项目状态中记录了 P4-2 证据 ID 和重载注意事项。 |
+| `docs/change-log.md` | 记录了本次文档更新。 |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | 在浏览器演练和验证后，将 P4-2 标记为完成。 |
 
-### What Changed
+### 变更内容
 
-Created a strategic roadmap that keeps the current final-demo-hardening scope
-separate from future platform work. It covers dynamic orchestrator planning,
-shared context and memory, manager/worker scheduling, a Claude Code security
-review agent, multi-user IM integration, plugin/skill ecosystem, and real deploy
-providers.
-
-The roadmap explicitly states that these phases are not current three-week
-tasks and should become focused OpenSpec changes before implementation.
-
-### Validation
-
-| Command | Result |
-|---|---|
-| `git diff --check` | Pass |
-
----
-
-## P4-2 Browser E2E Click Rehearsal
-
-**Date:** 2026-05-20
-
-### Modified Files
-
-| File | Change |
-|---|---|
-| `docs/e2e-capability-audit.md` | Added P4-2 browser-click rehearsal evidence for real Claude Code and fallback paths, plus reload and UI caveats. |
-| `docs/project-state.md` | Recorded P4-2 evidence IDs and the reload caveat in the stable project state. |
-| `docs/change-log.md` | Recorded this documentation update. |
-| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-2 complete after browser rehearsal and validation. |
-
-### What Changed
-
-Documented a browser UI click rehearsal for the final AgentHub demo hardening
-change. The rehearsal verified:
-
+记录了针对最终 AgentHub 演示加固变更的浏览器 UI 点击演练。该演练验证了：
 ```text
 requirement -> plan -> UI Start run -> agent execution -> diff -> preview -> mock deploy
 ```
+真实代理路径：
 
-Real-agent path:
+- 会话：`59ad209a-1f8d-4134-97c4-e4ad275b6f67`
+- TaskRun：`f1e78e9e-2f6b-4b9c-b4a7-5879d513c555`
+- 适配器：`claude_code`
+- Diff 制品：`b4c0fae4-bfeb-4105-a506-64de639472c6`
+- 预览：`4eb1622b-fb10-49e7-9b3d-5c256fad4b29`
+- 预览 URL：`http://127.0.0.1:49373`
+- 部署：`6c5a423c-ec7b-4070-9a05-87a8dddd91a1`
+- Provider/status：`mock`，`ready`
 
-- Session: `59ad209a-1f8d-4134-97c4-e4ad275b6f67`
-- TaskRun: `f1e78e9e-2f6b-4b9c-b4a7-5879d513c555`
-- Adapter: `claude_code`
-- Diff artifact: `b4c0fae4-bfeb-4105-a506-64de639472c6`
-- Preview: `4eb1622b-fb10-49e7-9b3d-5c256fad4b29`
-- Preview URL: `http://127.0.0.1:49373`
-- Deployment: `6c5a423c-ec7b-4070-9a05-87a8dddd91a1`
-- Provider/status: `mock`, `ready`
+兜底路径：
 
-Fallback path:
+- 会话：`c148a1d6-8cd1-4efb-a797-7d10bbe475aa`
+- 失败的 Codex TaskRun：`e7cead6e-93cd-4195-9a53-e258da253a81`
+- 失败错误码：`CODEX_DEMO_FORCED_FAILURE`
+- 兜底 TaskRun：`36d68849-f644-4242-a64b-27c05b8cf2d8`
+- 适配器：`scripted_mock`
+- Diff 制品：`fbe67726-20e3-4ad5-9b08-d4514aa97cbe`
+- 预览：`6c7f6f46-e287-4698-b6be-c99058f69b11`
+- 预览 URL：`http://127.0.0.1:49752`
+- 部署：`a0b5d533-acee-4b2a-a384-103197d46481`
+- Provider/status：`mock`，`ready`
 
-- Session: `c148a1d6-8cd1-4efb-a797-7d10bbe475aa`
-- Failed Codex TaskRun: `e7cead6e-93cd-4195-9a53-e258da253a81`
-- Failed error code: `CODEX_DEMO_FORCED_FAILURE`
-- Fallback TaskRun: `36d68849-f644-4242-a64b-27c05b8cf2d8`
-- Adapter: `scripted_mock`
-- Diff artifact: `fbe67726-20e3-4ad5-9b08-d4514aa97cbe`
-- Preview: `6c7f6f46-e287-4698-b6be-c99058f69b11`
-- Preview URL: `http://127.0.0.1:49752`
-- Deployment: `a0b5d533-acee-4b2a-a384-103197d46481`
-- Provider/status: `mock`, `ready`
+### 注意事项
 
-### Caveats
+- 开始按钮的宽泛浏览器定位器最初匹配了所有三个任务卡片；演练通过针对前端任务的第二个 `开始运行` 按钮进行了恢复。
+- 重新加载后，即使预览和部署制品已持久化，制品面板默认显示 Diff 标签页。点击 `预览1` 可恢复预览 URL 和 iframe 视图。
+- 未添加任何应用代码、产品行为、UI 重新设计、提供商市场、生产部署、Docker 沙箱、WebSocket/multiplayer、PR 创建或宽泛编辑功能。
 
-- The broad browser locator for the Start button initially matched all three
-  task cards; the rehearsal recovered by targeting the second `开始运行` button
-  for the frontend task.
-- After reload, the artifact panel defaults to the Diff tab even when preview
-  and deployment artifacts are persisted. Clicking `预览1` restores the preview
-  URL and iframe view.
-- No app code, product behavior, UI redesign, provider marketplace, production
-  deploy, Docker sandbox, WebSocket/multiplayer, PR creation, or broad editing
-  feature was added.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `git diff --check` | 通过 |
 
-### Follow-Up Browser Spot Check
+### 后续浏览器抽查
 
-On 2026-05-20, the persisted P4-2 real Claude Code and fallback sessions were
-re-opened in the Codex in-app browser without running another real agent
-mutation.
+在 2026-05-20 上，持久化的 P4-2 真实 Claude Code 和兜底会话在 Codex 应用内浏览器中重新打开，未运行其他真实代理变更。
 
-- Real Claude Code session
-  `59ad209a-1f8d-4134-97c4-e4ad275b6f67` still showed completed
-  `claude_code` evidence, the `apps/demo/src/App.tsx` diff chip, preview iframe
-  `http://127.0.0.1:49373`, and mock deployment
-  `6c5a423c-ec7b-4070-9a05-87a8dddd91a1`.
-- Fallback session `c148a1d6-8cd1-4efb-a797-7d10bbe475aa` still showed
-  `CODEX_DEMO_FORCED_FAILURE`, `scripted_mock`, `兜底已恢复`, `Diff 就绪`,
-  `预览健康`, and `模拟部署就绪`.
+- 真实 Claude Code 会话
+  `59ad209a-1f8d-4134-97c4-e4ad275b6f67` 仍显示已完成的
+  `claude_code` 证据、`apps/demo/src/App.tsx` diff 标签、预览 iframe
+  `http://127.0.0.1:49373` 和模拟部署
+  `6c5a423c-ec7b-4070-9a05-87a8dddd91a1`。
+- 兜底会话 `c148a1d6-8cd1-4efb-a797-7d10bbe475aa` 仍显示
+  `CODEX_DEMO_FORCED_FAILURE`、`scripted_mock`、`兜底已恢复`、`Diff 就绪`、
+  `预览健康` 和 `模拟部署就绪`。
 
 ---
 
-## P4-1 Baseline Governance Cleanup
+## P4-1 基线治理清理
 
-**Date:** 2026-05-20
+**日期：** 2026-05-20
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `AGENTS.md` | Updated the repo guardrails from P0-only wording to the current final-demo baseline, including Codex, Claude Code, and scripted mock adapters. |
-| `README.md` | Reframed AgentHub as a local single-user Agent Coding Workspace / strong demo MVP and documented current adapter paths. |
-| `docs/project-state.md` | Added P4-1 governance baseline notes preserving P0/P1/P2/P3/P4 verified paths. |
-| `docs/change-log.md` | Recorded this cleanup. |
-| `openspec/changes/agenthub-im-coding-mvp/specs/worktree-diff/spec.md` | Changed the optional patch-validation requirement to strict-compatible MUST wording. |
-| `openspec/changes/agenthub-final-demo-hardening/proposal.md` | Added a documentation/verification capability for strict OpenSpec validation. |
-| `openspec/changes/agenthub-final-demo-hardening/specs/demo-baseline-hardening/spec.md` | Added governance and evidence-discipline requirements for final demo hardening. |
-| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | Marked P4-1 complete after validation. |
+| `AGENTS.md` | 将仓库护栏从仅 P0 的措辞更新为当前最终演示基线，包括 Codex、Claude Code 和脚本化模拟适配器。 |
+| `README.md` | 将 AgentHub 重新定义为本地单用户代理编码工作区/强演示 MVP，并记录了当前适配器路径。 |
+| `docs/project-state.md` | 添加了 P4-1 治理基线说明，保留了 P0/P1/P2/P3/P4 已验证的路径。 |
+| `docs/change-log.md` | 记录了此次清理。 |
+| `openspec/changes/agenthub-im-coding-mvp/specs/worktree-diff/spec.md` | 将可选的补丁验证要求更改为严格兼容的 MUST 措辞。 |
+| `openspec/changes/agenthub-final-demo-hardening/proposal.md` | 为严格的 OpenSpec 验证添加了 documentation/verification 能力。 |
+| `openspec/changes/agenthub-final-demo-hardening/specs/demo-baseline-hardening/spec.md` | 为最终演示加固添加了治理和证据纪律要求。 |
+| `openspec/changes/agenthub-final-demo-hardening/tasks.md` | 验证后标记 P4-1 完成。 |
 
-### What Changed
+### 变更内容
 
-Aligned baseline governance around the current project state:
+围绕当前项目状态对齐基线治理：
 
-- AgentHub is now consistently described as a local single-user Agent Coding
-  Workspace / strong demo MVP, not a complete multi-user IM collaboration
-  platform.
-- `CodexAdapter`, `ClaudeCodeAdapter`, and `ScriptedMockAdapter` are all treated
-  as current adapters and must not be removed or regressed.
-- The fallback-based P0 path remains preserved.
-- Production deploy, provider marketplace, Docker sandbox, WebSocket/multiplayer,
-  external IM integrations, PR creation, broad arbitrary editing, and enterprise
-  workflows remain out of scope.
-- The previous OpenSpec strict-validation issue in `worktree-diff` is fixed.
+- AgentHub 现在被一致描述为本地单用户代理编码工作区/强演示 MVP，而非完整的多用户 IM 协作平台。
+- `CodexAdapter`、`ClaudeCodeAdapter` 和 `ScriptedMockAdapter` 均被视为
+  当前适配器，不得移除或退化。
+- 基于兜底的 P0 路径保持不变。
+- 生产部署、提供商市场、Docker 沙箱、WebSocket/multiplayer、
+  外部 IM 集成、PR 创建、宽泛的任意编辑和企业工作流仍不在范围内。
+- `worktree-diff` 中之前的 OpenSpec 严格验证问题已修复。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `openspec validate agenthub-im-coding-mvp --strict` | Pass |
-| `openspec validate agenthub-final-demo-hardening --strict` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (26 web tests, 113 API tests) |
-| `git diff --check` | Pass |
+| `openspec validate agenthub-im-coding-mvp --strict` | 通过 |
+| `openspec validate agenthub-final-demo-hardening --strict` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（26 个 Web 测试，113 个 API 测试） |
+| `git diff --check` | 通过 |
 
-### Remaining Governance Caveats
+### 剩余治理注意事项
 
-- P4-2 still needs a browser E2E click rehearsal; P4-0 verified the
-  browser-facing API path but did not complete automated browser clicking.
-- Pre-existing dirty files, including local app/test/doc changes and untracked
-  screenshots, were left untouched unless directly required by P4-1.
-- No app runtime behavior was changed for this task.
+- P4-2 仍需要浏览器端到端点击演练；P4-0 验证了浏览器面向的 API 路径，但未完成自动化浏览器点击。
+- 预先存在的脏文件，包括本地 app/test/doc 更改和未跟踪的截图，除非 P4-1 直接要求，否则保持不变。
+- 此任务未更改任何应用运行时行为。
 
 ---
 
-## P4-0 Full E2E Agent Execution Capability Audit
+## P4-0 完整端到端代理执行能力审计
 
-**Date:** 2026-05-19
+**日期：** 2026-05-19
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/e2e-capability-audit.md` | Added the P4-0 execution capability audit, evidence IDs, limitations, and conclusions. |
-| `docs/project-state.md` | Recorded the P4-0 verified real-agent, fallback, and follow-up paths. |
-| `docs/change-log.md` | Recorded this audit. |
+| `docs/e2e-capability-audit.md` | 添加了 P4-0 执行能力审计、证据 ID、限制和结论。 |
+| `docs/project-state.md` | 记录了 P4-0 已验证的真实代理、兜底和后续路径。 |
+| `docs/change-log.md` | 记录了此次审计。 |
 
-### What Changed
+### 变更内容
 
-Documented a full E2E capability audit for the current AgentHub execution
-pipeline. The audit used `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` and
-verified:
-
+记录了当前 AgentHub 执行的完整端到端能力审计
+流水线。审计使用了 `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` 并验证了：
 ```text
 requirement -> orchestrator plan -> Direct Start -> ClaudeCodeAdapter -> file mutation -> diff -> healthy preview -> mock deploy
 ```
+它还验证了强制性的 Codex 失败加上 ScriptedMockAdapter 兜底路径，
+以及针对 `把按钮文案改成 Sign in` 的同一会话自然语言跟进路径。
 
-It also verified the forced Codex failure plus ScriptedMockAdapter fallback path
-and the same-session natural-language follow-up path for `把按钮文案改成 Sign in`.
+### 审计结果
 
-### Audit Result
+- 真实代理路径：通过浏览器面向 API 的端点。
+- 兜底路径：通过。
+- 跟进路径：通过。
+- 浏览器点击自动化：未完全验证，因为未安装 Playwright，且 Chrome AppleScript 控制被 macOS Apple Events 权限提示阻止。
 
-- Real agent path: Pass through browser-facing API endpoints.
-- Fallback path: Pass.
-- Follow-up path: Pass.
-- Browser click automation: Not fully verified because Playwright is not
-  installed and Chrome AppleScript control was blocked by a macOS Apple Events
-  permission prompt.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (139 tests: 26 web + 113 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（139 个测试：26 个 Web + 113 个 API） |
+| `git diff --check` | 通过 |
 
 ---
 
-## Frontend Chinese Copy and Typography Polish
+## 前端中文文案与排版优化
 
-**Date:** 2026-05-19
+**日期：** 2026-05-19
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/globals.css` | Added a Chinese-first font stack and global line-height/text rendering tuning. |
-| `apps/web/src/lib/date-format.ts` | Changed compact timestamps to Chinese month/day formatting. |
-| `apps/web/src/lib/date-format.test.ts` | Updated timestamp expectations for Chinese date output. |
-| `apps/web/src/components/workspace-shell.tsx` | Localized command-center shell labels, error copy, composer placeholder, demo pipeline, sidebar, chat, and timeline headings. |
-| `apps/web/src/components/task-card-list.tsx` | Localized task statuses, run history, evidence chips, approval copy, and run controls while preserving existing callbacks. |
-| `apps/web/src/components/preview-card.tsx` | Localized preview/artifact panel labels, action buttons, summary metadata, empty state, and iframe title. |
-| `apps/web/src/components/diff-card.tsx` | Localized diff artifact labels, changed-file metadata, and expand/collapse control. |
-| `apps/web/src/components/deploy-card.tsx` | Localized deploy-card labels and common status/title display. |
-| `apps/web/src/components/health-card.tsx` | Localized backend health badge display. |
-| Frontend component tests | Updated assertions for localized UI copy. |
-| `docs/change-log.md` | Recorded this localization and typography pass. |
+| `apps/web/src/app/globals.css` | 添加了中文优先的字体栈和全局 line-height/text 渲染调优。 |
+| `apps/web/src/lib/date-format.ts` | 将紧凑时间戳改为中文 month/day 格式。 |
+| `apps/web/src/lib/date-format.test.ts` | 更新了针对中文日期输出的时间戳预期。 |
+| `apps/web/src/components/workspace-shell.tsx` | 本地化了命令中心 Shell 标签、错误文案、Composer 占位符、演示流水线、侧边栏、聊天和时间线标题。 |
+| `apps/web/src/components/task-card-list.tsx` | 本地化了任务状态、运行历史、证据标签、审批文案和运行控件，同时保留现有回调。 |
+| `apps/web/src/components/preview-card.tsx` | 本地化了 preview/artifact 面板标签、操作按钮、摘要元数据、空状态和 iframe 标题。 |
+| `apps/web/src/components/diff-card.tsx` | 本地化了差异制品标签、变更文件元数据和 expand/collapse 控件。 |
+| `apps/web/src/components/deploy-card.tsx` | 本地化了部署卡片标签和通用 status/title 显示。 |
+| `apps/web/src/components/health-card.tsx` | 本地化了后端健康状态徽章显示。 |
+| 前端组件测试 | 更新了针对本地化 UI 文案的断言。 |
+| `docs/change-log.md` | 记录了本次本地化和排版优化。 |
 
-### What Changed
+### 变更内容
 
-The frontend now presents the command-center chrome in Chinese while keeping
-backend data, adapter names, file paths, URLs, and technical product terms such
-as `Diff`, `Vite`, and `API` intact where they help the coding-agent demo.
+前端现在以中文呈现命令中心界面，同时保留后端数据、适配器名称、文件路径、URL 以及诸如 `Diff`、`Vite` 和 `API` 等技术产品术语，以支持编码代理演示。
 
-Spacing and typography were adjusted lightly for Chinese readability:
+间距和排版针对中文可读性进行了轻微调整：
 
-- Chinese-first system font stack with `PingFang SC`, `Microsoft YaHei`, and
-  Noto CJK fallbacks.
-- Global body line height set to `1.5`.
-- Timeline item gap tightened slightly for denser Chinese labels.
-- User-facing date formatting now renders like `5月17日 02:06`.
+- 中文优先的系统字体栈，包含 `PingFang SC`、`Microsoft YaHei` 和 Noto CJK 后备字体。
+- 全局正文行高设置为 `1.5`。
+- 时间线项目间距略微收紧，以适应更密集的中文标签。
+- 面向用户的日期格式现在渲染为 `5月17日 02:06`。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm --filter @agenthub/web check` | Pass |
-| `pnpm --filter @agenthub/web test` | Pass (26 web tests) |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (26 web tests, 113 API tests) |
-| `git diff --check` | Pass |
-| Browser render check | Pass: verified Chinese shell copy, Chinese-first font stack, viewport-height document, internal scroll regions, and composer visibility. Screenshot captured at `/tmp/agenthub-zh-ui-check.png`. |
+| `pnpm --filter @agenthub/web check` | 通过 |
+| `pnpm --filter @agenthub/web test` | 通过（26 个 Web 测试） |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（26 个 Web 测试，113 个 API 测试） |
+| `git diff --check` | 通过 |
+| 浏览器渲染检查 | 通过：已验证中文 Shell 文案、中文优先字体栈、视口高度文档、内部滚动区域和 Composer 可见性。截图于 `/tmp/agenthub-zh-ui-check.png` 捕获。 |
 
-### Known Limitations
+### 已知限制
 
-- Task titles, session titles, adapter names, artifact titles, paths, URLs, and
-  raw backend status strings can still be English when they come from persisted
-  backend data or intentionally technical identifiers.
+- 任务标题、会话标题、适配器名称、制品标题、路径、URL 和原始后端状态字符串，当来自持久化后端数据或有意使用的技术标识符时，仍可能为英文。
 
 ---
 
-## P3 UI Sync Error Handling
+## P3 UI 同步错误处理
 
-**Date:** 2026-05-19
+**日期：** 2026-05-19
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/main.py` | Allowed both `http://127.0.0.1:3000` and `http://localhost:3000` as local frontend CORS origins. |
-| `apps/api/tests/test_health.py` | Added CORS regression coverage for loopback and localhost frontend origins. |
-| `apps/web/src/components/workspace-shell.tsx` | Added guarded client-side session sync error handling for messages, tasks, SSE task refresh, and UI actions. |
-| `apps/web/src/components/workspace-shell.test.tsx` | Added a regression test that simulates browser fetch failures and verifies a user-facing backend sync warning is shown. |
-| `docs/change-log.md` | Recorded the fix. |
+| `apps/api/app/main.py` | 允许 `http://127.0.0.1:3000` 和 `http://localhost:3000` 作为本地前端 CORS 来源。 |
+| `apps/api/tests/test_health.py` | 为回环和本地主机前端来源添加了 CORS 回归测试覆盖。 |
+| `apps/web/src/components/workspace-shell.tsx` | 为消息、任务、SSE 任务刷新和 UI 操作添加了受保护的客户端会话同步错误处理。 |
+| `apps/web/src/components/workspace-shell.test.tsx` | 添加了一个回归测试，模拟浏览器 fetch 失败并验证显示面向用户的后端同步警告。 |
+| `docs/change-log.md` | 记录了修复。 |
 
-### What Changed
+### 变更内容
 
-Browser-side session refreshes now catch failed `fetch` calls instead of
-leaking unhandled promise rejections. When the FastAPI backend is unreachable or
-a session sync request fails, the UI keeps the existing page mounted and shows a
-compact warning telling the user to check the backend URL.
+浏览器端会话刷新现在会捕获失败的 `fetch` 调用，而不是泄漏未处理的 Promise 拒绝。当 FastAPI 后端不可达或会话同步请求失败时，UI 会保持现有页面挂载，并显示一个紧凑的警告，提示用户检查后端 URL。
 
-The backend now accepts both common local browser origins, so opening the web UI
-at `localhost:3000` or `127.0.0.1:3000` does not trip CORS while fetching from
-the API on port 8000. Expected client sync failures no longer call
-`console.error`, so they do not appear as Next/browser error stacks in the dev
-terminal.
+后端现在接受两种常见的本地浏览器来源，因此在端口 8000 上从 API 获取数据时，在 `localhost:3000` 或 `127.0.0.1:3000` 打开 Web UI 不会触发 CORS。预期的客户端同步失败不再调用 `console.error`，因此它们不会在开发终端中显示为 Next/browser 错误堆栈。
 
-### Why
+### 原因
 
-The browser reported unhandled rejections from `listSessionMessages` and
-`listSessionTasks` when `fetch` failed while switching or loading sessions. The
-failure should be visible and recoverable in the UI rather than surfacing as a
-runtime error. In local development, the browser origin can also differ between
-`localhost` and `127.0.0.1`; CORS must allow both forms.
+当 `fetch` 在切换或加载会话时失败，浏览器报告了来自 `listSessionMessages` 和 `listSessionTasks` 的未处理拒绝。该失败应在 UI 中可见且可恢复，而不是作为运行时错误出现。在本地开发中，浏览器来源也可能在 `localhost` 和 `127.0.0.1` 之间不同；CORS 必须允许两种形式。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (139 tests: 26 web + 113 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（139 项测试：26 项 Web + 113 项 API） |
+| `git diff --check` | 通过 |
 
 ---
 
-## TaskRun Test Environment Isolation
+## TaskRun 测试环境隔离
 
-**Date:** 2026-05-19
+**日期：** 2026-05-19
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_task_runs.py` | Isolated TaskRun API tests from inherited `AGENTHUB_DEFAULT_CODE_ADAPTER` shell state while preserving explicit Claude default-adapter coverage. |
-| `docs/change-log.md` | Recorded the test isolation fix. |
+| `apps/api/tests/test_task_runs.py` | 将 TaskRun API 测试与继承的 `AGENTHUB_DEFAULT_CODE_ADAPTER` shell 状态隔离，同时保留显式的 Claude 默认适配器覆盖。 |
+| `docs/change-log.md` | 记录了测试隔离修复。 |
 
-### What Changed
+### 变更内容
 
-The TaskRun tests now clear `AGENTHUB_DEFAULT_CODE_ADAPTER` in the shared
-`client` fixture so default Codex assertions are stable even when a developer
-starts tests from a shell configured for Claude Code demos. Tests that
-intentionally verify `claude_code` selection still set the environment variable
-explicitly with `monkeypatch`.
+TaskRun 测试现在会清除共享的 `client` 夹具中的 `AGENTHUB_DEFAULT_CODE_ADAPTER`，因此即使开发者从为 Claude Code 演示配置的 shell 启动测试，默认的 Codex 断言也能保持稳定。有意验证 `claude_code` 选择的测试仍会通过 `monkeypatch` 显式设置环境变量。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm test:api` | Pass (112 API tests) |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (25 web tests, 112 API tests) |
-| `git diff --check` | Pass |
+| `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm test:api` | 通过（112 项 API 测试） |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（25 项 Web 测试，112 项 API 测试） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- This does not change runtime adapter selection behavior; it only stabilizes
-  the test environment.
+- 这不会改变运行时适配器选择行为；它仅稳定了测试环境。
 
 ---
 
-## Command-Center Layout Scrolling Fix
+## 命令中心布局滚动修复
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/globals.css` | Locked `html` and `body` to viewport height and disabled document-level scrolling. |
-| `apps/web/src/app/page.tsx` | Changed the page root to a viewport-height, overflow-hidden app shell. |
-| `apps/web/src/app/page.test.tsx` | Updated the shell ownership assertion for the viewport-height layout. |
-| `apps/web/src/components/workspace-shell.tsx` | Made the command-center shell, sidebar, center timeline, and composer use bounded flex/grid sizing with internal scroll regions. |
-| `apps/web/src/components/preview-card.tsx` | Made the Artifact Detail panel a bounded internal scroll region. |
-| `docs/change-log.md` | Recorded this layout scrolling fix. |
+| `apps/web/src/app/globals.css` | 将 `html` 和 `body` 锁定为视口高度，并禁用了文档级滚动。 |
+| `apps/web/src/app/page.tsx` | 将页面根元素更改为视口高度、溢出隐藏的应用外壳。 |
+| `apps/web/src/app/page.test.tsx` | 更新了视口高度布局的外壳所有权断言。 |
+| `apps/web/src/components/workspace-shell.tsx` | 使命令中心外壳、侧边栏、中心时间线和编辑器使用有界的 flex/grid 尺寸，并包含内部滚动区域。 |
+| `apps/web/src/components/preview-card.tsx` | 使制品详情面板成为有界的内部滚动区域。 |
+| `docs/change-log.md` | 记录了此布局滚动修复。 |
 
-### What Changed
+### 变更内容
 
-This pass keeps the command-center structure, state ownership, APIs, and demo
-actions unchanged while fixing page-level scrolling:
+此阶段保持命令中心结构、状态所有权、API 和演示操作不变，同时修复了页面级滚动：
 
-- The app shell now uses viewport height with overflow hidden.
-- The left session list scrolls inside the sidebar.
-- The center chat/task timeline scrolls inside the center panel.
-- The composer remains anchored at the bottom of the center workspace.
-- The right Artifact Detail panel scrolls internally instead of stretching the
-  document.
+- 应用外壳现在使用视口高度并设置溢出隐藏。
+- 左侧会话列表在侧边栏内滚动。
+- 中心 chat/task 时间线在中心面板内滚动。
+- 编辑器锚定在中心工作区的底部。
+- 右侧制品详情面板在内部滚动，而不是拉伸文档。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (25 web tests, 112 API tests) |
-| `git diff --check` | Pass |
-| Browser layout check | Pass: Chrome DevTools measurement showed document/body scroll heights equal viewport height, `html`/`body` overflow hidden, sidebar and center scroll regions overflowing internally, Artifact Panel using internal overflow, composer visible at bottom, and header visible. Screenshot captured at `/tmp/agenthub-scroll-check.png`. |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（25 项 Web 测试，112 项 API 测试） |
+| `git diff --check` | 通过 |
+| 浏览器布局检查 | 通过：Chrome DevTools 测量显示 document/body 滚动高度等于视口高度，`html`/`body` 溢出隐藏，侧边栏和中心滚动区域在内部溢出，制品面板使用内部溢出，编辑器在底部可见，页眉可见。截图于 `/tmp/agenthub-scroll-check.png` 捕获。 |
 
-### Known Limitations
+### 已知限制
 
-- This is a layout mechanics pass only; it does not redesign the task timeline
-  or add full Artifact Panel tabs.
+- 这仅是一次布局机制调整；它不会重新设计任务时间线或添加完整的制品面板标签页。
 
 ---
 
-## P3 UI Final Visual QA Pass
+## P3 UI 最终视觉 QA 阶段
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/task-card-list.tsx` | Increased task timeline readability with stronger selected artifact emphasis, larger task titles, denser dependency text, and retained vertical rail hierarchy. |
-| `apps/web/src/components/preview-card.tsx` | Added Artifact Detail summary metadata for source task, task run, changed file, diff stats, preview health/status, and deploy status/provider. |
-| `apps/web/src/components/workspace-shell.tsx` | De-emphasized low-value smoke sessions, reduced sidebar metadata repetition, and labeled the top pipeline as the demo flow. |
-| `docs/change-log.md` | Recorded this final visual QA polish pass. |
+| `apps/web/src/components/task-card-list.tsx` | 通过更强的选中制品强调、更大的任务标题、更紧凑的依赖文本以及保留的垂直轨道层级，提高了任务时间线的可读性。 |
+| `apps/web/src/components/preview-card.tsx` | 为制品详情添加了摘要元数据，包括源任务、任务运行、变更文件、差异统计、预览 health/status 和部署 status/provider.。 |
+| `apps/web/src/components/workspace-shell.tsx` | 弱化了低价值的烟雾测试会话，减少了侧边栏元数据重复，并将顶部流水线标记为演示流程。 |
+| `docs/change-log.md` | 记录了此最终视觉 QA 打磨阶段。 |
 
-### What Changed
+### 变更内容
 
-This pass keeps the command-center structure and artifact state ownership
-unchanged while tightening the visual presentation:
+此阶段保持命令中心结构和制品状态所有权不变，同时收紧视觉呈现：
 
-- Center task cards now have stronger title weight and selected-artifact focus.
-- The left session list visually de-emphasizes repeated smoke sessions and only
-  shows task-focus metadata for the active session.
-- The right Artifact Detail panel now includes a source-task summary and
-  artifact-specific stats:
-  - Diff: file count, changed file, additions, deletions.
-  - Preview: health, status, port, host.
-  - Deploy: provider, status, environment, URL.
-- The top pipeline now carries an explicit `Demo flow` label.
+- 中心任务卡片现在具有更强的标题权重和选中的制品焦点。
+- 左侧会话列表在视觉上弱化了重复的烟雾测试会话，并且仅显示活动会话的任务焦点元数据。
+- 右侧制品详情面板现在包含源任务摘要和制品特定统计信息：
+  - 差异：文件数、变更文件、新增行数、删除行数。
+  - 预览：健康状态、状态、端口、主机。
+  - 部署：提供商、状态、环境、URL。
+- 顶部流水线现在带有显式的 `Demo flow` 标签。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (25 web tests, 112 API tests) |
-| `git diff --check` | Pass |
-| Browser render check | Pass: captured `/tmp/agenthub-final-visual-qa.png` against the running local UI. |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（25 项 Web 测试，112 项 API 测试） |
+| `git diff --check` | 通过 |
+| 浏览器渲染检查 | 通过：针对正在运行的本地 UI 捕获了 `/tmp/agenthub-final-visual-qa.png`。 |
 
-### Known Limitations
+### 已知限制
 
-- This does not add new Artifact Panel workflows or production-grade tabs.
-- Mobile/responsive behavior is still a future pass.
-- Smoke sessions remain selectable; they are only visually de-emphasized.
+- 这不会添加新的制品面板工作流或生产级标签页。
+- Mobile/responsive 行为仍是未来的阶段。
+- 烟雾测试会话仍然可选；它们仅在视觉上被弱化。
 
 ---
 
-## P3 UI Redesign Phase 3: Timeline and Artifact Panel Polish
+## P3 UI 重新设计阶段 3：时间线和制品面板打磨
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/task-card-list.tsx` | Polished the center task list into a stronger vertical execution rail, improved task card spacing, and made fallback recovery read as a clearer Codex failed → fallback recovered → artifacts ready sequence. |
-| `apps/web/src/components/task-card-list.test.tsx` | Updated the task marker assertion for the polished task label. |
-| `apps/web/src/components/preview-card.tsx` | Strengthened Artifact Panel hierarchy with clearer detail header, segmented Diff/Preview/Deploy selector, selected artifact label, and stronger active tab state. |
-| `apps/web/src/components/workspace-shell.tsx` | Reduced sidebar session-list noise and improved top pipeline status readability. |
-| `docs/change-log.md` | Recorded this Phase 3 visual polish pass. |
+| `apps/web/src/components/task-card-list.tsx` | 优化了中心任务列表，使其成为更强的垂直执行轨道，改进了任务卡间距，并使兜底恢复流程更清晰地呈现为：Codex 失败 → 兜底恢复 → 制品就绪。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 更新了优化后任务标签的任务标记断言。 |
+| `apps/web/src/components/preview-card.tsx` | 强化了制品面板的层级结构，包含更清晰的详情头部、分段式 Diff/Preview/Deploy 选择器、已选制品标签以及更强的活动标签状态。 |
+| `apps/web/src/components/workspace-shell.tsx` | 减少了侧边栏会话列表的冗余信息，并提升了顶部流水线状态的可读性。 |
+| `docs/change-log.md` | 记录了本次第三阶段视觉优化工作。 |
 
-### What Changed
+### 变更内容
 
-Phase 3 keeps the Phase 2 data ownership and API behavior intact while polishing
-visual hierarchy:
+第三阶段在保留第二阶段数据所有权和 API 行为不变的基础上，优化了视觉层级：
 
-- The center task timeline now has a vertical rail with numbered task nodes.
-- Task cards are lighter, more scannable, and less boxy.
-- Run history is grouped with clearer run counts and recovery status.
-- Fallback recovery now presents as:
-  `Codex failed -> fallback recovered -> artifacts ready`.
-- Sidebar sessions show less repeated metadata; only the selected session shows
-  task focus detail.
-- The top pipeline uses clearer status pills for completed, recovered, ready,
-  running, and pending states.
-- The Artifact Panel now reads as a detail panel with a clearer header, selected
-  artifact type label, and segmented Diff / Preview / Deploy controls.
+- 中心任务时间线现在采用垂直轨道，并带有编号的任务节点。
+- 任务卡片更轻量、更易扫描，且不再那么方正。
+- 运行历史按更清晰的运行次数和恢复状态进行分组。
+- 兜底恢复现在呈现为：
+  `Codex failed -> fallback recovered -> artifacts ready`。
+- 侧边栏会话显示更少的重复元数据；仅选中的会话会显示任务焦点详情。
+- 顶部流水线对已完成、已恢复、就绪、运行中和待处理状态使用了更清晰的状态标签。
+- 制品面板现在呈现为一个详情面板，包含更清晰的头部、已选制品类型标签以及分段式的 Diff / Preview / Deploy 控件。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (25 web tests, 112 API tests) |
-| `git diff --check` | Pass |
-| Browser render check | Pass: captured `/tmp/agenthub-phase3-polish.png` against the existing local web/API services. |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（25 个 Web 测试，112 个 API 测试） |
+| `git diff --check` | 通过 |
+| 浏览器渲染检查 | 通过：已捕获 `/tmp/agenthub-phase3-polish.png` 并对照现有本地 web/API 服务进行验证。 |
 
-### Known Limitations
+### 已知限制
 
-- This is still not a full task execution-detail page.
-- Artifact Panel controls are polished but remain a compact selector, not full
-  production tabs.
-- Mobile layout remains a later pass.
+- 这仍然不是一个完整的任务执行详情页面。
+- 制品面板控件已优化，但仍是一个紧凑的选择器，而非完整的生产级标签页。
+- 移动端布局将在后续阶段处理。
 
 ---
 
-## P3 UI Redesign Phase 2: Artifact Panel Ownership
+## P3 UI 重新设计第二阶段：制品面板所有权
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/components/task-card-list.tsx` | Removed inline detailed Diff, Preview, and Deploy card rendering from the center timeline; task cards now show artifact summary chips and clearer recovery/run summaries. |
-| `apps/web/src/components/preview-card.tsx` | Expanded the right panel into an Artifact Panel that can render selected diff, preview, or deployment details and expose existing preview/deploy actions. |
-| `apps/web/src/components/workspace-shell.tsx` | Added frontend-only artifact selection state, default latest-artifact selection, and right-panel callbacks while preserving existing API calls and SSE refresh. |
-| `apps/web/src/components/task-card-list.test.tsx` | Updated task timeline tests to assert summary chips, artifact selection, and artifact item handoff instead of inline detail cards. |
-| `apps/web/src/components/preview-card.test.tsx` | Updated panel tests for selected artifact rendering. |
-| `docs/change-log.md` | Recorded this Phase 2 frontend redesign slice. |
+| `apps/web/src/components/task-card-list.tsx` | 从中心时间线中移除了内联的详细 Diff、Preview 和 Deploy 卡片渲染；任务卡片现在仅显示制品摘要标签和更清晰的 recovery/run 摘要。 |
+| `apps/web/src/components/preview-card.tsx` | 将右侧面板扩展为一个制品面板，能够渲染选中的 diff、preview 或 deployment 详情，并暴露现有的 preview/deploy 操作。 |
+| `apps/web/src/components/workspace-shell.tsx` | 添加了纯前端的制品选择状态、默认选择最新制品的功能以及右侧面板回调，同时保留了现有的 API 调用和 SSE 刷新。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 更新了任务时间线测试，以断言摘要标签、制品选择和制品项交接，而非内联详情卡片。 |
+| `apps/web/src/components/preview-card.test.tsx` | 更新了面板测试，以验证选中制品的渲染。 |
+| `docs/change-log.md` | 记录了本次第二阶段前端重新设计工作。 |
 
-### What Changed
+### 变更内容
 
-The center task timeline now stays focused on execution state. It no longer
-duplicates detailed diff, preview, or deployment cards inline after each task.
-Instead, each task card exposes only compact artifact evidence:
+中心任务时间线现在专注于执行状态。它不再在每个任务后内联复制详细的 diff、preview 或 deployment 卡片。相反，每个任务卡片仅展示紧凑的制品证据：
 
-- Diff ready
-- Changed file
-- Preview health
-- Deploy mock ready
-- Recovered / fallback state
+- Diff 就绪
+- 已更改文件
+- Preview 健康状态
+- Deploy mock 就绪
+- 已恢复 / 兜底状态
 
-`TaskCardList` still uses the existing frontend API client functions to fetch
-TaskRun artifacts, but it now converts them into frontend-only
-`ArtifactPanelItem` objects and hands them to `WorkspaceShell`. `WorkspaceShell`
-keeps the selected artifact id and defaults the panel to the latest available
-artifact when no valid selection exists.
+`TaskCardList` 仍然使用现有的前端 API 客户端函数来获取 TaskRun 制品，但现在会将其转换为纯前端的 `ArtifactPanelItem` 对象，并传递给 `WorkspaceShell`。`WorkspaceShell` 会保留选中的制品 ID，并在没有有效选择时将面板默认显示为最新的可用制品。
 
-The right Artifact Panel now owns artifact detail rendering:
+右侧的制品面板现在负责制品详情的渲染：
 
-- Diff artifacts render through the existing `DiffCard`.
-- Preview artifacts render through the existing `PreviewCard` plus iframe.
-- Deployment artifacts render through the existing `DeployCard`.
+- Diff 制品通过现有的 `DiffCard` 渲染。
+- Preview 制品通过现有的 `PreviewCard` 加 iframe 渲染。
+- Deployment 制品通过现有的 `DeployCard` 渲染。
 
-Existing behavior is preserved:
+现有行为保持不变：
 
-- Start, Retry, Retry with ScriptedMockAdapter, Force Codex failure, Interrupt,
-  Approve, and Deny remain in the center task cards.
-- Preview refresh, open, stop, and mock deploy actions remain wired to the
-  existing API callbacks through the right panel.
-- No backend API changes were made.
+- 开始、重试、使用 ScriptedMockAdapter 重试、强制 Codex 失败、中断、批准和拒绝操作仍保留在中心任务卡片中。
+- Preview 刷新、打开、停止和 mock 部署操作仍通过右侧面板连接到现有的 API 回调。
+- 未对后端 API 进行任何更改。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (25 web tests, 112 API tests) |
-| `git diff --check` | Pass |
-| Browser render check | Pass: captured `/tmp/agenthub-phase2-artifact-panel.png`; right panel defaulted to the latest diff artifact while center timeline no longer rendered inline artifact detail cards. |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（25 个 Web 测试，112 个 API 测试） |
+| `git diff --check` | 通过 |
+| 浏览器渲染检查 | 通过：已捕获 `/tmp/agenthub-phase2-artifact-panel.png`；右侧面板默认显示最新的 diff 制品，而中心时间线不再渲染内联的制品详情卡片。 |
 
-### Known Limitations
+### 已知限制
 
-- This does not implement full Artifact Panel tabs or a task detail page.
-- The panel still uses a compact selector rail; richer artifact browsing remains
-  a later visual pass.
-- The center task timeline still needs another pass for a denser vertical rail
-  treatment once artifact ownership settles.
+- 这并未实现完整的制品面板标签页或任务详情页面。
+- 面板仍使用紧凑的选择器轨道；更丰富的制品浏览功能将在后续的视觉优化阶段处理。
+- 中心任务时间线在制品所有权稳定后，仍需另一次优化以实现更紧凑的垂直轨道样式。
 
 ---
 
-## P3 UI Visual QA Refinement Pass 1
+## P3 UI 视觉质量优化第一轮
+**日期：** 2026-05-18
 
-**Date:** 2026-05-18
+### 修改的文件
 
-### Modified Files
-
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/page.tsx` | Removed the capped outer page card wrapper so the command center reads as a full workspace. |
-| `apps/web/src/app/page.test.tsx` | Updated the shell ownership assertion for the full-screen page structure. |
-| `apps/web/src/components/health-card.tsx` | Compressed Backend health into a single header badge with tooltip detail. |
-| `apps/web/src/components/preview-card.tsx` | Refined the right Artifact Panel placeholder with tab-like labels, Safari-style preview chrome, dotted preview canvas, and a visible waiting card. |
-| `apps/web/src/components/workspace-shell.tsx` | Tuned header hierarchy, pipeline treatment, sidebar selected state, central empty-state card, composer surface, and orchestrator plan styling. |
-| `docs/change-log.md` | Recorded this visual QA refinement pass. |
+| `apps/web/src/app/page.tsx` | 移除了外层页面卡片包装器，使指挥中心呈现为完整工作区。 |
+| `apps/web/src/app/page.test.tsx` | 更新了全屏页面结构的 shell 所有权断言。 |
+| `apps/web/src/components/health-card.tsx` | 将后端健康状态压缩为单个头部徽章，并附带工具提示详情。 |
+| `apps/web/src/components/preview-card.tsx` | 优化了右侧制品面板占位符，添加了标签式选项卡、Safari 风格预览外壳、虚线预览画布和可见的等待卡片。 |
+| `apps/web/src/components/workspace-shell.tsx` | 调整了标题层级、流水线处理方式、侧边栏选中状态、中央空状态卡片、编辑器表面和编排器计划样式。 |
+| `docs/change-log.md` | 记录了本次视觉 QA 优化过程。 |
 
-### Visual QA Method
+### 视觉 QA 方法
 
-Used the three root-level reference PNGs (`1.png`, `2.png`, `3.png`) as the
-available visual references because `docs/ui-redesign/assets` is absent in this
-checkout. The main workspace target is `3.png`.
+使用三个根级参考 PNG（`1.png`、`2.png`、`3.png`）作为
+可用的视觉参考，因为在此检出中缺少 `docs/ui-redesign/assets`。
+主要工作区目标为 `3.png`。
 
-Captured the current UI with local Google Chrome headless:
-
+通过本地 Google Chrome 无头模式捕获当前 UI：
 ```bash
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless=new \
@@ -6692,1558 +6393,1323 @@ Captured the current UI with local Google Chrome headless:
   --screenshot=/tmp/agenthub-main-workspace-task-refined.png \
   "http://127.0.0.1:3000?session=cb653482-c31a-48da-a8ee-31ed8cd367e3"
 ```
+### 发现的主要视觉不匹配问题
 
-### Top Visual Mismatches Found
+1.  命令中心仍显示为大型圆角页面卡片，而非全屏工作区。
+2.  头部高度和后端健康状态权重使流水线显得次要。
+3.  侧边栏的已选会话样式过于通用，与参考中更强的活动导轨不匹配。
+4.  右侧制品面板占位符缺少参考中的预览画布质量。
+5.  Orchestrator/empty-state 卡片需要更轻的层级和更柔和的边框。
 
-1. The command center still read as a large rounded page card instead of a
-   full-screen workspace.
-2. Header height and Backend health weight made the pipeline feel secondary.
-3. Sidebar selected-session styling was too generic and did not match the
-   reference's stronger active rail.
-4. The right Artifact Panel placeholder lacked the preview-canvas quality of
-   the reference.
-5. Orchestrator/empty-state cards needed lighter hierarchy and softer borders.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (25 web tests, 112 API tests) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（25 个 Web 测试，112 个 API 测试） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- This pass intentionally does not implement execution-detail pages or full
-  Artifact Panel tabs.
-- Sidebar timestamps remain backed by the existing date formatter to avoid
-  introducing hydration-sensitive relative-time rendering in this visual-only
-  slice.
+-   此轮迭代有意不实现执行详情页面或完整的制品面板标签页。
+-   侧边栏时间戳仍由现有日期格式化程序支持，以避免在此纯视觉切片中引入对水合敏感的相对时间渲染。
 
 ---
 
-## P3 UI Redesign Slice 1: Command Center Shell
+## P3 UI 重新设计切片 1：命令中心外壳
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/globals.css` | Added command-center design tokens for surfaces, primary indigo, muted text, borders, and code colors. |
-| `apps/web/src/app/page.tsx` | Replaced the old page wrapper with a command-center container and moved health into the workspace shell header slot. |
-| `apps/web/src/app/page.test.tsx` | Updated the home-page test to assert the shell owns the command-center page structure. |
-| `apps/web/src/components/health-card.tsx` | Slimmed backend health from a large page card into a compact status surface for the header. |
-| `apps/web/src/components/preview-card.tsx` | Reworked the right preview area into an Artifact Panel placeholder while preserving preview refresh/close and iframe behavior. |
-| `apps/web/src/components/task-card-list.tsx` | Reframed tasks as a timeline with agent tags, run history, evidence chips, and preserved run/approval/preview/deploy controls. |
-| `apps/web/src/components/task-card-list.test.tsx` | Updated assertions for the new timeline labels and split run-history markup. |
-| `apps/web/src/components/ui/button.tsx` | Aligned button radius and primary color with the command-center token direction. |
-| `apps/web/src/components/workspace-shell.tsx` | Rebuilt the frontend shell into a left sidebar, central IM chat/task timeline, top demo pipeline, and right artifact panel layout while preserving existing state ownership and API callbacks. |
-| `docs/change-log.md` | Recorded this frontend-only redesign slice. |
+| `apps/web/src/app/globals.css` | 为表面、主靛蓝色、弱化文本、边框和代码颜色添加了命令中心设计令牌。 |
+| `apps/web/src/app/page.tsx` | 将旧的页面包装器替换为命令中心容器，并将健康状态移入工作区外壳头部插槽。 |
+| `apps/web/src/app/page.test.tsx` | 更新了主页测试，以断言外壳拥有命令中心页面结构。 |
+| `apps/web/src/components/health-card.tsx` | 将后端健康状态从大型页面卡片精简为头部的紧凑状态表面。 |
+| `apps/web/src/components/preview-card.tsx` | 将右侧预览区域重新设计为制品面板占位符，同时保留预览 refresh/close 和 iframe 行为。 |
+| `apps/web/src/components/task-card-list.tsx` | 将任务重构为带有代理标签、运行历史、证据芯片的时间线，并保留 run/approval/preview/deploy 控件。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 更新了对新时间线标签和拆分运行历史标记的断言。 |
+| `apps/web/src/components/ui/button.tsx` | 使按钮圆角和主色与命令中心令牌方向对齐。 |
+| `apps/web/src/components/workspace-shell.tsx` | 将前端外壳重建为左侧边栏、中央 IM chat/task 时间线、顶部演示流水线和右侧制品面板布局，同时保留现有状态所有权和 API 回调。 |
+| `docs/change-log.md` | 记录了此纯前端重新设计切片。 |
 
-### What Changed
+### 变更内容
 
-Implemented the first real UI redesign slice from `docs/ui-redesign-spec.md`.
-The previous page-level card layout was replaced with an IM-style Coding Agent
-Command Center:
+实现了来自 `docs/ui-redesign-spec.md` 的第一个实际 UI 重新设计切片。
+之前的页面级卡片布局被替换为 IM 风格的编码代理命令中心：
 
-1. A fixed left workspace/session sidebar with workspace identity, session
-   list, current-session status metadata, and full-width New Session action.
-2. A central workspace containing the current session header, chat bubbles,
-   orchestrator plan callout, task timeline container, and composer.
-3. A right Artifact Panel placeholder that visually reserves the final
-   diff/preview/deploy workspace without adding unsupported tabs.
-4. A top demo pipeline showing the P0 loop:
-   Requirement → Plan → Run → Diff → Preview → Deploy.
+1.  一个固定的左侧 workspace/session 边栏，包含工作区标识、会话列表、当前会话状态元数据和全宽的新建会话操作。
+2.  一个中央工作区，包含当前会话头部、聊天气泡、编排器计划标注、任务时间线容器和编辑器。
+3.  一个右侧制品面板占位符，在视觉上保留最终的 diff/preview/deploy 工作区，而不添加不支持的标签页。
+4.  一个顶部演示流水线，展示 P0 循环：需求 → 计划 → 运行 → 差异 → 预览 → 部署。
 
-All existing frontend API calls and callbacks for Start, Retry, Force failure,
-Fallback, Preview, Deploy, Approve, Deny, Interrupt, SSE refresh, and persisted
-session/task/run/artifact fetching remain wired through the existing client
-functions.
+所有现有的前端 API 调用和回调（用于启动、重试、强制失败、兜底、预览、部署、批准、拒绝、中断、SSE 刷新和持久化 session/task/run/artifact 获取）仍通过现有客户端函数连接。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (25 web tests, 112 API tests) |
-| `git diff --check` | Pass |
-| Manual local render check | Pass: reused existing `127.0.0.1:8000` and `127.0.0.1:3000` services; verified rendered HTML includes the command-center title, demo pipeline stages, Backend status, New Session action, and Artifact Panel placeholder. |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（25 个 Web 测试，112 个 API 测试） |
+| `git diff --check` | 通过 |
+| 手动本地渲染检查 | 通过：复用了现有的 `127.0.0.1:8000` 和 `127.0.0.1:3000` 服务；验证渲染的 HTML 包含命令中心标题、演示流水线阶段、后端状态、新建会话操作和制品面板占位符。 |
 
-### Known Limitations
+### 已知限制
 
-- This slice intentionally does not implement full Artifact Panel tabs.
-- Pipeline Preview and Deploy stages remain visual placeholders until the
-  artifact-panel phase connects richer artifact state.
-- `docs/ui-redesign/assets` was not present in this checkout; root-level
-  untracked reference PNGs were left untouched.
-- Screenshot capture was not produced because Playwright was not installed in
-  the workspace; the manual check used the already-running local Next.js server
-  and rendered HTML verification.
+-   此切片有意不实现完整的制品面板标签页。
+-   流水线预览和部署阶段保持为视觉占位符，直到制品面板阶段连接更丰富的制品状态。
+-   `docs/ui-redesign/assets` 在此检出中不存在；根级别的未跟踪参考 PNG 文件保持不变。
+-   未生成屏幕截图，因为工作区中未安装 Playwright；手动检查使用了已在运行的本地 Next.js 服务器，并渲染了 HTML 验证。
 
 ---
 
-## Frontend Design Handoff Brief
+## 前端设计交接简报
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/frontend-design-brief.md` | Added a Gemini handoff brief documenting current frontend capabilities, UI surfaces, flows, architecture, API constraints, design problems, and implementation constraints. |
-| `docs/change-log.md` | Recorded this documentation-only handoff task. |
+| `docs/frontend-design-brief.md` | 添加了一份 Gemini 交接简报，记录了当前前端能力、UI 表面、流程、架构、API 约束、设计问题和实现约束。 |
+| `docs/change-log.md` | 记录了此纯文档交接任务。 |
 
-No app code, backend code, frontend code, adapter code, tests, or dependencies
-changed.
+未更改任何应用代码、后端代码、前端代码、适配器代码、测试或依赖项。
 
-### What Changed
+### 变更内容
 
-Created a documentation-only frontend design brief so Gemini can propose a
-better AgentHub UI while staying inside verified P1 capabilities and current API
-constraints.
+创建了一份纯文档的前端设计简报，以便 Gemini 可以在经过验证的 P1 能力和当前 API 约束范围内提出更好的 AgentHub UI。
 
-The brief records:
+该简报记录了：
+- AgentHub 的 IM 风格编码代理产品定位。
+- 已验证的 P1 直接 Codex 及兜底能力。
+- 当前的会话、聊天、任务、运行、差异、预览、面板、部署和健康 UI 界面。
+- 主要成功、兜底和 reload/recovery 流程。
+- 当前的 Next.js 前端架构、API 客户端函数、数据类型、状态获取和 SSE 使用。
+- Backend/API Gemini 不得超越的约束。
+- 目标当前 UI 弱点及 Gemini 的设计要求。
+- 未来 Codex 前端重构的实现约束。
 
-- AgentHub's IM-style coding-agent product positioning.
-- Verified P1 direct Codex and fallback capabilities.
-- Current session, chat, task, run, diff, preview, panel, deploy, and health UI
-  surfaces.
-- Main success, fallback, and reload/recovery flows.
-- Current Next.js frontend architecture, API client functions, data types, state
-  fetching, and SSE usage.
-- Backend/API constraints Gemini must not exceed.
-- Objective current UI weaknesses and design requirements for Gemini.
-- Implementation constraints for a future Codex frontend pass.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `git diff --check` | Pass |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- This task did not redesign or implement UI changes.
-- Approval card UI remains outside the frozen P1 judge path and is documented
-  as not present in the current frontend.
+- 此任务未重新设计或实现 UI 更改。
+- 审批卡片 UI 仍处于冻结的 P1 判断路径之外，并记录为当前前端中不存在。
 
 ---
 
-## P1-1: Direct UI Start TaskRun Dispatch Fix
+## P1-1：直接 UI 启动 TaskRun 分发修复
 
-**Date:** 2026-05-16
+**日期：** 2026-05-16
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/main.py` | +86/-3 lines |
-| `apps/api/tests/test_task_runs.py` | +107 lines (3 new tests) |
+| `apps/api/app/main.py` | +86/-3 行 |
+| `apps/api/tests/test_task_runs.py` | +107 行（3 个新测试） |
 
-### Modified Functions / Areas
+### 修改的函数/区域
 
 - `apps/api/app/main.py`
-  - `create_task_run_for_task` — changed from `def` to `async def`, added `BackgroundTasks` parameter, now dispatches `_background_execute_task_run` after creating the TaskRun.
-  - `adapter_for_type` (new) — resolves `AgentAdapter` instance from adapter type string.
-  - `execute_task_run` (new) — reusable helper that builds an `AgentRunRequest`, dispatches adapter execution via `run_adapter_event_stream`, and collects diff on completion.
-  - `_background_execute_task_run` (new) — async background task that creates an independent DB session, resolves the adapter, calls `execute_task_run`, and normalizes unexpected failures to `failed` state with `ADAPTER_EXECUTION_ERROR`.
+  - `create_task_run_for_task` — 从 `def` 更改为 `async def`，添加了 `BackgroundTasks` 参数，现在在创建 TaskRun 后分发 `_background_execute_task_run`。
+  - `adapter_for_type`（新增）— 从适配器类型字符串解析 `AgentAdapter` 实例。
+  - `execute_task_run`（新增）— 可重用辅助函数，构建 `AgentRunRequest`，通过 `run_adapter_event_stream` 分发适配器执行，并在完成时收集差异。
+  - `_background_execute_task_run`（新增）— 异步后台任务，创建独立数据库会话，解析适配器，调用 `execute_task_run`，并将意外失败规范化为 `failed` 状态并附带 `ADAPTER_EXECUTION_ERROR`。
 
 - `apps/api/tests/test_task_runs.py`
-  - `test_direct_ui_start_dispatch_creates_queued_run_with_adapter_type` (new)
-  - `test_direct_ui_start_background_execution_persists_events` (new)
-  - `test_direct_ui_start_scripted_mock_background_execution_persists_events` (new)
+  - `test_direct_ui_start_dispatch_creates_queued_run_with_adapter_type`（新增）
+  - `test_direct_ui_start_background_execution_persists_events`（新增）
+  - `test_direct_ui_start_scripted_mock_background_execution_persists_events`（新增）
 
-### What Changed
+### 变更内容
 
-`POST /tasks/{task_id}/runs` previously only created a `queued` TaskRun database row and returned immediately. No adapter execution was dispatched. The TaskRun remained stuck in `queued` state forever.
+`POST /tasks/{task_id}/runs` 之前仅创建了一个 `queued` TaskRun 数据库行并立即返回。未分发任何适配器执行。TaskRun 永远停留在 `queued` 状态。
 
-After this fix, the endpoint:
-1. Creates the TaskRun in `queued` state (unchanged).
-2. Dispatches `_background_execute_task_run` via FastAPI `BackgroundTasks`.
-3. Returns the TaskRun response promptly.
-4. The background task creates an independent DB session, resolves the appropriate adapter (`CodexAdapter` or `ScriptedMockAdapter`), and invokes the existing `execute_task_run` path.
-5. TaskRunEvents are persisted, state transitions are applied, and diffs are collected on completion.
-6. Unexpected adapter failures are normalized to `failed` state.
+此修复后，端点：
+1. 在 `queued` 状态下创建 TaskRun（未更改）。
+2. 通过 FastAPI `BackgroundTasks` 分发 `_background_execute_task_run`。
+3. 立即返回 TaskRun 响应。
+4. 后台任务创建独立数据库会话，解析适当的适配器（`CodexAdapter` 或 `ScriptedMockAdapter`），并调用现有的 `execute_task_run` 路径。
+5. 持久化 TaskRunEvent，应用状态转换，并在完成时收集差异。
+6. 将意外的适配器失败规范化为 `failed` 状态。
 
-### Why
+### 原因
 
-Direct UI Start was the only execution path that did not dispatch adapter execution. The working paths (`force-codex-failure` and `retry-with-fallback`) already called `run_adapter_event_stream` after creating the run. This fix unifies Direct UI Start with the existing dispatch pattern while using `BackgroundTasks` to avoid blocking the HTTP response on long-running adapter execution.
+直接 UI 启动是唯一未分发适配器执行的执行路径。工作路径（`force-codex-failure` 和 `retry-with-fallback`）在创建运行后已调用 `run_adapter_event_stream`。此修复将直接 UI 启动与现有分发模式统一，同时使用 `BackgroundTasks` 避免阻塞 HTTP 响应以等待长时间运行的适配器执行。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (77 tests: 21 web + 56 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（77 个测试：21 个 Web + 56 个 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- Real Codex success was not tested because Codex CLI is not installed on this machine.
-- This fix verifies Direct UI Start at the dispatch level (background execution is scheduled, adapter invocation is attempted, TaskRunEvents are persisted, failures are normalized).
-- Full artifact generation (diff, preview, deploy) still depends on successful adapter execution against a real session worktree.
-- The existing fallback-based P0 demo path (`Force Codex failure` → `Retry with ScriptedMockAdapter` → diff → preview → deploy) remains intact and unchanged.
+- 未测试真实 Codex 成功，因为此机器未安装 Codex CLI。
+- 此修复在分发级别验证直接 UI 启动（后台执行已调度，适配器调用已尝试，TaskRunEvent 已持久化，失败已规范化）。
+- 完整的制品生成（差异、预览、部署）仍取决于针对真实会话工作树的成功适配器执行。
+- 现有的基于兜底的 P0 演示路径（`Force Codex failure` → `Retry with ScriptedMockAdapter` → 差异 → 预览 → 部署）保持完整且未更改。
 
 ---
 
-## P1-2: Real Codex CLI Execution Verification
+## P1-2：真实 Codex CLI 执行验证
 
-**Date:** 2026-05-16
+**日期：** 2026-05-16
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/tests/test_codex_adapter.py` | +30 lines (4 new tests) |
-| `apps/api/tests/test_task_runs.py` | +19/-2 lines (strengthened assertions) |
+| `apps/api/tests/test_codex_adapter.py` | +30 行（4 个新测试） |
+| `apps/api/tests/test_task_runs.py` | +19/-2 行（加强断言） |
 
-### Modified Functions / Areas
+### 修改的函数/区域
 
 - `apps/api/tests/test_codex_adapter.py`
-  - `test_codex_adapter_default_binary_is_macos_codex_app_path` (new) — verifies `DEFAULT_CODEX_BINARY` constant.
-  - `test_codex_adapter_respects_codex_cli_path_env_var` (new) — verifies `CODEX_CLI_PATH` env var override.
-  - `test_codex_adapter_falls_back_to_default_when_env_var_unset` (new) — verifies fallback to default when env var absent.
-  - `test_codex_adapter_constructor_binary_override_takes_precedence` (new) — verifies explicit `codex_binary` parameter takes highest priority.
+  - `test_codex_adapter_default_binary_is_macos_codex_app_path`（新增）— 验证 `DEFAULT_CODEX_BINARY` 常量。
+  - `test_codex_adapter_respects_codex_cli_path_env_var`（新增）— 验证 `CODEX_CLI_PATH` 环境变量覆盖。
+  - `test_codex_adapter_falls_back_to_default_when_env_var_unset`（新增）— 验证环境变量缺失时兜底到默认值。
+  - `test_codex_adapter_constructor_binary_override_takes_precedence`（新增）— 验证显式 `codex_binary` 参数具有最高优先级。
 
 - `apps/api/tests/test_task_runs.py`
-  - `test_direct_ui_start_background_execution_persists_events` — strengthened assertions: now verifies adapter lifecycle events exist beyond queued, and failed runs carry a `CODEX_*` error code with a non-null error message.
+  - `test_direct_ui_start_background_execution_persists_events` — 加强断言：现在验证适配器生命周期事件存在于排队之后，并且失败的运行带有 `CODEX_*` 错误代码及非空错误消息。
 
-### What Changed
+### 变更内容
+1. 为 `CodexAdapter` 二进制解析新增了 4 个单元测试（默认路径、环境变量覆盖、构造函数覆盖、兜底优先级）。
+2. 强化了后台调度集成测试，以断言当执行失败时 CodexAdapter 能生成可识别的 `CODEX_*` 错误码。
+3. 针对会话工作区执行了一次真实的 Codex CLI 冒烟测试，以验证当 Codex 可用时适配器路径能端到端工作。
 
-1. Added 4 new unit tests for `CodexAdapter` binary resolution (default path, env var override, constructor override, fallback precedence).
-2. Strengthened the background dispatch integration test to assert that CodexAdapter produces recognizable `CODEX_*` error codes when execution fails.
-3. Performed a real Codex CLI smoke test against the session worktree to verify the adapter path works end-to-end when Codex is available.
+### 真实 Codex CLI 冒烟测试结果
 
-### Real Codex CLI Smoke Test Result
+- **Codex CLI 可用：** `/Applications/Codex.app/Contents/Resources/codex` (v0.131.0-alpha.9) — **是。**
+- **Codex CLI 已认证：** 使用 ChatGPT 登录 — **是。**
+- **命令格式：** 与 `docs/adapter-notes.md` 完全匹配 (`--ask-for-approval never exec --json --cd <worktree> --sandbox workspace-write "<instruction>"`)。
+- **生成的 JSONL 事件：** `thread.started`, `turn.started`, `item.started`, `item.completed` — **是。**
+- **退出码：** `0` — **是。**
+- **工作区中的文件变更：** 未测试（只读冒烟）。Codex 搜索并定位了跨多个会话工作区目录的 `apps/demo/src/App.tsx`。
 
-- **Codex CLI available:** `/Applications/Codex.app/Contents/Resources/codex` (v0.131.0-alpha.9) — **Yes.**
-- **Codex CLI authenticated:** Logged in using ChatGPT — **Yes.**
-- **Command shape:** Matches `docs/adapter-notes.md` exactly (`--ask-for-approval never exec --json --cd <worktree> --sandbox workspace-write "<instruction>"`).
-- **JSONL events produced:** `thread.started`, `turn.started`, `item.started`, `item.completed` — **Yes.**
-- **Exit code:** `0` — **Yes.**
-- **File changes in worktree:** Not tested (read-only smoke). Codex searched and located `apps/demo/src/App.tsx` across multiple session worktree directories.
+### 原因
 
-### Why
+P1-1 修复了 Direct UI Start 调度，但未验证真实的 CodexAdapter CLI 路径是否实际工作。P1-2 弥补了这一验证缺口：确认 Codex CLI 存在且可执行，确认其命令格式与文档规范匹配，确认它在会话工作区内生成 JSONL 生命周期事件，并添加了不依赖真实 Codex 的 CI 安全测试。
 
-P1-1 fixed Direct UI Start dispatch but did not verify whether the real CodexAdapter CLI path actually works. P1-2 closes that verification gap: confirms Codex CLI is present and executable, confirms its command shape matches the documented spec, confirms it produces JSONL lifecycle events inside the session worktree, and adds CI-safe tests that do not depend on real Codex.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (81 tests: 21 web + 60 API) |
-| `git diff --check` | Pass |
-| Real Codex read-only smoke (manual) | Pass (JSONL events, worktree navigation confirmed) |
-| Real Codex write-and-diff smoke (manual) | Pass (see below) |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（81 个测试：21 个 Web + 60 个 API） |
+| `git diff --check` | 通过 |
+| 真实 Codex 只读冒烟（手动） | 通过（JSONL 事件，工作区导航已确认） |
+| 真实 Codex 写入与差异冒烟（手动） | 通过（见下文） |
 
-### Real Codex Write-and-Diff Smoke Test (2026-05-16)
+### 真实 Codex 写入与差异冒烟测试 (2026-05-16)
 
-**Outcome A: Real write-and-diff through Direct UI Start verified (API-level, not UI-level).**
+**结果 A：通过 Direct UI Start 验证了真实的写入与差异（API 级别，非 UI 级别）。**
 
-A new session worktree was created. A task was assigned to the frontend agent (CodexAdapter). CodexAdapter was invoked with instruction: `"In apps/demo/src/App.tsx, find the element with data-agenthub-target='primary-action-button' and change only its text to 'Codex Verified'."`
+创建了一个新的会话工作区。将一个任务分配给前端代理（CodexAdapter）。使用指令调用 CodexAdapter：`"In apps/demo/src/App.tsx, find the element with data-agenthub-target='primary-action-button' and change only its text to 'Codex Verified'."`
 
-Results:
-- **26 TaskRunEvents persisted** including `thread.started`, `turn.started`, `item.started`/`item.completed` (command_execution and file_change), `turn.completed`.
-- **Codex modified the file:** `apps/demo/src/App.tsx` — replaced button text from `"Continue"` to `"Codex Verified"`.
-- **TaskRun state:** `completed`.
-- **Diff artifact collected:** `artifact.diff.ready` event persisted with `artifactId` and `diffId`. Git diff confirmed 1 file changed, 1 insertion, 1 deletion.
-- **Transient stderr noise:** Codex emits `"Reconnecting..."` messages as `{"type":"error"}` JSONL events during execution; these are mapped to `CODEX_EXIT_ERROR` error events but do not prevent the run from completing when `turn.completed` follows. This is a known Codex CLI behavior, not an adapter bug.
+结果：
+- **持久化了 26 个 TaskRunEvent**，包括 `thread.started`, `turn.started`, `item.started`/`item.completed`（command_execution 和 file_change）, `turn.completed`。
+- **Codex 修改了文件：** `apps/demo/src/App.tsx` — 将按钮文本从 `"Continue"` 替换为 `"Codex Verified"`。
+- **TaskRun 状态：** `completed`。
+- **收集了差异制品：** `artifact.diff.ready` 事件已持久化，包含 `artifactId` 和 `diffId`。Git 差异确认 1 个文件已更改，1 处插入，1 处删除。
+- **瞬态 stderr 噪声：** Codex 在执行期间将 `"Reconnecting..."` 消息作为 `{"type":"error"}` JSONL 事件发出；这些被映射到 `CODEX_EXIT_ERROR` 错误事件，但当 `turn.completed` 紧随其后时不会阻止运行完成。这是已知的 Codex CLI 行为，而非适配器错误。
 
-The verification was performed through direct Python invocation of `CodexAdapter` + `run_adapter_event_stream` + `collect_task_run_diff` rather than through the HTTP endpoint, because `BackgroundTasks` + synchronous `process.communicate()` in CodexAdapter blocks the FastAPI event loop, preventing concurrent request handling during long Codex runs. This event-loop blocking is a pre-existing limitation that also affects the `force-codex-failure` and `retry-with-fallback` endpoints.
+验证是通过直接 Python 调用 `CodexAdapter` + `run_adapter_event_stream` + `collect_task_run_diff` 执行的，而非通过 HTTP 端点，因为 CodexAdapter 中的 `BackgroundTasks` + 同步 `process.communicate()` 会阻塞 FastAPI 事件循环，在长时间 Codex 运行期间阻止并发请求处理。这种事件循环阻塞是一个预先存在的限制，同样影响 `force-codex-failure` 和 `retry-with-fallback` 端点。
 
-### Known Limitations
+### 已知限制
 
-- Real Codex CLI **is available** (v0.131.0-alpha.9, logged in via ChatGPT) in the current validation environment. This is environment-dependent.
-- **Real write-and-diff verified** (API-level): Codex modified `apps/demo/src/App.tsx`, changed file confirmed by `git diff`, diff artifact collected by backend service.
-- Direct UI Start endpoint dispatches real Codex execution in background. `process.communicate()` was blocking the event loop; this is resolved in P1-3.
-- `FileNotFoundError` from missing worktree vs missing Codex binary both map to `CODEX_NOT_FOUND`. This pre-existing ambiguity is not addressed in P1-2.
-- Transient Codex `"Reconnecting..."` JSONL events are mapped to `CODEX_EXIT_ERROR` error events but do not prevent successful completion when followed by `turn.completed`.
-- The existing fallback-based P0 demo path remains intact and unchanged.
+- 真实 Codex CLI **可用**（v0.131.0-alpha.9，通过 ChatGPT 登录）在当前验证环境中。这取决于环境。
+- **真实的写入与差异已验证**（API 级别）：Codex 修改了 `apps/demo/src/App.tsx`，文件变更由 `git diff` 确认，差异制品由后端服务收集。
+- Direct UI Start 端点在后台调度真实的 Codex 执行。`process.communicate()` 正在阻塞事件循环；此问题已在 P1-3 中解决。
+- 来自缺失工作区与缺失 Codex 二进制的 `FileNotFoundError` 都映射到 `CODEX_NOT_FOUND`。这种预先存在的歧义未在 P1-2 中处理。
+- 瞬态 Codex `"Reconnecting..."` JSONL 事件被映射到 `CODEX_EXIT_ERROR` 错误事件，但当 `turn.completed` 紧随其后时不会阻止成功完成。
+- 现有的基于兜底的 P0 演示路径保持不变。
 
 ---
 
-## P1-3: Non-Blocking Subprocess Execution Fix
+## P1-3：非阻塞子进程执行修复
 
-**Date:** 2026-05-16
+**日期：** 2026-05-16
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/codex_adapter.py` | +2 lines: added `import asyncio`, changed `communicate()` to `await asyncio.to_thread(communicate)` |
-| `apps/api/tests/test_codex_adapter.py` | +49 lines: `DelayedFakeCodexProcess`, non-blocking test, `_drain_events` helper |
-| `docs/change-log.md` | P1-3 entry |
+| `apps/api/app/codex_adapter.py` | +2 行：添加了 `import asyncio`，将 `communicate()` 更改为 `await asyncio.to_thread(communicate)` |
+| `apps/api/tests/test_codex_adapter.py` | +49 行：`DelayedFakeCodexProcess`，非阻塞测试，`_drain_events` 辅助函数 |
+| `docs/change-log.md` | P1-3 条目 |
 
-### Modified Functions / Areas
+### 修改的函数 / 区域
 
 - `apps/api/app/codex_adapter.py`
-  - `streamEvents` (line 161): replaced synchronous `state.process.communicate()` with `await asyncio.to_thread(state.process.communicate)`.
-  - Added `import asyncio`.
+  - `streamEvents`（第 161 行）：将同步的 `state.process.communicate()` 替换为 `await asyncio.to_thread(state.process.communicate)`。
+  - 添加了 `import asyncio`。
 
 - `apps/api/tests/test_codex_adapter.py`
-  - `DelayedFakeCodexProcess` (new) — fake process that sleeps in `communicate()` to simulate a long-running subprocess.
-  - `test_codex_adapter_does_not_block_event_loop_during_communicate` (new) — proves a concurrent `asyncio.sleep` completes promptly while the adapter's `communicate()` runs in the thread pool.
-  - `_drain_events` (new) — helper to collect events from an async generator.
+- `DelayedFakeCodexProcess`（新增）——一个伪进程，在 `communicate()` 中休眠，以模拟长时间运行的子进程。
+- `test_codex_adapter_does_not_block_event_loop_during_communicate`（新增）——证明当适配器的 `communicate()` 在线程池中运行时，并发的 `asyncio.sleep` 能及时完成。
+- `_drain_events`（新增）——辅助函数，用于从异步生成器中收集事件。
 
-### What Changed
+### 变更内容
 
-The blocking `process.communicate()` call inside `CodexAdapter.streamEvents()` was wrapped in `asyncio.to_thread()`. This moves the blocking subprocess wait to a worker thread, keeping the asyncio event loop free to serve other requests (health checks, SSE, task queries).
+`CodexAdapter.streamEvents()` 内部的阻塞式 `process.communicate()` 调用被包裹在 `asyncio.to_thread()` 中。这将阻塞式的子进程等待移至工作线程，从而保持 asyncio 事件循环空闲，以服务其他请求（健康检查、SSE、任务查询）。
 
-### Why
+### 原因
 
-P1-2 confirmed that `BackgroundTasks` + synchronous `process.communicate()` blocks the FastAPI asyncio event loop for the entire duration of Codex execution (30-90s). During this time, no other HTTP requests could be served — health checks, SSE event delivery, and task queries would all hang. `asyncio.to_thread()` isolates the blocking operation in a thread pool, allowing the event loop to remain responsive.
+P1-2 确认，`BackgroundTasks` 加上同步的 `process.communicate()` 会在整个 Codex 执行期间（30-90秒）阻塞 FastAPI asyncio 事件循环。在此期间，无法服务任何其他 HTTP 请求——健康检查、SSE 事件推送和任务查询都会挂起。`asyncio.to_thread()` 将阻塞操作隔离在线程池中，使事件循环保持响应能力。
 
-### HTTP Direct UI Start Verification
+### HTTP 直接 UI 启动验证
 
-ScriptedMockAdapter was tested through the full HTTP path:
+ScriptedMockAdapter 通过完整的 HTTP 路径进行了测试：
 
-| Step | Result |
+| 步骤 | 结果 |
 |---|---|
-| `POST /tasks/{task_id}/runs` | Returned 201 with queued TaskRun |
-| Health check during execution | `ok` in ~5ms throughout |
-| TaskRun final state | `completed` |
-| Diff artifact | 1 file changed (`apps/demo/src/App.tsx`), 11 additions, 4 deletions |
+| `POST /tasks/{task_id}/runs` | 返回 201，包含已排队的 TaskRun |
+| 执行期间的健康检查 | 全程约 5ms 内返回 `ok` |
+| TaskRun 最终状态 | `completed` |
+| Diff 制品 | 1 个文件变更（`apps/demo/src/App.tsx`），11 处新增，4 处删除 |
 
-CodexAdapter ran via direct `_background_execute_task_run` invocation:
-- 9 TaskRunEvents persisted (queued → streaming events → error events)
-- TaskRun finalized as `failed` with `CODEX_USAGE_LIMIT` (account hit usage limit)
-- Event loop remained free during Codex subprocess execution
+CodexAdapter 通过直接调用 `_background_execute_task_run` 运行：
+- 持久化了 9 个 TaskRunEvent（已排队 → 流式事件 → 错误事件）
+- TaskRun 最终状态为 `failed`，附带 `CODEX_USAGE_LIMIT`（账户达到使用限制）
+- Codex 子进程执行期间事件循环保持空闲
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (82 tests: 21 web + 61 API) |
-| `git diff --check` | Pass |
-| HTTP Direct UI Start + ScriptedMockAdapter | Pass (diff collected) |
-| Direct `_background_execute_task_run` + CodexAdapter | Pass (events persisted, usage limit normalized) |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（82 个测试：21 个 Web + 61 个 API） |
+| `git diff --check` | 通过 |
+| HTTP 直接 UI 启动 + ScriptedMockAdapter | 通过（已收集 diff） |
+| 直接 `_background_execute_task_run` + CodexAdapter | 通过（事件已持久化，使用限制已标准化） |
 
-### Known Limitations
+### 已知限制
 
-- Events are still persisted in batch after `communicate()` returns, not streamed in real-time during Codex execution. Real-time per-line event streaming would require replacing `communicate()` with an async readline loop — deferred.
-- Real Codex hit a usage limit during P1-3 verification, so real Codex success through HTTP was not verified. The normalized failure path (CODEX_USAGE_LIMIT) was verified.
-- `asyncio.to_thread` is Python 3.9+; the project requires Python 3.9+.
-- The existing fallback-based P0 demo path remains intact and unchanged.
+- 事件仍在 `communicate()` 返回后批量持久化，而非在 Codex 执行期间实时流式传输。实时的逐行事件流式传输需要将 `communicate()` 替换为异步 readline 循环——已推迟。
+- 在 P1-3 验证期间，真实的 Codex 达到了使用限制，因此未验证真实 Codex 通过 HTTP 的成功路径。已验证标准化的失败路径（CODEX_USAGE_LIMIT）。
+- `asyncio.to_thread` 需要 Python 3.9+；该项目要求 Python 3.9+。
+- 现有的基于兜底的 P0 演示路径保持不变。
 
 ---
 
-## P1-4: Incremental Codex JSONL Streaming
+## P1-4：增量式 Codex JSONL 流式传输
 
-**Date:** 2026-05-16
+**日期：** 2026-05-16
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/codex_adapter.py` | Replaced whole-process stdout collection with incremental stdout JSONL line streaming and concurrent stderr capture. |
-| `apps/api/tests/test_codex_adapter.py` | Added streaming process fakes and tests for incremental event yield, pre-completion persistence, and event-loop responsiveness. |
-| `docs/change-log.md` | Added this P1-4 entry. |
+| `apps/api/app/codex_adapter.py` | 将全过程的 stdout 收集替换为增量式 stdout JSONL 逐行流式传输和并发的 stderr 捕获。 |
+| `apps/api/tests/test_codex_adapter.py` | 添加了流式进程的伪实现和测试，用于增量事件生成、完成前持久化和事件循环响应性。 |
+| `docs/change-log.md` | 添加了此 P1-4 条目。 |
 
-### Modified Functions / Areas
+### 修改的函数/区域
 
 - `apps/api/app/codex_adapter.py`
-  - `CodexProcess` — now exposes `stdout_lines()`, `wait()`, and `stderr_text()` instead of a whole-process `communicate()` contract.
-  - `SubprocessCodexProcess.stdout_lines` — reads stdout one line at a time with `asyncio.to_thread(stdout.readline)`.
-  - `SubprocessCodexProcess.stderr_text` — drains stderr concurrently while stdout is streamed.
-  - `CodexAdapter.streamEvents` — parses each complete JSONL stdout line as soon as it is available, yields mapped `AgentEvent`s immediately, then handles stderr and exit status after the process completes.
-  - `_finish_process` — waits for process completion and returns the normalized stderr excerpt.
+  - `CodexProcess`——现在暴露 `stdout_lines()`、`wait()` 和 `stderr_text()`，而非全过程的 `communicate()` 契约。
+  - `SubprocessCodexProcess.stdout_lines`——使用 `asyncio.to_thread(stdout.readline)` 逐行读取 stdout。
+  - `SubprocessCodexProcess.stderr_text`——在 stdout 流式传输的同时并发地排空 stderr。
+  - `CodexAdapter.streamEvents`——一旦每条完整的 JSONL stdout 行可用，立即解析，立即生成映射后的 `AgentEvent`，然后在进程完成后处理 stderr 和退出状态。
+  - `_finish_process`——等待进程完成并返回标准化的 stderr 摘录。
 
 - `apps/api/tests/test_codex_adapter.py`
-  - `StepwiseFakeCodexProcess` — fake process that pauses after the first JSONL line so tests can prove events are yielded before process completion.
-  - `test_codex_adapter_streams_jsonl_before_process_completion` — verifies the first mapped event is yielded before the fake process has waited/exited.
-  - `test_codex_streamed_events_persist_before_process_completion` — verifies `run_adapter_event_stream` persists the first TaskRunEvent before process completion.
-  - `test_codex_adapter_does_not_block_event_loop_while_waiting_for_jsonl` — verifies unrelated async tasks can run while Codex stdout is waiting.
+  - `StepwiseFakeCodexProcess`——伪进程，在第一条 JSONL 行后暂停，以便测试可以证明事件在进程完成前已生成。
+  - `test_codex_adapter_streams_jsonl_before_process_completion`——验证第一个映射事件在伪进程 waited/exited. 之前已生成。
+  - `test_codex_streamed_events_persist_before_process_completion`——验证 `run_adapter_event_stream` 在进程完成前持久化了第一个 TaskRunEvent。
+  - `test_codex_adapter_does_not_block_event_loop_while_waiting_for_jsonl`——验证在等待 Codex stdout 时可以运行不相关的异步任务。
 
-### What Changed
+### 变更内容
 
-Before P1-4, `CodexAdapter.streamEvents()` used:
-
+在 P1-4 之前，`CodexAdapter.streamEvents()` 使用了：
 ```python
 stdout, stderr = await asyncio.to_thread(state.process.communicate)
 ```
+这保持了 FastAPI 事件循环的响应性，但它仍然在 Codex 退出后才收集所有 stdout。TaskRunEvent 在子进程运行结束时被批量解析和持久化。
 
-That kept the FastAPI event loop responsive, but it still collected all stdout
-after Codex exited. TaskRunEvents were parsed and persisted in a batch at the
-end of the subprocess run.
+在 P1-4 之后，适配器增量地流式传输 stdout：
 
-After P1-4, the adapter streams stdout incrementally:
+1. 并发启动 stderr 捕获。
+2. 等待每个可用的 JSONL stdout 行。
+3. 立即解析该行。
+4. 将其映射为 `AgentEvent`。
+5. 立即将事件产出给 `run_adapter_event_stream`。
+6. 让 `run_adapter_event_stream` 在 SSE 投递前持久化事件。
+7. stdout 关闭后，等待进程完成并处理 stderr/exit 退出码。
 
-1. Start stderr capture concurrently.
-2. Await each stdout JSONL line as it becomes available.
-3. Parse the line immediately.
-4. Map it to an `AgentEvent`.
-5. Yield the event immediately to `run_adapter_event_stream`.
-6. Let `run_adapter_event_stream` persist the event before SSE delivery.
-7. After stdout closes, wait for process completion and handle stderr/exit code.
+### 原因
 
-### Why
+P1-3 解决了事件循环阻塞问题，但没有解决实时可见性问题。UI/SSE 路径可以保持响应性，但在进程完成之前无法观察 Codex 的进度。P1-4 使 Codex JSONL stdout 成为真正的流，这样在 Codex 仍在运行时，持久化的 TaskRunEvent 就可以出现。
 
-P1-3 solved event-loop blocking, but not realtime visibility. The UI/SSE path
-could remain responsive, but it could not observe Codex progress until the
-process finished. P1-4 makes Codex JSONL stdout a true stream so persisted
-TaskRunEvents can appear while Codex is still running.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_codex_adapter.py` | Pass (14 tests) |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (84 tests: 21 web + 63 API) |
-| `git diff --check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_codex_adapter.py` | 通过（14 个测试） |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（84 个测试：21 个 Web + 63 个 API） |
+| `git diff --check` | 通过 |
 
-### Manual Verification Result
+### 手动验证结果
 
-HTTP Direct Start with real Codex was attempted against a new planned frontend
-task:
+针对一个新的计划前端任务，尝试了使用真实 Codex 的 HTTP 直接启动：
 
-- Session: `62919139-e820-47d0-9557-ae7653740082`
-- TaskRun: `360e7781-a3cf-4692-bf7f-67f5447c0f36`
-- Initial state: `queued`
-- Observed state during execution: `streaming`
-- Health checks during execution: `ok` in 1-9ms
-- Persisted event replay lines: 12
-- Final state: `failed`
-- Normalized error code: `CODEX_EXIT_ERROR`
-- Normalized error message:
+- 会话：`62919139-e820-47d0-9557-ae7653740082`
+- TaskRun：`360e7781-a3cf-4692-bf7f-67f5447c0f36`
+- 初始状态：`queued`
+- 执行期间观察到的状态：`streaming`
+- 执行期间的健康检查：`ok`（1-9ms）
+- 持久化事件回放行数：12
+- 最终状态：`failed`
+- 标准化错误码：`CODEX_EXIT_ERROR`
+- 标准化错误消息：
   `Reconnecting... 2/5 (timeout waiting for child process to exit)`
-- Diff artifact: not produced
+- Diff 制品：未生成
 
-This verifies that HTTP Direct Start no longer remains stuck at `queued`, that
-real Codex execution is attempted, that events/state become visible while Codex
-is running, and that the API remains responsive. It does **not** verify HTTP
-Direct Start -> real Codex file mutation -> diff artifact, because the real
-Codex process failed before producing a successful file change.
+这验证了 HTTP 直接启动不再卡在 `queued`，尝试了真实的 Codex 执行，events/state 在 Codex 运行时变得可见，并且 API 保持响应性。它**没有**验证 HTTP 直接启动 -> 真实 Codex 文件变更 -> diff 制品，因为真实的 Codex 进程在产生成功的文件变更之前就失败了。
 
-### Known Limitations
+### 已知限制
 
-- The adapter now streams Codex stdout incrementally, but real HTTP write-and-diff verification still depends on local Codex quota/auth/process stability.
-- Stderr is captured concurrently and attached to final fallback/error handling, but mapped intermediate events may not include final stderr because they are emitted before process completion.
-- Preview/deploy through a real Codex success path remains unverified unless the manual HTTP run reaches a successful file mutation and diff artifact.
-- The existing fallback-based P0 demo path remains intact and must stay available.
+- 适配器现在增量地流式传输 Codex stdout，但真实的 HTTP 写入和 diff 验证仍然依赖于本地 Codex quota/auth/process 的稳定性。
+- Stderr 被并发捕获并附加到最终的 fallback/error 处理中，但映射的中间事件可能不包含最终的 stderr，因为它们是在进程完成之前发出的。
+- 通过真实 Codex 成功路径的 Preview/deploy 仍未得到验证，除非手动 HTTP 运行达到成功的文件变更和 diff 制品。
+- 现有的基于兜底的 P0 演示路径保持不变，并且必须保持可用。
 
 ---
 
-## P1-5: Codex Reconnect Handling and HTTP Direct Start Diagnosis
+## P1-5：Codex 重连处理与 HTTP 直接启动诊断
 
-**Date:** 2026-05-16
+**日期：** 2026-05-16
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/codex_adapter.py` | Treat Codex reconnect JSON events as informational progress, preserve specific Codex error codes when a later generic `turn.failed` arrives. |
-| `apps/api/app/main.py` | Generate a bounded demo-file instruction for planned frontend login-page tasks instead of sending the broad task title to Codex. |
-| `apps/api/tests/test_codex_adapter.py` | Added reconnect and specific-error preservation tests. |
-| `apps/api/tests/test_task_runs.py` | Added a test for bounded frontend login-page run instructions. |
-| `docs/change-log.md` | Added this P1-5 entry. |
+| `apps/api/app/codex_adapter.py` | 将 Codex 重连 JSON 事件视为信息性进度，当后续通用 `turn.failed` 到达时保留特定的 Codex 错误码。 |
+| `apps/api/app/main.py` | 为计划的前端登录页面任务生成有边界的演示文件指令，而不是将宽泛的任务标题发送给 Codex。 |
+| `apps/api/tests/test_codex_adapter.py` | 添加了重连和特定错误保留的测试。 |
+| `apps/api/tests/test_task_runs.py` | 添加了有边界的前端登录页面运行指令的测试。 |
+| `docs/change-log.md` | 添加了此 P1-5 条目。 |
 
-### Modified Functions / Areas
+### 修改的函数/区域
 
 - `apps/api/app/codex_adapter.py`
-  - `_map_codex_json_event` — maps `Reconnecting... N/5 (timeout waiting for child process to exit)` JSON events to `message.delta` progress events instead of terminal errors.
-  - `_is_reconnecting_error` (new) — detects reconnect progress messages from Codex JSON stdout.
-  - `_is_generic_failure_event` (new) — detects generic `CODEX_EXIT_ERROR` / `Codex run failed.` events.
-  - `CodexAdapter.streamEvents` — skips a later generic `turn.failed` error when a more specific Codex error was already emitted, so actionable errors such as `CODEX_USAGE_LIMIT` are not overwritten.
+  - `_map_codex_json_event` — 将 `Reconnecting... N/5 (timeout waiting for child process to exit)` JSON 事件映射为 `message.delta` 进度事件，而不是终端错误。
+  - `_is_reconnecting_error`（新增）— 从 Codex JSON stdout 检测重连进度消息。
+  - `_is_generic_failure_event`（新增）— 检测通用 `CODEX_EXIT_ERROR` / `Codex run failed.` 事件。
+  - `CodexAdapter.streamEvents` — 当更具体的 Codex 错误已经发出时，跳过后续的通用 `turn.failed` 错误，这样诸如 `CODEX_USAGE_LIMIT` 的可操作错误就不会被覆盖。
 
 - `apps/api/app/main.py`
-  - `instruction_for_task` (new) — converts the planned frontend login-page task into a small, explicit instruction targeting `apps/demo/src/App.tsx` and `data-agenthub-target="login-page-slot"`.
-  - `agent_run_request_for` — now uses `instruction_for_task(task)` instead of the broad task title.
+  - `instruction_for_task`（新增）— 将计划的前端登录页面任务转换为一个小的、明确的指令，针对 `apps/demo/src/App.tsx` 和 `data-agenthub-target="login-page-slot"`。
+  - `agent_run_request_for` — 现在使用 `instruction_for_task(task)` 而不是宽泛的任务标题。
 
-### What Changed
+### 变更内容
 
-P1-4 showed HTTP Direct Start failed with:
-
+P1-4 显示 HTTP 直接启动失败，错误信息为：
 ```text
 CODEX_EXIT_ERROR: Reconnecting... 2/5 (timeout waiting for child process to exit)
 ```
+P1-5 发现这是一个适配器映射错误。手动运行相同的 Codex CLI 命令表明，Codex 可以发出 `Reconnecting... 5/5`，然后记录 `falling back to HTTP`，继续发出正常的事件项，修改文件，并以 `turn.completed` 结束。因此，重新连接 JSON 事件不一定是终止性的。
 
-P1-5 found that this was an adapter mapping bug. Running the same Codex CLI
-command manually showed that Codex can emit `Reconnecting... 5/5`, then log
-`falling back to HTTP`, continue emitting normal item events, modify files, and
-finish with `turn.completed`. The reconnect JSON event is therefore not
-necessarily terminal.
+适配器现在将重新连接 JSON 事件视为进度消息。真正的失败来自进程退出码、非重新连接的 Codex 错误，或特定的 Codex 故障（如使用限制或身份验证失败）。
 
-The adapter now treats reconnect JSON events as progress messages. Real failure
-comes from the process exit code, a non-reconnect Codex error, or a specific
-Codex failure such as usage limit or authentication failure.
+P1-5 还缩小了 HTTP Direct Start 指令的范围。以前，后端只发送任务标题 `Build the Vite React login page`，因此 Codex 将请求视为一个宽泛的 OpenSpec 实现任务，并在接触演示应用之前读取大型 OpenSpec 文件。现在，后端为确定性的演示登录页面任务发送一个有限制的、针对文件的指令。
 
-P1-5 also narrowed the HTTP Direct Start instruction. Previously the backend
-sent only the task title, `Build the Vite React login page`, so Codex treated
-the request like a broad OpenSpec implementation task and read large OpenSpec
-files before touching the demo app. The backend now sends a bounded,
-file-targeted instruction for the deterministic demo login-page task.
+### 原因
 
-### Why
+直接的 Python 写入和差异冒烟测试成功，因为它使用了狭窄的文件编辑指令。HTTP Direct Start 使用了宽泛的任务标题，并且还将 Codex 重新连接进度视为终止性的。这些差异使得 HTTP 路径在 mutation/diff 之前失败，尽管 CLI 能够在同一会话工作区中进行真实的文件编辑。
 
-The direct Python write-and-diff smoke succeeded because it used a narrow file
-edit instruction. HTTP Direct Start used a broad task title and also treated
-Codex reconnect progress as terminal. Those differences made the HTTP path fail
-before mutation/diff despite the CLI being capable of real file edits in the
-same session worktree.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_codex_adapter.py tests/test_task_runs.py` | Pass (29 tests) |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (89 tests: 21 web + 68 API) |
-| `git diff --check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_codex_adapter.py tests/test_task_runs.py` | 通过（29 个测试） |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（89 个测试：21 个 Web + 68 个 API） |
+| `git diff --check` | 通过 |
 
-### Manual Verification Result
+### 手动验证结果
 
-HTTP Direct Start with real Codex was attempted after the reconnect-mapping and
-bounded-instruction fixes:
+在重新连接映射和有界指令修复之后，尝试了使用真实 Codex 的 HTTP Direct Start：
 
-- Session: `1eac3075-ac06-4504-94f9-76dd4b17ad9d`
-- TaskRun: `dac99e3d-2bb5-4f93-a31d-da9480c04ae6`
-- Initial state: `queued`
-- Observed state during execution: `streaming`
-- Health checks during execution: `ok` in 1-5ms
-- Persisted event replay lines: 27
-- Final state: `failed`
-- Final normalized error code: `CODEX_EXIT_ERROR`
-- Final normalized error message: `Codex run failed.`
-- Diff artifact: not produced
+- 会话：`1eac3075-ac06-4504-94f9-76dd4b17ad9d`
+- TaskRun：`dac99e3d-2bb5-4f93-a31d-da9480c04ae6`
+- 初始状态：`queued`
+- 执行期间观察到的状态：`streaming`
+- 执行期间的健康检查：`ok` 在 1-5ms 内
+- 持久化事件重放行数：27
+- 最终状态：`failed`
+- 最终标准化错误码：`CODEX_EXIT_ERROR`
+- 最终标准化错误消息：`Codex run failed.`
+- 差异制品：未生成
 
-Inspecting persisted events showed the useful underlying error before the final
-generic failure:
-
+检查持久化事件后，在最终通用失败之前发现了有用的底层错误：
 ```text
 CODEX_USAGE_LIMIT: You've hit your usage limit. To get more access now, send a request to your admin or try again at 10:02 PM.
 ```
+在 P1-5 之后，测试确保这个特定的 `CODEX_USAGE_LIMIT` 错误被保留下来，
+而不会被后续的通用 `turn.failed` 事件覆盖。
 
-After P1-5, tests ensure this specific `CODEX_USAGE_LIMIT` error is preserved
-instead of being overwritten by a later generic `turn.failed` event.
+在 Codex 失败后，同一会话中也执行了兜底路径：
 
-The fallback path was also exercised in the same session after Codex failed:
+- 使用 ScriptedMockAdapter 重试：已完成
+- Diff 制品：已生成
+- 变更的文件：`apps/demo/src/App.tsx`
+- Diff 统计：1 个文件变更，11 处新增，4 处删除
+- 预览：在 `http://127.0.0.1:64508` 处健康
+- 部署：mock 提供者，状态 `ready`
 
-- Retry with ScriptedMockAdapter: completed
-- Diff artifact: produced
-- Changed file: `apps/demo/src/App.tsx`
-- Diff stats: 1 file changed, 11 additions, 4 deletions
-- Preview: healthy at `http://127.0.0.1:64508`
-- Deployment: mock provider, status `ready`
+### 已知限制
 
-### Known Limitations
-
-- HTTP Direct Start with real Codex file mutation and diff collection was not
-  verified because the local Codex account hit a usage limit during the HTTP
-  run.
-- Manual CLI verification confirmed reconnect events can be followed by
-  fallback-to-HTTP, file mutation, `git diff`, and `turn.completed`; the adapter
-  now handles that event shape.
-- Preview/deploy through a real Codex success path remains unverified until
-  Codex quota permits a successful HTTP Direct Start mutation.
-- The existing fallback-based P0 demo path remains intact and verified.
+- HTTP 使用真实 Codex 文件变更和 diff 收集的 Direct Start 未经验证，
+  因为在 HTTP 运行期间，本地 Codex 账户达到了使用限制。
+- 手动 CLI 验证确认了重连事件之后可以跟随兜底到 HTTP、文件变更、`git diff` 和 `turn.completed`；
+  适配器现在能处理该事件形态。
+- Preview/deploy 通过真实 Codex 成功路径仍未验证，直到 Codex 配额允许一次成功的 HTTP Direct Start 变更。
+- 现有的基于兜底的 P0 演示路径保持完整且已验证。
 
 ---
 
-## P1-6: HTTP Direct Start Real Codex End-to-End Rehearsal
+## P1-6：HTTP Direct Start 真实 Codex 端到端预演
 
-**Date:** 2026-05-16
+**日期：** 2026-05-16
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/change-log.md` | Added this P1-6 rehearsal result. |
+| `docs/change-log.md` | 添加了此 P1-6 预演结果。 |
 
-### What Changed
+### 变更内容
 
-No product code was changed for P1-6. This was a focused rehearsal after the
-P1-5 reconnect/error-handling fixes and after Codex usage limits reset.
+P1-6 未更改任何产品代码。这是在 P1-5 reconnect/error-handling 修复之后以及 Codex 使用限制重置之后进行的一次针对性预演。
 
-### Manual Verification Result
+### 手动验证结果
 
-HTTP Direct Start with real Codex was rehearsed through the backend API path
-used by the UI:
+HTTP 使用真实 Codex 的 Direct Start 通过 UI 使用的后端 API 路径进行了预演：
 
-- Session: `a0b51d27-0473-44f3-b079-bbb02fdf00bb`
-- User request:
+- 会话：`a0b51d27-0473-44f3-b079-bbb02fdf00bb`
+- 用户请求：
   `@orchestrator build a login page for the demo app`
-- Codex-backed task: `f9e982c3-df76-4740-b38c-e14e8cb3497c`
-- TaskRun: `fa23fb4a-6506-4b0e-a608-3197356d0628`
-- Initial state: `queued`
-- Observed state during execution: `streaming`
-- Final state: `completed`
-- Error code/message: none
-- Persisted event replay lines: 84
-- Health checks during execution: `ok` in 1-5ms
-- Worktree:
+- Codex 支持的任务：`f9e982c3-df76-4740-b38c-e14e8cb3497c`
+- TaskRun：`fa23fb4a-6506-4b0e-a608-3197356d0628`
+- 初始状态：`queued`
+- 执行期间观察到的状态：`streaming`
+- 最终状态：`completed`
+- 错误 code/message：无
+- 持久化的事件重放行数：84
+- 执行期间的健康检查：`ok`，耗时 1-5 毫秒
+- 工作树：
   `.worktrees/98449267-914c-4f26-82b5-e1d176d64f91/a0b51d27-0473-44f3-b079-bbb02fdf00bb`
 
-Real Codex changed:
-
+真实 Codex 变更了：
 ```text
 apps/demo/src/App.tsx
 ```
+收集到的差异制品已持久化：
 
-The collected diff artifact was persisted:
+- 制品 ID：`782e16f4-36b5-46f3-86cf-42c3fb6119e9`
+- 差异 ID：`5df0273d-f9fc-46b3-bbfa-242d5d185667`
+- 变更文件：`["apps/demo/src/App.tsx"]`
+- 统计：1 个文件变更，20 处新增，4 处删除
 
-- Artifact ID: `782e16f4-36b5-46f3-86cf-42c3fb6119e9`
-- Diff ID: `5df0273d-f9fc-46b3-bbfa-242d5d185667`
-- Changed files: `["apps/demo/src/App.tsx"]`
-- Stats: 1 file changed, 20 additions, 4 deletions
-
-The file diff replaced the deterministic login-page slot copy with a compact
-login form containing email and password fields. This verifies:
-
+文件差异将确定性的登录页面插槽副本替换为包含邮箱和密码字段的紧凑登录表单。这验证了：
 ```text
 HTTP Direct Start -> real Codex file mutation -> diff artifact
 ```
+### 兜底验证
 
-### Fallback Verification
+P1-6 直接 Codex 运行已完成，因此本次演练中不需要兜底。P1-5 在此次运行之前立即验证了兜底路径：
 
-The P1-6 direct Codex run completed, so fallback was not needed in this
-rehearsal. P1-5 verified the fallback path immediately before this run:
+- 使用 ScriptedMockAdapter 重试完成。
+- 为 `apps/demo/src/App.tsx` 生成了差异制品。
+- 预览变为健康状态。
+- 创建了模拟部署卡片。
 
-- Retry with ScriptedMockAdapter completed.
-- Diff artifact was produced for `apps/demo/src/App.tsx`.
-- Preview became healthy.
-- Mock deployment card was created.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (89 tests: 21 web + 68 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（89 个测试：21 个 Web + 68 个 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- Preview and mock deploy were not triggered from the real Codex success run in
-  this rehearsal. The verified P1-6 scope was real Codex mutation plus diff
-  artifact.
-- The Codex run took about 163 seconds and emitted reconnect progress before
-  completion, so demos should still keep the ScriptedMockAdapter fallback
-  available.
+- 本次演练中，预览和模拟部署未从真实的 Codex 成功运行触发。已验证的 P1-6 范围是真实的 Codex 变更加差异制品。
+- Codex 运行耗时约 163 秒，并在完成前发出了重连进度，因此演示仍应保留 ScriptedMockAdapter 兜底可用。
 
 ---
 
-## P1-7: Real Codex Preview and Mock Deploy Rehearsal
+## P1-7：真实 Codex 预览和模拟部署演练
 
-**Date:** 2026-05-16
+**日期：** 2026-05-16
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/change-log.md` | Added this P1-7 rehearsal result. |
+| `docs/change-log.md` | 添加了此 P1-7 演练结果。 |
 
-### Modified Functions or Areas
+### 修改的函数或区域
 
-No product code changed. This rehearsal used the existing preview and deploy
-APIs after the successful real Codex Direct Start run from P1-6.
+未修改任何产品代码。本次演练在 P1-6 成功的真实 Codex 直接启动运行后，使用了现有的预览和部署 API。
 
-### What Changed
+### 变更内容
 
-No backend, frontend, adapter, preview, or deploy implementation was changed.
-The only change was documenting the focused verification result for continuing
-from a real Codex diff artifact to preview and mock deployment.
+后端、前端、适配器、预览或部署实现均未变更。唯一的变更是记录了从真实 Codex 差异制品到预览和模拟部署的聚焦验证结果。
 
-### Why
+### 原因
 
-P1-6 verified:
-
+P1-6 已验证：
 ```text
 HTTP Direct Start -> real Codex file mutation -> diff artifact
 ```
-
-P1-7 verifies whether the existing artifact path can continue from that same
-real Codex TaskRun to:
-
+P1-7 验证现有制品路径能否从同一个真实的 Codex TaskRun 继续执行到：
 ```text
 healthy Vite preview -> mock deploy card
 ```
+### 手动验证结果
 
-### Manual Verification Result
+该演练复用了 P1-6 中成功的真实 Codex 直接启动运行：
 
-The rehearsal reused the successful real Codex Direct Start run from P1-6:
+- 会话：`a0b51d27-0473-44f3-b079-bbb02fdf00bb`
+- Codex 支持的任务：`f9e982c3-df76-4740-b38c-e14e8cb3497c`
+- TaskRun：`fa23fb4a-6506-4b0e-a608-3197356d0628`
+- 来自真实 Codex 的变更文件：`apps/demo/src/App.tsx`
+- Diff 制品 ID：`782e16f4-36b5-46f3-86cf-42c3fb6119e9`
+- Diff ID：`5df0273d-f9fc-46b3-bbfa-242d5d185667`
 
-- Session: `a0b51d27-0473-44f3-b079-bbb02fdf00bb`
-- Codex-backed task: `f9e982c3-df76-4740-b38c-e14e8cb3497c`
-- TaskRun: `fa23fb4a-6506-4b0e-a608-3197356d0628`
-- Changed file from real Codex: `apps/demo/src/App.tsx`
-- Diff artifact ID: `782e16f4-36b5-46f3-86cf-42c3fb6119e9`
-- Diff ID: `5df0273d-f9fc-46b3-bbfa-242d5d185667`
-
-The existing preview API was called for that TaskRun:
-
+针对该 TaskRun 调用了现有的预览 API：
 ```text
 POST /task-runs/fa23fb4a-6506-4b0e-a608-3197356d0628/preview
 ```
+预览结果：
 
-Preview result:
+- 预览 ID：`877daf34-cabe-4ddf-8726-94677ba18831`
+- 预览制品 ID：`a14d9194-b198-4d17-a152-79e71cc0590a`
+- URL：`http://127.0.0.1:53089`
+- 端口：`53089`
+- 命令：`pnpm dev --host 127.0.0.1 --port 53089`
+- 进程 ID：`32754`
+- 健康状态：`healthy`
+- 制品状态：`ready`
 
-- Preview ID: `877daf34-cabe-4ddf-8726-94677ba18831`
-- Preview artifact ID: `a14d9194-b198-4d17-a152-79e71cc0590a`
-- URL: `http://127.0.0.1:53089`
-- Port: `53089`
-- Command: `pnpm dev --host 127.0.0.1 --port 53089`
-- Process ID: `32754`
-- Health status: `healthy`
-- Artifact status: `ready`
+预览 URL 成功提供了 Vite React HTML 外壳。
 
-The preview URL served the Vite React HTML shell successfully.
-
-The existing mock deploy API was called for the healthy preview:
-
+针对健康预览调用了现有的模拟部署 API：
 ```text
 POST /previews/877daf34-cabe-4ddf-8726-94677ba18831/deploy
 ```
+部署结果：
 
-Deployment result:
-
-- Deployment ID: `9ba427d9-1ea8-454a-8890-e243075fcec7`
-- Deployment artifact ID: `a623f388-8891-4282-9f7d-6b0074a9152c`
-- Provider: `mock`
-- Environment: `preview`
-- Status: `ready`
-- Commit SHA/worktree ref:
+- 部署 ID：`9ba427d9-1ea8-454a-8890-e243075fcec7`
+- 部署制品 ID：`a623f388-8891-4282-9f7d-6b0074a9152c`
+- 提供商：`mock`
+- 环境：`preview`
+- 状态：`ready`
+- 提交 SHA/worktree 引用：
   `9777b992c46ebb52150c19131410c3dfea54c268+worktree`
-- URL:
+- URL：
   `https://mock.agenthub.local/deployments/9ba427d9-1ea8-454a-8890-e243075fcec7`
-- Deploy log URI:
+- 部署日志 URI：
   `mock://deployments/9ba427d9-1ea8-454a-8890-e243075fcec7/logs`
 
-This verifies:
-
+此验证：
 ```text
 HTTP Direct Start -> real Codex file mutation -> diff artifact -> healthy Vite preview -> mock deploy
 ```
+预览和部署记录由后端创建并持久化。前端已读取这些持久化的 preview/deployment API，但本次 P1-7 演练直接使用了后端 API 路径，而非通过浏览器 UI 点击操作。
 
-The preview and deployment records are backend-created and persisted. The
-frontend already reads these persisted preview/deployment APIs, but this
-P1-7 rehearsal used the backend API path directly rather than clicking through
-the browser UI.
+### 兜底验证
 
-### Fallback Verification
-
-The fallback path was not needed for this rehearsal because the real Codex run
-from P1-6 had already completed and produced a diff. The fallback-based P0 demo
-path remains covered by the existing tests and prior P1-5/P1-6 verification:
-
+本次演练无需使用兜底路径，因为 P1-6 中真实的 Codex 运行已完成并生成了差异。基于兜底的 P0 演示路径仍由现有测试和之前的 P1-5/P1-6 验证覆盖：
 ```text
 forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock deploy
 ```
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (89 tests: 21 web + 68 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（89 项测试：21 项 Web + 68 项 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- This P1-7 rehearsal triggered preview and deploy through the existing backend
-  APIs, not by clicking the browser UI.
-- Real Codex execution remains dependent on local Codex quota and CLI stability;
-  keep the ScriptedMockAdapter fallback available for demos.
+- 此 P1-7 演练通过现有后端 API 触发了预览和部署，而非通过点击浏览器 UI。
+- 真实的 Codex 执行仍然依赖于本地 Codex 配额和 CLI 稳定性；请保留 ScriptedMockAdapter 兜底用于演示。
 
 ---
 
-## Codex Workflow Documentation
+## Codex 工作流文档
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `AGENTS.md` | Added project-wide mandatory Codex rules. |
-| `docs/codex-task-template.md` | Added a reusable short-prompt workflow template. |
-| `docs/project-state.md` | Added stable P0/P1 state, P1-6/P1-7 evidence, and the P1-8 UI gap. |
-| `docs/change-log.md` | Recorded this documentation-only workflow change. |
+| `AGENTS.md` | 添加了项目级强制 Codex 规则。 |
+| `docs/codex-task-template.md` | 添加了可复用的短提示工作流模板。 |
+| `docs/project-state.md` | 添加了稳定的 P0/P1 状态、P1-6/P1-7 证据以及 P1-8 UI 差距。 |
+| `docs/change-log.md` | 记录了此纯文档工作流的变更。 |
 
-### What Changed
+### 变更内容
 
-Moved repeated long-prompt context into stable project documents:
+将重复的长提示上下文移入稳定的项目文档中：
 
-- `AGENTS.md` now names mandatory rules for future Codex work, including
-  minimal task scope, honest verification claims, preserving the fallback-based
-  P0 demo, avoiding forbidden non-P0/P1 features unless explicitly requested,
-  updating the change log when engineering files change, and not committing or
-  pushing unless explicitly instructed.
-- `docs/codex-task-template.md` defines the standard read/check/diagnose/edit
-  workflow and final-response checklist.
-- `docs/project-state.md` records current P0/P1 state, including P1-6 real
-  Codex direct-start diff verification, P1-7 backend API preview/deploy
-  verification, and the concrete P1-7 evidence IDs.
+- `AGENTS.md` 现在为未来的 Codex 工作命名了强制规则，包括最小任务范围、诚实验证声明、保留基于兜底的 P0 演示、避免使用禁止的 non-P0/P1 功能（除非明确要求）、在工程文件变更时更新变更日志，以及除非明确指示，否则不提交或推送。
+- `docs/codex-task-template.md` 定义了标准的 read/check/diagnose/edit 工作流和最终响应检查清单。
+- `docs/project-state.md` 记录了当前的 P0/P1 状态，包括 P1-6 真实 Codex 直接启动差异验证、P1-7 后端 API preview/deploy 验证以及具体的 P1-7 证据 ID。
 
-### Why
+### 原因
 
-Future Codex prompts can now reference these documents instead of repeating the
-same long context, constraints, and wrap-up requirements each time.
+未来的 Codex 提示现在可以引用这些文档，而无需每次都重复相同的长上下文、约束和收尾要求。
 
-### Scope
+### 范围
 
-Documentation only. No app code, backend code, tests, dependencies, or runtime
-behavior were changed.
+仅文档变更。未更改任何应用代码、后端代码、测试、依赖项或运行时行为。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Not run; documentation-only change. |
-| `pnpm test` | Not run; documentation-only change. |
-| `git diff --check` | Pass |
+| `pnpm check` | 未运行；仅文档变更。 |
+| `pnpm test` | 未运行；仅文档变更。 |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- This change does not verify any app behavior.
+- 此变更未验证任何应用行为。
 
 ---
 
-## P1-8: Browser UI Preview and Mock Deploy Rehearsal
+## P1-8：浏览器 UI 预览和模拟部署演练
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/app/page.tsx` | Let `WorkspaceShell` use the full page width so its own right-side preview panel does not compete with the health card. |
-| `apps/web/src/app/page.test.tsx` | Added a focused page layout contract test. |
-| `docs/project-state.md` | Updated P1-8 from a known gap to verified browser UI state. |
-| `docs/change-log.md` | Recorded this P1-8 continuation. |
+| `apps/web/src/app/page.tsx` | 让 `WorkspaceShell` 使用全页宽度，使其自身的右侧预览面板不与健康卡片竞争空间。 |
+| `apps/web/src/app/page.test.tsx` | 添加了聚焦的页面布局契约测试。 |
+| `docs/project-state.md` | 将 P1-8 从已知差距更新为已验证的浏览器 UI 状态。 |
+| `docs/change-log.md` | 记录了此 P1-8 延续。 |
 
-### Modified Functions or Areas
+### 修改的函数或区域
 
 - `apps/web/src/app/page.tsx`
-  - Changed the page content wrapper from `grid gap-4 md:grid-cols-[1fr_360px]`
-    to `grid gap-4`.
-  - `WorkspaceShell` already owns its internal workspace/session/task/preview
-    columns, so the health card now stacks below the full-width workspace shell.
+  - 将页面内容包装器从 `grid gap-4 md:grid-cols-[1fr_360px]` 更改为 `grid gap-4`。
+  - `WorkspaceShell` 已经拥有其内部的 workspace/session/task/preview 列，因此健康卡片现在堆叠在全宽工作区外壳下方。
 
-### What Changed
+### 变更内容
 
-The browser UI rehearsal showed that the outer page constrained
-`WorkspaceShell` beside the health card while `WorkspaceShell` also rendered an
-internal right-side preview panel. That made the task column cramped and made
-the preview/deploy controls difficult to operate at desktop width.
+浏览器 UI 演练显示，外部页面将 `WorkspaceShell` 约束在健康卡片旁边，而 `WorkspaceShell` 也渲染了一个内部右侧预览面板。这使得任务列变得拥挤，并且使得 preview/deploy 控件在桌面宽度下难以操作。
 
-The fix is intentionally small: it changes only the outer page layout. Existing
-task cards, diff cards, preview cards, deploy cards, API clients, backend
-preview/deploy APIs, adapters, and artifact persistence are unchanged.
+此修复特意保持较小规模：它仅更改了外部页面布局。现有的任务卡片、差异卡片、预览卡片、部署卡片、API 客户端、后端 preview/deploy API、适配器和制品持久化均未更改。
 
-### Why
+### 原因
 
-P1-7 verified the post-diff path through backend APIs. P1-8 verifies that a user
-can operate the same post-diff path through the browser UI after a real Codex
-Direct Start run has produced a real diff artifact.
+P1-7 验证了通过后端 API 的差异后路径。P1-8 验证了用户在真实的 Codex 直接启动运行产生真实差异制品后，能够通过浏览器 UI 操作相同的差异后路径。
 
-### Manual Browser Verification Result
+### 手动浏览器验证结果
 
-The browser UI was opened at:
-
+浏览器 UI 在以下位置打开：
 ```text
 http://127.0.0.1:3000/?session=a0b51d27-0473-44f3-b079-bbb02fdf00bb
 ```
+所选会话复用了来自 P1-6/P1-7 的成功真实 Codex 直接启动运行：
 
-The selected session reused the successful real Codex Direct Start run from
-P1-6/P1-7:
+- 会话：`a0b51d27-0473-44f3-b079-bbb02fdf00bb`
+- Codex 支持的任务：`f9e982c3-df76-4740-b38c-e14e8cb3497c`
+- TaskRun：`fa23fb4a-6506-4b0e-a608-3197356d0628`
+- 来自真实 Codex 的变更文件：`apps/demo/src/App.tsx`
+- Diff 制品 ID：`782e16f4-36b5-46f3-86cf-42c3fb6119e9`
+- Diff ID：`5df0273d-f9fc-46b3-bbfa-242d5d185667`
 
-- Session: `a0b51d27-0473-44f3-b079-bbb02fdf00bb`
-- Codex-backed task: `f9e982c3-df76-4740-b38c-e14e8cb3497c`
-- TaskRun: `fa23fb4a-6506-4b0e-a608-3197356d0628`
-- Changed file from real Codex: `apps/demo/src/App.tsx`
-- Diff artifact ID: `782e16f4-36b5-46f3-86cf-42c3fb6119e9`
-- Diff ID: `5df0273d-f9fc-46b3-bbfa-242d5d185667`
+浏览器 UI 检查：
 
-Browser UI checks:
+- 真实 Codex TaskRun 的持久化 diff 卡片已显示。
+- diff 卡片展开后，变更文件详情保持可见。
+- UI 中的 `Start preview` 按钮创建了一个新的健康 Vite 预览。
+- UI 中的 `Open preview` 按钮打开了右侧 iframe 面板。
+- iframe 从会话工作树加载了 Vite React 演示。
+- UI 中的 `Create deploy card` 按钮创建了一个新的持久化模拟部署卡片。
+- 页面刷新后，diff、预览卡片和模拟部署卡片保持可见。
 
-- The persisted diff card appeared for the real Codex TaskRun.
-- The diff card expanded and changed-file details remained visible.
-- The UI `Start preview` button created a new healthy Vite preview.
-- The UI `Open preview` button opened the right-side iframe panel.
-- The iframe loaded the Vite React demo from the session worktree.
-- The UI `Create deploy card` button created a new persisted mock deploy card.
-- After page reload, the diff, preview cards, and mock deploy cards remained
-  visible.
+新创建的 UI 预览：
 
-Fresh UI-created preview:
+- 预览 ID：`810324d7-2ba9-47e6-b676-7391e87cb131`
+- 预览制品 ID：`927f3b23-2bea-43a4-a420-13432ae39064`
+- URL：`http://127.0.0.1:64067`
+- 端口：`64067`
+- 健康状态：`healthy`
+- 制品状态：`ready`
 
-- Preview ID: `810324d7-2ba9-47e6-b676-7391e87cb131`
-- Preview artifact ID: `927f3b23-2bea-43a4-a420-13432ae39064`
-- URL: `http://127.0.0.1:64067`
-- Port: `64067`
-- Health status: `healthy`
-- Artifact status: `ready`
+新创建的 UI 部署：
 
-Fresh UI-created deployment:
+- 部署 ID：`58c7812c-31f8-49ee-8b08-28d38264cd87`
+- 部署制品 ID：`da95fe77-167e-4df2-9ef4-e2d450fa3bb1`
+- 提供商：`mock`
+- 环境：`preview`
+- 状态：`ready`
+- URL：`https://mock.agenthub.local/deployments/58c7812c-31f8-49ee-8b08-28d38264cd87`
 
-- Deployment ID: `58c7812c-31f8-49ee-8b08-28d38264cd87`
-- Deployment artifact ID: `da95fe77-167e-4df2-9ef4-e2d450fa3bb1`
-- Provider: `mock`
-- Environment: `preview`
-- Status: `ready`
-- URL:
-  `https://mock.agenthub.local/deployments/58c7812c-31f8-49ee-8b08-28d38264cd87`
-
-This verifies through the browser UI:
-
+这通过浏览器 UI 验证了：
 ```text
 real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
 ```
+### 兜底验证
 
-### Fallback Verification
-
-No fallback was needed during P1-8 because it reused the successful real Codex
-TaskRun from P1-6. The fallback-based P0 demo remains covered by existing tests
-and prior verification:
-
+P1-8 期间无需兜底，因为它复用了 P1-6 中成功的真实 Codex
+TaskRun。基于兜底的 P0 演示仍由现有测试和先前验证覆盖：
 ```text
 forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock deploy
 ```
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（90 项测试：22 项 Web + 68 项 API） |
+| `git diff --check` | 通过 |
 
 ---
 
-## Runtime Settings Provider Override Save Fix
+## 运行时设置提供者覆盖保存修复
 
-**Date:** 2026-06-08
+**日期：** 2026-06-08
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/agent_runtime_config.py` | Treat non-planner AgentProfile records as role/capability templates when validating runtime provider overrides, while still requiring the selected adapter to match the selected provider. |
-| `apps/api/tests/test_agent_runtime_config.py` | Added regression coverage for saving Frontend Agent with Claude Code provider and rejecting stale adapter/provider payloads. |
-| `apps/web/src/components/agent-runtime-settings.tsx` | Synced provider, adapter, mode, and availability when users change runtime Agent profiles or providers. |
-| `apps/web/src/components/runtime-settings-page-client.test.tsx` | Added UI regression coverage for saving a Frontend Agent configured with Claude Code CLI. |
+| `apps/api/app/agent_runtime_config.py` | 在验证运行时提供者覆盖时，将非规划器 AgentProfile 记录视为 role/capability 模板，同时仍要求所选适配器与所选提供者匹配。 |
+| `apps/api/tests/test_agent_runtime_config.py` | 增加了回归覆盖，用于保存使用 Claude Code 提供者的前端 Agent，并拒绝过时的 adapter/provider 负载。 |
+| `apps/web/src/components/agent-runtime-settings.tsx` | 当用户更改运行时 Agent 配置文件或提供者时，同步提供者、适配器、模式和可用性。 |
+| `apps/web/src/components/runtime-settings-page-client.test.tsx` | 增加了 UI 回归覆盖，用于保存配置了 Claude Code CLI 的前端 Agent。 |
 
-### What Changed
+### 变更内容
 
-Runtime settings can now save a built-in role profile such as `Frontend Agent`
-with a user-selected coding provider such as `Claude Code CLI`. The selected
-provider still determines the runtime adapter, and stale payloads where
-`adapterType` does not match the selected provider remain invalid.
+运行时设置现在可以保存内置角色配置文件（例如 `Frontend Agent`）以及用户选择的编码提供者（例如 `Claude Code CLI`）。所选提供者仍然决定运行时适配器，并且 `adapterType` 与所选提供者不匹配的过时负载仍然无效。
 
 ---
 
-## P19 Planner Routing Hardening
+## P19 规划器路由加固
 
-**Date:** 2026-06-07
+**日期：** 2026-06-07
 
-P19 hardens the Planner / Conversation Router so clear development requests are
-not limited by fixed demo templates or swallowed by weak API-provider
-`assistant_reply` outcomes.
+P19 加固了规划器/对话路由器，使得明确的开发请求不再受限于固定的演示模板，也不会被弱 API 提供者的 `assistant_reply` 结果所吞没。
 
-Changes completed through P19-4:
+通过 P19-4 完成的变更：
 
-- Unified API planner providers and Claude CLI planner on one canonical prompt
-  contract.
-- Added few-shot routing examples for greetings and Library Management App /
-  inventory-style frontend app requests.
-- Required safe build / implement / create / develop / modify software requests
-  to return `task_plan` with a complete `planDraft`.
-- Preserved pure chat, clarification, refusal, and approval-required outcomes
-  as non-executing replies.
-- Added deterministic fallback for safe external frontend coding requests when
-  LLM routing misclassifies them as `assistant_reply`.
-- Recorded planner fallback evidence, including LLM outcome type, fallback
-  reason, provider metadata, validation result, safe error summary, and created
-  task ids.
-- Added P18c Library Management App routing regression coverage with prepared
-  external frontend targets.
-- Confirmed missing/unregistered desktop targets ask for target setup instead
-  of writing arbitrary host paths.
+- 统一了 API 规划器提供者和 Claude CLI 规划器的规范提示合约。
+- 增加了针对问候语和库管理应用/库存风格前端应用请求的少样本路由示例。
+- 要求安全的构建/实现/创建/开发/修改软件请求返回 `task_plan` 并附带完整的 `planDraft`。
+- 保留了纯聊天、澄清、拒绝和需要批准的结果作为非执行回复。
+- 当 LLM 路由将安全的外部前端编码请求错误分类为 `assistant_reply` 时，增加了确定性兜底。
+- 记录了规划器兜底证据，包括 LLM 结果类型、兜底原因、提供者元数据、验证结果、安全错误摘要和创建的任务 ID。
+- 增加了 P18c 库管理应用路由回归覆盖，并准备了外部前端目标。
+- 确认 missing/unregistered 桌面目标要求进行目标设置，而不是写入任意主机路径。
 
-Validation so far:
+截至目前验证结果：
 
-- Planner contract/provider tests: pass.
-- Planning misroute/evidence tests: pass.
-- Novel-app routing tests: pass.
-- `pnpm check`: pass.
-- `pnpm test`: pass, including 58 web tests, 440 API tests, and 5 demo API
-  tests.
-- `pnpm demo:api:test`: pass.
-- `git diff --check`: pass.
-- `openspec validate agenthub-p19-planner-routing-hardening --strict`: pass.
+- 规划器 contract/provider 测试：通过。
+- 规划 misroute/evidence 测试：通过。
+- 新颖应用路由测试：通过。
+- `pnpm check`：通过。
+- `pnpm test`：通过，包括 58 项 Web 测试、440 项 API 测试和 5 项演示 API 测试。
+- `pnpm demo:api:test`：通过。
+- `git diff --check`：通过。
+- `openspec validate agenthub-p19-planner-routing-hardening --strict`：通过。
 
 ---
 
-## Minimal Claude Code Adapter
+## 最小化 Claude Code 适配器
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/claude_code_adapter.py` | Added a minimal Claude Code adapter using subprocess cwd isolation and stream-json parsing. |
-| `apps/api/app/main.py` | Added `claude_code` adapter dispatch support. |
-| `apps/api/app/guardrails.py` | Allowed bounded Claude CLI commands through the existing command guardrail path. |
-| `apps/api/tests/test_claude_code_adapter.py` | Added fake-runner tests for command shape, event streaming, persistence, and normalized failures. |
-| `apps/api/tests/test_guardrails.py` | Added command-policy coverage for the Claude Code CLI shape. |
-| `docs/project-state.md` | Recorded the current Claude Code adapter status and limitations. |
-| `docs/change-log.md` | Recorded this implementation. |
+| `apps/api/app/claude_code_adapter.py` | 添加了一个最小化的 Claude Code 适配器，使用子进程 cwd 隔离和流式 JSON 解析。 |
+| `apps/api/app/main.py` | 添加了 `claude_code` 适配器分发支持。 |
+| `claude_code` | 允许通过现有命令防护路径执行受限的 Claude CLI 命令。 |
+| `apps/api/app/guardrails.py` | 为命令形状、事件流式传输、持久化和标准化失败添加了假运行器测试。 |
+| `apps/api/tests/test_claude_code_adapter.py` | 为 Claude Code CLI 形状添加了命令策略覆盖。 |
+| `apps/api/tests/test_guardrails.py` | 记录了当前 Claude Code 适配器的状态和限制。 |
+| `docs/project-state.md` | 记录了此实现。 |
 
-### Diagnosis
+### 诊断
 
-The existing adapter contract and `run_adapter_event_stream` persistence flow
-already support another local CLI adapter. The missing pieces were a
-Claude-specific subprocess runner, stream-json event mapper, error-code
-normalization, command guardrail allowance, and dispatch support for
-`adapterType: claude_code`.
+现有的适配器合约和 `run_adapter_event_stream` 持久化流程已经支持另一个本地 CLI 适配器。缺失的部分是 Claude 特定的子进程运行器、流式 JSON 事件映射器、错误码标准化、命令防护允许以及针对 `adapterType: claude_code` 的分发支持。
 
-### What Changed
+### 变更内容
 
-Added `ClaudeCodeAdapter` as a sibling of `CodexAdapter`. It builds the
-documented command shape:
-
+添加了 `ClaudeCodeAdapter` 作为 `CodexAdapter` 的兄弟。它构建了文档化的命令形状：
 ```bash
 claude --print --verbose --output-format stream-json --include-partial-messages \
   --permission-mode dontAsk --allowedTools Read,Edit,MultiEdit \
   --no-session-persistence --max-budget-usd 1.00 "<instruction>"
 ```
+该过程由 `cwd=<session_worktree_path>` 启动。适配器增量解析 stdout，并将 Claude Code 事件映射为标准化 `task.state`、`message.delta`、`completed` 和 `error` 事件。它会规范化缺失 CLI、需要认证、用量限制、中断、超时、解析错误、护栏拦截以及非零退出失败等情况。
 
-The process is started with `cwd=<session_worktree_path>`. The adapter parses
-stdout incrementally and maps Claude Code events to normalized `task.state`,
-`message.delta`, `completed`, and `error` events. It normalizes missing CLI,
-auth required, usage limit, interruption, timeout, parse error, guardrail
-blocking, and non-zero exit failures.
+未更改前端 UI、提供商市场、部署行为、Codex 行为或 ScriptedMockAdapter 兜底行为。
 
-No frontend UI, provider marketplace, deployment behavior, Codex behavior, or
-ScriptedMockAdapter fallback behavior changed.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (133 tests: 25 web + 108 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（133 项测试：25 项 Web + 108 项 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- Tests use fake process runners only; CI and local tests do not call real
-  Claude Code.
-- No real Claude mutation was run or claimed.
-- Real Claude `stream-json` output, permission behavior, auth failure text, and
-  usage-limit text still need an explicitly approved smoke before demo use.
+- 测试仅使用假进程运行器；CI 和本地测试不会调用真实的 Claude Code。
+- 未运行或声称任何真实的 Claude 变异。
+- 真实的 Claude `stream-json` 输出、权限行为、认证失败文本和用量限制文本仍需在演示使用前获得明确批准的冒烟测试。
 
 ---
 
-## P2-7: Explicit ClaudeCodeAdapter Smoke Rehearsal
+## P2-7：显式 ClaudeCodeAdapter 冒烟预演
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/claude_code_adapter.py` | Added the required `--verbose` flag for real Claude `--output-format stream-json` execution and mapped real `stream_event` text deltas. |
-| `apps/api/app/guardrails.py` | Required `--verbose` in the bounded Claude Code command allowlist shape. |
-| `apps/api/tests/test_claude_code_adapter.py` | Updated command-shape coverage for `--verbose` and added stream-event text/thinking delta coverage. |
-| `apps/api/tests/test_guardrails.py` | Updated command-policy coverage for `--verbose`. |
-| `docs/project-state.md` | Recorded the real Claude smoke evidence and limitations. |
-| `docs/change-log.md` | Recorded this P2-7 rehearsal. |
+| `apps/api/app/claude_code_adapter.py` | 为真实的 Claude `--output-format stream-json` 执行添加了必需的 `--verbose` 标志，并映射了真实的 `stream_event` 文本增量。 |
+| `apps/api/app/guardrails.py` | 在有界 Claude Code 命令允许列表形状中要求 `--verbose`。 |
+| `apps/api/tests/test_claude_code_adapter.py` | 更新了 `--verbose` 的命令形状覆盖范围，并添加了流事件 text/thinking 增量覆盖范围。 |
+| `apps/api/tests/test_guardrails.py` | 更新了 `--verbose` 的命令策略覆盖范围。 |
+| `docs/project-state.md` | 记录了真实的 Claude 冒烟证据和限制。 |
+| `docs/change-log.md` | 记录了本次 P2-7 预演。 |
 
-### Diagnosis
+### 诊断
 
-The fake-runner adapter implementation was structurally correct, but the first
-real Claude Code smoke revealed one concrete CLI requirement:
-
+假运行器适配器实现在结构上是正确的，但首次真实的 Claude Code 冒烟测试揭示了一个具体的 CLI 要求：
 ```text
 Error: When using --print, --output-format=stream-json requires --verbose
 ```
+该失败发生在任何文件变更之前。适配器和护栏命令形态已通过最小修复更新：添加 `--verbose`。
+成功的冒烟测试还表明，详细输出包含底层 `stream_event` 记录（包括思考增量），因此适配器现在映射文本增量并过滤思考增量，而不是将其作为原始消息保留。
 
-That failure happened before any file mutation. The adapter and guardrail
-command shape were updated with the smallest possible fix: add `--verbose`.
-The successful smoke also showed that verbose output includes low-level
-`stream_event` records, including thinking deltas, so the adapter now maps text
-deltas and filters thinking deltas instead of preserving them as raw messages.
+### 冒烟测试方法
 
-### Smoke Method
-
-Created a detached disposable worktree:
-
+创建了一个分离的可丢弃工作树：
 ```text
 /Users/luotianhang/Desktop/agenthub/.worktrees/claude-smoke-96d46af7-dc74-4d71-a062-c9be42cd1332
 ```
-
-Then ran one tiny real `ClaudeCodeAdapter` instruction through the backend
-adapter flow:
-
+然后通过后端适配器流程运行了一条微小的真实 `ClaudeCodeAdapter` 指令：
 ```text
 change only the primary action button text in apps/demo/src/App.tsx to "Claude smoke"
 ```
+未运行任何宽泛提示、依赖安装、浏览器 UI 流程或重复变更循环。
 
-No broad prompt, dependency install, browser UI flow, or repeated mutation
-loop was run.
+### 结果
 
-### Result
+第一次尝试：
 
-First attempt:
-
-- TaskRun: `c66f1f86-2407-487a-b18f-cf01abd3a7f3`
-- Final state: `failed`
-- Error code: `CLAUDE_CODE_EXIT_ERROR`
-- Error message:
+- TaskRun：`c66f1f86-2407-487a-b18f-cf01abd3a7f3`
+- 最终状态：`failed`
+- 错误代码：`CLAUDE_CODE_EXIT_ERROR`
+- 错误消息：
   `Error: When using --print, --output-format=stream-json requires --verbose`
-- File mutation: none
+- 文件变更：无
 
-Second attempt after the `--verbose` fix:
+`--verbose` 修复后的第二次尝试：
 
-- Session: `4cf32311-1a9b-4eda-9ec3-ab0d010691fc`
-- Task: `a5557a9a-99de-4962-9d25-86ed548ea7ca`
-- TaskRun: `095ae634-c188-4ffc-a502-53a500d20e14`
-- AdapterRun: `claude-code-94cc6074-f15d-4290-b050-c2383363f44d`
-- Final state: `completed`
-- Persisted adapter events: 337
-- Diff artifact: `95bb1d0b-12a3-4a0e-be3e-c07cf1bf79d4`
-- Diff: `9f69bc39-6b32-42ca-8a86-cf9fbfa62343`
-- Changed file: `apps/demo/src/App.tsx`
-- Diff stats: 1 file changed, 1 addition, 1 deletion
+- 会话：`4cf32311-1a9b-4eda-9ec3-ab0d010691fc`
+- 任务：`a5557a9a-99de-4962-9d25-86ed548ea7ca`
+- TaskRun：`095ae634-c188-4ffc-a502-53a500d20e14`
+- AdapterRun：`claude-code-94cc6074-f15d-4290-b050-c2383363f44d`
+- 最终状态：`completed`
+- 持久化的适配器事件：337
+- Diff 制品：`95bb1d0b-12a3-4a0e-be3e-c07cf1bf79d4`
+- 差异：`9f69bc39-6b32-42ca-8a86-cf9fbfa62343`
+- 变更的文件：`apps/demo/src/App.tsx`
+- 差异统计：1 个文件变更，1 处新增，1 处删除
 
-Direct git diff in the disposable worktree showed only:
-
+在一次性工作区中直接执行 git diff 仅显示：
 ```diff
 -            Continue
 +            Claude smoke
 ```
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (134 tests: 25 web + 109 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（134 项测试：25 项 Web + 109 项 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- This was a direct backend smoke, not full browser UI execution.
-- Only one tiny real Claude mutation was verified.
-- Claude `stream-json` emits verbose low-level `stream_event` records; text
-  deltas and thinking-delta filtering are covered, but broader stream event
-  shapes remain unverified.
-- Real auth-failure and usage-limit outputs remain unverified.
+- 这仅是一次直接的后端冒烟测试，并非完整的浏览器 UI 执行。
+- 仅验证了一个微小的真实 Claude 变更。
+- Claude `stream-json` 会输出冗长的底层 `stream_event` 记录；文本增量和思考增量过滤已覆盖，但更广泛的流事件形态仍未验证。
+- 真实的身份验证失败和使用限制输出仍未验证。
 
 ---
 
-## P2-8: Claude Code Direct-Start Selection
+## P2-8：Claude Code 直接启动选择
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/task_runs.py` | Added `AGENTHUB_DEFAULT_CODE_ADAPTER` selection for codex-backed frontend/backend coding agents. |
-| `apps/api/tests/test_task_runs.py` | Added coverage for Claude default selection, explicit adapter preservation, non-code adapter preservation, and invalid env values. |
-| `docs/project-state.md` | Recorded the P2-8 selection behavior and current limits. |
-| `docs/change-log.md` | Recorded this P2-8 implementation. |
+| `apps/api/app/task_runs.py` | 为基于 codex 的 frontend/backend 编码代理添加了 `AGENTHUB_DEFAULT_CODE_ADAPTER` 选择。 |
+| `apps/api/tests/test_task_runs.py` | 增加了对 Claude 默认选择、显式适配器保留、非代码适配器保留以及无效环境变量值的覆盖。 |
+| `docs/project-state.md` | 记录了 P2-8 选择行为及当前限制。 |
+| `docs/change-log.md` | 记录了本次 P2-8 实现。 |
 
-### Diagnosis
+### 诊断
 
-Normal Direct Start creates a TaskRun through `create_task_run()`, which used
-the assigned agent's stored `adapter_type` unless an endpoint passed an
-explicit adapter. The seeded frontend and backend agents use `codex`, so normal
-demo execution continued to default to Codex even after the minimal
-`ClaudeCodeAdapter` was available.
+正常的直接启动通过 `create_task_run()` 创建 TaskRun，除非端点传递了显式适配器，否则会使用已分配代理存储的 `adapter_type`。种子化的前端和后端代理使用 `codex`，因此即使在最小化的 `ClaudeCodeAdapter` 可用后，正常的演示执行仍默认使用 Codex。
 
-### What Changed
+### 变更内容
 
-Added an environment/config switch:
-
+新增了一个 environment/config 开关：
 ```bash
 AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code
 ```
+设置后，frontend/backend 中存储的适配器为 `codex` 的编码代理将使用 `adapterType: claude_code` 创建新的 TaskRun。未设置时，行为保持不变。
+显式适配器选择仍然优先，因此强制的 Codex 失败和回退到 ScriptedMockAdapter 的重试机制继续正常工作。包括 `scripted_mock` 在内的非编码适配器不受此环境变量的影响。
 
-When set, frontend/backend coding agents whose stored adapter is `codex` create
-new TaskRuns with `adapterType: claude_code`. When unset, behavior is unchanged.
-Explicit adapter choices still win, so forced Codex failure and
-retry-with-ScriptedMockAdapter fallback keep working as before. Non-code
-adapters, including `scripted_mock`, are not changed by the env var.
+未添加前端 UI 选择器、提供商市场、种子重写、Codex 移除或 ScriptedMockAdapter 行为变更。
 
-No frontend UI selector, provider marketplace, seed rewrite, Codex removal, or
-ScriptedMockAdapter behavior change was added.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (137 tests: 25 web + 112 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（137 个测试：25 个 Web + 112 个 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- P2-8 did not run another real Claude mutation; P2-7 remains the real Claude
-  smoke evidence.
-- The selection method is environment-based. A browser-visible provider picker
-  remains out of scope.
+- P2-8 未运行另一个真实的 Claude 变异测试；P2-7 仍然是真实的 Claude 烟雾测试证据。
+- 选择方法基于环境。浏览器可见的提供商选择器仍不在范围内。
 
 ---
 
-## P2-9: Claude Default Adapter Mode Documentation
+## P2-9：Claude 默认适配器模式文档
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/demo-script.md` | Documented how to start the API with Claude Code as the default coding adapter and how to present the mode during demos. |
-| `docs/project-state.md` | Recorded P2-9 Direct Start selection evidence and remaining limits. |
-| `docs/change-log.md` | Recorded this P2-9 documentation and rehearsal result. |
+| `docs/demo-script.md` | 记录了如何以 Claude Code 作为默认编码适配器启动 API，以及如何在演示中展示该模式。 |
+| `docs/project-state.md` | 记录了 P2-9 直接启动选择的证据和剩余限制。 |
+| `docs/change-log.md` | 记录了本次 P2-9 文档和演练结果。 |
 
-No app code, adapter code, backend API behavior, frontend UI, provider
-marketplace, or test behavior changed for P2-9.
+P2-9 未更改任何应用代码、适配器代码、后端 API 行为、前端 UI、提供商市场或测试行为。
 
-### Diagnosis
+### 诊断
 
-P2-8 added the selection mechanism, but the demo script did not yet tell future
-operators how to start AgentHub in Claude-default mode. Browser Direct Start
-with `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` also had not been manually
-rehearsed.
+P2-8 添加了选择机制，但演示脚本尚未告知未来的操作员如何以 Claude 默认模式启动 AgentHub。使用 `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` 的浏览器直接启动也尚未手动演练过。
 
-### What Changed
+### 变更内容
 
-The demo script now documents:
-
+演示脚本现在记录了：
 ```bash
 AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api
 ```
+它还区分了已验证的级别：
 
-It also distinguishes the verified levels:
+- P2-7 验证了直接的后端真实 Claude 变更和差异制品。
+- P2-8 验证了测试中基于环境变量的选择。
+- P2-9 验证了当环境变量设置时，Direct Start 会创建一个 `claude_code` TaskRun。
+- 通过 diff/preview/deploy 进行的完整浏览器 UI Claude 默认执行仍未演练。
 
-- P2-7 verified a direct backend real Claude mutation and diff artifact.
-- P2-8 verified env-based selection in tests.
-- P2-9 verified Direct Start creates a `claude_code` TaskRun when the env var
-  is set.
-- Full browser UI Claude-default execution through diff/preview/deploy remains
-  unrehearsed.
+### 最小化演练
 
-### Minimal Rehearsal
+使用 `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` 运行了一次内存中的 API Direct Start 检查。该请求未启动真实的 Claude；它仅验证了选择层。
 
-Ran an in-memory API Direct Start check with
-`AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`. The request did not launch real
-Claude; it verified the selection layer only.
+证据：
 
-Evidence:
+- 端点：`POST /tasks/{task_id}/runs`
+- 响应状态：`201`
+- 会话：`1c662ede-d0be-4349-8c86-20f49be6fb53`
+- 任务：`c28cda5b-67c7-44a8-bd2b-e43ebbc64217`
+- TaskRun：`a1c191ea-1414-4746-95ca-d6c51b36b4f8`
+- 适配器类型：`claude_code`
+- 状态：`queued`
+- 排队事件负载：`{"adapterType":"claude_code","state":"queued"}`
 
-- Endpoint: `POST /tasks/{task_id}/runs`
-- Response status: `201`
-- Session: `1c662ede-d0be-4349-8c86-20f49be6fb53`
-- Task: `c28cda5b-67c7-44a8-bd2b-e43ebbc64217`
-- TaskRun: `a1c191ea-1414-4746-95ca-d6c51b36b4f8`
-- Adapter type: `claude_code`
-- State: `queued`
-- Queued event payload: `{"adapterType":"claude_code","state":"queued"}`
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (137 tests: 25 web + 112 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（137 个测试：25 个 Web + 112 个 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- No real Claude execution was run for P2-9.
-- Full browser UI Claude-default execution through diff/preview/deploy remains
-  unrehearsed.
-- P2-7 remains the real Claude mutation and diff artifact evidence.
+- P2-9 未运行真实的 Claude 执行。
+- 通过 diff/preview/deploy 进行的完整浏览器 UI Claude 默认执行仍未演练。
+- P2-7 仍然是真实的 Claude 变更和差异制品证据。
 
 ---
 
-## P2 Final Freeze Review
+## P2 最终冻结审查
 
-**Date:** 2026-05-18
+**日期：** 2026-05-18
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/demo-script.md` | Updated the introduction to include P2 stabilization and Claude-default mode notes. |
-| `docs/p2-roadmap.md` | Reconciled the original P2 plan with the final completed P2 state and remaining caveats. |
-| `docs/project-state.md` | Recorded the P2 final freeze review result. |
-| `docs/change-log.md` | Recorded this freeze review. |
+| `docs/demo-script.md` | 更新了引言，包含 P2 稳定化和 Claude 默认模式说明。 |
+| `docs/p2-roadmap.md` | 协调了原始 P2 计划与最终完成的 P2 状态及剩余注意事项。 |
+| `docs/project-state.md` | 记录了 P2 最终冻结审查结果。 |
+| `docs/change-log.md` | 记录了本次冻结审查。 |
 
-No app code, adapter code, backend API behavior, frontend behavior, tests, or
-dependencies changed during the P2 final freeze review.
+在 P2 最终冻结审查期间，未更改任何应用代码、适配器代码、后端 API 行为、前端行为、测试或依赖项。
 
-### Review Result
+### 审查结果
 
-The reviewed docs are aligned on the current P2 state:
+审查的文档与当前 P2 状态保持一致：
 
-- P2 stabilization work is complete through P2-9.
-- P1 real Codex Direct Start and fallback-based P0 paths remain preserved.
-- Claude default mode is documented with
-  `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code`.
-- Remaining caveats are visible:
-  - full browser UI Claude-default execution through diff/preview/deploy is
-    unrehearsed
-  - real Claude auth-failure and usage-limit outputs remain partially
-    unverified
-  - broad arbitrary natural-language editing remains out of scope
-  - production deploy remains out of scope
+- P2 稳定化工作已完成至 P2-9。
+- P1 真实的 Codex Direct Start 和基于兜底的 P0 路径保持不变。
+- Claude 默认模式已通过 `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` 记录。
+- 剩余注意事项可见：
+  - 通过 diff/preview/deploy 进行的完整浏览器 UI Claude 默认执行未演练
+  - 真实的 Claude 认证失败和使用限制输出仍未完全验证
+  - 广泛的任意自然语言编辑仍不在范围内
+  - 生产部署仍不在范围内
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (137 tests: 25 web + 112 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（137 个测试：25 个 Web + 112 个 API） |
+| `git diff --check` | 通过 |
 
 ---
 
-## P2-3: Natural-Language Second-Change Orchestration
+## P2-3：自然语言二次变更编排
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/planning.py` | Added deterministic follow-up intent parsing and one-task frontend follow-up planning. |
-| `apps/api/app/main.py` | Added bounded follow-up task instructions for primary button and demo heading text changes. |
-| `apps/api/app/scripted_mock.py` | Extended the fallback adapter to apply deterministic button and heading text updates. |
-| `apps/api/tests/test_planning.py` | Added follow-up parsing and planning coverage. |
-| `apps/api/tests/test_task_runs.py` | Added task-run instruction coverage for follow-up button and heading changes. |
-| `apps/api/tests/test_scripted_mock_adapter.py` | Added fallback mutation and second-diff continuity coverage. |
-| `docs/project-state.md` | Recorded P2-3 verified state and rehearsal evidence. |
-| `docs/change-log.md` | Recorded this P2-3 implementation. |
+| `apps/api/app/planning.py` | 添加了确定性后续意图解析和单任务前端后续规划。 |
+| `apps/api/app/main.py` | 为主按钮和演示标题文本变更添加了有界后续任务指令。 |
+| `apps/api/app/scripted_mock.py` | 扩展了兜底适配器以应用确定性的按钮和标题文本更新。 |
+| `apps/api/tests/test_planning.py` | 添加了后续解析和规划覆盖。 |
+| `apps/api/tests/test_task_runs.py` | 为后续按钮和标题变更添加了任务运行指令覆盖。 |
+| `apps/api/tests/test_scripted_mock_adapter.py` | 添加了兜底变更和二次差异连续性覆盖。 |
+| `docs/project-state.md` | 记录了 P2-3 已验证状态和演练证据。 |
+| `docs/change-log.md` | 记录了本次 P2-3 实现。 |
 
-### Root Cause
+### 根本原因
 
-Before P2-3, planning only recognized the initial
-`@orchestrator build a login page for the demo app` flow. Later messages in the
-same session, such as `把按钮文案改成 Sign in`, did not create a focused
-follow-up task. The fallback adapter also used fixed copy for its button-update
-path, so it could not deterministically apply the requested second-change text.
+在 P2-3 之前，规划仅识别初始的 `@orchestrator build a login page for the demo app` 流程。同一会话中的后续消息（例如 `把按钮文案改成 Sign in`）不会创建聚焦的后续任务。兜底适配器也为其按钮更新路径使用了固定副本，因此无法确定性地应用请求的二次变更文本。
 
-### What Changed
+### 变更内容
 
-P2-3 adds a small rule/template layer for demo-safe follow-up text changes:
+P2-3 为演示安全的后续文本变更添加了一个小的 rule/template 层：
 
-- primary button text changes, including English and Chinese phrasing
-- demo heading/title text changes, including English and Chinese phrasing
+- 主按钮文本变更，包括英文和中文措辞
+- 演示 heading/title 文本变更，包括英文和中文措辞
 
-When an existing session already has tasks, a supported follow-up request
-creates one frontend task assigned to the seeded frontend agent. The task
-depends on the latest existing task, keeps `planJson` bounded to
-`apps/demo/src/App.tsx`, and reuses the existing session worktree through the
-normal TaskRun lifecycle.
+当现有会话已有任务时，受支持的后续请求会创建一个分配给种子前端代理的前端任务。该任务依赖于最新的现有任务，将 `planJson` 限制在 `apps/demo/src/App.tsx` 范围内，并通过正常的 TaskRun 生命周期重用现有会话的工作树。
 
-No general autonomous planner, arbitrary natural-language editing, new adapter,
-preview/deploy redesign, frontend redesign, or provider work was added.
+未添加通用的自主规划器、任意自然语言编辑、新适配器、preview/deploy 重新设计、前端重新设计或提供商工作。
 
-### Manual Verification
+### 手动验证
 
-Used the local API with an isolated rehearsal session:
+使用本地 API 和一个隔离的演练会话：
 
-- Session: `d65fc331-39f2-432b-9828-89723b9f3c32`
-- Initial frontend task: `3f7f6f65-9f72-4add-ab0a-c9a944dc3b23`
-- Initial fallback TaskRun: `607ad185-8eb2-4158-8219-e124880e68a7`
-- Initial diff artifact: `c83c21d5-dad8-4d56-b0b8-cf1bc9de2bc3`
-- Initial preview: `511ee0ca-e0dc-4054-8775-e487e81f7303`
-- Follow-up request: `把按钮文案改成 Sign in`
-- Follow-up task: `3ce6aa3d-97bf-4e16-b85a-33676e62bef2`
-- Follow-up fallback TaskRun: `7a4f5763-ebbe-4d51-a207-b36b1fff7091`
-- Follow-up diff artifact: `f1ca4318-0b41-48a8-9b27-acb957448734`
-- Follow-up preview: `551aa58f-ab73-49f3-96c2-e6db8994bdd6`
-- Follow-up preview health: `healthy`
+- 会话：`d65fc331-39f2-432b-9828-89723b9f3c32`
+- 初始前端任务：`3f7f6f65-9f72-4add-ab0a-c9a944dc3b23`
+- 初始兜底 TaskRun：`607ad185-8eb2-4158-8219-e124880e68a7`
+- 初始差异制品：`c83c21d5-dad8-4d56-b0b8-cf1bc9de2bc3`
+- 初始预览：`511ee0ca-e0dc-4054-8775-e487e81f7303`
+- 后续请求：`把按钮文案改成 Sign in`
+- 后续任务：`3ce6aa3d-97bf-4e16-b85a-33676e62bef2`
+- 后续兜底 TaskRun：`7a4f5763-ebbe-4d51-a207-b36b1fff7091`
+- 后续差异制品：`f1ca4318-0b41-48a8-9b27-acb957448734`
+- 后续预览：`551aa58f-ab73-49f3-96c2-e6db8994bdd6`
+- 后续预览健康状态：`healthy`
 
-The follow-up task reused the same session worktree, produced a second diff for
-`apps/demo/src/App.tsx`, and the refreshed preview became healthy. Execution was
-verified with `ScriptedMockAdapter` fallback rather than real Codex to avoid
-quota dependency during this task.
+后续任务复用了同一个会话工作区，为 `apps/demo/src/App.tsx` 生成了第二个差异，刷新后的预览恢复健康。执行通过 `ScriptedMockAdapter` 兜底而非真实 Codex 验证，以避免此任务期间的配额依赖。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (123 tests: 25 web + 98 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（123 个测试：25 个 Web + 98 个 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- P2-3 intentionally supports only narrow button/title text-change requests.
-- Real Codex execution of the follow-up task was not rehearsed in this task.
-- Browser iframe refresh after the second change was not separately rehearsed;
-  preview refresh was verified through the backend preview API.
+- P2-3 仅有意支持狭窄的 button/title 文本变更请求。
+- 此任务中未演练后续任务的真实 Codex 执行。
+- 第二次变更后的浏览器 iframe 刷新未单独演练；预览刷新通过后端预览 API 验证。
 
 ---
 
-## P2-4: Verify Browser Preview Iframe Refresh After Second Change
+## P2-4：验证第二次变更后的浏览器预览 iframe 刷新
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/project-state.md` | Recorded P2-4 browser rehearsal evidence and current limitations. |
-| `docs/demo-script.md` | Replaced the stale second-change caveat with the verified narrow follow-up flow. |
-| `docs/change-log.md` | Recorded this P2-4 verification result. |
+| `docs/project-state.md` | 记录了 P2-4 浏览器演练证据和当前限制。 |
+| `docs/demo-script.md` | 将过时的第二次变更说明替换为已验证的狭窄后续流程。 |
+| `docs/change-log.md` | 记录了此 P2-4 验证结果。 |
 
-No app code, backend code, frontend code, adapter code, tests, or dependencies
-changed for P2-4.
+P2-4 未更改任何应用代码、后端代码、前端代码、适配器代码、测试或依赖项。
 
-### Diagnosis
+### 诊断
 
-The preview refresh path already had the needed UI behavior:
+预览刷新路径已具备所需的 UI 行为：
 
-- `Start preview` creates a new backend preview for the selected TaskRun and
-  sets that preview as the right-side panel iframe.
-- `Open preview` selects a persisted preview card for the right-side panel.
-- `Refresh preview` re-reads persisted preview state for the selected TaskRun
-  and bumps the iframe key when the selected preview belongs to that run.
+- `Start preview` 为选定的 TaskRun 创建新的后端预览，并将该预览设置为右侧面板 iframe。
+- `Open preview` 为右侧面板选择持久化的预览卡片。
+- `Refresh preview` 重新读取选定 TaskRun 的持久化预览状态，并在选定的预览属于该运行时更新 iframe 键。
 
-The remaining P2-3 gap was verification, not missing product code. Persisted
-preview cards from earlier sessions can outlive their local Vite processes, so
-P2-4 used fresh `Start preview` actions during the browser rehearsal.
+剩余的 P2-3 差距在于验证，而非缺失产品代码。来自早期会话的持久化预览卡片可能比其本地 Vite 进程存活更久，因此 P2-4 在浏览器演练期间使用了全新的 `Start preview` 操作。
 
-### Manual Verification
+### 手动验证
 
-Verified through browser UI interaction:
-
+通过浏览器 UI 交互验证：
 ```text
 initial task -> ScriptedMockAdapter fallback -> first diff -> Start preview -> iframe at first preview URL -> follow-up text change -> ScriptedMockAdapter fallback -> second diff -> Start preview -> iframe refreshed to second preview URL
 ```
+证据：
 
-Evidence:
+- 会话：`cb653482-c31a-48da-a8ee-31ed8cd367e3`
+- 初始前端任务：`5f2c26c2-6511-4b8f-b359-b9de5c9e5a50`
+- 初始兜底 TaskRun：`cfeff131-8cbf-4bcc-95b9-1aa84dbf5130`
+- 初始差异制品：`737085ee-7b73-4715-8303-df64b3a14132`
+- 初始预览：`c077ba2d-7bd4-4c49-8e0c-313e2ecd641c`
+- 初始预览 URL：`http://127.0.0.1:61087`
+- 后续请求：`把按钮文案改成 Sign in`
+- 后续任务：`0f9ff26c-8216-4489-b71a-3628c1a7ab7a`
+- 后续兜底 TaskRun：`f8d78651-5347-43de-8553-12b29c8c3647`
+- 后续差异制品：`b48b3b33-feb2-4313-805d-89811a5cb51c`
+- 后续预览：`44ea9495-04b5-419a-ba64-0701eaa83ec8`
+- 后续预览 URL：`http://127.0.0.1:61292`
 
-- Session: `cb653482-c31a-48da-a8ee-31ed8cd367e3`
-- Initial frontend task: `5f2c26c2-6511-4b8f-b359-b9de5c9e5a50`
-- Initial fallback TaskRun: `cfeff131-8cbf-4bcc-95b9-1aa84dbf5130`
-- Initial diff artifact: `737085ee-7b73-4715-8303-df64b3a14132`
-- Initial preview: `c077ba2d-7bd4-4c49-8e0c-313e2ecd641c`
-- Initial preview URL: `http://127.0.0.1:61087`
-- Follow-up request: `把按钮文案改成 Sign in`
-- Follow-up task: `0f9ff26c-8216-4489-b71a-3628c1a7ab7a`
-- Follow-up fallback TaskRun: `f8d78651-5347-43de-8553-12b29c8c3647`
-- Follow-up diff artifact: `b48b3b33-feb2-4313-805d-89811a5cb51c`
-- Follow-up preview: `44ea9495-04b5-419a-ba64-0701eaa83ec8`
-- Follow-up preview URL: `http://127.0.0.1:61292`
+右侧预览面板的 iframe 从 `http://127.0.0.1:61087` 变为
+`http://127.0.0.1:61292`。后续预览状态正常，且以顶层页面打开同一 URL 后，显示了更新后的 `Sign in` 按钮。由于当前应用内浏览器运行时不支持跨域 iframe 的直接 DOM 检查，因此 iframe 内容通过视觉检查和顶层预览 URL 进行了验证。
 
-The right-side preview panel iframe changed from `http://127.0.0.1:61087` to
-`http://127.0.0.1:61292`. The follow-up preview was healthy, and the same URL
-opened as a top-level page showed the updated `Sign in` button. Direct DOM
-inspection inside the cross-origin iframe is not supported by the current
-in-app browser runtime, so iframe content was verified visually and through the
-top-level preview URL.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (123 tests: 25 web + 98 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（123 个测试：25 个 Web + 98 个 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- Real Codex was not used for P2-4 execution; the browser rehearsal used the
-  reliable forced-failure plus `ScriptedMockAdapter` fallback path.
-- Broad arbitrary natural-language editing remains out of scope.
+- P2-4 执行未使用真实的 Codex；浏览器排练使用了可靠的强制失败加 `ScriptedMockAdapter` 兜底路径。
+- 广泛的任意自然语言编辑仍不在范围内。
 
 ---
 
-## P2-5: Add GitHub Actions CI
+## P2-5：添加 GitHub Actions CI
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `.github/workflows/ci.yml` | Added the pull request and push CI workflow. |
-| `docs/project-state.md` | Recorded the P2-5 CI state. |
-| `docs/change-log.md` | Recorded this P2-5 implementation. |
+| `.github/workflows/ci.yml` | 添加了拉取请求和推送 CI 工作流。 |
+| `docs/project-state.md` | 记录了 P2-5 CI 状态。 |
+| `docs/change-log.md` | 记录了此 P2-5 实现。 |
 
-No app code, backend code, frontend code, adapter code, test behavior,
-deployment, Docker, or production release workflow changed for P2-5.
+P2-5 未更改任何应用代码、后端代码、前端代码、适配器代码、测试行为、部署、Docker 或生产发布工作流。
 
-### Diagnosis
+### 诊断
 
-Manual validation repeatedly uses:
-
+手动验证反复使用：
 ```text
 pnpm check
 pnpm test
 git diff --check
 ```
+API 检查与测试脚本期望在 `.venv/bin/python` 处存在仓库本地的 Python 虚拟环境，因此 CI 需要在调用现有 pnpm 脚本之前创建该虚拟环境。
 
-The API check and test scripts expect a repository-local Python virtualenv at
-`.venv/bin/python`, so CI needs to create that virtualenv before invoking the
-existing pnpm scripts.
+### 变更内容
 
-### What Changed
-
-Added one minimal GitHub Actions workflow that runs on `pull_request` and
-`push`. It checks out the repo, installs pnpm 10.33.4, sets up Node.js 22 and
-Python 3.11, installs JavaScript dependencies with `pnpm install
---frozen-lockfile`, installs API dependencies into `.venv`, then runs:
-
+新增了一个极简的 GitHub Actions 工作流，在 `pull_request` 和 `push` 时触发。该工作流会检出仓库、安装 pnpm 10.33.4、配置 Node.js 22 和 Python 3.11、通过 `pnpm install --frozen-lockfile`, installs API dependencies into `.venv` 安装 JavaScript 依赖，然后运行：
 ```text
 pnpm check
 pnpm test
 git diff --check
 ```
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (123 tests: 25 web + 98 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（123 项测试：25 项 Web + 98 项 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- The workflow has been validated locally by syntax inspection and the local
-  validation commands below; it has not yet run on GitHub Actions.
+- 该工作流已通过语法检查和以下本地验证命令在本地完成验证；尚未在 GitHub Actions 上运行。
 
 ---
 
-## Claude Code Adapter Feasibility Notes
+## Claude Code 适配器可行性说明
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/claude-code-adapter-notes.md` | Added local Claude Code CLI feasibility findings and future adapter design notes. |
-| `docs/change-log.md` | Recorded this documentation-only investigation. |
+| `docs/claude-code-adapter-notes.md` | 添加了本地 Claude Code CLI 可行性发现及未来适配器设计说明。 |
+| `docs/change-log.md` | 记录了本次仅限文档的调查。 |
 
-No app code, backend behavior, frontend behavior, adapter implementation, test
-behavior, or runtime configuration changed.
+未更改任何应用代码、后端行为、前端行为、适配器实现、测试行为或运行时配置。
 
-### What Was Inspected
+### 检查内容
 
-Adapter architecture:
+适配器架构：
 
 - `apps/api/app/adapters.py`
 - `apps/api/app/codex_adapter.py`
 - `apps/api/app/scripted_mock.py`
 - `apps/api/app/main.py`
 
-Safe Claude CLI commands:
-
+安全的 Claude CLI 命令：
 ```bash
 which claude
 claude --version
@@ -8252,579 +7718,509 @@ claude -p --help
 claude auth --help
 claude auth status
 ```
+未执行任何真实的提示或文件变更。
 
-No real prompt execution or file mutation was run.
+### 结果
 
-### Result
+Claude Code CLI 已在此机器上安装并完成身份验证：
 
-Claude Code CLI is installed and authenticated on this machine:
+- 二进制文件：`/Users/luotianhang/.npm-global/bin/claude`
+- 版本：`2.1.143 (Claude Code)`
+- 身份验证状态：`loggedIn: true`，`authMethod: api_key_helper`
 
-- Binary: `/Users/luotianhang/.npm-global/bin/claude`
-- Version: `2.1.143 (Claude Code)`
-- Auth status: `loggedIn: true`, `authMethod: api_key_helper`
+帮助输出表明，非交互式执行可通过
+`--print`/`-p` 使用，机器可读输出可通过
+`--output-format json` 或 `--output-format stream-json` 获取，并且指令可以
+作为位置参数传递。未观察到直接的 `--cd` 选项，因此
+未来的适配器应将子进程的 `cwd` 设置为 `Session.worktreePath`。
 
-Help output indicates non-interactive execution is available with
-`--print`/`-p`, machine-readable output is available with
-`--output-format json` or `--output-format stream-json`, and instructions can
-be passed as a positional prompt. No direct `--cd` option was observed, so a
-future adapter should set subprocess `cwd` to `Session.worktreePath`.
-
-Tentative future command shape:
-
+暂定的未来命令格式：
 ```bash
 claude --print --output-format stream-json --include-partial-messages \
   --permission-mode dontAsk --allowedTools "Read,Edit,MultiEdit" \
   --no-session-persistence --max-budget-usd <small-budget> "<instruction>"
 ```
+使用子进程运行 `cwd=<session_worktree_path>`。
 
-Run with subprocess `cwd=<session_worktree_path>`.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `git diff --check` | Pass |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- Real `stream-json` output was not captured.
-- No quota-consuming command was run.
-- Usage-limit and unauthenticated failure patterns still need real/fake-process
-  test coverage before implementation.
-- Permission mode and tool allowlist behavior need a bounded smoke before any
-  write-capable adapter claim.
+- 未捕获真实的 `stream-json` 输出。
+- 未运行任何消耗配额的命令。
+- 使用限制和未认证失败模式在实现前仍需 real/fake-process 测试覆盖。
+- 在任何支持写入的适配器声明之前，权限模式和工具允许列表行为需要有限度的冒烟测试。
 
 ---
 
-## P2 Roadmap Planning
+## P2 路线图规划
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p2-roadmap.md` | Added the P2 stabilization roadmap. |
-| `docs/change-log.md` | Recorded this documentation-only planning change. |
+| `docs/p2-roadmap.md` | 添加了 P2 稳定性路线图。 |
+| `docs/change-log.md` | 记录了本次仅涉及文档的规划变更。 |
 
-No app code, backend code, frontend code, adapter code, tests, or dependencies
-changed.
+未更改任何应用代码、后端代码、前端代码、适配器代码、测试或依赖项。
 
-### What Changed
+### 变更内容
 
-Created a P2 scope plan focused on stabilization, known caveats, and demo
-reliability after the P1 freeze. The roadmap captures:
+创建了 P2 范围计划，重点关注 P1 冻结后的稳定性、已知注意事项和演示可靠性。路线图包含：
 
-- the current P1 final verified state
-- remaining P1 caveats
-- immediate P2 task order
-- objective, scope, affected modules, acceptance criteria, validation method,
-  and non-goals for each proposed task
-- frontend redesign as explicitly deferred
+- 当前 P1 最终验证状态
+- 剩余的 P1 注意事项
+- 即时的 P2 任务顺序
+- 每个提议任务的目标、范围、受影响的模块、验收标准、验证方法和非目标
+- 明确推迟的前端重新设计
 
-### Proposed P2 Task Order
+### 提议的 P2 任务顺序
 
-1. P2-1 fix locale hydration warning.
-2. P2-2 approval card UI/rehearsal.
-3. P2-3 natural-language second-change orchestration.
-4. P2-4 GitHub Actions CI.
-5. P2-5 demo reset / clean-state helper.
+1. P2-1 修复区域设置水合警告。
+2. P2-2 审批卡片 UI/rehearsal.
+3. P2-3 自然语言二次机会编排。
+4. P2-4 GitHub Actions CI。
+5. P2-5 演示重置/清理状态辅助工具。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `git diff --check` | Pass |
+| `git diff --check` | 通过 |
 
 ---
 
-## P2-1: Fix Locale-Specific Hydration Warning
+## P2-1：修复区域设置特定的水合警告
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/web/src/lib/date-format.ts` | Added deterministic compact timestamp formatting from ISO-like timestamp text. |
-| `apps/web/src/lib/date-format.test.ts` | Added unit coverage for locale-independent formatting. |
-| `apps/web/src/components/workspace-shell.tsx` | Replaced runtime-locale session timestamp formatting with deterministic formatting. |
-| `apps/web/src/components/preview-card.tsx` | Replaced runtime-locale preview checked-time formatting with deterministic formatting. |
-| `apps/web/src/components/preview-card.test.tsx` | Updated preview timestamp assertion to the deterministic text. |
-| `docs/change-log.md` | Recorded this P2-1 implementation. |
+| `apps/web/src/lib/date-format.ts` | 添加了从类似 ISO 的时间戳文本生成确定性紧凑时间戳格式的功能。 |
+| `apps/web/src/lib/date-format.test.ts` | 添加了与区域设置无关格式化的单元测试覆盖。 |
+| `apps/web/src/components/workspace-shell.tsx` | 将运行时区域设置的会话时间戳格式替换为确定性格式化。 |
+| `apps/web/src/components/preview-card.tsx` | 将运行时区域设置的预览检查时间格式替换为确定性格式化。 |
+| `apps/web/src/components/preview-card.test.tsx` | 将预览时间戳断言更新为确定性文本。 |
+| `docs/change-log.md` | 记录了本次 P2-1 实现。 |
 
-### Root Cause
+### 根本原因
 
-`workspace-shell.tsx` and `preview-card.tsx` used
-`new Intl.DateTimeFormat(undefined, ...)`, which selects the current runtime
-locale. During development SSR/hydration, the server rendered session dates in
-one locale while the browser hydrated in another, producing a text mismatch such
-as `May 17, 02:06 AM` versus `5月17日 02:06`.
+`workspace-shell.tsx` 和 `preview-card.tsx` 使用了
+`new Intl.DateTimeFormat(undefined, ...)`，它会选择当前的运行时
+区域设置。在开发 SSR/hydration 期间，服务器以一种区域设置渲染会话日期，
+而浏览器以另一种区域设置进行水合，导致文本不匹配，例如
+`May 17, 02:06 AM` 与 `5月17日 02:06`。
 
-### What Changed
+### 变更内容
 
-P2-1 adds `formatCompactDateTime`, which formats ISO-like timestamps from their
-source components instead of relying on runtime locale defaults. Session list,
-selected-session metadata, and preview checked timestamps now render stable text
-such as:
-
+P2-1 添加了 `formatCompactDateTime`，它根据源组件格式化类似 ISO 的时间戳，
+而不是依赖运行时区域设置默认值。会话列表、所选会话元数据和预览检查时间戳现在渲染稳定的文本，例如：
 ```text
 May 17, 02:06
 ```
+未修改后端 API、任务运行生命周期行为、preview/deploy 逻辑或前端布局。
 
-No backend APIs, task-run lifecycle behavior, preview/deploy logic, or frontend
-layout were changed.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (92 tests: 24 web + 68 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（92 项测试：24 项 Web + 68 项 API） |
+| `git diff --check` | 通过 |
 
-### Manual Verification
+### 手动验证
 
-Opened and reloaded the AgentHub UI at `http://127.0.0.1:3000` against the
-local API at `http://127.0.0.1:8000`. The session list, selected-session
-metadata, backend health card, and preview panel rendered successfully, and the
-previous locale-specific hydration overlay did not appear. Session timestamps
-rendered as deterministic compact text such as `May 17, 02:06`.
+在 `http://127.0.0.1:3000` 处打开并重新加载了 AgentHub UI，该 UI 连接至 `http://127.0.0.1:8000` 处的本地 API。会话列表、选定会话元数据、后端健康卡片和预览面板均成功渲染，且之前特定于语言环境的 hydration 覆盖层未出现。会话时间戳渲染为确定性的紧凑文本，例如 `May 17, 02:06`。
 
-### Known Limitations
+### 已知限制
 
-- The formatter is intentionally compact and English-labeled for deterministic
-  local demo rendering. This is not a full internationalization system.
+- 格式化程序有意设计为紧凑且带有英文标签，以确保本地演示渲染的确定性。这并非完整的国际化系统。
 
 ---
 
-## P2-2: Verify and Minimally Complete Approval Card UI/Rehearsal
+## P2-2：验证并最小化完成审批卡片 UI/Rehearsal
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `apps/api/app/schemas.py` | Added approval request/decision API schemas and exposed optional approval payloads on TaskRun responses. |
-| `apps/api/app/main.py` | Added latest approval request mapping plus approve/deny TaskRun endpoints. |
-| `apps/api/app/guardrails.py` | Fixed `git -C <path>` parsing for commands that contain no following subcommand, preserving allowlist behavior. |
-| `apps/api/tests/test_task_runs.py` | Added API coverage for visible approval payloads and approve/deny endpoints. |
-| `apps/api/tests/test_events.py` | Kept the new SSE event tests deterministic with real datetime values. |
-| `apps/api/tests/test_guardrails.py` | Existing local guardrail edge-case tests now pass against the parser fix. |
-| `apps/web/src/lib/api.ts` | Added approval request types and approve/deny API client helpers. |
-| `apps/web/src/lib/api.test.ts` | Added API client coverage for approve/deny calls. |
-| `apps/web/src/components/task-card-list.tsx` | Added a compact approval card for `waiting_approval` runs. |
-| `apps/web/src/components/task-card-list.test.tsx` | Added approval card rendering and action coverage. |
-| `apps/web/src/components/workspace-shell.tsx` | Wired approval actions through the existing task refresh flow. |
-| `docs/project-state.md` | Recorded P2-2 verified state and rehearsal evidence. |
-| `docs/change-log.md` | Recorded this P2-2 implementation. |
+| `apps/api/app/schemas.py` | 添加了审批 request/decision API 模式，并在 TaskRun 响应中暴露了可选的审批负载。 |
+| `apps/api/app/main.py` | 添加了最新的审批请求映射以及 approve/deny TaskRun 端点。 |
+| `apps/api/app/guardrails.py` | 修复了对于不包含后续子命令的命令的 `git -C <path>` 解析，保留了白名单行为。 |
+| `apps/api/tests/test_task_runs.py` | 为可见的审批负载和 approve/deny 端点添加了 API 覆盖。 |
+| `apps/api/tests/test_events.py` | 使用真实的日期时间值保持了新的 SSE 事件测试的确定性。 |
+| `apps/api/tests/test_guardrails.py` | 现有的本地防护边缘情况测试现在能通过解析器修复。 |
+| `apps/web/src/lib/api.ts` | 添加了审批请求类型和 approve/deny API 客户端辅助函数。 |
+| `apps/web/src/lib/api.test.ts` | 为 approve/deny 调用添加了 API 客户端覆盖。 |
+| `apps/web/src/components/task-card-list.tsx` | 为 `waiting_approval` 运行添加了一个紧凑的审批卡片。 |
+| `waiting_approval` | 添加了审批卡片渲染和操作覆盖。 |
+| `apps/web/src/components/task-card-list.test.tsx` | 通过现有的任务刷新流程连接了审批操作。 |
+| `apps/web/src/components/workspace-shell.tsx` | 记录了 P2-2 验证状态和演练证据。 |
+| `docs/project-state.md` | 记录了本次 P2-2 实现。 |
 
-### Diagnosis
+### 诊断
 
-The backend already had the core P0 approval primitives:
-`ApprovalRequestPayload`, `request_task_run_approval`, `approve_task_run`, and
-`deny_task_run`. Adapter events could also transition a run to
-`waiting_approval`. The product API did not expose the latest approval payload,
-there were no public approve/deny endpoints, and the frontend treated
-`waiting_approval` like a generic active run with only an interrupt control.
+后端已经具备核心的 P0 审批原语：`ApprovalRequestPayload`、`request_task_run_approval`、`approve_task_run` 和 `deny_task_run`。适配器事件也可以将运行转换为 `waiting_approval` 状态。产品 API 未暴露最新的审批负载，没有公开的 approve/deny 端点，并且前端将 `waiting_approval` 视为仅带有中断控制的通用活动运行。
 
-### What Changed
+### 变更内容
 
-TaskRun API responses now include `approvalRequest` only while the run is in
-`waiting_approval`. The frontend renders that payload as a small approval card
-showing approval type, requested action, risk/reason, and command/path details
-when present. Approve and Deny reuse the existing guardrail service methods and
-refresh the selected task list.
+TaskRun API 响应现在仅在运行处于 `waiting_approval` 状态时包含 `approvalRequest`。前端将该负载渲染为一个小型审批卡片，显示审批类型、请求的操作、risk/reason 以及存在的 command/path 详细信息。批准和拒绝复用现有的防护服务方法，并刷新选定的任务列表。
 
-No enterprise RBAC, policy admin, provider marketplace, production deploy
-approval, frontend redesign, or new approval persistence entity was added.
+未添加企业级 RBAC、策略管理、提供商市场、生产部署审批、前端重新设计或新的审批持久化实体。
 
-### Manual Verification
+### 手动验证
 
-Used an isolated local rehearsal session:
+使用了隔离的本地演练会话：
 
-- Session: `67421999-3b16-44c4-ade3-98cb31331549`
-- Approved TaskRun: `5653e8f9-0057-478f-913c-ac25b4484216`
-- Denial rehearsal TaskRun: `54bde1de-b9f7-4f2b-9357-98d51b3675c7`
+- 会话：`67421999-3b16-44c4-ade3-98cb31331549`
+- 已批准的 TaskRun：`5653e8f9-0057-478f-913c-ac25b4484216`
+- 拒绝演练 TaskRun：`54bde1de-b9f7-4f2b-9357-98d51b3675c7`
 
-The browser UI rendered a `product_confirmation` approval card and the Approve
-button moved that run from `waiting_approval` to `queued`. A
-`security_approval` approval card rendered for the second run; backend/API tests
-cover the denial transition and frontend tests cover the Deny button wiring.
+浏览器 UI 渲染了一个 `product_confirmation` 审批卡片，并且“批准”按钮将该运行从 `waiting_approval` 状态移至 `queued` 状态。为第二个运行渲染了一个 `security_approval` 审批卡片；backend/API 测试覆盖了拒绝转换，前端测试覆盖了“拒绝”按钮的接线。
 
-### Validation
+### 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (116 tests: 25 web + 91 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（116 项测试：25 项 Web + 91 项 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- Approval resolution only updates the TaskRun state; it does not resume adapter
-  execution automatically. This is sufficient for the current approval-card
-  rehearsal and keeps scheduler/orchestrator behavior out of scope.
-- The browser automation Deny click was not reliable during manual rehearsal,
-  so denial is verified through backend/API tests and frontend button wiring
-  tests rather than a full browser click.
+- 审批决议仅更新 TaskRun 状态；它不会自动恢复适配器执行。这对于当前的审批卡片演练已足够，并将 scheduler/orchestrator 行为排除在范围之外。
+- 在手动演练期间，浏览器自动化的“拒绝”点击不可靠，因此拒绝操作通过 backend/API 测试和前端按钮接线测试进行验证，而非完整的浏览器点击。
 
-### Known Limitations
+### 已知限制
 
-- P1-8 reused the successful real Codex TaskRun from P1-6 instead of spending
-  another Codex run.
-- Browser UI verification covered the post-diff artifact controls. It did not
-  re-run Codex from the browser during P1-8.
-- Real Codex execution remains dependent on local Codex quota and CLI stability;
-  keep the ScriptedMockAdapter fallback available for demos.
+- P1-8 复用了 P1-6 中成功的真实 Codex TaskRun，而不是再执行一次 Codex 运行。
+- 浏览器 UI 验证涵盖了差异后制品控件。在 P1-8 期间未从浏览器重新运行 Codex。
+- 真实的 Codex 执行仍然依赖于本地 Codex 配额和 CLI 稳定性；请保留 ScriptedMockAdapter 兜底方案以供演示使用。
 
 ---
 
-## P1-9: Demo Readiness and Reproducibility Check
+## P1-9：演示就绪性与可复现性检查
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/demo-script.md` | Updated the main demo path to reflect the real browser UI Codex flow and moved the forced-failure path to a fallback demo path. |
-| `docs/project-state.md` | Added P1-9 clean-start rehearsal status and evidence. |
-| `docs/change-log.md` | Recorded this P1-9 result. |
+| `docs/demo-script.md` | 更新了主演示路径以反映真实的浏览器 UI Codex 流程，并将强制失败路径移至兜底演示路径。 |
+| `docs/project-state.md` | 新增 P1-9 干净启动排练状态与证据。 |
+| `docs/change-log.md` | 已记录此 P1-9 结果。 |
 
-### What Changed
+### 变更内容
 
-Documentation was updated to match the current browser UI demo behavior:
+文档已更新以匹配当前浏览器 UI 演示行为：
 
-- The main demo path now uses `Start run` on the frontend implementation task
-  when local Codex is available.
-- The forced Codex failure plus ScriptedMockAdapter path is still documented as
-  the reliable fallback path.
-- `docs/project-state.md` now records clean-start P1-9 evidence.
+- 主演示路径现在在本地 Codex 可用时，在前端实现任务上使用 `Start run`。
+- 强制 Codex 失败加 ScriptedMockAdapter 路径仍作为可靠的兜底路径记录。
+- `docs/project-state.md` 现在记录干净启动的 P1-9 证据。
 
-No product code, backend code, adapter code, preview/deploy services, or
-dependencies changed for P1-9.
+P1-9 未涉及产品代码、后端代码、适配器代码、preview/deploy 服务或依赖项的变更。
 
-### Why
+### 原因
 
-P1-8 proved the browser UI post-diff controls using an existing successful
-Codex run. P1-9 verifies whether a fresh browser demo can reproduce the full
-path from a clean backend/frontend start.
+P1-8 使用一次成功的现有 Codex 运行验证了浏览器 UI 的差异后控制功能。P1-9 则验证全新的浏览器演示能否从干净的 backend/frontend 启动复现完整路径。
 
-### Clean-Start Manual Verification Result
+### 干净启动手动验证结果
 
-The backend and frontend were restarted using the documented commands:
-
+后端和前端已使用文档中记录的命令重启：
 ```bash
 pnpm dev:api
 pnpm dev:web
 ```
-
-The browser UI was opened at:
-
+浏览器 UI 已在以下位置打开：
 ```text
 http://127.0.0.1:3000
 ```
+全新启动流程：
 
-Clean-start flow:
+1. 从 UI 创建了一个新会话。
+2. 发送了 `@orchestrator build a login page for the demo app`。
+3. 在前端实现任务上点击了 `Start run`。
+4. 通过活动状态观察了 Codex 运行进度。
+5. 确认运行已完成。
+6. 确认差异卡片已出现。
+7. 点击了 `Start preview`。
+8. 确认右侧 iframe 面板中打开了健康的 Vite 预览。
+9. 点击了 `Create deploy card`。
+10. 重新加载页面，确认差异、预览和部署卡片仍然可见。
 
-1. Created a new session from the UI.
-2. Sent `@orchestrator build a login page for the demo app`.
-3. Clicked `Start run` on the frontend implementation task.
-4. Observed the Codex run progress through active state.
-5. Confirmed the run completed.
-6. Confirmed the diff card appeared.
-7. Clicked `Start preview`.
-8. Confirmed a healthy Vite preview opened in the right-side iframe panel.
-9. Clicked `Create deploy card`.
-10. Reloaded the page and confirmed diff, preview, and deploy cards remained
-    visible.
+证据：
 
-Evidence:
-
-- Session: `666fa20b-6f54-4342-b844-39594b903da3`
-- Task: `c90396af-1b9f-42f4-a6dd-9daa4f3913f6`
-- TaskRun: `b1882cda-47f6-4035-b12d-ba3d72d67939`
-- Adapter: `codex`
-- Final TaskRun state: `completed`
-- Error code/message: none
-- Base ref: `ad9136f91fe9776c33e839359a2203d64fbbf322`
-- Head ref: `ad9136f91fe9776c33e839359a2203d64fbbf322+worktree`
-- Diff: `8a0155a6-b865-4cee-987e-82d773b9f20e`
-- Diff artifact: `c832b249-c2c3-444c-ac97-6b3e811e5c70`
-- Changed file: `apps/demo/src/App.tsx`
-- Diff stats: 1 file changed, 14 additions, 4 deletions
-- Preview: `b363eb09-7251-4b8e-a5b4-3c59775b58b7`
-- Preview artifact: `f93ebc25-b8c7-47e9-ac11-aeee777c604e`
-- Preview URL: `http://127.0.0.1:51763`
-- Preview health/status: `healthy`, `ready`
-- Deployment: `d97e447a-c8d0-41b7-95f8-e40008d83eb0`
-- Deployment artifact: `d85e9bcf-9b92-4c3c-958a-352f855e59a9`
-- Provider/environment/status: `mock`, `preview`, `ready`
-- Deployment URL:
+- 会话：`666fa20b-6f54-4342-b844-39594b903da3`
+- 任务：`c90396af-1b9f-42f4-a6dd-9daa4f3913f6`
+- TaskRun：`b1882cda-47f6-4035-b12d-ba3d72d67939`
+- 适配器：`codex`
+- 最终 TaskRun 状态：`completed`
+- 错误 code/message：无
+- 基础引用：`ad9136f91fe9776c33e839359a2203d64fbbf322`
+- 头引用：`ad9136f91fe9776c33e839359a2203d64fbbf322+worktree`
+- 差异：`8a0155a6-b865-4cee-987e-82d773b9f20e`
+- 差异制品：`c832b249-c2c3-444c-ac97-6b3e811e5c70`
+- 变更文件：`apps/demo/src/App.tsx`
+- 差异统计：1 个文件变更，14 处新增，4 处删除
+- 预览：`b363eb09-7251-4b8e-a5b4-3c59775b58b7`
+- 预览制品：`f93ebc25-b8c7-47e9-ac11-aeee777c604e`
+- 预览 URL：`http://127.0.0.1:51763`
+- 预览 health/status：`healthy`，`ready`
+- 部署：`d97e447a-c8d0-41b7-95f8-e40008d83eb0`
+- 部署制品：`d85e9bcf-9b92-4c3c-958a-352f855e59a9`
+- Provider/environment/status：`mock`，`preview`，`ready`
+- 部署 URL：
   `https://mock.agenthub.local/deployments/d97e447a-c8d0-41b7-95f8-e40008d83eb0`
 
-This verifies:
-
+这验证了：
 ```text
 clean start -> real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
 ```
+### UI 就绪说明
 
-### UI Readiness Notes
+- 核心标签对于 judge/demo 场景足够清晰：`Start run`、运行历史、`Start preview`、`Open preview` 和 `Create deploy card`。
+- 可见的活动状态简单但足够：当 Codex 运行时，运行显示为 `queued`/`streaming`，并带有 `Interrupt` 控件。
+- 如果 Codex 不可用、未认证、使用受限或速度过慢，基于兜底的 P0 演示仍然是安全路径。
 
-- Core labels are clear enough for a judge/demo scenario: `Start run`, run
-  history, `Start preview`, `Open preview`, and `Create deploy card`.
-- The visible active state is simple but adequate: the run appears as
-  `queued`/`streaming` with an `Interrupt` control while Codex runs.
-- If Codex is unavailable, unauthenticated, usage-limited, or too slow, the
-  fallback-based P0 demo remains the safe path.
+### 兜底验证
 
-### Fallback Verification
-
-The fallback path was not used during P1-9 because real Codex completed. The
-fallback-based P0 demo remains covered by existing tests and prior
-verification:
-
+在 P1-9 期间未使用兜底路径，因为真实的 Codex 已完成运行。基于兜底的 P0 演示仍由现有测试和先前验证覆盖：
 ```text
 forced Codex failure -> ScriptedMockAdapter fallback -> diff -> preview -> mock deploy
 ```
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（90 项测试：22 项 Web + 68 项 API） |
+| `git diff --check` | 通过 |
 
-### Known Limitations
+### 已知限制
 
-- Real Codex execution remains dependent on local Codex quota and CLI stability.
-- P1-9 did not reset the SQLite database or delete existing worktrees; it
-  restarted backend/frontend processes and created a fresh session from the UI.
+- 真实的 Codex 执行仍然依赖于本地 Codex 配额和 CLI 稳定性。
+- P1-9 未重置 SQLite 数据库或删除现有的工作树；它重新启动了 backend/frontend 进程，并从 UI 创建了一个新的会话。
 
 ---
 
-## P1-10: Demo Freeze and Final Acceptance Checklist
+## P1-10：演示冻结与最终验收检查清单
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/p1-acceptance-checklist.md` | Added the final frozen P1 acceptance checklist. |
-| `docs/project-state.md` | Marked the P1 demo baseline as frozen and linked the checklist. |
-| `docs/change-log.md` | Recorded this P1-10 freeze result. |
+| `docs/p1-acceptance-checklist.md` | 添加了最终冻结的 P1 验收检查清单。 |
+| `docs/project-state.md` | 将 P1 演示基线标记为冻结，并链接了检查清单。 |
+| `docs/change-log.md` | 记录了此 P1-10 冻结结果。 |
 
-### What Changed
+### 变更内容
 
-P1 is now documented as a frozen local demo baseline for:
-
+P1 现在已被记录为以下内容的冻结本地演示基线：
 ```text
 real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
 ```
+新的验收清单记录了已完成的能力、具体证据、验证状态、已知未验证项、已知风险、基于兜底的 P0 状态、明确排除在范围外的项，以及推荐的下一阶段。
 
-The new acceptance checklist captures completed capabilities, concrete evidence,
-validation status, known unverified items, known risks, fallback-based P0
-status, explicitly out-of-scope items, and recommended next phase.
+P1-10 未更改任何应用代码、后端代码、适配器代码、测试、preview/deploy 服务或依赖项。
 
-No app code, backend code, adapter code, tests, preview/deploy services, or
-dependencies changed for P1-10.
+### 原因
 
-### Why
+P1-9 证明了演示可以从干净的 backend/frontend 启动中重现。P1-10 冻结了该状态，以便后续工作拥有稳定的演示基线，并清晰记录已验证的内容、仍存在的风险以及排除在范围外的内容。
 
-P1-9 proved the demo is reproducible from a clean backend/frontend start. P1-10
-freezes that state so future work has a stable demo baseline and a clear record
-of what is verified, what remains risky, and what stays out of scope.
+### 冻结基线
 
-### Frozen Baseline
-
-Frozen P1 path:
-
+冻结的 P1 路径：
 ```text
 real Codex Direct Start -> diff card -> Start preview -> preview iframe -> Create deploy card
 ```
+冻结证据来自 P1-9 冷启动演练：
 
-Frozen evidence comes from the P1-9 clean-start rehearsal:
+- 会话：`666fa20b-6f54-4342-b844-39594b903da3`
+- TaskRun：`b1882cda-47f6-4035-b12d-ba3d72d67939`
+- 差异制品：`c832b249-c2c3-444c-ac97-6b3e811e5c70`
+- 预览：`b363eb09-7251-4b8e-a5b4-3c59775b58b7`
+- 部署：`d97e447a-c8d0-41b7-95f8-e40008d83eb0`
+- Provider/status：`mock`、`ready`
 
-- Session: `666fa20b-6f54-4342-b844-39594b903da3`
-- TaskRun: `b1882cda-47f6-4035-b12d-ba3d72d67939`
-- Diff artifact: `c832b249-c2c3-444c-ac97-6b3e811e5c70`
-- Preview: `b363eb09-7251-4b8e-a5b4-3c59775b58b7`
-- Deployment: `d97e447a-c8d0-41b7-95f8-e40008d83eb0`
-- Provider/status: `mock`, `ready`
-
-Fallback-based P0 path remains preserved:
-
+基于兜底的 P0 路径仍保留：
 ```text
 forced Codex failure -> ScriptedMockAdapter fallback -> real diff -> healthy Vite preview -> mock deploy card
 ```
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（90 项测试：22 项 Web + 68 项 API） |
+| `git diff --check` | 通过 |
 
-### Known Unverified Items
+### 已知未验证项
 
-- P1-9 did not reset the SQLite database or delete existing worktrees.
-- Fallback-based P0 was not manually re-run during P1-9 because real Codex
-  completed; it remains covered by tests and prior verification.
-- Natural-language second-change orchestration remains a documented caveat.
-- Approval card UI was not part of the frozen P1 judge path.
+- P1-9 未重置 SQLite 数据库或删除现有工作树。
+- 基于兜底的 P0 在 P1-9 期间未手动重新运行，因为真实的 Codex 已完成；它仍受测试和先前验证的覆盖。
+- 自然语言的二次变更编排仍是一个已记录的注意事项。
+- 审批卡片 UI 不属于冻结的 P1 评判路径的一部分。
 
-### Known Risks
+### 已知风险
 
-- Real Codex execution depends on local CLI availability, authentication,
-  quota, and CLI stability.
-- Codex run duration can vary, so the ScriptedMockAdapter fallback should
-  remain ready for demos.
-- Preview health depends on setup-time demo dependencies.
+- 真实的 Codex 执行依赖于本地 CLI 的可用性、身份验证、配额和 CLI 稳定性。
+- Codex 运行时长可能不同，因此 ScriptedMockAdapter 兜底应随时准备好用于演示。
+- 预览的健康状况取决于设置时的演示依赖项。
 
 ---
 
-## P1-11: Clean-State and Fallback Rehearsal
+## P1-11：干净状态与兜底演练
 
-**Date:** 2026-05-17
+**日期：** 2026-05-17
 
-### Modified Files
+### 修改的文件
 
-| File | Change |
+| 文件 | 变更 |
 |---|---|
-| `docs/project-state.md` | Recorded the clean SQLite rehearsal, fresh session worktree evidence, and fallback rehearsal evidence. |
-| `docs/p1-acceptance-checklist.md` | Marked the clean-state and manual fallback readiness items verified. |
-| `docs/change-log.md` | Recorded this P1-11 rehearsal result. |
+| `docs/project-state.md` | 记录了干净的 SQLite 演练、新的会话工作树证据以及兜底演练证据。 |
+| `docs/p1-acceptance-checklist.md` | 将干净状态和手动兜底就绪项标记为已验证。 |
+| `docs/change-log.md` | 记录了此 P1-11 演练结果。 |
 
-No app code, backend code, frontend code, adapter code, tests, or dependencies
-changed for P1-11.
+P1-11 未更改任何应用代码、后端代码、前端代码、适配器代码、测试或依赖项。
 
-### Backup / Reset Method
+### 备份/重置方法
 
-- Moved the active SQLite database to
-  `/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`.
-- Recorded the pre-rehearsal Git worktree registry and directory inventory at:
+- 将活动的 SQLite 数据库移至
+  `/tmp/agenthub-p1-11-backup-20260517-095901/agenthub.sqlite3.before-p1-11`。
+- 记录了演练前的 Git 工作树注册表和目录清单，位于：
   - `/tmp/agenthub-p1-11-backup-20260517-095901/worktree-list-before.txt`
   - `/tmp/agenthub-p1-11-backup-20260517-095901/worktree-dirs-before.txt`
-- Left existing `.worktrees` checkouts in place to avoid disturbing Git's
-  registered worktree metadata.
-- Reinitialized a clean SQLite database with `pnpm db:init`.
-- Created fresh session-level worktrees through the UI during rehearsal.
+- 保留现有的 `.worktrees` 检出，以避免干扰 Git 已注册的工作树元数据。
+- 使用 `pnpm db:init` 重新初始化了一个干净的 SQLite 数据库。
+- 在演练期间通过 UI 创建了新的会话级工作树。
 
-### Clean-State Rehearsal
+### 干净状态演练
 
-Verified path:
-
+已验证路径：
 ```text
 clean SQLite -> fresh session worktree -> real Codex Direct Start -> real diff -> healthy Vite preview -> mock deploy card
 ```
+证据：
 
-Evidence:
+- 会话：`72668a90-74a0-45c6-a0c4-98e8cfa54c27`
+- 任务：`7e0a4e97-1b80-404d-bcab-4616418627e3`
+- TaskRun：`4c92132f-3c89-47cc-b8a4-3f1395825c39`
+- 差异：`bb45131e-42f8-47d7-88eb-c8126d694b0a`
+- 差异制品：`243ce682-748b-42ad-9354-dd8eed1f3e67`
+- 预览：`a30d07e2-470c-4614-a864-c21ac0b52363`
+- 预览 URL：`http://127.0.0.1:58634`
+- 部署：`448b7d91-5064-43c2-a849-3e89634e14bd`
+- Provider/status：`mock`, `ready`
 
-- Session: `72668a90-74a0-45c6-a0c4-98e8cfa54c27`
-- Task: `7e0a4e97-1b80-404d-bcab-4616418627e3`
-- TaskRun: `4c92132f-3c89-47cc-b8a4-3f1395825c39`
-- Diff: `bb45131e-42f8-47d7-88eb-c8126d694b0a`
-- Diff artifact: `243ce682-748b-42ad-9354-dd8eed1f3e67`
-- Preview: `a30d07e2-470c-4614-a864-c21ac0b52363`
-- Preview URL: `http://127.0.0.1:58634`
-- Deployment: `448b7d91-5064-43c2-a849-3e89634e14bd`
-- Provider/status: `mock`, `ready`
+### 兜底演练
 
-### Fallback Rehearsal
-
-Verified path:
-
+已验证路径：
 ```text
 forced Codex failure -> ScriptedMockAdapter fallback -> real diff -> healthy Vite preview -> mock deploy card
 ```
+证据：
 
-Evidence:
+- 会话：`695287ed-2967-4360-8520-a5fdc1be46e3`
+- 任务：`1a790664-c817-42eb-a953-d7c0f11cccb0`
+- 失败的 Codex TaskRun：`1b50d047-0c08-4ff2-a4d7-12412b36f786`
+- 失败运行错误码：`CODEX_DEMO_FORCED_FAILURE`
+- 兜底 TaskRun：`c35d52f5-bf27-4656-aee1-b0321eb2bd96`
+- 差异：`8a8f05bf-6559-44f4-bafc-fb87881c4750`
+- 差异制品：`91b6c898-bf2b-4c0c-b44b-f6a236a72ef0`
+- 预览：`e1be7c11-1cc7-42f9-8441-62c7eb0a1b92`
+- 预览 URL：`http://127.0.0.1:59152`
+- 部署：`cb8c7f95-42f7-4213-8273-4201500bf8b3`
+- Provider/status：`mock`, `ready`
 
-- Session: `695287ed-2967-4360-8520-a5fdc1be46e3`
-- Task: `1a790664-c817-42eb-a953-d7c0f11cccb0`
-- Failed Codex TaskRun: `1b50d047-0c08-4ff2-a4d7-12412b36f786`
-- Failed run error code: `CODEX_DEMO_FORCED_FAILURE`
-- Fallback TaskRun: `c35d52f5-bf27-4656-aee1-b0321eb2bd96`
-- Diff: `8a8f05bf-6559-44f4-bafc-fb87881c4750`
-- Diff artifact: `91b6c898-bf2b-4c0c-b44b-f6a236a72ef0`
-- Preview: `e1be7c11-1cc7-42f9-8441-62c7eb0a1b92`
-- Preview URL: `http://127.0.0.1:59152`
-- Deployment: `cb8c7f95-42f7-4213-8273-4201500bf8b3`
-- Provider/status: `mock`, `ready`
+重新加载后，浏览器 UI 仍然显示了失败的 Codex 运行、兜底运行、差异、预览和部署卡片。
 
-The browser UI still showed the failed Codex run, fallback run, diff, preview,
-and deploy card after reload.
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
-| `git diff --check` | Pass |
-
-### Known Limitations
-
-- Existing registered `.worktrees` checkouts were not moved or deleted. P1-11
-  verified clean app state by backing up the SQLite database and creating new
-  session-level worktrees from the clean DB.
-- Real Codex execution still depends on local CLI availability, authentication,
-  quota, and CLI stability.
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（90 个测试：22 个 Web + 68 个 API） |
+| `git diff --check` | 通过 |
 
 ---
 
-## P1 Final Freeze Review
+## 可靠执行平台：通用新项目路径
 
-**Date:** 2026-05-17
+**日期：** 2026-06-10
 
-### Modified Files
+### 变更内容
 
-| File | Change |
+- 新增 selected empty folder provisioning apply 路径：用户选择空目录后，AgentHub 会创建通用 `frontend/` Vite React TS、`backend/` FastAPI、`docs/api-contract.md`、`README.md` 和 `agenthub.project.json`。
+- provisioning 成功后注册 role-scoped external frontend/backend targets，并把当前 Session 的 active frontend/backend target 指向新 target。
+- planner 在 Session 已绑定 external active targets 时优先使用真实 target 边界，番茄钟、Todo、读书笔记等请求走同一条通用 fullstack routing，不走 Pomodoro 特化。
+- provisioned target 继续经过 PlanValidator、ProjectProfile command policy、session queue、target lock 和 run diagnostics；旧的 force failure / fallback retry 入口已收口到共享 scheduler path，避免直接绕过 queue/lock 执行 adapter。
+- 运行设置页面增加“新建全栈项目”流程，后端返回的 `plan + registeredTargets + session` 作为 UI 绑定来源。
+- 修复中文 `新建全栈项目` 只注册 frontend target 的问题；`全栈` 现在会触发 backend target。若目录已被 AgentHub scaffold 但只注册了部分 target，再次 apply 会复用匹配的已注册 target 并补注册缺失 target。
+
+### 验证
+
+- 新增/更新 API 测试覆盖 provisioning、planner routing、PlanValidator、target lock release 和 fallback scheduler path。
+- 新增/更新 Web 测试覆盖 provisioning API client 和运行设置 UI flow。
+
+### 已知限制
+
+- 现有已注册的 `.worktrees` 检出未被移动或删除。P1-11 通过备份 SQLite 数据库并从干净的数据库创建新的会话级工作树，验证了干净的应用程序状态。
+- 真实的 Codex 执行仍然依赖于本地 CLI 的可用性、身份验证、配额和 CLI 稳定性。
+
+---
+
+## P1 最终冻结审查
+
+**日期：** 2026-05-17
+
+### 修改的文件
+
+| 文件 | 变更 |
 |---|---|
-| `README.md` | Updated the stale P0 direct-start caveat to the verified P1 direct Codex state and added P1 reset/restore notes. |
-| `docs/demo-script.md` | Added P1-11 restore details and the non-blocking locale hydration warning caveat. |
-| `docs/project-state.md` | Added restore note and final freeze review summary. |
-| `docs/p1-acceptance-checklist.md` | Added final freeze review validation slot and locale hydration warning caveat. |
-| `docs/change-log.md` | Recorded this freeze review. |
+| `README.md` | 将过时的 P0 直接启动说明更新为已验证的 P1 直接 Codex 状态，并添加了 P1 reset/restore 注释。 |
+| `docs/demo-script.md` | 添加了 P1-11 恢复细节和非阻塞区域设置水合警告说明。 |
+| `docs/project-state.md` | 添加了恢复注释和最终冻结审查摘要。 |
+| `docs/p1-acceptance-checklist.md` | 添加了最终冻结审查验证槽和区域设置水合警告说明。 |
+| `docs/change-log.md` | 记录了本次冻结审查。 |
 
-No app code, backend code, frontend code, adapter code, tests, or dependencies
-changed for the final freeze review.
+最终冻结审查未更改任何应用程序代码、后端代码、前端代码、适配器代码、测试或依赖项。
 
-### What Changed
+### 变更内容
 
-The review found one stale README caveat from the P0 freeze era: it still said
-the `Start run` UI only creates a queued TaskRun and that the complete artifact
-path is fallback-only. That is no longer true after P1. The README now matches
-the P1 verified state:
-
+审查发现来自 P0 冻结时代的一个过时的 README 说明：它仍然声称 `Start run` UI 仅创建一个已排队的 TaskRun，并且完整的制品路径仅用于兜底。这在 P1 之后已不再正确。README 现在与 P1 已验证的状态一致：
 ```text
 Start run -> real Codex Direct Start -> real diff -> healthy Vite preview -> mock deploy card
 ```
+文档现在也明确说明了 P1-11 的 SQLite 恢复方法，以及在 P1-11 期间观察到的非阻塞的特定区域水合警告。
 
-The docs now also explicitly state the P1-11 SQLite restore method and the
-non-blocking locale-specific hydration warning observed during P1-11.
+### 冻结审查结果
 
-### Freeze Review Result
+- P1-11 已提交至 `faca556`。
+- 当前没有标签指向 P1-11 HEAD。
+- 只要以下验证保持绿色，P1 即可准备冻结。
+- 剩余注意事项可见：
+  - 自然语言二次变更编排仍是一个注意事项
+  - 审批卡片 UI 不在已冻结的 P1 裁判路径内
+  - 生产部署不在范围内
+  - 观察到了特定区域的开发水合警告，但未阻塞演练
 
-- P1-11 is committed at `faca556`.
-- No tag currently points at P1-11 HEAD.
-- P1 is ready to freeze once the validation below remains green.
-- Remaining caveats are visible:
-  - natural-language second-change orchestration remains a caveat
-  - approval card UI is outside the frozen P1 judge path
-  - production deploy is out of scope
-  - locale-specific development hydration warning was observed but did not
-    block rehearsal
+### 验证
 
-### Validation
-
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `pnpm check` | Pass |
-| `pnpm test` | Pass (90 tests: 22 web + 68 API) |
-| `git diff --check` | Pass |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过（90 个测试：22 个 Web + 68 个 API） |
+| `git diff --check` | 通过 |

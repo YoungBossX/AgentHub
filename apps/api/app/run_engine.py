@@ -13,7 +13,7 @@ from app.claude_code_adapter import ClaudeCodeAdapter
 from app.codex_adapter import CodexAdapter
 from app.context_pack import build_session_context_pack
 from app.deployments import DeployError, DeployService
-from app.diffs import collect_task_run_diff
+from app.diffs import DiffCollectionError, collect_task_run_diff, record_diff_collection_failure
 from app.instruction_builder import build_role_instruction
 from app.ledger import refresh_session_ledger_for_task_run
 from app.models import Agent, Task, TaskRun
@@ -30,7 +30,12 @@ from app.provider_gateway import (
     record_provider_resolution,
 )
 from app.repositories import list_session_tasks
-from app.reviews import create_scripted_review_for_task_run, list_task_run_reviews
+from app.reviews import (
+    ReviewError,
+    create_scripted_review_for_task_run,
+    list_task_run_reviews,
+    record_review_collection_failure,
+)
 from app.run_supervisor import RunSupervisor, default_run_supervisor
 from app.scheduler import SCHEDULER_WAITING_TARGET_LOCK, evaluate_and_apply_scheduler_readiness
 from app.scheduler import target_id_for_task, write_lock_required_for_task
@@ -59,6 +64,7 @@ _provider_resolver = ProviderResolver()
 _provider_health_probe = ProviderHealthProbe()
 _provider_capacity_limiter = ProviderConcurrencyLimiter()
 DEFAULT_RUN_WORKER_ID_PREFIX = "worker"
+AUTO_PIPELINE_PLANNERS = {"contract_first_v1", "orchestrator_external_target_v1"}
 
 
 def get_preview_service() -> PreviewService:
@@ -278,8 +284,18 @@ async def finalize_completed_task_run(
     db: DbSession,
     task_run: TaskRun,
 ) -> TaskRun:
-    collect_task_run_diff(db, task_run.id)
-    create_scripted_review_for_task_run(db, task_run.id)
+    diff_ready = True
+    try:
+        collect_task_run_diff(db, task_run.id)
+    except DiffCollectionError as exc:
+        diff_ready = False
+        record_diff_collection_failure(db, task_run.id, exc)
+        record_review_collection_failure(db, task_run.id, ReviewError("No diff artifact found for review."), skipped=True)
+    if diff_ready:
+        try:
+            create_scripted_review_for_task_run(db, task_run.id)
+        except ReviewError as exc:
+            record_review_collection_failure(db, task_run.id, exc)
     refresh_session_ledger_for_task_run(db, task_run.id)
     _complete_ready_pipeline_review_tasks(db, task_run.task_id)
     _maybe_auto_preview_and_mock_deploy(db, task_run)
@@ -296,6 +312,8 @@ async def _auto_start_next_pipeline_task(
     if completed_task is None:
         return None
     for task in list_session_tasks(db, completed_task.session_id):
+        if task.id == completed_task_id:
+            continue
         if not _is_auto_pipeline_task(task):
             continue
         if _has_task_run(db, task.id):
@@ -417,7 +435,7 @@ def _maybe_auto_preview_and_mock_deploy(db: DbSession, task_run: TaskRun) -> Non
 def _is_auto_pipeline_task(task: Task) -> bool:
     plan = plan_json_for_task(task)
     return (
-        plan.get("planner") == "contract_first_v1"
+        plan.get("planner") in AUTO_PIPELINE_PLANNERS
         and plan.get("autoStart") is True
         and task.intent_type in {"backend_change", "frontend_change"}
     )
@@ -469,6 +487,23 @@ async def execute_task_run_background(
             task_run.id,
             runner_id=task_run.runner_id,
         )
+        if metrics_for_run(task_run).get("forceFailure") is True:
+            await execute_task_run(
+                db,
+                task_run,
+                adapter_type="codex",
+                adapter=CodexAdapter(),
+                plan_context={"forceFailure": True},
+            )
+            return True
+        if adapter_type == "scripted_mock":
+            await execute_task_run(
+                db,
+                task_run,
+                adapter_type="scripted_mock",
+                adapter=ScriptedMockAdapter(),
+            )
+            return True
         gateway = _resolve_provider_gateway_for_run(db, task_run, adapter_type)
         adapter_type = gateway["adapter_type"]
         adapter = adapter_for_type(
@@ -557,6 +592,18 @@ def _resolve_provider_gateway_for_run(
     if session is None:
         raise TaskRunLifecycleError(f"Session not found: {task.session_id}")
     target_id = target_id_for_task(task, db)
+    metrics = metrics_for_run(task_run)
+    runtime_resolution = metrics.get("runtimeConfigResolution")
+    provider_assignment = metrics.get("providerAssignment")
+    runtime_provider_id = None
+    if isinstance(runtime_resolution, dict):
+        candidate_provider_id = runtime_resolution.get("providerId")
+        if isinstance(candidate_provider_id, str) and candidate_provider_id:
+            runtime_provider_id = candidate_provider_id
+    if runtime_provider_id is None and isinstance(provider_assignment, dict):
+        candidate_provider_id = provider_assignment.get("providerId")
+        if isinstance(candidate_provider_id, str) and candidate_provider_id:
+            runtime_provider_id = candidate_provider_id
     context = CodingRunContext(
         workspace_id=session.workspace_id,
         session_id=session.id,
@@ -569,6 +616,7 @@ def _resolve_provider_gateway_for_run(
         if write_lock_required_for_task(task)
         else ("review",),
         worktree_path=task_run.worktree_path,
+        runtime_provider_id=runtime_provider_id,
         runtime_adapter_type=fallback_adapter_type,
         fallback_policy="scripted_mock",
     )

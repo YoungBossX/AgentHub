@@ -92,12 +92,61 @@ describe("PreviewCard", () => {
       }),
     )
 
-    expect(screen.getAllByText("Review Agent report").length).toBeGreaterThan(0)
-    expect(screen.getByText("Advisory only · scripted_mock")).toBeTruthy()
+    expect(screen.getAllByText("评审报告").length).toBeGreaterThan(0)
+    expect(screen.getByText("仅供参考 · scripted_mock")).toBeTruthy()
     expect(
-      screen.getByText("Scripted Review Agent passed 1 changed file with low risk."),
+      screen.getByText("脚本评审通过 1 个变更文件，风险较低。"),
     ).toBeTruthy()
     expect(screen.getAllByText("通过").length).toBeGreaterThan(0)
+  })
+
+  it("translates review findings and suggestions in the right-side panel", () => {
+    render(
+      createElement(PreviewPanel, {
+        artifactItems: [
+          {
+            artifact: {
+              ...sampleReviewArtifact,
+              findings: [
+                {
+                  message:
+                    "External target external-backend-pomodoro-app has configured check command `python -m py_compile main.py` but no evidence was recorded.",
+                  severity: "medium",
+                },
+              ],
+              riskLevel: "medium",
+              status: "warning",
+              suggestedChanges: [
+                "Record check evidence for `python -m py_compile main.py`.",
+              ],
+              summary:
+                "Scripted Review Agent found 2 advisory findings with medium risk.",
+            },
+            id: "review-asset",
+            kind: "review",
+            taskRunId: "run-1",
+            taskTitle: "Build the Pomodoro backend",
+          },
+        ],
+        frameKey: 1,
+        selectedArtifactId: "review-asset",
+      }),
+    )
+
+    expect(
+      screen.getByText("脚本评审发现 2 条建议项，风险等级为中。"),
+    ).toBeTruthy()
+    expect(screen.getAllByText("中").length).toBeGreaterThan(0)
+    expect(
+      screen.getByText(
+        "外部目标 external-backend-pomodoro-app 配置了检查命令 `python -m py_compile main.py`，但尚未记录验证证据。",
+      ),
+    ).toBeTruthy()
+    expect(
+      screen.getByText(
+        "记录 `python -m py_compile main.py` 的检查验证证据。",
+      ),
+    ).toBeTruthy()
   })
 
   it("shows artifact workbench empty state before evidence is selected", () => {
@@ -110,13 +159,13 @@ describe("PreviewCard", () => {
     )
 
     expect(screen.getByText("证据工作台")).toBeTruthy()
-    expect(
-      screen.getByText("从任务时间线选择 Diff、评审、预览或部署产物。"),
-    ).toBeTruthy()
     expect(screen.getByText("等待产物")).toBeTruthy()
     expect(
-      screen.getByText("任务生成 Diff、评审、预览或部署证据后，可在这里查看详情。"),
-    ).toBeTruthy()
+      screen.queryByText("从任务时间线选择 Diff、评审、预览或部署产物。"),
+    ).toBeNull()
+    expect(
+      screen.queryByText("任务生成 Diff、评审、预览或部署证据后，可在这里查看详情。"),
+    ).toBeNull()
   })
 
   it("renders artifact workbench markdown content and version metadata", () => {

@@ -106,6 +106,155 @@ function previewTitle(title: string) {
   return title === "Vite React preview" ? "Vite React 预览" : title
 }
 
+function reviewTitleLabel(title: string) {
+  return title === "Review Agent report" ? "评审报告" : title
+}
+
+function commandTypeLabel(commandType: string) {
+  const labels: Record<string, string> = {
+    build: "构建",
+    check: "检查",
+    test: "测试",
+  }
+  return labels[commandType] ?? commandType
+}
+
+function reviewTextLabel(value: string) {
+  const text = value.trim()
+  let match = text.match(
+    /^Scripted Review Agent passed (\d+) changed files? with low risk and verified contract consistency for (.+)\.$/,
+  )
+  if (match) {
+    return `脚本评审通过 ${match[1]} 个变更文件，风险较低，并已验证 ${match[2]} 的契约一致性。`
+  }
+
+  match = text.match(
+    /^Scripted Review Agent passed (\d+) changed files? with low risk\.$/,
+  )
+  if (match) {
+    return `脚本评审通过 ${match[1]} 个变更文件，风险较低。`
+  }
+
+  match = text.match(
+    /^Scripted Review Agent found (\d+) advisory findings? with (\w+) risk\.$/,
+  )
+  if (match) {
+    return `脚本评审发现 ${match[1]} 条建议项，风险等级为${riskLabel(match[2])}。`
+  }
+
+  match = text.match(
+    /^External target (.+) has configured (check|test|build) command `(.+)` but no evidence was recorded\.$/,
+  )
+  if (match) {
+    return `外部目标 ${match[1]} 配置了${commandTypeLabel(match[2])}命令 \`${match[3]}\`，但尚未记录验证证据。`
+  }
+
+  match = text.match(/^Record (check|test|build) evidence for `(.+)`\.$/)
+  if (match) {
+    return `记录 \`${match[2]}\` 的${commandTypeLabel(match[1])}验证证据。`
+  }
+
+  match = text.match(
+    /^External target (.+) (check|test|build) command `(.+)` failed with exit code (.+)\.$/,
+  )
+  if (match) {
+    return `外部目标 ${match[1]} 的${commandTypeLabel(match[2])}命令 \`${match[3]}\` 失败，退出码为 ${match[4]}。`
+  }
+
+  match = text.match(
+    /^Fix failing (check|test|build) evidence before claiming validation success\.$/,
+  )
+  if (match) {
+    return `修复失败的${commandTypeLabel(match[1])}验证证据后，再标记验证成功。`
+  }
+
+  match = text.match(/^External target (.+) changed denied path (.+)\.$/)
+  if (match) {
+    return `外部目标 ${match[1]} 修改了禁止路径 ${match[2]}。`
+  }
+
+  match = text.match(/^Remove denied-path changes from (.+)\.$/)
+  if (match) {
+    return `移除 ${match[1]} 中违反禁止路径规则的变更。`
+  }
+
+  match = text.match(
+    /^External target (.+) changed (.+), which is outside registered allowed paths\.$/,
+  )
+  if (match) {
+    return `外部目标 ${match[1]} 修改了 ${match[2]}，该路径不在已注册的允许路径内。`
+  }
+
+  match = text.match(/^Keep changes inside (.+) for (.+)\.$/)
+  if (match) {
+    return `请将 ${match[2]} 的变更限制在 ${match[1]} 内。`
+  }
+
+  match = text.match(/^Contract (.+) expected backend changes under (.+)\.$/)
+  if (match) {
+    return `契约 ${match[1]} 期望在 ${match[2]} 下有后端变更。`
+  }
+
+  match = text.match(/^Contract (.+) expected frontend changes under (.+)\.$/)
+  if (match) {
+    return `契约 ${match[1]} 期望在 ${match[2]} 下有前端变更。`
+  }
+
+  match = text.match(/^Add or verify backend implementation under (.+)\.$/)
+  if (match) {
+    return `请补充或确认 ${match[1]} 下的后端实现。`
+  }
+
+  match = text.match(/^Add or verify frontend implementation under (.+)\.$/)
+  if (match) {
+    return `请补充或确认 ${match[1]} 下的前端实现。`
+  }
+
+  match = text.match(
+    /^Contract (.+) expected demo API base (.+), but frontend code references (.+)\.$/,
+  )
+  if (match) {
+    return `契约 ${match[1]} 期望 Demo API 地址为 ${match[2]}，但前端代码引用了 ${match[3]}。`
+  }
+
+  match = text.match(/^Use demo API base (.+) for generated app data calls\.$/)
+  if (match) {
+    return `生成应用的数据请求请使用 Demo API 地址 ${match[1]}。`
+  }
+
+  match = text.match(
+    /^Contract (.+) expected task target (.+), but task plan targets (.+)\.$/,
+  )
+  if (match) {
+    return `契约 ${match[1]} 期望任务目标为 ${match[2]}，但任务计划指向 ${match[3]}。`
+  }
+
+  match = text.match(/^Align task targetId with contract target IDs for (.+)\.$/)
+  if (match) {
+    return `请让任务 targetId 与契约 ${match[1]} 的目标 ID 保持一致。`
+  }
+
+  match = text.match(/^Use registry-resolved (.+)=(.+)\.$/)
+  if (match) {
+    return `请使用目标注册表解析出的 ${match[1]}=${match[2]}。`
+  }
+
+  if (text === "No changed files were present in the reviewed diff.") {
+    return "评审的 Diff 中没有变更文件。"
+  }
+  if (text === "Confirm the coding run produced the intended file changes.") {
+    return "请确认本次编码运行已经生成预期文件变更。"
+  }
+  if (text === "The diff contains console logging; remove it if it is not intentional.") {
+    return "Diff 中包含 console 日志；如果不是有意保留，请移除。"
+  }
+  if (text === "Remove temporary console logging before a production path.") {
+    return "进入生产路径前请移除临时 console 日志。"
+  }
+
+  return value
+}
+
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
     healthy: "健康",
@@ -240,17 +389,14 @@ export function PreviewPanel({
       <header className="shrink-0 border-b border-[var(--border)] bg-white/95 px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-              产物详情
-            </p>
-            <h2 className="mt-1 truncate text-base font-semibold text-slate-950">
+            <h2 className="truncate text-base font-semibold text-slate-950">
               {panelTitle(selectedItem)}
             </h2>
-            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-              {selectedItem
-                ? selectedItem.taskTitle
-                : "从任务时间线选择 Diff、评审、预览或部署产物。"}
-            </p>
+            {selectedItem ? (
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                {selectedItem.taskTitle}
+              </p>
+            ) : null}
             {selectedItem ? (
               <p className="mt-2 inline-flex rounded-full bg-[var(--surface-muted)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-normal text-slate-600">
                 {artifactKindLabel(selectedItem.kind)}
@@ -385,9 +531,6 @@ export function PreviewPanel({
                 <Monitor aria-hidden="true" size={18} />
               </span>
               <p className="mt-4 font-semibold text-slate-900">等待产物</p>
-              <p className="mt-1 leading-6">
-                任务生成 Diff、评审、预览或部署证据后，可在这里查看详情。
-              </p>
             </div>
           </div>
         )}
@@ -529,7 +672,7 @@ function panelTitle(item: ArtifactPanelItem | null) {
     return item.artifact.title
   }
   if (item.kind === "review") {
-    return item.artifact.title
+    return reviewTitleLabel(item.artifact.title)
   }
   if (item.kind === "workbench") {
     return item.artifact.title
@@ -580,7 +723,7 @@ function summaryRows(item: ArtifactPanelItem) {
       { label: "状态", value: reviewStatusLabel(item.artifact.status) },
       { label: "风险", value: riskLabel(item.artifact.riskLevel) },
       { label: "文件", value: String(item.artifact.filesReviewed.length) },
-      { label: "Adapter", value: item.artifact.adapterType },
+      { label: "适配器", value: item.artifact.adapterType },
     ]
   }
 
@@ -802,11 +945,13 @@ function ReviewCard({ review }: { review: ReviewArtifact }) {
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
             <ShieldCheck aria-hidden="true" size={14} />
-            Review Agent
+            评审智能体
           </p>
-          <h3 className="mt-1 truncate text-sm font-semibold">{review.title}</h3>
+          <h3 className="mt-1 truncate text-sm font-semibold">
+            {reviewTitleLabel(review.title)}
+          </h3>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            Advisory only · {review.adapterType}
+            仅供参考 · {review.adapterType}
           </p>
         </div>
         <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
@@ -815,7 +960,7 @@ function ReviewCard({ review }: { review: ReviewArtifact }) {
       </div>
 
       <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm leading-6 text-slate-800">
-        {review.summary}
+        {reviewTextLabel(review.summary)}
       </p>
 
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
@@ -843,10 +988,12 @@ function ReviewCard({ review }: { review: ReviewArtifact }) {
               key={`${String(finding.message)}-${index}`}
             >
               <p className="font-semibold">
-                {String(finding.severity ?? "warning")}
+                {severityLabel(String(finding.severity ?? "warning"))}
                 {finding.file ? ` · ${String(finding.file)}` : ""}
               </p>
-              <p className="mt-1 leading-5">{String(finding.message ?? "")}</p>
+              <p className="mt-1 leading-5">
+                {reviewTextLabel(String(finding.message ?? ""))}
+              </p>
             </div>
           ))}
         </div>
@@ -856,7 +1003,7 @@ function ReviewCard({ review }: { review: ReviewArtifact }) {
         <ul className="mt-3 grid gap-1 text-xs text-slate-700">
           {review.suggestedChanges.map((change) => (
             <li className="rounded bg-slate-50 px-2 py-1" key={change}>
-              {change}
+              {reviewTextLabel(change)}
             </li>
           ))}
         </ul>
@@ -881,6 +1028,17 @@ function riskLabel(riskLevel: string) {
     medium: "中",
   }
   return labels[riskLevel] ?? riskLevel
+}
+
+function severityLabel(severity: string) {
+  const labels: Record<string, string> = {
+    high: "高",
+    info: "信息",
+    low: "低",
+    medium: "中",
+    warning: "警告",
+  }
+  return labels[severity] ?? severity
 }
 
 function rendererKindLabel(rendererKind: string) {

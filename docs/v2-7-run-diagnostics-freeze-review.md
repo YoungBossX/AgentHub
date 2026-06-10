@@ -1,55 +1,48 @@
-# V2.7 Run Diagnostics Freeze Review
+# V2.7 运行诊断冻结审查
 
-**Date:** 2026-06-09
+**日期：** 2026-06-09
 
-## Scope
+## 范围
 
-V2.7 added a safe diagnostics projection over TaskRun, TaskRunEvent, provider
-gateway, queue, lock, preview, deploy, and artifact evidence.
+V2.7 在 TaskRun、TaskRunEvent、提供商网关、队列、锁、预览、部署和制品证据之上新增了安全的诊断投影。
 
-Implemented:
+已实现：
 
-- RunDiagnostics response model.
-- failure category classifier and primary/contributing factor selection.
-- run timeline builder.
-- provider/queue/lock/preview/deploy health summaries.
-- next-step suggestion model.
-- `GET /task-runs/{task_run_id}/diagnostics`.
-- `GET /sessions/{session_id}/run-diagnostics-summary`.
-- Mission panel diagnostic summary using TaskRun provider/queue/lock/job
-  evidence.
+- RunDiagnostics 响应模型。
+- 失败类别分类器和 primary/contributing 因子选择。
+- 运行时间线构建器。
+- provider/queue/lock/preview/deploy 健康摘要。
+- 下一步建议模型。
+- `GET /task-runs/{task_run_id}/diagnostics`。
+- `GET /sessions/{session_id}/run-diagnostics-summary`。
+- 使用 TaskRun provider/queue/lock/job 证据的任务面板诊断摘要。
 
-## Safety
+## 安全性
 
-- Diagnostics do not change execution semantics.
-- No new adapter, WebSocket, Docker sandbox, external IM, PR, or deployment
-  behavior was added.
-- Metadata and evidence are redacted before being exposed.
-- Missing evidence is shown as unknown/limited, not inferred success.
-- ScriptedMock remains visibly mock/fallback evidence.
+- 诊断不会改变执行语义。
+- 未新增适配器、WebSocket、Docker 沙箱、外部 IM、PR 或部署行为。
+- 元数据和证据在暴露前已进行脱敏处理。
+- 缺失的证据显示为 unknown/limited，而非推断为成功。
+- ScriptedMock 仍明显显示为 mock/fallback 证据。
 
-## Validation
+## 验证
 
-| Command | Result |
+| 命令 | 结果 |
 |---|---|
-| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_run_diagnostics.py -q` | Pass |
-| `pnpm --filter @agenthub/web test -- mission-panel.test.tsx` | Pass |
-| `pnpm check` | Pass |
-| `pnpm test` | Pass |
-| `pnpm demo:api:test` | Pass |
-| `openspec validate agenthub-v2-7-run-diagnostics --strict` | Pass |
-| `git diff --check` | Pass |
+| `cd apps/api && ../../.venv/bin/python -m pytest tests/test_run_diagnostics.py -q` | 通过 |
+| `pnpm --filter @agenthub/web test -- mission-panel.test.tsx` | 通过 |
+| `pnpm check` | 通过 |
+| `pnpm test` | 通过 |
+| `pnpm demo:api:test` | 通过 |
+| `openspec validate agenthub-v2-7-run-diagnostics --strict` | 通过 |
+| `git diff --check` | 通过 |
 
-## Limitations
+## 限制
 
-- The first UI pass intentionally stays compact and surfaces diagnostics in the
-  mission panel rather than adding a full detail drawer.
-- Suggestion action buttons remain tied to existing retry/settings/artifact
-  flows; new automatic remediation is deferred.
-- Timeline display is available through API and summarized in UI, with richer
-  visual timeline reserved for a later pass.
+- 首次 UI 迭代有意保持简洁，在任务面板中展示诊断信息，而非添加完整的详情抽屉。
+- 建议操作按钮仍绑定到现有的 retry/settings/artifact 流程；新的自动修复功能已推迟。
+- 时间线显示可通过 API 获取，并在 UI 中汇总展示，更丰富的可视化时间线留待后续迭代。
 
-## Follow-up
+## 后续工作
 
-Recommended follow-up: add a dedicated run diagnostics drawer after V2.4/V2.5
-stabilize ProjectProfile and Policy Engine signals.
+建议后续工作：在 V2.4/V2.5 稳定 ProjectProfile 和 Policy Engine 信号后，添加专用的运行诊断抽屉。
