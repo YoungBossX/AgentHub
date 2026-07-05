@@ -11,7 +11,6 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.main import auto_start_safe_tasks
 from app.external_workspaces import (
     ExternalWorkspaceRegistration,
     register_external_project_target,
@@ -27,6 +26,7 @@ from app.scheduler import (
     evaluate_and_apply_dependency_readiness,
     evaluate_dependency_readiness,
 )
+from app.routes.messages import auto_start_safe_tasks
 from app.session_queue import entry_for_task_run, mark_task_run_running
 from app.task_runs import (
     TaskRunLifecycleError,
@@ -396,6 +396,7 @@ def test_same_external_target_write_task_queues_for_active_lock(tmp_path) -> Non
             title="First external write",
             intent_type="frontend_change",
             status="pending",
+            priority=0,
             assigned_agent_id=frontend.id,
             plan_json=json.dumps(plan, separators=(",", ":")),
         )
@@ -404,6 +405,7 @@ def test_same_external_target_write_task_queues_for_active_lock(tmp_path) -> Non
             title="Second external write",
             intent_type="frontend_change",
             status="pending",
+            priority=1,
             assigned_agent_id=frontend.id,
             plan_json=json.dumps(plan, separators=(",", ":")),
         )
@@ -1161,6 +1163,7 @@ def seed_same_target_write_tasks(
         title="First write",
         intent_type=intent_type,
         status="pending",
+        priority=0,
         assigned_agent_id=agent.id,
         plan_json=json.dumps(plan, separators=(",", ":")),
     )
@@ -1169,6 +1172,7 @@ def seed_same_target_write_tasks(
         title="Second write",
         intent_type=intent_type,
         status="pending",
+        priority=1,
         assigned_agent_id=agent.id,
         plan_json=json.dumps(plan, separators=(",", ":")),
     )

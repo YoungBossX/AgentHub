@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -16,6 +17,18 @@ from app.target_registry import (
     DEMO_FRONTEND_TARGET_ID,
     list_targets,
 )
+
+
+def _existing_windows_system_root() -> Path:
+    candidates = [
+        Path(os.environ.get("SystemRoot", r"C:\Windows")),
+        Path(os.environ.get("ProgramFiles", r"C:\Program Files")),
+        Path(os.environ.get("ProgramData", r"C:\ProgramData")),
+    ]
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_dir():
+            return candidate
+    pytest.skip("Windows system root is not available on this platform")
 
 
 @pytest.fixture
@@ -267,6 +280,24 @@ def test_registration_rejects_unsafe_roots(
     assert missing_response.status_code == 400
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows path guard")
+def test_registration_rejects_windows_system_roots(client: TestClient) -> None:
+    workspace = client.get("/workspaces/demo").json()
+    system_root = _existing_windows_system_root()
+
+    response = client.post(
+        f"/workspaces/{workspace['id']}/external-targets",
+        json={
+            "name": "Unsafe Windows system root",
+            "rootPath": str(system_root),
+            "allowedPaths": ["src"],
+        },
+    )
+
+    assert response.status_code == 400
+    assert "System directory" in response.json()["detail"]
+
+
 def test_registration_requires_bounded_relative_allowed_paths(
     client: TestClient,
     tmp_path: Path,
@@ -316,6 +347,22 @@ def test_browse_external_target_folders_lists_starts_and_children(
     assert children_body["currentPath"] == str(project.resolve())
     assert children_body["parentPath"] == str(project.parent.resolve())
     assert [child["name"] for child in children_body["children"]] == ["app"]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows path guard")
+def test_browse_external_target_folders_rejects_windows_system_roots(
+    client: TestClient,
+) -> None:
+    workspace = client.get("/workspaces/demo").json()
+    system_root = _existing_windows_system_root()
+
+    response = client.get(
+        f"/workspaces/{workspace['id']}/external-targets/folders",
+        params={"path": str(system_root)},
+    )
+
+    assert response.status_code == 400
+    assert "System directory" in response.json()["detail"]
 
 
 def test_browse_external_target_folders_rejects_unknown_workspace(

@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
 import asyncio
 import json
-from pathlib import Path
-from typing import Any, AsyncIterator, Iterator, Optional
+from typing import Any, AsyncIterator, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,9 +50,13 @@ from app.artifact_workbench import (
 from app.config import get_settings
 from app.claude_code_adapter import ClaudeCodeAdapter
 from app.context_pack import build_session_context_pack
-from app.db import engine, init_database
+from app.db import init_database
+from app.dependencies import (
+    get_db,
+    get_deploy_service,
+    get_preview_service,
+)
 from app.deployments import DeployError, DeployService, StoredDeploymentArtifact
-from app.deployment_providers import list_deployment_providers
 from app.diffs import (
     DiffCollectionError,
     StoredDiffArtifact,
@@ -62,16 +65,6 @@ from app.diffs import (
     record_diff_collection_failure,
 )
 from app.events import encode_sse_event, list_session_events, subscribe_session_events
-from app.external_workspaces import (
-    ExternalWorkspaceRegistration,
-    ExternalWorkspaceRegistrationError,
-    allowed_paths_for,
-    denied_paths_for,
-    deploy_provider_ids_for,
-    get_external_project_target,
-    list_external_project_targets,
-    register_external_project_target,
-)
 from app.external_evidence import (
     ExternalEvidenceError,
     StoredCommandEvidence,
@@ -86,13 +79,6 @@ from app.ledger import (
     refresh_session_ledger,
     refresh_session_ledger_for_task_run,
 )
-from app.local_folders import LocalFolderBrowseError, list_local_folders
-from app.memory_snapshots import (
-    MemorySnapshotError,
-    create_memory_snapshot,
-    ensure_session_memory_snapshot,
-    refresh_session_memory_snapshot,
-)
 from app.memory_store import (
     MemoryFilter,
     MemoryStoreError,
@@ -102,35 +88,20 @@ from app.memory_store import (
     transition_memory_item,
 )
 from app.mission_trace import build_session_mission_trace
-from app.models import Agent, MemoryItem, Message, Task, TaskRun
+from app.models import Agent, MemoryItem, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import SessionExecutionLedger
 from app.models import TaskRunEvent
 from app.models import utc_now
-from app.planning import MentionParseError, plan_for_message
 from app.pmo_decisions import PmoDecisionError, apply_pmo_decision, require_supported_decision_payload
-from app.project_analyzer import ProjectAnalysisResult, analyze_external_project
-from app.project_provisioning import (
-    ProjectProvisioningApplyError,
-    ProjectProvisioningApplyResult,
-    ProjectProvisioningPlan,
-    apply_project_provisioning,
-    plan_project_provisioning,
-)
 from app.previews import PreviewError, PreviewService, StoredPreviewArtifact
 from app.provider_configs import ProviderConfig, list_provider_configs
 from app.provider_health import ProviderHealthCheckResult, check_runtime_role_provider
 from app.repositories import (
-    create_session_message,
-    get_demo_workspace,
     get_enabled_agents,
     get_session,
     get_workspace,
-    list_session_messages,
     list_session_tasks,
-    list_workspace_sessions,
-    next_session_title,
-    persist_session,
 )
 from app.reviews import (
     ReviewError,
@@ -143,6 +114,15 @@ from app.run_diagnostics import (
     build_session_run_diagnostics_summary,
     build_task_run_diagnostics,
 )
+from app.routes.health import router as health_router
+from app.routes.registries import (
+    provider_config_response,
+    router as registries_router,
+)
+from app.routes.messages import router as messages_router
+from app.routes.sessions import router as sessions_router
+from app.routes.targets import router as targets_router
+from app.routes.workspaces import router as workspaces_router
 from app.run_engine import (
     adapter_for_type,
     agent_run_request_for,
@@ -152,17 +132,6 @@ from app.run_engine import (
     schedule_task_run_execution,
     _background_execute_task_run,
     _complete_ready_pipeline_review_tasks,
-)
-from app.scheduler import complete_synthetic_planning_tasks
-from app.scheduler import evaluate_and_apply_scheduler_readiness
-from app.scheduler import refresh_session_scheduler_state
-from app.target_registry import DEMO_BACKEND_TARGET_ID, DEMO_FRONTEND_TARGET_ID
-from app.target_registry import (
-    TargetProject,
-    TargetRegistryError,
-    external_target_to_project,
-    get_target_for_workspace,
-    list_targets_for_workspace,
 )
 from app.schemas import (
     AgentContactResponse,
@@ -177,9 +146,6 @@ from app.schemas import (
     CommandEvidenceCreateRequest,
     CommandEvidenceResponse,
     DeploymentCreateRequest,
-    DeploymentProviderRegistryResponse,
-    DeploymentProviderResponse,
-    HealthResponse,
     DeploymentResponse,
     DiffArtifactResponse,
     ArtifactWorkbenchArtifactResponse,
@@ -187,23 +153,10 @@ from app.schemas import (
     ArtifactWorkbenchSessionResponse,
     ArtifactWorkbenchVersionResponse,
     ArtifactVersionResponse,
-    ExternalProjectAnalysisRequest,
-    ExternalProjectAnalysisResponse,
-    ExternalProjectTargetCreateRequest,
-    ExternalProjectTargetResponse,
-    LocalFolderEntryResponse,
-    LocalFolderListingResponse,
-    LocalFolderStartResponse,
-    MessageCreateRequest,
-    MessageResponse,
     MemoryItemResponse,
     MemoryItemStatusUpdateRequest,
     PMOPlanDecisionRequest,
     PreviewResponse,
-    ProjectProvisioningApplyRequest,
-    ProjectProvisioningApplyResponse,
-    ProjectProvisioningRequest,
-    ProjectProvisioningResponse,
     ProviderConfigResponse,
     ReviewArtifactResponse,
     RuntimeConfigResponse,
@@ -213,17 +166,12 @@ from app.schemas import (
     RuntimeProviderCheckResponse,
     RuntimeRoleConfigResponse,
     RunDiagnosticsResponse,
-    SessionCreateRequest,
     SessionExecutionLedgerResponse,
     SessionMissionTraceResponse,
     SessionRunDiagnosticsSummaryResponse,
     SessionResponse,
-    SessionTargetSelectionRequest,
-    SessionUpdateRequest,
-    TargetProjectResponse,
     TaskResponse,
     TaskRunResponse,
-    WorkspaceResponse,
 )
 from app.task_runs import (
     TaskRunLifecycleError,
@@ -236,7 +184,6 @@ from app.task_runs import (
     retry_with_scripted_mock,
     transition_task_run,
 )
-from app.worktrees import WorktreeError, WorktreeService
 
 
 @asynccontextmanager
@@ -261,19 +208,13 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "OPTIONS"],
     allow_headers=["*"],
 )
+app.include_router(health_router)
+app.include_router(registries_router)
+app.include_router(messages_router)
+app.include_router(sessions_router)
+app.include_router(targets_router)
+app.include_router(workspaces_router)
 
-
-def get_db() -> Iterator[DbSession]:
-    with DbSession(engine) as session:
-        yield session
-
-
-def get_worktree_service() -> WorktreeService:
-    return WorktreeService()
-
-
-_preview_service = PreviewService()
-_deploy_service = DeployService()
 
 VIRTUAL_AGENT_CONTACTS: tuple[AgentContactResponse, ...] = (
     AgentContactResponse(
@@ -309,364 +250,6 @@ VIRTUAL_AGENT_CONTACTS: tuple[AgentContactResponse, ...] = (
         contactType="service",
     ),
 )
-
-
-def get_preview_service() -> PreviewService:
-    return _preview_service
-
-
-def get_deploy_service() -> DeployService:
-    return _deploy_service
-
-
-
-@app.get("/health", response_model=HealthResponse)
-def health() -> HealthResponse:
-    return HealthResponse(
-        status="ok",
-        service="agenthub-api",
-        database="ready",
-    )
-
-
-@app.get("/workspaces/demo", response_model=WorkspaceResponse)
-def read_demo_workspace(db: DbSession = Depends(get_db)) -> WorkspaceResponse:
-    return get_demo_workspace(db)
-
-
-def external_target_response(
-    target: "ExternalProjectTarget",
-) -> ExternalProjectTargetResponse:
-    return ExternalProjectTargetResponse(
-        id=target.id,
-        workspaceId=target.workspace_id,
-        targetId=target.target_id,
-        name=target.name,
-        rootPath=target.root_path,
-        projectType=target.project_type,
-        allowedPaths=allowed_paths_for(target),
-        deniedPaths=denied_paths_for(target),
-        devCommand=target.dev_command,
-        testCommand=target.test_command,
-        checkCommand=target.check_command,
-        buildCommand=target.build_command,
-        previewCommand=target.preview_command,
-        stagingOutputDir=target.staging_output_dir,
-        stagingServeCommand=target.staging_serve_command,
-        deployProviderIds=deploy_provider_ids_for(target),
-        packageManager=target.package_manager,
-        detectedFramework=target.detected_framework,
-        analysisStatus=target.analysis_status,
-        projectProfile=external_target_to_project(target).project_profile.summary(),
-        createdAt=target.created_at,
-        updatedAt=target.updated_at,
-    )
-
-
-def external_project_analysis_response(
-    analysis: ProjectAnalysisResult,
-) -> ExternalProjectAnalysisResponse:
-    return ExternalProjectAnalysisResponse(
-        rootPath=analysis.root_path,
-        projectType=analysis.project_type,
-        detectedFramework=analysis.detected_framework,
-        packageManager=analysis.package_manager,
-        allowedPaths=list(analysis.allowed_paths),
-        deniedPaths=list(analysis.denied_paths),
-        devCommand=analysis.dev_command,
-        testCommand=analysis.test_command,
-        checkCommand=analysis.check_command,
-        buildCommand=analysis.build_command,
-        previewCommand=analysis.preview_command,
-        analysisStatus=analysis.analysis_status,
-        analysisWarnings=list(analysis.analysis_warnings),
-        confidence=analysis.confidence,
-        projectProfile=analysis.project_profile.summary(),
-    )
-
-
-def project_provisioning_response(
-    plan: ProjectProvisioningPlan,
-) -> ProjectProvisioningResponse:
-    summary = plan.summary()
-    return ProjectProvisioningResponse(
-        projectKind=str(summary["projectKind"]),
-        projectSlug=str(summary["projectSlug"]),
-        projectRoot=str(summary["projectRoot"]),
-        requiresFrontend=bool(summary["requiresFrontend"]),
-        requiresBackend=bool(summary["requiresBackend"]),
-        defaultFrontendStack=(
-            summary["defaultFrontendStack"]
-            if isinstance(summary["defaultFrontendStack"], str)
-            else None
-        ),
-        defaultBackendStack=(
-            summary["defaultBackendStack"]
-            if isinstance(summary["defaultBackendStack"], str)
-            else None
-        ),
-        targetDrafts=list(summary["targetDrafts"]),
-        approvalRequiredCommands=list(summary["approvalRequiredCommands"]),
-        setupSteps=list(summary["setupSteps"]),
-        safeDefaultCommands=list(summary["safeDefaultCommands"]),
-        notes=list(summary["notes"]),
-    )
-
-
-def project_provisioning_apply_response(
-    result: ProjectProvisioningApplyResult,
-) -> ProjectProvisioningApplyResponse:
-    return ProjectProvisioningApplyResponse(
-        plan=project_provisioning_response(result.plan),
-        registeredTargets=[
-            external_target_response(target) for target in result.registered_targets
-        ],
-        session=result.session,
-    )
-
-
-def local_folder_listing_response(
-    listing: "LocalFolderListing",
-) -> LocalFolderListingResponse:
-    return LocalFolderListingResponse(
-        currentPath=listing.current_path,
-        parentPath=listing.parent_path,
-        starts=[
-            LocalFolderStartResponse(label=start.label, path=start.path)
-            for start in listing.starts
-        ],
-        children=[
-            LocalFolderEntryResponse(name=child.name, path=child.path)
-            for child in listing.children
-        ],
-    )
-
-
-def target_project_response(target: TargetProject) -> TargetProjectResponse:
-    return TargetProjectResponse(
-        targetId=target.target_id,
-        name=target.name,
-        type=target.type,
-        root=target.root,
-        allowedPaths=list(target.allowed_paths),
-        deniedPaths=list(target.denied_paths),
-        devCommand=target.dev_command,
-        testCommand=target.test_command,
-        checkCommand=target.check_command,
-        buildCommand=target.build_command,
-        previewCommand=target.preview_command,
-        stagingOutputDir=target.staging_output_dir,
-        stagingServeCommand=target.staging_serve_command,
-        deployProviderIds=list(target.deploy_provider_ids),
-        baseUrl=target.base_url,
-        packageManager=target.package_manager,
-        detectedFramework=target.detected_framework,
-        projectType=target.project_type,
-        analysisStatus=target.analysis_status,
-        projectProfile=(
-            target.project_profile.summary() if target.project_profile is not None else None
-        ),
-        allowedAgents=list(target.allowed_agents),
-        requiresPlatformMode=target.requires_platform_mode,
-        requiresApproval=target.requires_approval,
-        relatedTargetIds=list(target.related_target_ids),
-    )
-
-
-@app.get(
-    "/workspaces/{workspace_id}/targets",
-    response_model=list[TargetProjectResponse],
-)
-def read_workspace_targets(
-    workspace_id: str,
-    db: DbSession = Depends(get_db),
-) -> list[TargetProjectResponse]:
-    if get_workspace(db, workspace_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-    return [
-        target_project_response(target)
-        for target in list_targets_for_workspace(db, workspace_id)
-    ]
-
-
-@app.post(
-    "/workspaces/{workspace_id}/external-targets/analyze",
-    response_model=ExternalProjectAnalysisResponse,
-)
-def analyze_external_target(
-    workspace_id: str,
-    request: ExternalProjectAnalysisRequest,
-    db: DbSession = Depends(get_db),
-) -> ExternalProjectAnalysisResponse:
-    if get_workspace(db, workspace_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-    return external_project_analysis_response(
-        analyze_external_project(request.root_path)
-    )
-
-
-@app.post(
-    "/workspaces/{workspace_id}/project-provisioning/plan",
-    response_model=ProjectProvisioningResponse,
-)
-def plan_workspace_project_provisioning(
-    workspace_id: str,
-    request: ProjectProvisioningRequest,
-    db: DbSession = Depends(get_db),
-) -> ProjectProvisioningResponse:
-    if get_workspace(db, workspace_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-    return project_provisioning_response(
-        plan_project_provisioning(
-            user_request=request.user_request,
-            existing_project_root=request.existing_project_root,
-            preferred_slug=request.preferred_slug,
-        )
-    )
-
-
-@app.post(
-    "/workspaces/{workspace_id}/project-provisioning/apply",
-    response_model=ProjectProvisioningApplyResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def apply_workspace_project_provisioning(
-    workspace_id: str,
-    request: ProjectProvisioningApplyRequest,
-    db: DbSession = Depends(get_db),
-) -> ProjectProvisioningApplyResponse:
-    workspace = get_workspace(db, workspace_id)
-    if workspace is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-    session = get_session(db, request.session_id)
-    if session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-
-    try:
-        result = apply_project_provisioning(
-            db,
-            workspace=workspace,
-            session=session,
-            user_request=request.user_request,
-            selected_root_path=request.selected_root_path,
-            preferred_slug=request.preferred_slug,
-        )
-    except ProjectProvisioningApplyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-    return project_provisioning_apply_response(result)
-
-
-@app.get(
-    "/workspaces/{workspace_id}/external-targets/folders",
-    response_model=LocalFolderListingResponse,
-)
-def browse_external_target_folders(
-    workspace_id: str,
-    path: Optional[str] = Query(default=None),
-    db: DbSession = Depends(get_db),
-) -> LocalFolderListingResponse:
-    workspace = get_workspace(db, workspace_id)
-    if workspace is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-
-    try:
-        return local_folder_listing_response(
-            list_local_folders(
-                workspace_root=workspace.root_path,
-                requested_path=path,
-            )
-        )
-    except LocalFolderBrowseError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-
-
-@app.post(
-    "/workspaces/{workspace_id}/external-targets",
-    response_model=ExternalProjectTargetResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_external_target(
-    workspace_id: str,
-    request: ExternalProjectTargetCreateRequest,
-    db: DbSession = Depends(get_db),
-) -> ExternalProjectTargetResponse:
-    workspace = get_workspace(db, workspace_id)
-    if workspace is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-
-    try:
-        target = register_external_project_target(
-            db,
-            workspace,
-            ExternalWorkspaceRegistration(
-                target_id=request.target_id,
-                name=request.name,
-                root_path=request.root_path,
-                project_type=request.project_type,
-                allowed_paths=request.allowed_paths,
-                denied_paths=request.denied_paths,
-                dev_command=request.dev_command,
-                test_command=request.test_command,
-                check_command=request.check_command,
-                build_command=request.build_command,
-                preview_command=request.preview_command,
-                staging_output_dir=request.staging_output_dir,
-                staging_serve_command=request.staging_serve_command,
-                deploy_provider_ids=request.deploy_provider_ids,
-                package_manager=request.package_manager,
-                detected_framework=request.detected_framework,
-            ),
-        )
-    except ExternalWorkspaceRegistrationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-    return external_target_response(target)
-
-
-@app.get(
-    "/workspaces/{workspace_id}/external-targets",
-    response_model=list[ExternalProjectTargetResponse],
-)
-def read_external_targets(
-    workspace_id: str,
-    db: DbSession = Depends(get_db),
-) -> list[ExternalProjectTargetResponse]:
-    if get_workspace(db, workspace_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-    return [
-        external_target_response(target)
-        for target in list_external_project_targets(db, workspace_id)
-    ]
-
-
-@app.get(
-    "/workspaces/{workspace_id}/external-targets/{target_id}",
-    response_model=ExternalProjectTargetResponse,
-)
-def read_external_target(
-    workspace_id: str,
-    target_id: str,
-    db: DbSession = Depends(get_db),
-) -> ExternalProjectTargetResponse:
-    if get_workspace(db, workspace_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-
-    target = get_external_project_target(db, workspace_id, target_id)
-    if target is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="External target not found",
-        )
-    return external_target_response(target)
-
 
 def agent_contact_response(agent: Agent) -> AgentContactResponse:
     profile = profile_for_agent(agent)
@@ -724,33 +307,6 @@ def draft_input_from_request(request: AgentProfileDraftCreateRequest) -> AgentPr
         shell_commands=request.shell_commands,
         tool_permissions=request.tool_permissions,
         unrestricted_filesystem_access=request.unrestricted_filesystem_access,
-    )
-
-
-def provider_config_response(config: ProviderConfig) -> ProviderConfigResponse:
-    return ProviderConfigResponse(
-        providerId=config.provider_id,
-        displayName=config.display_name,
-        adapterType=config.adapter_type,
-        authStatus=config.auth_status,
-        available=config.available,
-        defaultForRoles=config.default_for_roles,
-        supportedModes=config.supported_modes,
-    )
-
-
-def deployment_provider_response(provider) -> DeploymentProviderResponse:
-    return DeploymentProviderResponse(
-        providerId=provider.provider_id,
-        displayName=provider.display_name,
-        providerType=provider.provider_type,
-        supportedArtifactKinds=list(provider.supported_artifact_kinds),
-        supportedTargetTypes=list(provider.supported_target_types),
-        authStatus=provider.auth_status,
-        available=provider.available,
-        requiresApproval=provider.requires_approval,
-        secretEnvVars=list(provider.secret_env_vars),
-        description=provider.description,
     )
 
 
@@ -932,21 +488,6 @@ def runtime_config_profiles_for_workspace(
     return list_agent_profile_registry(
         _ordered_enabled_agents(db),
         drafts=list_agent_profile_drafts(db, workspace_id=workspace_id),
-    )
-
-
-@app.get("/provider-configs", response_model=list[ProviderConfigResponse])
-def read_provider_configs() -> list[ProviderConfigResponse]:
-    return [provider_config_response(config) for config in list_provider_configs()]
-
-
-@app.get("/deployment-providers", response_model=DeploymentProviderRegistryResponse)
-def read_deployment_providers() -> DeploymentProviderRegistryResponse:
-    return DeploymentProviderRegistryResponse(
-        providers=[
-            deployment_provider_response(provider)
-            for provider in list_deployment_providers()
-        ],
     )
 
 
@@ -1238,276 +779,6 @@ def _ordered_enabled_agents(db: DbSession) -> list[Agent]:
         key=lambda agent: role_order.get(agent.role, 99),
     )
     return list(agents)
-
-
-@app.get(
-    "/workspaces/{workspace_id}/sessions",
-    response_model=list[SessionResponse],
-)
-def read_workspace_sessions(
-    workspace_id: str,
-    db: DbSession = Depends(get_db),
-) -> list[AgentHubSession]:
-    if get_workspace(db, workspace_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-    return list_workspace_sessions(db, workspace_id)
-
-
-@app.post(
-    "/workspaces/{workspace_id}/sessions",
-    response_model=SessionResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_workspace_session(
-    workspace_id: str,
-    request: SessionCreateRequest,
-    db: DbSession = Depends(get_db),
-    worktrees: WorktreeService = Depends(get_worktree_service),
-) -> AgentHubSession:
-    workspace = get_workspace(db, workspace_id)
-    if workspace is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-
-    now = utc_now()
-    session = AgentHubSession(
-        workspace_id=workspace.id,
-        title=request.title or next_session_title(db, workspace.id),
-        session_type="demo",
-        bound_branch=workspace.default_branch,
-        memory_snapshot_id=create_memory_snapshot(
-            db,
-            workspace_id=workspace.id,
-            reason="session_create",
-        ).id,
-        worktree_path=str(worktrees.session_path(workspace.id, "")),
-        status="active",
-        last_message_at=now,
-        created_at=now,
-        updated_at=now,
-    )
-    try:
-        worktree_path = worktrees.create_session_worktree(workspace, session.id)
-    except WorktreeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Could not create session worktree: {exc}",
-        ) from exc
-
-    session.worktree_path = str(worktree_path)
-    return persist_session(db, session)
-
-
-@app.get("/sessions/{session_id}", response_model=SessionResponse)
-def read_session(
-    session_id: str,
-    db: DbSession = Depends(get_db),
-) -> AgentHubSession:
-    session = get_session(db, session_id)
-    if session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-    ensure_session_memory_snapshot(db, session)
-    return session
-
-
-@app.post("/sessions/{session_id}/memory-snapshot/refresh", response_model=SessionResponse)
-def refresh_memory_snapshot_for_session(
-    session_id: str,
-    db: DbSession = Depends(get_db),
-) -> AgentHubSession:
-    session = get_session(db, session_id)
-    if session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-    try:
-        refresh_session_memory_snapshot(db, session_id)
-    except MemorySnapshotError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    refreshed = get_session(db, session_id)
-    if refreshed is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-    return refreshed
-
-
-@app.patch("/sessions/{session_id}", response_model=SessionResponse)
-def update_session(
-    session_id: str,
-    request: SessionUpdateRequest,
-    db: DbSession = Depends(get_db),
-) -> AgentHubSession:
-    session = get_session(db, session_id)
-    if session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-
-    if request.title is not None:
-        session.title = request.title
-    if request.status is not None:
-        session.status = request.status
-
-    return persist_session(db, session)
-
-
-@app.patch("/sessions/{session_id}/target-selection", response_model=SessionResponse)
-def update_session_target_selection(
-    session_id: str,
-    request: SessionTargetSelectionRequest,
-    db: DbSession = Depends(get_db),
-) -> AgentHubSession:
-    session = get_session(db, session_id)
-    if session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-
-    if request.frontend_target_id is not None:
-        _validate_session_target(
-            db,
-            session.workspace_id,
-            request.frontend_target_id,
-            expected_type="frontend",
-        )
-        session.active_frontend_target_id = request.frontend_target_id
-    if request.backend_target_id is not None:
-        _validate_session_target(
-            db,
-            session.workspace_id,
-            request.backend_target_id,
-            expected_type="backend",
-        )
-        session.active_backend_target_id = request.backend_target_id
-
-    return persist_session(db, session)
-
-
-def _validate_session_target(
-    db: DbSession,
-    workspace_id: str,
-    target_id: str,
-    *,
-    expected_type: str,
-) -> None:
-    try:
-        target = get_target_for_workspace(db, workspace_id, target_id)
-    except TargetRegistryError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-    if target.type != expected_type:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Target {target_id} is not a {expected_type} target.",
-        )
-
-
-@app.get("/sessions/{session_id}/messages", response_model=list[MessageResponse])
-def read_session_messages(
-    session_id: str,
-    db: DbSession = Depends(get_db),
-) -> list[Message]:
-    if get_session(db, session_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-    return list_session_messages(db, session_id)
-
-
-@app.post(
-    "/sessions/{session_id}/messages",
-    response_model=MessageResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_message(
-    session_id: str,
-    request: MessageCreateRequest,
-    background_tasks: BackgroundTasks,
-    db: DbSession = Depends(get_db),
-) -> Message:
-    session = get_session(db, session_id)
-    if session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-
-    message = Message(
-        session_id=session.id,
-        sender_type=request.sender_type,
-        sender_id=request.sender_id,
-        content_md=request.content_md,
-        message_kind=request.message_kind,
-        parent_message_id=request.parent_message_id,
-        stream_state=request.stream_state,
-        context_json=json.dumps(request.context, separators=(",", ":")),
-    )
-    created = create_session_message(db, session, message)
-    if created.sender_type == "user":
-        try:
-            planned_tasks = plan_for_message(db, created, created.content_md)
-            complete_synthetic_planning_tasks(db, planned_tasks)
-            refresh_session_scheduler_state(db, session.id)
-            auto_start_safe_tasks(db, planned_tasks, background_tasks)
-        except MentionParseError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(exc),
-            ) from exc
-
-    refresh_session_ledger(db, session.id)
-    return created
-
-
-def auto_start_safe_tasks(
-    db: DbSession,
-    tasks: list[Task],
-    background_tasks: BackgroundTasks,
-) -> None:
-    for task in tasks:
-        try:
-            plan = json.loads(task.plan_json)
-        except json.JSONDecodeError:
-            continue
-        if not _should_auto_start_task(db, task, plan):
-            continue
-        decision = evaluate_and_apply_scheduler_readiness(db, task)
-        if not decision.runnable:
-            continue
-        task_run = create_task_run(db, task.id)
-        schedule_task_run_execution(background_tasks)
-
-
-def _should_auto_start_task(db: DbSession, task: Task, plan: dict[str, Any]) -> bool:
-    if not plan.get("autoStart"):
-        return False
-    files = plan.get("files", [])
-    if not isinstance(files, list) or not files:
-        return False
-    if task.intent_type not in {"frontend_change", "backend_change"}:
-        return False
-
-    target_id = plan.get("targetId")
-    if not isinstance(target_id, str):
-        target_id = (
-            DEMO_FRONTEND_TARGET_ID
-            if task.intent_type == "frontend_change"
-            else DEMO_BACKEND_TARGET_ID
-        )
-    session = db.get(AgentHubSession, task.session_id)
-    if session is None:
-        return False
-    try:
-        target = get_target_for_workspace(db, session.workspace_id, target_id)
-    except TargetRegistryError:
-        return False
-    if target.requires_platform_mode or target.requires_approval:
-        return False
-    expected_role = "frontend" if task.intent_type == "frontend_change" else "backend"
-    if not target.allows_agent(expected_role):
-        return False
-    safe_target = plan.get("safeTarget")
-    if isinstance(safe_target, str) and safe_target and not target.permits_path(safe_target):
-        return False
-    return all(_is_safe_target_path(path, target) for path in files)
-
-
-def _is_safe_target_path(path: object, target: TargetProject) -> bool:
-    if not isinstance(path, str) or not path.strip():
-        return False
-    normalized = path.replace("\\", "/").strip()
-    if normalized.startswith("/") or normalized.startswith("../") or "/../" in normalized:
-        return False
-    return target.permits_path(normalized)
 
 
 def ledger_response(

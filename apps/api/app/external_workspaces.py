@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from pathlib import Path
 from typing import Optional
@@ -25,20 +26,71 @@ DEFAULT_EXTERNAL_DENIED_PATHS: tuple[str, ...] = (
     "coverage",
 )
 
-SYSTEM_ROOTS: tuple[Path, ...] = tuple(
-    Path(path)
-    for path in (
-        "/System",
-        "/Library",
-        "/Applications",
-        "/bin",
-        "/sbin",
-        "/usr",
-        "/etc",
-        "/dev",
-        "/proc",
-    )
+POSIX_SYSTEM_ROOT_STRINGS: tuple[str, ...] = (
+    "/System",
+    "/Library",
+    "/Applications",
+    "/bin",
+    "/sbin",
+    "/usr",
+    "/etc",
+    "/dev",
+    "/proc",
 )
+
+WINDOWS_SYSTEM_ENV_NAMES: tuple[str, ...] = (
+    "SystemRoot",
+    "WINDIR",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "ProgramData",
+)
+
+
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for path in paths:
+        key = os.path.normcase(str(path))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
+
+
+def _default_system_roots() -> tuple[Path, ...]:
+    roots: list[Path] = []
+    if os.name == "nt":
+        candidates = [os.environ.get(name) for name in WINDOWS_SYSTEM_ENV_NAMES]
+        system_drive = os.environ.get("SystemDrive", "C:")
+        candidates.extend(
+            [
+                rf"{system_drive}\Windows",
+                rf"{system_drive}\Program Files",
+                rf"{system_drive}\Program Files (x86)",
+                rf"{system_drive}\ProgramData",
+            ]
+        )
+    else:
+        candidates = list(POSIX_SYSTEM_ROOT_STRINGS)
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        roots.append(Path(candidate).expanduser().resolve(strict=False))
+    return tuple(_dedupe_paths(roots))
+
+
+SYSTEM_ROOTS: tuple[Path, ...] = _default_system_roots()
+
+
+def is_system_path(path: Path) -> bool:
+    resolved = path.expanduser().resolve(strict=False)
+    return any(
+        resolved == system_root or system_root in resolved.parents
+        for system_root in SYSTEM_ROOTS
+    )
 
 TARGET_ID_PATTERN = re.compile(r"^external-[a-z0-9][a-z0-9-]{1,80}$")
 
@@ -202,11 +254,10 @@ def _validate_root_path(root_path: str) -> Path:
             f"Cannot register this directory directly: {path}. "
             "Choose a specific project directory, e.g. ~/Desktop/my-project."
         )
-    for system_root in SYSTEM_ROOTS:
-        if path == system_root or system_root in path.parents:
-            raise ExternalWorkspaceRegistrationError(
-                f"System directory cannot be registered: {path}"
-            )
+    if is_system_path(path):
+        raise ExternalWorkspaceRegistrationError(
+            f"System directory cannot be registered: {path}"
+        )
     return path
 
 

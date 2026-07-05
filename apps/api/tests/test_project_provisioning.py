@@ -7,9 +7,26 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
 
-from app.main import app, get_db
+from app.dependencies import get_db, get_worktree_service
+from app.main import app
 from app.models import Workspace
 from app.project_provisioning import plan_project_provisioning
+from app.worktrees import safe_path_segment
+
+
+class FakeWorktreeService:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+
+    def session_path(self, workspace_id: str, session_id: str) -> Path:
+        segment = safe_path_segment(session_id) if session_id else "pending"
+        return self.root / safe_path_segment(workspace_id) / segment
+
+    def create_session_worktree(self, workspace: Workspace, session_id: str) -> Path:
+        path = self.session_path(workspace.id, session_id)
+        path.mkdir(parents=True, exist_ok=True)
+        (path / ".git").write_text("fake test worktree\n", encoding="utf-8")
+        return path.resolve()
 
 
 def test_project_provisioning_api_returns_dry_run_plan() -> None:
@@ -57,7 +74,7 @@ def test_project_provisioning_api_returns_dry_run_plan() -> None:
 def test_project_provisioning_apply_scaffolds_registers_targets_and_activates_session(
     tmp_path: Path,
 ) -> None:
-    client = TestClient(_app_with_memory_db())
+    client = TestClient(_app_with_memory_db(tmp_path / "worktrees"))
     try:
         workspace = client.get("/workspaces/demo").json()
         session = client.post(
@@ -135,7 +152,7 @@ def test_project_provisioning_apply_scaffolds_registers_targets_and_activates_se
 def test_project_provisioning_apply_chinese_fullstack_request_registers_backend_target(
     tmp_path: Path,
 ) -> None:
-    client = TestClient(_app_with_memory_db())
+    client = TestClient(_app_with_memory_db(tmp_path / "worktrees"))
     try:
         workspace = client.get("/workspaces/demo").json()
         session = client.post(
@@ -170,7 +187,7 @@ def test_project_provisioning_apply_chinese_fullstack_request_registers_backend_
 def test_project_provisioning_apply_repairs_agenthub_scaffold_missing_backend_target(
     tmp_path: Path,
 ) -> None:
-    client = TestClient(_app_with_memory_db())
+    client = TestClient(_app_with_memory_db(tmp_path / "worktrees"))
     try:
         workspace = client.get("/workspaces/demo").json()
         session = client.post(
@@ -234,7 +251,7 @@ def test_project_provisioning_apply_repairs_agenthub_scaffold_missing_backend_ta
 
 
 def test_project_provisioning_apply_rejects_non_empty_folder(tmp_path: Path) -> None:
-    client = TestClient(_app_with_memory_db())
+    client = TestClient(_app_with_memory_db(tmp_path / "worktrees"))
     try:
         workspace = client.get("/workspaces/demo").json()
         session = client.post(
@@ -270,7 +287,7 @@ def test_project_provisioning_apply_rejects_non_empty_folder(tmp_path: Path) -> 
 def test_project_provisioning_apply_rejects_target_id_conflict_before_writing(
     tmp_path: Path,
 ) -> None:
-    client = TestClient(_app_with_memory_db())
+    client = TestClient(_app_with_memory_db(tmp_path / "worktrees"))
     try:
         workspace = client.get("/workspaces/demo").json()
         session = client.post(
@@ -322,7 +339,9 @@ def test_new_fullstack_request_plans_frontend_and_backend_boundaries() -> None:
 
     assert plan.project_kind == "new_project"
     assert plan.project_slug == "health-management"
-    assert plan.project_root.endswith("/Desktop/agenthub-rehearsals/health-management")
+    assert Path(plan.project_root) == (
+        Path.home() / "Desktop" / "agenthub-rehearsals" / "health-management"
+    )
     assert plan.requires_frontend is True
     assert plan.requires_backend is True
     assert plan.default_frontend_stack == "vite-react"
@@ -356,7 +375,7 @@ def test_existing_project_root_keeps_existing_project_kind(tmp_path: Path) -> No
     assert plan.target_drafts[0].role == "frontend"
 
 
-def _app_with_memory_db():
+def _app_with_memory_db(worktrees_root: Path | None = None):
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -379,4 +398,8 @@ def _app_with_memory_db():
             yield db
 
     app.dependency_overrides[get_db] = override_db
+    if worktrees_root is not None:
+        app.dependency_overrides[get_worktree_service] = lambda: FakeWorktreeService(
+            worktrees_root
+        )
     return app

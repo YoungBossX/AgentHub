@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from app.external_workspaces import DEFAULT_EXTERNAL_DENIED_PATHS, SYSTEM_ROOTS
+from app.external_workspaces import DEFAULT_EXTERNAL_DENIED_PATHS, is_system_path
 
 
 class LocalFolderBrowseError(ValueError):
@@ -125,7 +125,7 @@ def _is_hidden_or_denied(path: Path) -> bool:
 
 
 def _is_system_path(path: Path) -> bool:
-    return any(path == root or root in path.parents for root in SYSTEM_ROOTS)
+    return is_system_path(path)
 
 
 def _parent_path(path: Path) -> Optional[str]:

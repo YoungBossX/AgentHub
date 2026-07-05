@@ -8,7 +8,8 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.main import app, get_db, get_worktree_service
+from app.dependencies import get_db, get_worktree_service
+from app.main import app
 from app.models import Agent, MemorySnapshot, Session, Task, TaskRun, Workspace
 from app.repositories import next_session_title
 from app.worktrees import WorktreeService, safe_path_segment

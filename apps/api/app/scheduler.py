@@ -787,9 +787,10 @@ def _planned_files_for_task(task: Task) -> list[str]:
 def _git_dirty_files(root: Path) -> Optional[list[str]]:
     if not root.exists():
         return None
+    root = root.resolve()
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=all"],
+            ["git", "status", "--porcelain", "--untracked-files=all", "--", "."],
             cwd=root,
             capture_output=True,
             text=True,
@@ -799,6 +800,7 @@ def _git_dirty_files(root: Path) -> Optional[list[str]]:
         return None
     if result.returncode != 0:
         return None
+    repo_root = _git_repo_root(root)
     files: list[str] = []
     for line in result.stdout.splitlines():
         if not line:
@@ -808,8 +810,42 @@ def _git_dirty_files(root: Path) -> Optional[list[str]]:
             path = path.split(" -> ", 1)[1]
         path = path.strip()
         if path:
-            files.append(path)
+            files.append(_dirty_path_relative_to_root(path, root=root, repo_root=repo_root))
     return files
+
+
+def _git_repo_root(root: Path) -> Optional[Path]:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    first_line = result.stdout.splitlines()[0] if result.stdout.splitlines() else ""
+    return Path(first_line).resolve() if first_line else None
+
+
+def _dirty_path_relative_to_root(
+    path: str,
+    *,
+    root: Path,
+    repo_root: Optional[Path],
+) -> str:
+    normalized = path.replace("\\", "/")
+    candidate_roots = [candidate for candidate in (repo_root, root) if candidate is not None]
+    for candidate_root in candidate_roots:
+        try:
+            relative = (candidate_root / normalized).resolve().relative_to(root)
+        except ValueError:
+            continue
+        return relative.as_posix()
+    return normalized
 
 
 def _contract_hash(contract: dict[str, Any]) -> str:

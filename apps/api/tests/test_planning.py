@@ -13,8 +13,7 @@ from app.external_workspaces import (
     register_external_project_target,
 )
 from app.main import app, get_db
-from app.main import _should_auto_start_task
-import app.main as main_module
+import app.routes.messages as messages_module
 from app.models import Agent, Message, Session, Task, Workspace
 from app.agent_runtime_config import RuntimeRoleConfig, upsert_runtime_config
 from app.config import Settings
@@ -27,6 +26,7 @@ from app.planning import (
     parse_frontend_intent,
     parse_mentions,
 )
+from app.routes.messages import _should_auto_start_task
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_service import build_plan_draft
 from app.task_graph_builder import TaskGraphTaskSpec
@@ -2012,7 +2012,7 @@ def test_fullstack_requests_use_active_provisioned_targets_for_multiple_domains(
     slug: str,
 ) -> None:
     monkeypatch.setattr(
-        main_module,
+        messages_module,
         "auto_start_safe_tasks",
         lambda _db, _tasks, _background_tasks: None,
     )

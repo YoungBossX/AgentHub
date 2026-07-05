@@ -1,14 +1,16 @@
+import {
+  ApiRequestError,
+  apiUrl,
+  responseErrorMessage,
+  type Fetcher,
+} from "./api-core"
+
+export { ApiRequestError } from "./api-core"
+
 export type BackendHealth = {
   status: string
   service: string
   database: string
-}
-
-export class ApiRequestError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = "ApiRequestError"
-  }
 }
 
 export type Workspace = {
@@ -580,12 +582,6 @@ export type ArtifactWorkbenchEditInput = {
 }
 
 export type MessageContextInput = Record<string, unknown>
-
-type Fetcher = typeof fetch
-
-function apiUrl(backendUrl: string, path: string) {
-  return `${backendUrl.replace(/\/$/, "")}${path}`
-}
 
 export async function getBackendHealth(
   backendUrl: string,
@@ -1202,7 +1198,6 @@ export async function denyTaskRun(
 
   return (await response.json()) as TaskRun
 }
-
 export async function listTaskRunDiffs(
   backendUrl: string,
   taskRunId: string,
@@ -1385,16 +1380,4 @@ async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {
   }
 
   return (await response.json()) as TaskRun
-}
-
-async function responseErrorMessage(response: Response, fallback: string): Promise<string> {
-  try {
-    const payload = (await response.json()) as { detail?: unknown }
-    if (typeof payload.detail === "string" && payload.detail.trim().length > 0) {
-      return payload.detail
-    }
-  } catch {
-    return fallback
-  }
-  return fallback
 }
