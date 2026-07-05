@@ -492,6 +492,7 @@ def test_provisioned_project_runs_use_durable_queue_and_release_target_lock(tmp_
             title="First provisioned frontend task",
             intent_type="frontend_change",
             status="pending",
+            priority=0,
             assigned_agent_id=frontend.id,
             plan_json=json.dumps(plan, separators=(",", ":")),
         )
@@ -500,6 +501,7 @@ def test_provisioned_project_runs_use_durable_queue_and_release_target_lock(tmp_
             title="Second provisioned frontend task",
             intent_type="frontend_change",
             status="pending",
+            priority=1,
             assigned_agent_id=frontend.id,
             plan_json=json.dumps(plan, separators=(",", ":")),
         )

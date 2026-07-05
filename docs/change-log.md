@@ -9,7 +9,7 @@
 - 新增 `apps/api/app/routes/messages.py`，将 Session message 读写、用户消息规划触发、自动启动安全判定从 `main.py` 拆出；`main.py` 仅挂载 `messages_router`，保留原 `/sessions/{session_id}/messages` API 行为。
 - 迁移时保留 `autoStart`、`safeTarget`、目标 agent 权限和目标路径白名单校验，避免自动启动任务越过 demo target 边界。
 - 修复外部项目 dirty-worktree 检查的路径坐标问题：当外部 target 位于 AgentHub 仓库子目录时，Git 返回的仓库根相对路径会先归一化为 target root 相对路径，再与计划文件比较，避免被父仓库未提交改动误判阻塞。
-- 让调度器测试中的同目标写任务显式设置 `priority`，避免同一时间戳下 UUID 排序导致“第二个任务”反向阻塞“第一个任务”的非确定性失败。
+- 让调度器测试中的同目标写任务和 provisioned frontend run 任务显式设置 `priority`，避免同一时间戳下 UUID 排序导致“第二个任务”反向阻塞“第一个任务”的非确定性失败。
 - 将 pytest `--basetemp .pytest-tmp` 生成的临时目录加入 `.gitignore`，避免测试产物进入提交候选或污染 `git status`。
 
 ### 验证
