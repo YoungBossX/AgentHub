@@ -1,327 +1,524 @@
-# AgentHub
+AgentHub
 
-AgentHub 是一个本地单用户、IM 风格的 Agent Coding Workspace / 多 Agent 编码协作平台原型。它已经支持 Planner、前端/后端/评审 Agent、外部项目目标和运行时 provider 配置，但还不是完整的多用户飞书/微信式协作平台。Demo 闭环是：
+IM 式 Multi-Agent Coding Workspace：把一次 AI 编程请求转换为可拆解、可执行、可追踪、可验证的工程任务。
 
-```text
-用户需求 -> Orchestrator 拆解任务 -> Agent 执行 -> 真实 Git Diff -> 网页预览 -> 部署卡片
-```
+AgentHub 面向本地开发工作流，将 Planner / Orchestrator、角色 Agent、Coding Provider、Git Worktree、TaskRunEvent 与 Artifact 组织成完整的多 Agent 编程协作链路。
 
-## 比赛交付看点
+用户在 Session 中提出需求后，系统会生成任务计划，由不同角色 Agent 在受控工作区内执行代码任务，并将结果沉淀为 Diff、Review、Preview 与运行事件，让 AI 编程过程从自然语言回答进一步转化为可检查的工程交付。
 
-AgentHub 的比赛主线不是“做一个聊天壳”，而是把多 Agent 编程协作做成可验证的本地闭环：用户在 IM 式会话里提出需求，Orchestrator 拆解任务，角色 Agent 在受控 worktree/target 中执行，最后用 Diff、Review、Preview、Deploy card 和 Run Diagnostics 证明产出真实存在。
+User Message
+    ↓
+Planner / Orchestrator
+    ↓
+Task Graph
+    ↓
+TaskRun + Scheduler
+    ↓
+ProviderGateway
+    ↓
+Coding Adapter
+    ↓
+Git Worktree / Project Target
+    ↓
+Diff · Review · Preview
+    ↓
+TaskRunEvent · SSE
+    ↓
+Web Workspace
 
-| 评分维度 | 仓库证据 | 演示动作 |
-|---|---|---|
-| AI 协作能力 | `AGENTS.md`、`openspec/changes/*`、`docs/change-log.md` 记录了规则、Spec、任务拆解和演进过程 | 说明如何用 OpenSpec/guardrails 限定 AI 只做当前任务，并保留每次交付证据 |
-| 功能完整度 | IM 风格 Session、`@orchestrator` / `@frontend` / `@backend` / `@qa` 路由、TaskRun 生命周期 | 新建 Session，发送需求，展示计划、任务状态和多 Agent 执行轨迹 |
-| 生成效果质量 | 真实 Git Diff、Review、Vite Preview、部署状态卡片、右侧产物面板 | 打开 Diff，启动预览，在 iframe 中查看页面，再创建部署卡片 |
-| 代码理解度 | FastAPI + Next.js + SQLite + SSE + session worktree + adapter gateway 的清晰边界 | 按“消息 -> 规划 -> 执行 -> 证据 -> 预览”讲核心链路 |
-| 创新与产品感 | 显式 fallback、文件快照 Diff、Run Diagnostics、外部项目 target/provisioning | 演示真实 provider 不可用时如何诚实降级，同时不伪造成功 |
+Highlights
 
-### 3 分钟 Demo 路径
+1. Multi-Agent Task Orchestration
 
-1. 打开本地 Web 端，创建或选择一个 Session。
-2. 输入 `@orchestrator build a login page for the demo app`。
-3. 展示 Orchestrator 生成的任务计划，点击 **Start run**。
-4. 展示执行完成后的 Diff、Review、Preview 和 Deploy card。
-5. 如真实 Codex/Claude CLI 不可用，点击 **Force Codex failure**，再用 **Retry with ScriptedMockAdapter** 展示兜底闭环。
-6. 讲解证据链：每次运行都落到 TaskRun、TaskRunEvent、Artifact 和右侧产物面板，而不是只返回一段聊天文本。
+AgentHub 将一次用户需求拆成多个可执行 Task，并通过任务图组织：
 
-## 交付文档入口
+role：任务由哪个角色执行，例如 frontend / backend / qa；
 
-| 文档 | 用途 |
-|---|---|
-| [`docs/demo-script.md`](docs/demo-script.md) | 3-10 分钟录屏、现场演示和答辩脚本 |
-| [`docs/architecture.md`](docs/architecture.md) | 技术架构、核心链路、模块地图、可靠性边界和答辩讲法 |
-| [`AGENTS.md`](AGENTS.md) | AI 协作守则、项目边界和 demo baseline guardrails |
-| [`openspec/changes`](openspec/changes) | OpenSpec 过程证据，展示 Spec、任务拆解和演进记录 |
-| [`docs/change-log.md`](docs/change-log.md) | 变更日志，展示关键实现、验证和文档更新 |
+target：任务允许作用于哪个代码目标；
 
-## 技术栈
+dependsOn：任务之间的依赖关系；
 
-| 层 | 技术 |
-|---|---|
-| 前端 UI | Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui |
-| 后端 | FastAPI, Pydantic, SQLModel, SQLite |
-| Demo 应用 | Vite React (`apps/demo`) |
-| 实时通信 | SSE (基于持久化 TaskRunEvent) |
-| 隔离 | 每个 Session 一个 Git Worktree |
-| Agent 适配器 | CodexAdapter, ClaudeCodeAdapter, ScriptedMockAdapter |
+intent：当前任务需要完成的工程目标。
 
-## 前置条件
+planning.py 负责角色提及解析、Planner / LLM Planner 调用与计划生成，并通过任务图校验保证计划结构能够进入后续执行链路。
 
-两个平台都需要以下工具，请先安装：
+2. ProviderGateway & Runtime Mapping
 
-- **Node.js** ≥ 18 + **pnpm** ≥ 9（项目 `package.json` 锁定了 `pnpm@10.33.4`）
-- **Python** ≥ 3.9
-- **Git**
+Agent 角色不直接绑定具体模型或 CLI。
 
-可选（真实 Agent 执行时按需使用）：
-- **Codex CLI**：已登录，macOS 默认路径 `/Applications/Codex.app/Contents/Resources/codex`，或通过 `CODEX_CLI_PATH` 环境变量指定
-- **Claude Code CLI**：已登录，通过 `claude` 命令或 `CLAUDE_CODE_CLI_PATH` 环境变量指定
+ProviderGateway 将业务编排与具体 Coding Provider 解耦，统一负责：
 
----
+根据 role / target / capability 解析运行 Provider；
 
-## 快速开始
+Provider 健康检查与运行时信息管理；
 
-以下命令**全部在仓库根目录执行**。请根据你的操作系统选择对应 tab。
+Provider 容量控制；
 
-### 1. 安装 JS 依赖
+Adapter 能力映射；
 
-两个平台相同：
+Provider 运行证据记录。
 
-```bash
+当前 Coding Adapter 包括：
+
+CodexAdapter
+
+ClaudeCodeAdapter
+
+这种设计使上层 TaskRun 只依赖统一执行接口，而不需要在业务逻辑中直接耦合某个模型或 CLI。
+
+3. Git Worktree Isolation
+
+多 Agent 同时执行代码任务时，最大的工程问题之一是写入冲突。
+
+AgentHub 为 Session 建立独立 Git Worktree，使不同会话拥有各自的代码工作目录：
+
+Repository
+├── main working tree
+├── session-A worktree
+├── session-B worktree
+└── session-C worktree
+
+这样可以保留真实 Git Diff，同时避免不同 Session 直接修改同一个工作目录。
+
+4. Session Queue & Target Lock
+
+仅有 Worktree 不能覆盖所有并发写场景，因此执行层进一步加入 Session Queue 与 Target Lock。
+
+TaskRun
+   ↓
+Session Queue
+   ↓
+Scheduler Readiness
+   ↓
+Target Lock
+   ↓
+Adapter Execution
+
+当前策略包括：
+
+readonly Task 可以安全并行；
+
+write Task 进入 Session 写队列；
+
+同一写目标通过 Target Lock 建立互斥边界；
+
+TaskRun 生命周期与锁状态由执行引擎统一维护。
+
+核心实现：
+
+apps/api/app/session_queue.py
+
+apps/api/app/target_locks.py
+
+apps/api/app/scheduler.py
+
+apps/api/app/run_engine.py
+
+5. Persistent TaskRun Events + SSE
+
+Agent 执行通常是一个持续产生状态变化的长任务。
+
+AgentHub 将运行过程标准化为 TaskRunEvent，并持久化到 SQLite：
+
+Agent / Adapter Event
+        ↓
+TaskRunEvent
+        ↓
+SQLite
+        ↓
+SSE
+        ↓
+Web UI
+
+前端不需要持续轮询完整 TaskRun，而是通过 SSE 接收增量事件并更新：
+
+Task 状态；
+
+Provider 执行信息；
+
+Queue / Lock 状态；
+
+Artifact；
+
+执行轨迹；
+
+运行诊断。
+
+持久化事件同时为会话恢复和运行回放提供数据基础。
+
+6. Engineering Evidence Chain
+
+AgentHub 不把“模型返回完成”作为任务完成的唯一依据。
+
+每次 TaskRun 可以继续沉淀工程产物：
+
+Artifact
+
+作用
+
+Diff
+
+展示真实代码修改
+
+Review
+
+对代码变更进行审查
+
+Preview
+
+启动本地 Web 预览并记录状态
+
+TaskRunEvent
+
+保存完整运行轨迹
+
+Diagnostics
+
+将运行信息投影为可读诊断
+
+核心链路：
+
+TaskRun
+  ├─ Adapter execution
+  ├─ Diff collection
+  ├─ Review
+  ├─ Preview
+  └─ TaskRunEvent persistence
+
+Architecture
+
+flowchart LR
+    U[User Message] --> P[Planner / Orchestrator]
+    P --> TG[Task Graph]
+    TG --> TR[TaskRun]
+    TR --> SQ[Session Queue / Scheduler]
+    SQ --> PG[ProviderGateway]
+    PG --> AD[Codex / Claude Code Adapter]
+    AD --> WT[Git Worktree / Project Target]
+    WT --> DF[Diff]
+    WT --> RV[Review]
+    WT --> PV[Preview]
+    TR --> EV[TaskRunEvent]
+    DF --> AR[Artifact]
+    RV --> AR
+    PV --> AR
+    EV --> SSE[SSE]
+    SSE --> WEB[Next.js Workspace]
+    AR --> WEB
+
+Layered View
+
+Layer
+
+Components
+
+Responsibility
+
+Interaction
+
+Session, Message, Web Workspace
+
+用户交互与上下文入口
+
+Planning
+
+Planner, LLM Planner, Task Graph
+
+需求理解、角色路由、任务拆解
+
+Execution
+
+TaskRun, Scheduler, ProviderGateway, Adapter
+
+运行调度与 Coding Provider 执行
+
+Isolation
+
+Git Worktree, Target Scope, Target Lock
+
+控制代码访问和并发写入
+
+Evidence
+
+Diff, Review, Preview, Artifact
+
+形成可验证工程产物
+
+Observability
+
+TaskRunEvent, SSE, Diagnostics
+
+实时追踪与运行状态投影
+
+Core Execution Flow
+
+一次典型运行流程如下：
+
+用户在 Session 中发送需求；
+
+Planner 解析角色提及、上下文与任务意图；
+
+Orchestrator / LLM Planner 生成 Task Graph；
+
+TaskRun 创建并进入 Scheduler / Session Queue；
+
+系统确认 Target、访问模式与写入边界；
+
+ProviderGateway 解析 Coding Provider；
+
+Adapter 在对应 Worktree / Target 中执行；
+
+系统采集 Diff、Review 与 Preview；
+
+执行过程持续写入 TaskRunEvent；
+
+SSE 将运行状态和 Artifact 投影到 Web Workspace。
+
+Tech Stack
+
+Backend
+
+Python
+
+FastAPI
+
+Pydantic
+
+SQLModel
+
+SQLite
+
+Frontend
+
+Next.js App Router
+
+TypeScript
+
+Tailwind CSS
+
+shadcn/ui
+
+Agent Runtime
+
+Codex CLI
+
+Claude Code CLI
+
+ProviderGateway
+
+Task Graph
+
+Runtime Role Config
+
+Engineering Infrastructure
+
+Git Worktree
+
+Session Queue
+
+Target Lock
+
+Server-Sent Events (SSE)
+
+Vite React Preview
+
+Repository Structure
+
+AgentHub/
+├── apps/
+│   ├── api/                 # FastAPI backend
+│   │   └── app/
+│   │       ├── planning.py
+│   │       ├── run_engine.py
+│   │       ├── provider_gateway.py
+│   │       ├── session_queue.py
+│   │       ├── target_locks.py
+│   │       ├── diffs.py
+│   │       ├── reviews.py
+│   │       ├── previews.py
+│   │       └── models.py
+│   │
+│   ├── web/                 # Next.js workspace
+│   ├── demo/                # Vite React target application
+│   └── demo-api/            # FastAPI target application
+│
+├── docs/                    # Architecture and project documents
+├── openspec/                # Feature specifications / changes
+├── scripts/                 # Development scripts
+└── README.md
+
+Key Modules
+
+Module
+
+Responsibility
+
+planning.py
+
+Planner、角色提及、LLM Planner、Task Graph
+
+run_engine.py
+
+TaskRun 主执行链路与执行生命周期
+
+provider_gateway.py
+
+Provider 解析、健康、容量与运行上下文
+
+session_queue.py
+
+Session 任务队列与读写门控
+
+target_locks.py
+
+Target 写锁
+
+diffs.py
+
+Git Diff / 文件差异采集
+
+reviews.py
+
+Review Artifact
+
+previews.py
+
+本地 Preview 生命周期
+
+run_diagnostics.py
+
+运行事件与 Artifact 的诊断投影
+
+apps/web
+
+Session、消息、任务、执行轨迹和 Artifact UI
+
+Quick Start
+
+Requirements
+
+Node.js >= 18
+
+pnpm
+
+Python >= 3.9
+
+Git
+
+如需连接真实 Coding Provider，请提前配置对应的 Codex CLI 或 Claude Code CLI。
+
+1. Install JavaScript Dependencies
+
 pnpm install
-```
 
-建议通过 Corepack 使用 `package.json` 中锁定的 `pnpm@10.33.4`。仓库在 `pnpm-workspace.yaml` 中启用了 `strictDepBuilds`，并且只显式放行 `esbuild`、`sharp`、`unrs-resolver` 三个 Next/Vite 工具链依赖的构建脚本。若 pnpm 提示 `ERR_PNPM_IGNORED_BUILDS`，不要执行全量 `pnpm approve-builds --all`，应先检查新增依赖是否确实需要构建脚本，再把最小 allowlist 写入 `pnpm-workspace.yaml`。
+2. Create Python Environment
 
-### 2. 创建 Python 虚拟环境并安装依赖
+macOS / Linux:
 
-**macOS / Linux：**
-
-```bash
 python3 -m venv .venv
 .venv/bin/pip install -r apps/api/requirements.txt
-```
 
-**Windows (Git Bash / PowerShell)：**
+Windows:
 
-```bash
 python -m venv .venv
-.venv\Scripts\pip install -r apps/api\requirements.txt
-```
+.venv\Scripts\pip install -r apps\api\requirements.txt
 
-> 如果你安装了多个 Python 版本，把 `python3` / `python` 替换为具体版本号如 `python3.12`。
+3. Prepare Demo Target
 
-### 3. 安装 Demo 应用依赖
-
-两个平台相同：
-
-```bash
 pnpm demo:setup
-```
 
-> 依赖安装在 setup 阶段一次性完成，Agent 执行期间不会运行 `npm install`。
+4. Initialize Database
 
-### 4. 初始化数据库
-
-```bash
 pnpm db:init
-```
 
-这会创建 SQLite 表并写入 seed 数据：
-- 1 个 demo 用户
-- 1 个 `AgentHub Demo` 工作区（指向 `apps/demo`）
-- 4 个 Agent：orchestrator, frontend, backend, qa
+5. Start Backend
 
-### 5. 启动后端和前端
-
-**终端 1 — 启动后端：**
-
-```bash
 pnpm dev:api
-```
 
-后端默认监听 `http://127.0.0.1:8000`。可通过 `AGENTHUB_API_PORT` 覆盖端口。
+Default API address:
 
-**终端 2 — 启动前端：**
+http://127.0.0.1:8000
 
-```bash
+6. Start Web Workspace
+
 pnpm dev:web
-```
 
-前端默认监听 `http://127.0.0.1:3000`。可通过 `BACKEND_URL` 覆盖后端地址。
+Open:
 
-打开 `http://127.0.0.1:3000` 即可看到 AgentHub。
+http://127.0.0.1:3000
 
-### 6. 发送第一条 Demo 请求
+Example
 
-在 UI 中创建一个新 Session，输入：
+在 AgentHub Session 中输入：
 
-```text
 @orchestrator build a login page for the demo app
-```
 
-Orchestrator 会自动生成 3 个 Task，点击 **Start run** 即可触发 Agent 执行。
+系统会将需求转换为多个任务，并在工作台中展示：
 
----
+Plan
+ ↓
+Task
+ ↓
+TaskRun
+ ↓
+Agent Execution
+ ↓
+Diff / Review / Preview
+ ↓
+TaskRunEvent
 
-## 实际新建一个全栈应用
+也可以为 Session 绑定外部 frontend / backend Target，使 Agent 在指定项目目录中执行代码任务。
 
-AgentHub 现在支持从一个空文件夹开始创建真实项目，而不是只能修改内置 Demo 应用。推荐流程：
+Development Commands
 
-1. 打开 `http://127.0.0.1:3000`，创建或选择一个 Session。
-2. 进入左侧 **运行设置**（`/settings/runtime`）。
-3. 在工作区目标区域选择一个空文件夹。
-4. 点击 **新建全栈项目**。AgentHub 会在该目录中创建 frontend/backend 项目边界，注册对应的 external frontend/backend targets，并绑定到当前 Session。
-5. 按页面展示的 setup steps 准备依赖。
-6. 回到会话，发送需求，例如：
-
-```text
-@orchestrator 帮我做一个番茄钟软件，前后端分离
-```
-
-Orchestrator 会把任务规划给前端 / 后端 Agent。点击任务上的 **Start run** 后，Agent 会在当前 Session 绑定的项目目录中执行，并生成 Diff、Review、预览和部署卡片等证据。
-
-当前这条路径适用于常见的本地全栈应用开发演示：前端默认 Vite React，后端默认 FastAPI。它不会在 Agent 执行期间自动安装依赖；依赖准备必须在 setup 阶段完成或经过显式审批。
-
----
-
-## Windows 用户注意事项
-
-项目脚本（`scripts/` 目录）使用 **bash** 编写，Windows 上需要以下方式之一执行：
-
-| 方式 | 推荐度 | 说明 |
-|---|---|---|
-| **Git Bash** | 推荐 | 安装 Git for Windows 时自带，直接运行所有 `pnpm` 命令 |
-| **WSL 2** | 推荐 | 完整 Linux 环境，Python venv 路径与 macOS 一致 |
-| **PowerShell** | 可 | 手动执行脚本内容，详见下方 |
-
-**PowerShell 手动启动方式**（如果不用 Git Bash）：
-
-```powershell
-# 初始化数据库
-cd apps\api
-..\..\.venv\Scripts\python -m app.db
-
-# 启动后端
-..\..\.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-
-# 启动前端（仓库根目录）
+# Start web
 pnpm dev:web
-```
 
-> Python venv 路径对照：macOS 用 `.venv/bin/python`，Windows 用 `.venv\Scripts\python.exe`。
+# Start API
+pnpm dev:api
 
----
-
-## 常用命令
-
-| 命令 | 说明 |
-|---|---|
-| `pnpm dev:api` | 启动后端 (127.0.0.1:8000) |
-| `pnpm dev:web` | 启动前端 (127.0.0.1:3000) |
-| `pnpm demo:dev` | 单独启动 Vite Demo 应用 |
-| `pnpm db:init` | 初始化数据库 + seed |
-| `pnpm db:seed` | 仅重新 seed（不重建表） |
-| `pnpm demo:reset` | 安全重置 Demo 数据库（自动备份） |
-| `pnpm check` | 全部代码检查 |
-| `pnpm test` | 全部测试 |
-| `pnpm test:api` | 仅后端测试 |
-| `pnpm test:web` | 仅前端测试 |
-
-### 使用 Claude Code 作为默认 Agent
-
-```bash
-# macOS
-AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code pnpm dev:api
-
-# Windows (PowerShell)
-$env:AGENTHUB_DEFAULT_CODE_ADAPTER="claude_code"; pnpm dev:api
-```
-
----
-
-## Demo 重置
-
-当本地数据库积累过多测试数据时：
-
-```bash
-pnpm demo:reset
-```
-
-- 自动备份当前数据库到 `apps/api/data/backups/demo-reset-<timestamp>/`
-- 保留 `.worktrees`、源代码、依赖
-- 不停止正在运行的预览进程
-- 重置命令会打印备份路径和恢复命令
-
----
-
-## 故障排除
-
-### 前端启动失败
-
-```bash
-pnpm install
-pnpm dev:web
-```
-
-确认后端在 `http://127.0.0.1:8000` 运行。如后端地址不同，设置 `BACKEND_URL`。
-
-### 后端启动失败
-
-```bash
-# macOS
-python3 -m venv .venv
-.venv/bin/pip install -r apps/api/requirements.txt
-
-# Windows
-python -m venv .venv
-.venv\Scripts\pip install -r apps/api\requirements.txt
-```
-
-### 数据库缺失
-
-```bash
+# Initialize database
 pnpm db:init
-```
 
-### Agent CLI 不可用
+# Run checks
+pnpm check
 
-- Codex：确认本机已登录 Codex CLI；可通过 `CODEX_CLI_PATH` 指定路径，适配器实现位于 `apps/api/app/codex_adapter.py`
-- Claude Code：确认 `claude` 命令可用，或通过 `CLAUDE_CODE_CLI_PATH` 指定路径；可用 `AGENTHUB_DEFAULT_CODE_ADAPTER=claude_code` 作为默认编码适配器，适配器实现位于 `apps/api/app/claude_code_adapter.py`
-- 降级路径：UI 中点击 **Force Codex failure** → **Retry with ScriptedMockAdapter**，使用确定性 mock 执行，仍然产生真实文件修改和 diff
+# Run tests
+pnpm test
 
-### 预览端口被占用
+# Start demo target
+pnpm demo:dev
 
-```bash
-AGENTHUB_DEMO_PORT=5174 pnpm demo:dev
-```
+Design Focus
 
-### Demo 依赖缺失
+AgentHub 重点解决的不是“如何让多个模型同时聊天”，而是 多个 Agent 如何在真实代码工作区中安全、可追踪地协作执行任务。
 
-```bash
-pnpm demo:setup
-```
+围绕这个目标，项目形成了四条核心设计主线：
 
-### 降级路径无 Diff
+Task Orchestration
+      +
+Execution Isolation
+      +
+Runtime Provider Abstraction
+      +
+Engineering Evidence
 
-确认 Session 有 Git Worktree，降级 run 已完成。`ScriptedMockAdapter` 需要 worktree 中存在 `apps/demo/src/App.tsx`。
+最终目标是让一次 AI 编程任务不仅有自然语言输出，还能够回答：
 
-### Mock 部署卡片未出现
+谁执行了这个任务？
 
-先创建健康的预览，再在预览卡片上点击 **Create deploy card**。
+使用了哪个运行 Provider？
 
----
+修改了哪个代码目标？
 
-## 项目边界
+是否存在并发写冲突？
 
-当前包括：
-- 单用户本地工作区
-- SSE 实时推送（非 WebSocket）
-- Session 级 Git Worktree 隔离（非 Docker）
-- Vite React 预览
-- SQLite
-- Codex CLI + Claude Code CLI 真实适配器
-- ScriptedMockAdapter 降级适配器
-- Git Diff + 预览 + Mock Deploy
-- 空文件夹新建全栈项目路径
-- external frontend/backend targets 绑定到 Session
-- 非 Git 外部项目的文件快照 Diff / Review 证据链
-- Target 写锁恢复、队列调度、provider 失败诊断和 Review 中文证据面板
+实际修改了哪些文件？
 
-当前可靠性能力：
+是否生成了可预览结果？
 
-- 同一个 Session 复用已绑定的项目 target，不把不同 Session 写到同一个工作区。
-- TaskRun 开始前为非 Git 外部目标记录文件快照，完成后可生成真实 Diff。
-- Diff/Review 收尾失败会写入诊断事件，不再静默丢失证据。
-- Provider 连接失败、限流、不可用等常见问题会进入 Run Diagnostics，便于判断是否重试或切换 provider。
-- completed/failed/interrupted 终态会释放 target 写锁，避免旧 run 长时间阻塞后续任务。
+整个执行过程能否被追踪和恢复？
 
-明确排除（P1/P2+）：
-- HumanAgentAdapter、Docker、WebSocket
-- Provider Marketplace、MCP Marketplace
-- PR 创建、外部 IM 集成（飞书/微信/Slack）
-- 多用户协作、RBAC
-- 生产部署
+这也是 AgentHub 与普通 Chat UI 的核心区别。
+
+AgentHub — Multi-Agent Coding Workspace
