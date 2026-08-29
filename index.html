@@ -1,1250 +1,154 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentHub - 可验证的多 Agent 编程工作台</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-deep: #050508;
-            --bg-primary: #0a0a10;
-            --bg-secondary: #0f0f18;
-            --bg-elevated: #161622;
-            --bg-card: #12121c;
-            --text-primary: #f0f0f5;
-            --text-secondary: #8888a0;
-            --text-muted: #555566;
-            --accent-cyan: #00f5d4;
-            --accent-cyan-dim: rgba(0, 245, 212, 0.15);
-            --accent-purple: #a855f7;
-            --accent-purple-dim: rgba(168, 85, 247, 0.12);
-            --accent-amber: #fbbf24;
-            --border: rgba(255, 255, 255, 0.06);
-            --border-hover: rgba(255, 255, 255, 0.12);
-            --glow-cyan: 0 0 40px rgba(0, 245, 212, 0.2);
-            --glow-purple: 0 0 40px rgba(168, 85, 247, 0.2);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-deep);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* Grid Background */
-        .grid-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image:
-                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-            background-size: 60px 60px;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        /* Noise Overlay */
-        .noise-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0.3;
-            pointer-events: none;
-            z-index: 1;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.4'/%3E%3C/svg%3E");
-        }
-
-        /* Gradient Orbs */
-        .orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(80px);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .orb-1 {
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(0, 245, 212, 0.08) 0%, transparent 70%);
-            top: -150px;
-            right: -100px;
-            animation: float 20s ease-in-out infinite;
-        }
-
-        .orb-2 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(168, 85, 247, 0.06) 0%, transparent 70%);
-            bottom: 20%;
-            left: -100px;
-            animation: float 25s ease-in-out infinite reverse;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(30px, 30px); }
-        }
-
-        /* Navigation */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: rgba(5, 5, 8, 0.8);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
-            z-index: 1000;
-            padding: 1rem 2rem;
-        }
-
-        .nav-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .nav-logo {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.4rem;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-logo .logo-mark {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--bg-deep);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2.5rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 0;
-            width: 0;
-            height: 1px;
-            background: var(--accent-cyan);
-            transition: width 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-        }
-
-        .nav-links a:hover::after {
-            width: 100%;
-        }
-
-        .nav-github {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .nav-github:hover {
-            border-color: var(--accent-cyan);
-            box-shadow: var(--glow-cyan);
-        }
-
-        .nav-github svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        /* Hero Section */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            padding: 8rem 2rem 4rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .hero-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
-        }
-
-        .hero-text {
-            opacity: 0;
-            transform: translateY(30px);
-            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            animation-delay: 0.2s;
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.4rem 0.8rem;
-            background: var(--accent-cyan-dim);
-            border: 1px solid rgba(0, 245, 212, 0.2);
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--accent-cyan);
-            margin-bottom: 1.5rem;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .hero-badge::before {
-            content: '';
-            width: 6px;
-            height: 6px;
-            background: var(--accent-cyan);
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        .hero-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 4rem;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -0.04em;
-            margin-bottom: 1.5rem;
-        }
-
-        .hero-title .highlight {
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-description {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            margin-bottom: 2.5rem;
-            line-height: 1.8;
-            max-width: 500px;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.875rem 1.5rem;
-            border-radius: 10px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: pointer;
-            border: none;
-            font-size: 0.9rem;
-            font-family: inherit;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-cyan), #00d4aa);
-            color: var(--bg-deep);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(0, 245, 212, 0.3);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--accent-cyan);
-            background: var(--accent-cyan-dim);
-        }
-
-        /* Terminal Card */
-        .hero-visual {
-            opacity: 0;
-            transform: translateX(30px);
-            animation: slideRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            animation-delay: 0.4s;
-        }
-
-        .terminal {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow:
-                0 0 0 1px rgba(255, 255, 255, 0.03),
-                0 20px 60px -20px rgba(0, 0, 0, 0.8),
-                inset 0 1px 0 rgba(255, 255, 255, 0.03);
-        }
-
-        .terminal-header {
-            background: var(--bg-elevated);
-            padding: 0.875rem 1rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .terminal-dots {
-            display: flex;
-            gap: 0.4rem;
-        }
-
-        .terminal-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        .terminal-dot.red { background: #ff5f57; }
-        .terminal-dot.yellow { background: #febc2e; }
-        .terminal-dot.green { background: #28c840; }
-
-        .terminal-title {
-            flex: 1;
-            text-align: center;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .terminal-body {
-            padding: 1.25rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            line-height: 1.8;
-        }
-
-        .terminal-line {
-            margin-bottom: 0.25rem;
-            opacity: 0;
-            animation: fadeIn 0.3s ease forwards;
-        }
-
-        .terminal-line:nth-child(1) { animation-delay: 0.6s; }
-        .terminal-line:nth-child(2) { animation-delay: 0.8s; }
-        .terminal-line:nth-child(3) { animation-delay: 1s; }
-        .terminal-line:nth-child(4) { animation-delay: 1.2s; }
-        .terminal-line:nth-child(5) { animation-delay: 1.4s; }
-        .terminal-line:nth-child(6) { animation-delay: 1.6s; }
-        .terminal-line:nth-child(7) { animation-delay: 1.8s; }
-        .terminal-line:nth-child(8) { animation-delay: 2s; }
-
-        @keyframes fadeIn {
-            to { opacity: 1; }
-        }
-
-        .prompt {
-            color: var(--accent-cyan);
-        }
-
-        .cmd {
-            color: var(--text-primary);
-        }
-
-        .out {
-            color: var(--text-secondary);
-        }
-
-        .success {
-            color: var(--accent-cyan);
-        }
-
-        .warning {
-            color: var(--accent-amber);
-        }
-
-        .comment {
-            color: var(--text-muted);
-        }
-
-        /* Stats Bar */
-        .stats-bar {
-            position: relative;
-            z-index: 2;
-            background: var(--bg-primary);
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-            padding: 2rem;
-        }
-
-        .stats-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 2rem;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 1rem;
-        }
-
-        .stat-value {
-            font-family: 'Syne', sans-serif;
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            letter-spacing: -0.02em;
-        }
-
-        .stat-value .accent {
-            color: var(--accent-cyan);
-        }
-
-        .stat-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 0.25rem;
-        }
-
-        /* Features Section */
-        .features {
-            padding: 8rem 2rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .section-container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .section-header {
-            margin-bottom: 4rem;
-        }
-
-        .section-tag {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--accent-cyan);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 1rem;
-        }
-
-        .section-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: -0.03em;
-            max-width: 600px;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-        }
-
-        .feature-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
-            opacity: 0;
-            transition: opacity 0.4s ease;
-        }
-
-        .feature-card:hover {
-            border-color: var(--border-hover);
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
-        }
-
-        .feature-card:hover::before {
-            opacity: 1;
-        }
-
-        .feature-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            margin-bottom: 1.25rem;
-        }
-
-        .feature-icon.cyan {
-            background: var(--accent-cyan-dim);
-            color: var(--accent-cyan);
-        }
-
-        .feature-icon.purple {
-            background: var(--accent-purple-dim);
-            color: var(--accent-purple);
-        }
-
-        .feature-icon.amber {
-            background: rgba(251, 191, 36, 0.12);
-            color: var(--accent-amber);
-        }
-
-        .feature-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.75rem;
-        }
-
-        .feature-desc {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-        }
-
-        /* Tech Stack Section */
-        .tech {
-            padding: 8rem 2rem;
-            background: var(--bg-primary);
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-            position: relative;
-            z-index: 2;
-        }
-
-        .tech-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 3rem;
-            margin-top: 4rem;
-        }
-
-        .tech-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
-        }
-
-        .tech-card-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .tech-card-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: var(--accent-purple-dim);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--accent-purple);
-            font-size: 1rem;
-        }
-
-        .tech-card-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .tech-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .tech-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            background: var(--bg-elevated);
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-        }
-
-        .tech-item:hover {
-            border-color: var(--border-hover);
-        }
-
-        .tech-item-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--accent-cyan);
-            flex-shrink: 0;
-        }
-
-        .tech-item-text {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        .tech-item-text strong {
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        /* Workflow Section */
-        .workflow {
-            padding: 8rem 2rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .workflow-steps {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            margin-top: 4rem;
-        }
-
-        .workflow-step {
-            text-align: center;
-            padding: 2rem 1rem;
-            position: relative;
-        }
-
-        .workflow-step::after {
-            content: '→';
-            position: absolute;
-            right: -0.75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            font-size: 1.25rem;
-        }
-
-        .workflow-step:last-child::after {
-            display: none;
-        }
-
-        .workflow-number {
-            font-family: 'Syne', sans-serif;
-            font-size: 3rem;
-            font-weight: 800;
-            color: var(--bg-elevated);
-            line-height: 1;
-            margin-bottom: 1rem;
-            transition: color 0.3s ease;
-        }
-
-        .workflow-step:hover .workflow-number {
-            color: var(--accent-cyan-dim);
-        }
-
-        .workflow-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .workflow-desc {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
-        /* CTA Section */
-        .cta {
-            padding: 8rem 2rem;
-            background: var(--bg-primary);
-            border-top: 1px solid var(--border);
-            position: relative;
-            z-index: 2;
-            text-align: center;
-        }
-
-        .cta-title {
-            font-family: 'Syne', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            letter-spacing: -0.03em;
-            margin-bottom: 1rem;
-        }
-
-        .cta-desc {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            margin-bottom: 2rem;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .cta-actions {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-        }
-
-        /* Footer */
-        footer {
-            background: var(--bg-deep);
-            border-top: 1px solid var(--border);
-            padding: 3rem 2rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .footer-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .footer-brand {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .footer-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .footer-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: color 0.3s ease;
-        }
-
-        .footer-links a:hover {
-            color: var(--text-primary);
-        }
-
-        .footer-copy {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        /* Animations */
-        @keyframes slideUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideRight {
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .hero-content {
-                grid-template-columns: 1fr;
-                gap: 3rem;
-            }
-
-            .hero-title {
-                font-size: 3rem;
-            }
-
-            .features-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .workflow-steps {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .workflow-step::after {
-                display: none;
-            }
-        }
-
-        @media (max-width: 768px) {
-            nav {
-                padding: 0.875rem 1rem;
-            }
-
-            .nav-links {
-                display: none;
-            }
-
-            .hero {
-                padding: 6rem 1rem 3rem;
-            }
-
-            .hero-title {
-                font-size: 2.25rem;
-            }
-
-            .hero-actions {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .stats-content {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .features {
-                padding: 4rem 1rem;
-            }
-
-            .section-title {
-                font-size: 1.75rem;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .tech {
-                padding: 4rem 1rem;
-            }
-
-            .tech-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .workflow {
-                padding: 4rem 1rem;
-            }
-
-            .workflow-steps {
-                grid-template-columns: 1fr;
-            }
-
-            .cta {
-                padding: 4rem 1rem;
-            }
-
-            .cta-title {
-                font-size: 1.75rem;
-            }
-
-            .cta-actions {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .footer-content {
-                flex-direction: column;
-                gap: 1.5rem;
-                text-align: center;
-            }
-
-            .footer-links {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-        }
-
-        /* Reduced Motion */
-        @media (prefers-reduced-motion: reduce) {
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="AgentHub：面向本地开发工作流的 IM 式 Multi-Agent Coding Workspace。支持任务规划、角色协作、Provider 路由、Git Worktree 隔离、并发写控制、SSE 事件流与工程证据链。" />
+  <title>AgentHub · Multi-Agent Coding Workspace</title>
+  <style>
+    :root {
+      --bg:#071019; --panel:#0d1924; --panel2:#101f2c; --text:#edf5f8; --muted:#9eb0bd;
+      --line:#213746; --mint:#68e0c0; --blue:#83a9ff; --gold:#f3cb73; --radius:22px;
+      --shadow:0 24px 70px rgba(0,0,0,.30);
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;background:radial-gradient(1100px 620px at 8% -8%,rgba(104,224,192,.10),transparent 58%),radial-gradient(900px 620px at 92% 5%,rgba(131,169,255,.11),transparent 55%),var(--bg);color:var(--text);font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}
+    a{color:inherit;text-decoration:none}.wrap{width:min(1180px,calc(100% - 38px));margin:auto}
+    .nav{position:sticky;top:0;z-index:30;background:rgba(7,16,25,.78);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06)}
+    .navin{height:68px;display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{display:flex;align-items:center;gap:11px;font-weight:850}.mark{width:35px;height:35px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,var(--mint),var(--blue));color:#06141b;font-weight:950;box-shadow:0 10px 28px rgba(104,224,192,.18)}
+    .navlinks{display:flex;align-items:center;gap:20px;font-size:13px;color:#9fb1bd}.navlinks a:hover{color:#fff}.github{padding:7px 11px;border:1px solid var(--line);border-radius:10px;color:#d7e3e9!important;background:#0d1b26}
+    .hero{padding:86px 0 56px}.hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:38px;align-items:center}
+    .eyebrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tag{font-size:12px;padding:6px 10px;border-radius:999px;background:#0c1822;border:1px solid var(--line);color:#c5d3dc}
+    h1{font-size:clamp(46px,7vw,78px);line-height:.98;letter-spacing:-3.2px;margin:0 0 22px}.grad{background:linear-gradient(90deg,#f4fbff 5%,#aae9da 48%,#a9bdff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .lead{font-size:19px;color:#b8c7d1;max-width:720px;margin:0 0 28px}.lead strong{color:#f3f9fb}.actions{display:flex;gap:11px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;border:1px solid var(--line);background:#0c1b27;color:#e9f3f7;font-weight:760;font-size:14px}.btn.primary{border:0;color:#061319;background:linear-gradient(135deg,var(--mint),#7abcf6)}
+    .stats{margin-top:29px;display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.stat{padding:15px 16px;border:1px solid var(--line);background:rgba(13,25,36,.68);border-radius:16px}.stat b{display:block;font-size:16px}.stat span{font-size:11px;color:#8499a7}
+    .workspace{overflow:hidden;border:1px solid #294354;border-radius:24px;background:linear-gradient(180deg,#0e1c28,#09141d);box-shadow:var(--shadow)}.window{height:44px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 14px;gap:7px}.window i{width:8px;height:8px;border-radius:50%;background:#405565}.ui{display:grid;grid-template-columns:118px 1fr 145px;min-height:460px}.side,.artifacts{padding:14px 10px;background:#0a151f}.side{border-right:1px solid var(--line)}.artifacts{border-left:1px solid var(--line)}.smalltitle{font-size:9px;text-transform:uppercase;letter-spacing:1.3px;color:#708897;margin:6px 5px 9px}.person{font-size:10px;color:#9cafbb;padding:8px;border-radius:8px;margin:3px 0}.person.active{background:#142736;color:#f2f8fa}.chat{padding:16px}.bubble{font-size:10px;padding:10px 11px;border-radius:11px;margin-bottom:10px;max-width:88%}.user{background:#1b3854;margin-left:auto}.agent{background:#13271f;border:1px solid #24483a}.task{border:1px solid #244051;border-radius:12px;padding:10px;margin:8px 0;background:#0c1923}.tasktop{display:flex;justify-content:space-between;gap:8px;font-size:9px}.status{font-size:8px;padding:3px 6px;border-radius:99px;background:#173c32;color:#93efd6}.progress{height:4px;background:#1b2d38;border-radius:9px;overflow:hidden;margin:8px 0 5px}.progress span{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--blue))}.micro{font-size:8px;color:#788f9e}.mini{border:1px solid #244052;border-radius:10px;padding:9px;margin:7px 0;font-size:9px}.mint{color:#7fe5c6}.blue{color:#9fbaff}
+    section{padding:72px 0}.head{display:flex;justify-content:space-between;gap:28px;align-items:end;margin-bottom:30px}.kicker{color:var(--mint);font-size:11px;font-weight:850;letter-spacing:1.5px;text-transform:uppercase}.head h2{font-size:36px;letter-spacing:-1.5px;margin:5px 0}.head p{max-width:540px;color:var(--muted);margin:0}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.card{border:1px solid var(--line);border-radius:var(--radius);padding:21px;background:linear-gradient(180deg,rgba(16,31,43,.92),rgba(9,19,28,.95));box-shadow:0 10px 34px rgba(0,0,0,.11)}.icon{width:38px;height:38px;border-radius:12px;border:1px solid #2a4658;background:#0b1923;display:grid;place-items:center;font-size:18px}.card h3{font-size:17px;margin:11px 0 8px}.card p{font-size:13px;color:var(--muted);margin:0}
+    .arch{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}.node{min-height:116px;border:1px solid var(--line);border-radius:16px;background:#0c1923;padding:13px 9px;display:flex;flex-direction:column;justify-content:center;text-align:center}.node b{font-size:13px}.node span{font-size:9px;color:#8197a5;margin-top:4px}.arrow{display:grid;place-items:center;color:#49697b;font-size:18px}
+    .layers{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:17px}.layer h3{margin:5px 0 8px;font-size:16px}.layer ul{padding-left:17px;margin:0;color:#aebec8;font-size:12px}.layer li{margin:6px 0}
+    .engineering{display:grid;grid-template-columns:1fr 1fr;gap:16px}.eng{position:relative;overflow:hidden}.eng:after{content:"";position:absolute;right:-50px;top:-50px;width:130px;height:130px;border-radius:50%;background:rgba(131,169,255,.06)}.label{font-size:10px;color:#7f96a5;text-transform:uppercase;letter-spacing:1.1px}.eng h3{font-size:19px}.eng ul{padding-left:18px;color:#b7c5ce;font-size:13px;margin-bottom:0}.eng li{margin:7px 0}.src{font-family:Consolas,monospace;color:#758c9b;font-size:10px;border-top:1px dashed #294252;margin-top:14px;padding-top:11px}
+    .evidence{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.terminal{border:1px solid #253f50;border-radius:18px;background:#071018;padding:18px;font-family:"SFMono-Regular",Consolas,monospace;min-height:315px;box-shadow:var(--shadow)}.term-title{font-family:Inter,system-ui;font-size:10px;color:#7e94a2;margin-bottom:14px}.line{font-size:11px;color:#aabcc7;margin:10px 0}.ok{color:#70dfbd}.eventblue{color:#8faeff}.gold{color:var(--gold)}.timeline{border-left:1px solid #294657;padding-left:20px;margin-left:7px}.event{position:relative;margin-bottom:19px}.event:before{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--mint);left:-25px;top:7px;box-shadow:0 0 0 5px #0d1b26}.event b{font-size:13px}.event p{font-size:11px;color:var(--muted);margin:3px 0 0}
+    .stack{display:flex;gap:9px;flex-wrap:wrap}.chip{padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#0c1923;font-size:11px;color:#b8c8d1}
+    .code-map{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.module{padding:16px;border:1px solid var(--line);border-radius:15px;background:#0c1923}.module code{color:#9fbaff;font-size:11px}.module p{font-size:11px;color:#93a7b4;margin:6px 0 0}
+    footer{padding:38px 0 50px;border-top:1px solid rgba(255,255,255,.05);color:#728997;font-size:11px}
+    @media(max-width:980px){.hero-grid,.evidence{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}.layers{grid-template-columns:1fr 1fr}.arch{grid-template-columns:1fr 40px 1fr}.ui{grid-template-columns:100px 1fr}.artifacts{display:none}.engineering{grid-template-columns:1fr}.code-map{grid-template-columns:1fr 1fr}.navlinks a:not(.github){display:none}}
+    @media(max-width:620px){h1{letter-spacing:-2px}.stats,.cards,.layers,.code-map{grid-template-columns:1fr}.head{align-items:flex-start;flex-direction:column}.arch{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}.ui{grid-template-columns:76px 1fr}.side{padding:12px 6px}.person{font-size:8px;padding:7px 4px}.hero{padding-top:54px}}
+  </style>
 </head>
 <body>
-    <div class="grid-bg"></div>
-    <div class="noise-overlay"></div>
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-
-    <!-- Navigation -->
-    <nav>
-        <div class="nav-content">
-            <div class="nav-logo">
-                <div class="logo-mark">AH</div>
-                AgentHub
-            </div>
-            <ul class="nav-links">
-                <li><a href="#features">功能特性</a></li>
-                <li><a href="#tech">技术栈</a></li>
-                <li><a href="#workflow">工作流程</a></li>
-            </ul>
-            <a href="https://github.com/YoungBossX/AgentHub" class="nav-github" target="_blank" rel="noopener noreferrer">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                GitHub
-            </a>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-text">
-                <div class="hero-badge">COMPETITION DEMO READY</div>
-                <h1 class="hero-title">
-                    让 AI 编程<br>
-                    <span class="highlight">可验证交付</span>
-                </h1>
-                <p class="hero-description">
-                    面向多 Agent 协作平台题面的本地可运行 Demo：通过群聊式界面调度 Orchestrator、Frontend、Backend、QA，把需求拆成任务，在受控 worktree 或项目 target 中执行，并沉淀 Diff、Review、Preview、诊断和部署状态证据。
-                </p>
-                <div class="hero-actions">
-                    <a href="https://github.com/YoungBossX/AgentHub" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
-                        查看仓库
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </a>
-                    <a href="#features" class="btn btn-secondary">查看功能</a>
-                </div>
-            </div>
-
-            <div class="hero-visual">
-                <div class="terminal">
-                    <div class="terminal-header">
-                        <div class="terminal-dots">
-                            <div class="terminal-dot red"></div>
-                            <div class="terminal-dot yellow"></div>
-                            <div class="terminal-dot green"></div>
-                        </div>
-                        <div class="terminal-title">agenthub — 演示会话</div>
-                    </div>
-                    <div class="terminal-body">
-                        <div class="terminal-line">
-                            <span class="prompt">你 $</span>
-                            <span class="cmd"> @orchestrator 做一个登录页</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="out">[orchestrator]</span>
-                            <span class="success"> 解析提及角色...</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="out">[orchestrator]</span>
-                            <span class="comment"> 生成 3 步计划：</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="out">  → 1. @frontend 实现登录界面</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="out">  → 2. @qa 审查并验证变更</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="out">  → 3. 生成预览与交付证据</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="out">[frontend]</span>
-                            <span class="warning"> 修改 apps/demo/src/App.tsx...</span>
-                        </div>
-                        <div class="terminal-line">
-                            <span class="out">[frontend]</span>
-                            <span class="success"> ✓ Diff 已生成 · 预览 :5173</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Stats Bar -->
-    <div class="stats-bar">
-        <div class="stats-content">
-            <div class="stat-item">
-                <div class="stat-value">4</div>
-                <div class="stat-label">角色 Agent（orchestrator / frontend / backend / qa）</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">3</div>
-                <div class="stat-label">执行适配器（Codex / Claude Code / ScriptedMock）</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">50<span class="accent">+</span></div>
-                <div class="stat-label">后端测试文件，覆盖执行、证据、策略和诊断</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">6<span class="accent">+</span></div>
-                <div class="stat-label">证据类型：Diff / Review / Preview / Deploy 等</div>
-            </div>
-        </div>
+  <nav class="nav">
+    <div class="wrap navin">
+      <div class="brand"><div class="mark">A</div><div>AgentHub</div></div>
+      <div class="navlinks">
+        <a href="#overview">项目概览</a><a href="#architecture">核心架构</a><a href="#engineering">工程设计</a><a href="#evidence">执行闭环</a>
+        <a class="github" href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noreferrer">GitHub ↗</a>
+      </div>
     </div>
+  </nav>
 
-    <!-- Features Section -->
-    <section class="features" id="features">
-        <div class="section-container">
-            <div class="section-header">
-                <div class="section-tag">// 功能特性</div>
-                <h2 class="section-title">群聊式多 Agent 编程工作台</h2>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon cyan">💬</div>
-                    <h3 class="feature-title">群聊式任务入口</h3>
-                    <p class="feature-desc">
-                        通过 @orchestrator、@frontend、@backend、@qa 把需求分发给不同角色 Agent，用户用自然语言推进任务。
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon purple">🎯</div>
-                    <h3 class="feature-title">计划先行的任务拆解</h3>
-                    <p class="feature-desc">
-                        Orchestrator 先把需求拆成可审查计划，再分配给前端、后端、QA 等角色，避免直接黑盒改代码。
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon cyan">🔗</div>
-                    <h3 class="feature-title">真实执行与可靠 fallback</h3>
-                    <p class="feature-desc">
-                        统一适配器层支持 Codex CLI、Claude Code CLI 和 ScriptedMock。真实路径失败时，可通过明确 fallback 保持演示闭环。
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon purple">📊</div>
-                    <h3 class="feature-title">可审计 Diff</h3>
-                    <p class="feature-desc">
-                        每个 Session 独立 worktree；Git 项目生成真实 Git Diff，非 Git target 也能基于文件快照生成变更证据。
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon amber">👁️</div>
-                    <h3 class="feature-title">本地预览</h3>
-                    <p class="feature-desc">
-                        任务完成后生成 Vite React 预览卡片，右侧面板展示运行页面，并保留端口、URL、健康状态等证据。
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon cyan">🚀</div>
-                    <h3 class="feature-title">诚实部署卡片</h3>
-                    <p class="feature-desc">
-                        部署卡片记录本地暂存、手动交接或外部提供者阻塞状态；没有真实第三方结果时，不伪造部署成功。
-                    </p>
-                </div>
-            </div>
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <div class="eyebrow"><span class="tag">Multi-Agent</span><span class="tag">Coding Workspace</span><span class="tag">Engineering Evidence</span></div>
+          <h1 class="grad">AgentHub</h1>
+          <p class="lead">面向本地开发工作流的 <strong>IM 式多 Agent 编程协作平台</strong>。将用户需求转换为可执行任务图，由不同角色 Agent 协同完成代码任务，并通过隔离执行、并发控制、实时事件流与工程产物形成完整交付闭环。</p>
+          <div class="actions"><a class="btn primary" href="#architecture">查看系统架构 ↓</a><a class="btn" href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noreferrer">查看源码 ↗</a></div>
+          <div class="stats">
+            <div class="stat"><b>Task Graph</b><span>任务拆解、角色分配与依赖编排</span></div>
+            <div class="stat"><b>Worktree + Lock</b><span>会话隔离与写入冲突控制</span></div>
+            <div class="stat"><b>Event + Artifact</b><span>运行状态与工程证据统一追踪</span></div>
+          </div>
         </div>
+
+        <div class="workspace" aria-label="AgentHub 产品界面示意">
+          <div class="window"><i></i><i></i><i></i></div>
+          <div class="ui">
+            <aside class="side"><div class="smalltitle">Agents</div><div class="person active">◎ Orchestrator</div><div class="person">◫ Frontend</div><div class="person">⌘ Backend</div><div class="person">✓ QA / Review</div><div class="smalltitle" style="margin-top:18px">Sessions</div><div class="person active">Login Page</div><div class="person">Dashboard</div></aside>
+            <div class="chat">
+              <div class="bubble user">@orchestrator 构建一个登录页，并完成前端实现与检查。</div>
+              <div class="bubble agent">已生成执行计划。任务将按角色、Target 与依赖关系推进。</div>
+              <div class="task"><div class="tasktop"><b>Frontend · Login UI</b><span class="status">completed</span></div><div class="progress"><span style="width:100%"></span></div><div class="micro">target: frontend · worktree isolated</div></div>
+              <div class="task"><div class="tasktop"><b>Backend · API Contract</b><span class="status">running</span></div><div class="progress"><span style="width:72%"></span></div><div class="micro">provider resolved · task run active</div></div>
+              <div class="task"><div class="tasktop"><b>QA · Review</b><span class="status">ready</span></div><div class="progress"><span style="width:28%"></span></div><div class="micro">dependsOn: frontend + backend</div></div>
+            </div>
+            <aside class="artifacts"><div class="smalltitle">Artifacts</div><div class="mini"><span class="mint">✓ Diff</span><br/>App.tsx<br/>styles.css</div><div class="mini"><span class="blue">◉ Preview</span><br/>Vite React<br/>healthy</div><div class="mini"><span class="mint">✓ Review</span><br/>artifact ready</div><div class="mini"><span class="blue">⌁ Events</span><br/>TaskRunEvent<br/>streaming</div></aside>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- Tech Stack Section -->
-    <section class="tech" id="tech">
-        <div class="section-container">
-            <div class="section-header">
-                <div class="section-tag">// 技术栈</div>
-                <h2 class="section-title">本地可运行的工程栈</h2>
-            </div>
-
-            <div class="tech-grid">
-                <div class="tech-card">
-                    <div class="tech-card-header">
-                        <div class="tech-card-icon">⚡</div>
-                        <h3 class="tech-card-title">核心组件</h3>
-                    </div>
-                    <ul class="tech-list">
-                        <li class="tech-item">
-                            <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Frontend</strong> — Next.js 16 + React 19 + TypeScript 5.9</div>
-                        </li>
-                        <li class="tech-item">
-                            <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Backend</strong> — FastAPI 0.121 + SQLModel + SQLite</div>
-                        </li>
-                        <li class="tech-item">
-                            <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Styling</strong> — Tailwind CSS 4.1 + shadcn/ui 风格组件</div>
-                        </li>
-                        <li class="tech-item">
-                            <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Diff Viewer</strong> — Monaco Editor 0.55</div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="tech-card">
-                    <div class="tech-card-header">
-                        <div class="tech-card-icon">🛡️</div>
-                        <h3 class="tech-card-title">架构特性</h3>
-                    </div>
-                    <ul class="tech-list">
-                        <li class="tech-item">
-                            <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Realtime</strong> — SSE + TaskRunEvent 持久化</div>
-                        </li>
-                        <li class="tech-item">
-                            <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Isolation</strong> — 每个 Session 独立 Git Worktree</div>
-                        </li>
-                        <li class="tech-item">
-                            <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Fallback</strong> — ScriptedMock 降级保证 Demo 可用</div>
-                        </li>
-                        <li class="tech-item">
-                            <div class="tech-item-dot"></div>
-                            <div class="tech-item-text"><strong>Guardrails</strong> — 命令白名单 + 路径保护</div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+    <section id="overview">
+      <div class="wrap">
+        <div class="head"><div><div class="kicker">01 · Overview</div><h2>把 AI 编程从“回答”推进到“交付”</h2></div><p>AgentHub 的核心不是增加更多聊天角色，而是建立从需求理解、任务编排、受控执行到结果验证的工程工作流。</p></div>
+        <div class="cards">
+          <article class="card"><div class="icon">⌁</div><h3>任务编排</h3><p>Planner 解析用户意图与角色提及，Orchestrator 生成 Task Graph，并对任务依赖、角色和 Target 进行组织。</p></article>
+          <article class="card"><div class="icon">⚙</div><h3>运行时路由</h3><p>通过 ProviderGateway 将角色职责与具体 Coding Provider 解耦，统一处理 Provider 解析、健康检查与运行配置。</p></article>
+          <article class="card"><div class="icon">⑂</div><h3>隔离与并发</h3><p>Session 级 Git Worktree 提供代码工作区隔离，Session Queue 与 Target Lock 控制写任务的安全执行顺序。</p></article>
+          <article class="card"><div class="icon">✓</div><h3>可验证交付</h3><p>执行结果沉淀为 Diff、Review、Preview、TaskRunEvent 等工程产物，前端能够持续展示真实运行过程。</p></article>
         </div>
+      </div>
     </section>
 
-    <!-- Workflow Section -->
-    <section class="workflow" id="workflow">
-        <div class="section-container">
-            <div class="section-header">
-                <div class="section-tag">// 工作流程</div>
-                <h2 class="section-title">从需求到可验证交付证据</h2>
-            </div>
-
-            <div class="workflow-steps">
-                <div class="workflow-step">
-                    <div class="workflow-number">01</div>
-                    <h4 class="workflow-title">需求输入</h4>
-                    <p class="workflow-desc">在会话中 @orchestrator 描述目标</p>
-                </div>
-                <div class="workflow-step">
-                    <div class="workflow-number">02</div>
-                    <h4 class="workflow-title">计划拆解</h4>
-                    <p class="workflow-desc">编排器生成可审查任务计划</p>
-                </div>
-                <div class="workflow-step">
-                    <div class="workflow-number">03</div>
-                    <h4 class="workflow-title">Agent 执行</h4>
-                    <p class="workflow-desc">角色 Agent 在受控目标内修改代码</p>
-                </div>
-                <div class="workflow-step">
-                    <div class="workflow-number">04</div>
-                    <h4 class="workflow-title">证据交付</h4>
-                    <p class="workflow-desc">沉淀 Diff、Review、Preview 和状态卡片</p>
-                </div>
-            </div>
+    <section id="architecture">
+      <div class="wrap">
+        <div class="head"><div><div class="kicker">02 · Architecture</div><h2>一条请求如何进入执行系统</h2></div><p>从 IM 会话进入 Planner，再经过任务图、运行时路由与受控工作区，最终生成持久化事件和可检查 Artifact。</p></div>
+        <div class="arch">
+          <div class="node"><b>Message</b><span>Session / Context</span></div><div class="arrow">→</div><div class="node"><b>Planner</b><span>Intent / Mentions / LLM</span></div><div class="arrow">→</div><div class="node"><b>Task Graph</b><span>Role / Target / DependsOn</span></div><div class="arrow">→</div><div class="node"><b>TaskRun</b><span>Queue / Lease / Lock</span></div><div class="arrow">→</div><div class="node"><b>ProviderGateway</b><span>Runtime Resolution</span></div><div class="arrow">→</div><div class="node"><b>Adapter</b><span>Controlled Execution</span></div>
         </div>
+        <div class="arch" style="margin-top:9px">
+          <div class="node"><b>Worktree / Target</b><span>Execution Boundary</span></div><div class="arrow">→</div><div class="node"><b>Diff / Review</b><span>Engineering Evidence</span></div><div class="arrow">→</div><div class="node"><b>Preview</b><span>Runtime Verification</span></div><div class="arrow">→</div><div class="node"><b>TaskRunEvent</b><span>Persistent Event Stream</span></div><div class="arrow">→</div><div class="node"><b>SSE / Web UI</b><span>Realtime Projection</span></div><div class="arrow">→</div><div class="node"><b>Artifacts</b><span>Delivery View</span></div>
+        </div>
+        <div class="layers">
+          <article class="card layer"><div class="label">Interaction</div><h3>交互层</h3><ul><li>IM 式 Session</li><li>角色提及与上下文传递</li><li>任务卡片与产物面板</li></ul></article>
+          <article class="card layer"><div class="label">Orchestration</div><h3>编排层</h3><ul><li>Planner / LLM Planner</li><li>Task Graph Validation</li><li>Role / Target / Dependency</li></ul></article>
+          <article class="card layer"><div class="label">Execution</div><h3>执行层</h3><ul><li>ProviderGateway</li><li>Session Queue / Target Lock</li><li>Worktree / External Target</li></ul></article>
+          <article class="card layer"><div class="label">Evidence</div><h3>证据层</h3><ul><li>Diff / Review / Preview</li><li>TaskRunEvent</li><li>SSE / Diagnostics Projection</li></ul></article>
+        </div>
+      </div>
     </section>
 
-    <!-- CTA Section -->
-    <section class="cta">
-        <h2 class="cta-title">在本地跑通 AgentHub</h2>
-        <p class="cta-desc">按 README 完成依赖、数据库和 demo app 初始化，即可启动本地多 Agent 编程工作台。</p>
-        <div class="cta-actions">
-            <a href="https://github.com/YoungBossX/AgentHub" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
-                查看仓库
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </a>
+    <section id="engineering">
+      <div class="wrap">
+        <div class="head"><div><div class="kicker">03 · Engineering Design</div><h2>核心工程设计</h2></div><p>围绕多 Agent 同时修改代码、Provider 差异、长任务可观测性和结果验证，形成明确的运行时边界。</p></div>
+        <div class="engineering">
+          <article class="card eng"><div class="label">Isolation & Concurrency</div><h3>Git Worktree + Queue + Target Lock</h3><ul><li>不同 Session 绑定独立工作区，避免会话之间互相污染。</li><li>只读任务可并行执行，写任务按照 Session Queue 管理执行顺序。</li><li>Target Lock 对共享写目标建立互斥边界，RunEngine 统一管理执行生命周期。</li></ul><div class="src">session_queue.py · target_locks.py · run_engine.py</div></article>
+          <article class="card eng"><div class="label">Runtime Abstraction</div><h3>ProviderGateway + Adapter</h3><ul><li>角色配置与具体模型/CLI 解耦，运行时根据 role、target、capability 解析 Provider。</li><li>Provider 健康、容量与执行上下文集中在 Gateway 层管理。</li><li>Adapter 将 Codex CLI、Claude Code CLI 等执行方式统一到一致的 Agent 事件接口。</li></ul><div class="src">provider_gateway.py · codex_adapter.py · claude_code_adapter.py</div></article>
+          <article class="card eng"><div class="label">Traceability</div><h3>TaskRunEvent + SSE</h3><ul><li>Agent 执行过程标准化为事件，并持久化为 TaskRunEvent。</li><li>前端通过 SSE 按事件增量更新任务状态、执行轨迹和产物。</li><li>持久化事件可继续用于会话恢复、执行回放和运行诊断投影。</li></ul><div class="src">events.py · models.py · workspace-shell.tsx</div></article>
+          <article class="card eng"><div class="label">Verification</div><h3>Diff + Review + Preview</h3><ul><li>执行后采集真实 Git Diff 或文件快照差异，展示实际代码变更。</li><li>Review Artifact 对变更进行独立审查，Preview Service 启动本地前端验证。</li><li>统一 Artifact 模型把代码差异、审查结果和预览状态组织为交付证据。</li></ul><div class="src">diffs.py · reviews.py · previews.py · artifact_*.py</div></article>
         </div>
+      </div>
     </section>
 
-    <!-- Footer -->
-    <footer>
-        <div class="footer-content">
-            <div class="footer-brand">AgentHub</div>
-            <ul class="footer-links">
-                <li><a href="#features">功能特性</a></li>
-                <li><a href="#tech">技术栈</a></li>
-                <li><a href="#workflow">工作流程</a></li>
-                <li><a href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-            </ul>
-            <p class="footer-copy">© 2026 AgentHub · MIT License · Local Demo MVP</p>
+    <section id="evidence">
+      <div class="wrap evidence">
+        <div>
+          <div class="kicker">04 · Execution Evidence</div><h2 style="font-size:34px;letter-spacing:-1.2px;margin:6px 0 18px">运行过程本身就是可检查的数据</h2>
+          <div class="terminal"><div class="term-title">task-run / frontend-login-page</div>
+            <div class="line"><span class="eventblue">planner.completed</span>   → task graph persisted</div>
+            <div class="line"><span class="eventblue">provider.resolved</span>    → coding provider selected</div>
+            <div class="line"><span class="ok">session_queue.running</span>  → write scope acquired</div>
+            <div class="line"><span class="gold">adapter.event</span>          → file / shell activity</div>
+            <div class="line"><span class="ok">diff.collected</span>         → code changes recorded</div>
+            <div class="line"><span class="ok">review.created</span>         → review artifact ready</div>
+            <div class="line"><span class="ok">preview.healthy</span>        → local preview verified</div>
+            <div class="line"><span class="eventblue">task_run.completed</span>  → events & artifacts persisted</div>
+          </div>
         </div>
-    </footer>
+        <article class="card"><div class="label">Delivery Pipeline</div><div class="timeline" style="margin-top:18px"><div class="event"><b>Plan</b><p>将用户需求拆解为带角色、Target 与依赖的任务图。</p></div><div class="event"><b>Route</b><p>根据运行时配置和能力要求选择执行 Provider。</p></div><div class="event"><b>Guard</b><p>检查队列、写锁与工作区范围，建立执行边界。</p></div><div class="event"><b>Execute</b><p>Adapter 在分配的 Worktree 或 Target 中完成代码操作。</p></div><div class="event"><b>Verify</b><p>采集 Diff、Review 与 Preview，形成可检查工程产物。</p></div><div class="event"><b>Observe</b><p>TaskRunEvent 持久化并通过 SSE 投影到前端工作台。</p></div></div></article>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="head"><div><div class="kicker">05 · Technology</div><h2>技术栈与模块映射</h2></div><p>技术选择围绕任务编排、受控代码执行、实时状态同步和可验证工程产物展开。</p></div>
+        <div class="stack"><span class="chip">Python</span><span class="chip">FastAPI</span><span class="chip">Pydantic</span><span class="chip">SQLModel</span><span class="chip">SQLite</span><span class="chip">Next.js</span><span class="chip">TypeScript</span><span class="chip">Tailwind CSS</span><span class="chip">SSE</span><span class="chip">Git Worktree</span><span class="chip">Codex CLI</span><span class="chip">Claude Code CLI</span><span class="chip">Vite React</span><span class="chip">Task Graph</span><span class="chip">Provider Gateway</span></div>
+        <div class="code-map" style="margin-top:22px"><div class="module"><code>planning.py</code><p>提及解析、Planner/LLM Planner、任务图生成与校验。</p></div><div class="module"><code>run_engine.py</code><p>TaskRun 主执行链路、执行生命周期与产物收尾。</p></div><div class="module"><code>provider_gateway.py</code><p>Provider 解析、健康、容量与运行时证据。</p></div><div class="module"><code>session_queue.py</code><p>Session 运行队列与读写任务门控。</p></div><div class="module"><code>diffs.py / previews.py</code><p>代码变更采集与本地运行预览。</p></div><div class="module"><code>apps/web</code><p>Session、聊天、任务卡、执行轨迹与 Artifact 工作台。</p></div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="wrap">AgentHub · Multi-Agent Coding Workspace · Architecture and capability descriptions are aligned with the public repository implementation.</div></footer>
 </body>
 </html>
