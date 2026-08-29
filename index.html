@@ -1,266 +1,1348 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="AgentHub：面向本地开发工作流的 IM 式 Multi-Agent Coding Workspace。支持任务规划、角色协作、Provider 路由、Git Worktree 隔离、并发写控制、SSE 事件流与工程证据链。" />
+  <meta name="description" content="AgentHub：IM-style Multi-Agent Coding Workspace。展示任务编排、Provider Runtime、Git Worktree 隔离、并发控制、SSE 事件追踪与工程证据链。" />
   <title>AgentHub · Multi-Agent Coding Workspace</title>
+
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem("agenthub-theme");
+        if (saved === "light" || saved === "dark") {
+          document.documentElement.dataset.theme = saved;
+        } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+          document.documentElement.dataset.theme = "light";
+        }
+      } catch (_) {}
+    })();
+  </script>
+
   <style>
-    :root {
-      --bg:#071019; --panel:#0d1924; --panel2:#101f2c; --text:#edf5f8; --muted:#9eb0bd;
-      --line:#213746; --mint:#68e0c0; --blue:#83a9ff; --gold:#f3cb73; --radius:22px;
-      --shadow:0 24px 70px rgba(0,0,0,.30);
+    :root{
+      --font:Inter,"PingFang SC","Microsoft YaHei",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+      --radius-xl:28px;
+      --radius-lg:20px;
+      --radius-md:14px;
+      --ease:180ms ease;
+      color-scheme:dark;
     }
-    *{box-sizing:border-box} html{scroll-behavior:smooth}
-    body{margin:0;background:radial-gradient(1100px 620px at 8% -8%,rgba(104,224,192,.10),transparent 58%),radial-gradient(900px 620px at 92% 5%,rgba(131,169,255,.11),transparent 55%),var(--bg);color:var(--text);font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}
-    a{color:inherit;text-decoration:none}.wrap{width:min(1180px,calc(100% - 38px));margin:auto}
-    .nav{position:sticky;top:0;z-index:30;background:rgba(7,16,25,.78);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06)}
-    .navin{height:68px;display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{display:flex;align-items:center;gap:11px;font-weight:850}.mark{width:35px;height:35px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,var(--mint),var(--blue));color:#06141b;font-weight:950;box-shadow:0 10px 28px rgba(104,224,192,.18)}
-    .navlinks{display:flex;align-items:center;gap:20px;font-size:13px;color:#9fb1bd}.navlinks a:hover{color:#fff}.github{padding:7px 11px;border:1px solid var(--line);border-radius:10px;color:#d7e3e9!important;background:#0d1b26}
-    .hero{padding:86px 0 56px}.hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:38px;align-items:center}
-    .eyebrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tag{font-size:12px;padding:6px 10px;border-radius:999px;background:#0c1822;border:1px solid var(--line);color:#c5d3dc}
-    h1{font-size:clamp(46px,7vw,78px);line-height:.98;letter-spacing:-3.2px;margin:0 0 22px}.grad{background:linear-gradient(90deg,#f4fbff 5%,#aae9da 48%,#a9bdff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-    .lead{font-size:19px;color:#b8c7d1;max-width:720px;margin:0 0 28px}.lead strong{color:#f3f9fb}.actions{display:flex;gap:11px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;border:1px solid var(--line);background:#0c1b27;color:#e9f3f7;font-weight:760;font-size:14px}.btn.primary{border:0;color:#061319;background:linear-gradient(135deg,var(--mint),#7abcf6)}
-    .stats{margin-top:29px;display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.stat{padding:15px 16px;border:1px solid var(--line);background:rgba(13,25,36,.68);border-radius:16px}.stat b{display:block;font-size:16px}.stat span{font-size:11px;color:#8499a7}
-    .workspace{overflow:hidden;border:1px solid #294354;border-radius:24px;background:linear-gradient(180deg,#0e1c28,#09141d);box-shadow:var(--shadow)}.window{height:44px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 14px;gap:7px}.window i{width:8px;height:8px;border-radius:50%;background:#405565}.ui{display:grid;grid-template-columns:118px 1fr 145px;min-height:460px}.side,.artifacts{padding:14px 10px;background:#0a151f}.side{border-right:1px solid var(--line)}.artifacts{border-left:1px solid var(--line)}.smalltitle{font-size:9px;text-transform:uppercase;letter-spacing:1.3px;color:#708897;margin:6px 5px 9px}.person{font-size:10px;color:#9cafbb;padding:8px;border-radius:8px;margin:3px 0}.person.active{background:#142736;color:#f2f8fa}.chat{padding:16px}.bubble{font-size:10px;padding:10px 11px;border-radius:11px;margin-bottom:10px;max-width:88%}.user{background:#1b3854;margin-left:auto}.agent{background:#13271f;border:1px solid #24483a}.task{border:1px solid #244051;border-radius:12px;padding:10px;margin:8px 0;background:#0c1923}.tasktop{display:flex;justify-content:space-between;gap:8px;font-size:9px}.status{font-size:8px;padding:3px 6px;border-radius:99px;background:#173c32;color:#93efd6}.progress{height:4px;background:#1b2d38;border-radius:9px;overflow:hidden;margin:8px 0 5px}.progress span{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--blue))}.micro{font-size:8px;color:#788f9e}.mini{border:1px solid #244052;border-radius:10px;padding:9px;margin:7px 0;font-size:9px}.mint{color:#7fe5c6}.blue{color:#9fbaff}
-    section{padding:72px 0}.head{display:flex;justify-content:space-between;gap:28px;align-items:end;margin-bottom:30px}.kicker{color:var(--mint);font-size:11px;font-weight:850;letter-spacing:1.5px;text-transform:uppercase}.head h2{font-size:36px;letter-spacing:-1.5px;margin:5px 0}.head p{max-width:540px;color:var(--muted);margin:0}
-    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.card{border:1px solid var(--line);border-radius:var(--radius);padding:21px;background:linear-gradient(180deg,rgba(16,31,43,.92),rgba(9,19,28,.95));box-shadow:0 10px 34px rgba(0,0,0,.11)}.icon{width:38px;height:38px;border-radius:12px;border:1px solid #2a4658;background:#0b1923;display:grid;place-items:center;font-size:18px}.card h3{font-size:17px;margin:11px 0 8px}.card p{font-size:13px;color:var(--muted);margin:0}
-    .arch{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}.node{min-height:116px;border:1px solid var(--line);border-radius:16px;background:#0c1923;padding:13px 9px;display:flex;flex-direction:column;justify-content:center;text-align:center}.node b{font-size:13px}.node span{font-size:9px;color:#8197a5;margin-top:4px}.arrow{display:grid;place-items:center;color:#49697b;font-size:18px}
-    .layers{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:17px}.layer h3{margin:5px 0 8px;font-size:16px}.layer ul{padding-left:17px;margin:0;color:#aebec8;font-size:12px}.layer li{margin:6px 0}
-    .engineering{display:grid;grid-template-columns:1fr 1fr;gap:16px}.eng{position:relative;overflow:hidden}.eng:after{content:"";position:absolute;right:-50px;top:-50px;width:130px;height:130px;border-radius:50%;background:rgba(131,169,255,.06)}.label{font-size:10px;color:#7f96a5;text-transform:uppercase;letter-spacing:1.1px}.eng h3{font-size:19px}.eng ul{padding-left:18px;color:#b7c5ce;font-size:13px;margin-bottom:0}.eng li{margin:7px 0}.src{font-family:Consolas,monospace;color:#758c9b;font-size:10px;border-top:1px dashed #294252;margin-top:14px;padding-top:11px}
-    .evidence{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.terminal{border:1px solid #253f50;border-radius:18px;background:#071018;padding:18px;font-family:"SFMono-Regular",Consolas,monospace;min-height:315px;box-shadow:var(--shadow)}.term-title{font-family:Inter,system-ui;font-size:10px;color:#7e94a2;margin-bottom:14px}.line{font-size:11px;color:#aabcc7;margin:10px 0}.ok{color:#70dfbd}.eventblue{color:#8faeff}.gold{color:var(--gold)}.timeline{border-left:1px solid #294657;padding-left:20px;margin-left:7px}.event{position:relative;margin-bottom:19px}.event:before{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:var(--mint);left:-25px;top:7px;box-shadow:0 0 0 5px #0d1b26}.event b{font-size:13px}.event p{font-size:11px;color:var(--muted);margin:3px 0 0}
-    .stack{display:flex;gap:9px;flex-wrap:wrap}.chip{padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#0c1923;font-size:11px;color:#b8c8d1}
-    .code-map{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.module{padding:16px;border:1px solid var(--line);border-radius:15px;background:#0c1923}.module code{color:#9fbaff;font-size:11px}.module p{font-size:11px;color:#93a7b4;margin:6px 0 0}
-    footer{padding:38px 0 50px;border-top:1px solid rgba(255,255,255,.05);color:#728997;font-size:11px}
 
-    /* ===== Full-width responsive recruitment layout ===== */
-    html,body{width:100%;min-height:100%;overflow-x:hidden}
-    body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    html[data-theme="dark"]{
+      --bg:#0b0f14;
+      --bg-soft:#10161d;
+      --surface:#121922;
+      --surface-2:#161f2a;
+      --surface-3:#1a2632;
+      --text:#f3f6f8;
+      --text-2:#c9d2d9;
+      --muted:#8795a1;
+      --line:#25313c;
+      --line-strong:#344554;
 
-    /* Fill the browser instead of constraining the page to a narrow center column. */
-    .wrap{
+      /* Unified brand accents */
+      --accent:#52c7d9;
+      --accent-2:#6f8ff5;
+      --accent-soft:rgba(82,199,217,.10);
+      --blue-soft:rgba(111,143,245,.09);
+
+      --warning:#d8b15f;
+      --success:#62cbb0;
+      --shadow:0 28px 72px rgba(0,0,0,.30);
+      --nav:rgba(11,15,20,.88);
+      --grid:rgba(255,255,255,.022);
+      --code:#0d131a;
+      --hero-a:rgba(82,199,217,.075);
+      --hero-b:rgba(111,143,245,.065);
+      --button-text:#071014;
+      color-scheme:dark;
+    }
+
+    html[data-theme="light"]{
+      --bg:#f6f8fa;
+      --bg-soft:#eef2f5;
+      --surface:#ffffff;
+      --surface-2:#f7f9fb;
+      --surface-3:#eef3f7;
+      --text:#17212b;
+      --text-2:#3c4a57;
+      --muted:#71808d;
+      --line:#dbe3e9;
+      --line-strong:#c6d1d9;
+
+      /* Same hue family as dark mode */
+      --accent:#258ea0;
+      --accent-2:#5875cf;
+      --accent-soft:rgba(37,142,160,.08);
+      --blue-soft:rgba(88,117,207,.07);
+
+      --warning:#956d1f;
+      --success:#2b8f78;
+      --shadow:0 22px 58px rgba(37,54,68,.10);
+      --nav:rgba(246,248,250,.90);
+      --grid:rgba(23,33,43,.025);
+      --code:#15202a;
+      --hero-a:rgba(37,142,160,.055);
+      --hero-b:rgba(88,117,207,.05);
+      --button-text:#ffffff;
+      color-scheme:light;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-width:320px;
+      background:
+        radial-gradient(900px 600px at 4% 0%,var(--hero-a),transparent 60%),
+        radial-gradient(1100px 720px at 100% 5%,var(--hero-b),transparent 60%),
+        linear-gradient(var(--grid) 1px,transparent 1px),
+        linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+        var(--bg);
+      background-size:auto,auto,42px 42px,42px 42px,auto;
+      color:var(--text);
+      font-family:var(--font);
+      line-height:1.7;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+      transition:background-color var(--ease),color var(--ease);
+      overflow-x:hidden;
+    }
+
+    a{color:inherit;text-decoration:none}
+    button{font:inherit}
+    .page{
+      width:100%;
+      padding-inline:clamp(22px,3.8vw,84px);
+    }
+    .full{
       width:100%;
       max-width:none;
       margin:0;
-      padding-left:clamp(24px,4.2vw,84px);
-      padding-right:clamp(24px,4.2vw,84px);
     }
 
-    /* Prevent CSS Grid content from forcing columns wider than their tracks. */
-    .hero-grid,.cards,.arch,.layers,.engineering,.evidence,.code-map,.ui,
-    .hero-grid>*,.cards>*,.arch>*,.layers>*,.engineering>*,.evidence>*,.code-map>*,.ui>*{
+    .nav{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:var(--nav);
+      backdrop-filter:blur(18px) saturate(135%);
+      border-bottom:1px solid color-mix(in srgb,var(--line) 78%,transparent);
+    }
+    .nav-inner{
+      min-height:72px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:11px;
+      font-weight:800;
+      letter-spacing:-.28px;
+      white-space:nowrap;
+      color:var(--text);
+    }
+    .brand > span:last-child{
+      transform:translateY(-.25px);
+    }
+    .brand-mark{
+      width:38px;
+      height:38px;
+      flex:0 0 38px;
+      border-radius:12px;
+      display:grid;
+      place-items:center;
+      border:1px solid var(--line);
+      background:color-mix(in srgb,var(--surface) 96%,transparent);
+      color:var(--text-2);
+      box-shadow:0 6px 18px rgba(0,0,0,.06);
+    }
+    .brand-mark svg{
+      width:22px;
+      height:22px;
+      display:block;
+      overflow:visible;
+    }
+    .brand-mark .hub-line{
+      stroke:var(--muted);
+      stroke-width:1.35;
+      stroke-linecap:round;
+      opacity:.8;
+    }
+    .brand-mark .hub-core{
+      fill:var(--accent);
+    }
+    .brand-mark .hub-node-a{
+      fill:var(--accent-2);
+    }
+    .brand-mark .hub-node-b{
+      fill:color-mix(in srgb,var(--accent) 72%,var(--text));
+    }
+    .nav-right{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:10px;
+      min-width:0;
+      flex:0 1 auto;
+    }
+    .nav-links{
+      display:flex;
+      align-items:center;
+      gap:22px;
+      color:var(--muted);
+      font-size:13px;
       min-width:0;
     }
+    .nav-actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding-left:2px;
+    }
+    .nav-links a{transition:color var(--ease)}
+    .nav-links a:hover{color:var(--text)}
+    .icon-action{
+      width:40px;
+      height:40px;
+      min-width:40px;
+      flex:0 0 40px;
+      border:1px solid var(--line);
+      background:color-mix(in srgb,var(--surface) 94%,transparent);
+      color:var(--text-2);
+      border-radius:12px;
+      display:grid;
+      place-items:center;
+      padding:0;
+      cursor:pointer;
+      line-height:1;
+      transition:
+        background var(--ease),
+        border-color var(--ease),
+        color var(--ease),
+        transform var(--ease);
+    }
+    .icon-action svg{
+      width:18px;
+      height:18px;
+      display:block;
+      pointer-events:none;
+    }
+    .icon-action:hover{
+      color:var(--text);
+      border-color:var(--line-strong);
+      background:var(--surface-2);
+      transform:translateY(-1px);
+    }
+    .icon-action:active{transform:translateY(0)}
+    /* Theme button shows CURRENT theme only.
+       Higher specificity than `.icon-action svg` avoids both icons rendering. */
+    .icon-action .theme-sun,
+    .icon-action .theme-moon{
+      display:none;
+    }
+    html[data-theme="light"] .icon-action .theme-sun{
+      display:block;
+    }
+    html[data-theme="dark"] .icon-action .theme-moon{
+      display:block;
+    }
+    .icon-action:focus-visible,.btn:focus-visible{
+      outline:3px solid color-mix(in srgb,var(--accent) 35%,transparent);
+      outline-offset:2px;
+    }
 
-    .navin{height:72px}
-    .hero{padding:72px 0 64px}
+    .hero{
+      padding:clamp(56px,6vw,106px) 0 clamp(62px,6vw,106px);
+    }
     .hero-grid{
-      grid-template-columns:minmax(0,1.02fr) minmax(560px,.98fr);
-      gap:clamp(32px,4vw,78px);
+      width:100%;
+      display:grid;
+      grid-template-columns:minmax(0,.88fr) minmax(620px,1.12fr);
+      gap:clamp(44px,5.6vw,110px);
       align-items:center;
     }
-    .lead{max-width:900px;font-size:clamp(17px,1.2vw,21px);line-height:1.8}
-
-    /* Avoid glyph clipping on large headings and translated/system fonts. */
-    h1,h2,h3,.grad,.brand,.stat b,.node b,.tasktop b{
-      overflow:visible;
-      text-wrap:balance;
+    .hero-copy,.workspace,.cards>*,
+    .arch-row>*,.engineering>*,
+    .evidence-grid>*,.module-grid>*{min-width:0}
+    .eyebrow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-bottom:20px;
     }
+    .tag{
+      padding:6px 11px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:var(--surface);
+      color:var(--text-2);
+      font-size:11px;
+      font-weight:720;
+      letter-spacing:.15px;
+    }
+    h1,h2,h3,p{overflow-wrap:anywhere}
     h1{
-      font-size:clamp(58px,6.2vw,108px);
-      line-height:1.08;
-      letter-spacing:clamp(-4px,-.22vw,-2px);
-      padding:.06em .02em .10em;
-      margin:-.06em 0 16px;
+      margin:0 0 18px;
+      font-size:clamp(62px,6.2vw,112px);
+      line-height:1.14;
+      letter-spacing:clamp(-5px,-.25vw,-2px);
+      font-weight:900;
+      overflow:visible;
     }
-    .grad{display:inline-block;-webkit-box-decoration-break:clone;box-decoration-break:clone}
-    .head h2{font-size:clamp(34px,3vw,54px);line-height:1.22;letter-spacing:-1.4px;margin:7px 0 3px}
-    .card h3,.eng h3,.layer h3{line-height:1.4}
-    p,li,.card,.module,.stat,.node,.task,.bubble,.mini{overflow-wrap:anywhere;word-break:normal}
-
-    /* Use the available desktop canvas more effectively. */
-    .workspace{width:100%;min-height:520px}
-    .ui{grid-template-columns:clamp(122px,8vw,170px) minmax(0,1fr) clamp(160px,10vw,220px);min-height:500px}
-    .chat{padding:clamp(16px,1.4vw,24px)}
-    .bubble{font-size:clamp(10px,.72vw,13px);line-height:1.6}
-    .tasktop{font-size:clamp(9px,.67vw,12px);line-height:1.5;align-items:flex-start}
-    .micro,.mini{font-size:clamp(8px,.6vw,11px);line-height:1.55}
-    .person{font-size:clamp(9px,.64vw,12px);line-height:1.45}
-
-    section{padding:clamp(64px,6vw,104px) 0}
-    .head{margin-bottom:clamp(28px,3vw,46px)}
-    .head p{max-width:760px;font-size:clamp(14px,1vw,17px);line-height:1.8}
-    .cards{grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(14px,1.3vw,24px)}
-    .card{padding:clamp(20px,1.7vw,30px);min-height:220px}
-    .card h3{font-size:clamp(17px,1.15vw,21px)}
-    .card p{font-size:clamp(13px,.9vw,16px);line-height:1.75}
-
-    .arch{grid-template-columns:repeat(6,minmax(0,1fr));gap:clamp(9px,.9vw,16px)}
-    .node{min-height:136px;padding:18px 12px}
-    .node b{font-size:clamp(13px,.95vw,17px);line-height:1.45}
-    .node span{font-size:clamp(10px,.7vw,12px);line-height:1.55}
-    .layers{gap:clamp(14px,1.3vw,24px);margin-top:24px}
-    .engineering{gap:clamp(16px,1.4vw,26px)}
-    .evidence{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:clamp(16px,1.5vw,28px)}
-    .code-map{grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(13px,1.2vw,22px)}
-    .module{padding:clamp(16px,1.4vw,24px)}
-
-    .eng{isolation:isolate}
-    .eng>*{position:relative;z-index:1}
-    .eng:after{z-index:0;pointer-events:none}
-
-    @media(min-width:1500px){
-      .hero-grid{grid-template-columns:minmax(0,1fr) minmax(650px,.95fr)}
-      .workspace{min-height:570px}
-      .ui{min-height:526px}
-      .stats{max-width:900px}
+    .gradient-text{
+      display:inline-block;
+      color:transparent;
+      background:linear-gradient(90deg,var(--text) 0%,color-mix(in srgb,var(--accent) 54%,var(--text)) 58%,color-mix(in srgb,var(--accent-2) 46%,var(--text)) 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-box-decoration-break:clone;
+      box-decoration-break:clone;
+      line-height:1.14;
+      padding:.04em .03em .18em;
+      margin-bottom:-.10em;
+      overflow:visible;
+      vertical-align:top;
+    }
+    .lead{
+      margin:0;
+      max-width:880px;
+      color:var(--text-2);
+      font-size:clamp(17px,1.15vw,21px);
+      line-height:1.82;
+    }
+    .lead strong{color:var(--text)}
+    .hero-note{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:13px;
+      display:flex;
+      align-items:center;
+      gap:9px;
+    }
+    .hero-note::before{
+      content:"";
+      width:7px;height:7px;border-radius:50%;
+      background:var(--success);
+      box-shadow:0 0 0 5px var(--accent-soft);
+      flex:0 0 auto;
+    }
+    .actions{
+      margin-top:28px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:11px;
+    }
+    .btn{
+      min-height:46px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:11px 17px;
+      border-radius:13px;
+      border:1px solid var(--line);
+      background:var(--surface);
+      color:var(--text);
+      font-size:13px;
+      font-weight:780;
+      transition:transform var(--ease),background var(--ease),border-color var(--ease);
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+      border-color:var(--line-strong);
+      background:var(--surface-2);
+    }
+    .btn.primary{
+      border-color:transparent;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      color:var(--button-text);
+      box-shadow:0 14px 34px color-mix(in srgb,var(--accent) 18%,transparent);
     }
 
-    @media(max-width:980px){.hero-grid,.evidence{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}.layers{grid-template-columns:1fr 1fr}.arch{grid-template-columns:1fr 40px 1fr}.ui{grid-template-columns:100px 1fr}.artifacts{display:none}.engineering{grid-template-columns:1fr}.code-map{grid-template-columns:1fr 1fr}.navlinks a:not(.github){display:none}}
-    @media(max-width:620px){h1{letter-spacing:-2px}.stats,.cards,.layers,.code-map{grid-template-columns:1fr}.head{align-items:flex-start;flex-direction:column}.arch{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}.ui{grid-template-columns:76px 1fr}.side{padding:12px 6px}.person{font-size:8px;padding:7px 4px}.hero{padding-top:54px}}
+    .hero-metrics{
+      margin-top:34px;
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+    }
+    .metric{
+      min-height:112px;
+      border:1px solid var(--line);
+      background:color-mix(in srgb,var(--surface) 86%,transparent);
+      border-radius:16px;
+      padding:17px;
+    }
+    .metric strong{
+      display:block;
+      color:var(--text);
+      font-size:15px;
+      margin-bottom:5px;
+      letter-spacing:-.15px;
+    }
+    .metric span{
+      display:block;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.6;
+    }
 
-    @media(max-width:1180px){
-      .hero-grid{grid-template-columns:1fr;gap:42px}
-      .workspace{max-width:none}
-      .evidence{grid-template-columns:1fr}
+    .workspace{
+      border:1px solid var(--line-strong);
+      border-radius:26px;
+      background:var(--surface);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      min-height:580px;
+      position:relative;
+    }
+    .workspace::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:linear-gradient(135deg,var(--accent-soft),transparent 32%,transparent 65%,var(--blue-soft));
+    }
+    .window-bar{
+      position:relative;
+      z-index:1;
+      height:48px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 16px;
+      border-bottom:1px solid var(--line);
+      background:color-mix(in srgb,var(--surface-2) 86%,transparent);
+    }
+    .dots{display:flex;gap:7px}
+    .dots i{
+      width:8px;height:8px;border-radius:50%;
+      background:var(--line-strong);
+      display:block;
+    }
+    .window-title{
+      font-size:10px;
+      color:var(--muted);
+      letter-spacing:.2px;
+    }
+    .workspace-ui{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:clamp(128px,8.5vw,190px) minmax(0,1fr) clamp(175px,11vw,230px);
+      min-height:532px;
+    }
+    .sidebar,.artifact-panel{
+      padding:18px 13px;
+      background:color-mix(in srgb,var(--bg-soft) 76%,transparent);
+    }
+    .sidebar{border-right:1px solid var(--line)}
+    .artifact-panel{border-left:1px solid var(--line)}
+    .panel-title{
+      margin:4px 6px 10px;
+      color:var(--muted);
+      font-size:9px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:1.3px;
+    }
+    .person{
+      margin:3px 0;
+      padding:8px 9px;
+      border-radius:9px;
+      color:var(--muted);
+      font-size:10px;
+      line-height:1.45;
+    }
+    .person.active{
+      color:var(--text);
+      background:var(--surface-3);
+    }
+    .chat{
+      padding:18px;
+    }
+    .bubble{
+      max-width:88%;
+      padding:11px 12px;
+      border-radius:12px;
+      font-size:10px;
+      line-height:1.55;
+      margin-bottom:11px;
+    }
+    .bubble.user{
+      margin-left:auto;
+      background:color-mix(in srgb,var(--accent-2) 22%,var(--surface-2));
+      border:1px solid color-mix(in srgb,var(--accent-2) 24%,var(--line));
+    }
+    .bubble.agent{
+      background:color-mix(in srgb,var(--accent) 12%,var(--surface-2));
+      border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));
+    }
+    .task{
+      border:1px solid var(--line);
+      background:color-mix(in srgb,var(--surface-2) 92%,transparent);
+      border-radius:13px;
+      padding:12px;
+      margin:9px 0;
+    }
+    .task-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:8px;
+      font-size:10px;
+      line-height:1.45;
+    }
+    .status{
+      flex:0 0 auto;
+      padding:3px 7px;
+      border-radius:999px;
+      background:var(--accent-soft);
+      color:var(--success);
+      font-size:8px;
+      font-weight:800;
+    }
+    .progress{
+      height:4px;
+      border-radius:999px;
+      background:var(--line);
+      overflow:hidden;
+      margin:9px 0 6px;
+    }
+    .progress span{
+      display:block;
+      height:100%;
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    }
+    .micro{
+      font-size:8px;
+      color:var(--muted);
+      line-height:1.5;
+    }
+    .artifact-item{
+      padding:10px;
+      margin:8px 0;
+      border:1px solid var(--line);
+      background:var(--surface-2);
+      border-radius:10px;
+      color:var(--text-2);
+      font-size:9px;
+      line-height:1.55;
+    }
+    .artifact-item b{color:var(--success)}
+    .artifact-item .blue{color:var(--accent-2)}
+
+    section.content{
+      padding:clamp(72px,6vw,118px) 0;
+      border-top:1px solid color-mix(in srgb,var(--line) 75%,transparent);
+    }
+    .section-head{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(340px,.75fr);
+      align-items:end;
+      gap:clamp(28px,5vw,80px);
+      margin-bottom:clamp(30px,3.5vw,52px);
+    }
+    .kicker{
+      color:var(--accent);
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:1.45px;
+      text-transform:uppercase;
+    }
+    .section-head h2{
+      margin:6px 0 0;
+      font-size:clamp(34px,3.1vw,58px);
+      line-height:1.18;
+      letter-spacing:clamp(-2px,-.08vw,-1px);
+    }
+    .section-head p{
+      margin:0;
+      max-width:760px;
+      color:var(--muted);
+      font-size:clamp(13px,.95vw,16px);
+      line-height:1.8;
+    }
+
+    .cards{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:clamp(14px,1.4vw,25px);
+    }
+    .card{
+      min-height:240px;
+      padding:clamp(22px,1.8vw,31px);
+      border:1px solid var(--line);
+      border-radius:var(--radius-lg);
+      background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 98%,transparent),color-mix(in srgb,var(--surface-2) 92%,transparent));
+      position:relative;
+      overflow:hidden;
+      transition:transform var(--ease),border-color var(--ease),background var(--ease);
+    }
+    .card:hover{
+      transform:translateY(-2px);
+      border-color:var(--line-strong);
+    }
+    .card::after{
+      content:"";
+      position:absolute;
+      width:130px;height:130px;border-radius:50%;
+      right:-65px;top:-65px;
+      background:var(--blue-soft);
+      pointer-events:none;
+    }
+    .card-icon{
+      width:42px;height:42px;
+      border:1px solid var(--line);
+      border-radius:13px;
+      display:grid;
+      place-items:center;
+      background:var(--surface-2);
+      color:var(--accent);
+      font-size:18px;
+      position:relative;
+      z-index:1;
+    }
+    .card h3{
+      margin:16px 0 9px;
+      font-size:clamp(17px,1.1vw,21px);
+      line-height:1.35;
+      position:relative;
+      z-index:1;
+    }
+    .card p{
+      margin:0;
+      color:var(--muted);
+      font-size:clamp(12px,.85vw,15px);
+      line-height:1.78;
+      position:relative;
+      z-index:1;
+    }
+    .card-code{
+      margin-top:18px;
+      padding-top:13px;
+      border-top:1px dashed var(--line);
+      color:var(--muted);
+      font-family:var(--mono);
+      font-size:10px;
+      position:relative;
+      z-index:1;
+    }
+
+    .architecture-shell{
+      border:1px solid var(--line);
+      border-radius:var(--radius-xl);
+      background:color-mix(in srgb,var(--surface) 93%,transparent);
+      padding:clamp(20px,2.1vw,38px);
+      overflow:hidden;
+    }
+    .arch-row{
+      display:grid;
+      grid-template-columns:repeat(6,minmax(0,1fr));
+      gap:12px;
+      align-items:stretch;
+    }
+    .arch-row + .arch-row{margin-top:14px}
+    .arch-node{
+      min-height:126px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      padding:15px 12px;
+      border:1px solid var(--line);
+      border-radius:15px;
+      background:var(--surface-2);
+    }
+    .arch-node.accent{
+      border-color:color-mix(in srgb,var(--accent) 34%,var(--line));
+      background:linear-gradient(180deg,var(--accent-soft),var(--surface-2));
+    }
+    .arch-node.blue{
+      border-color:color-mix(in srgb,var(--accent-2) 32%,var(--line));
+      background:linear-gradient(180deg,var(--blue-soft),var(--surface-2));
+    }
+    .arch-node b{
+      font-size:13px;
+      line-height:1.4;
+    }
+    .arch-node span{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:9px;
+      line-height:1.5;
+    }
+    .architecture-caption{
+      margin-top:18px;
+      color:var(--muted);
+      font-size:11px;
+      text-align:center;
+    }
+
+    .layer-strip{
+      margin-top:18px;
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:13px;
+    }
+    .layer{
+      min-height:146px;
+      padding:18px;
+      border-radius:15px;
+      border:1px solid var(--line);
+      background:var(--surface);
+    }
+    .layer small{
+      display:block;
+      color:var(--accent);
+      font-size:9px;
+      font-weight:850;
+      letter-spacing:1px;
+      text-transform:uppercase;
+    }
+    .layer strong{
+      display:block;
+      margin:6px 0 8px;
+      font-size:15px;
+    }
+    .layer span{
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.65;
+    }
+
+    .engineering{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:clamp(14px,1.4vw,24px);
+    }
+    .eng-card{
+      min-height:260px;
+      padding:clamp(22px,2vw,34px);
+      border:1px solid var(--line);
+      border-radius:var(--radius-lg);
+      background:var(--surface);
+    }
+    .eng-card .num{
+      color:var(--accent);
+      font-family:var(--mono);
+      font-size:10px;
+      letter-spacing:.8px;
+    }
+    .eng-card h3{
+      margin:8px 0 12px;
+      font-size:clamp(19px,1.35vw,25px);
+      line-height:1.35;
+    }
+    .eng-card ul{
+      margin:0;
+      padding-left:18px;
+      color:var(--text-2);
+      font-size:13px;
+      line-height:1.72;
+    }
+    .eng-card li{margin:7px 0}
+    .eng-card code{
+      display:block;
+      margin-top:18px;
+      padding-top:13px;
+      border-top:1px dashed var(--line);
+      color:var(--muted);
+      font-family:var(--mono);
+      font-size:10px;
+    }
+
+    .evidence-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1.15fr) minmax(390px,.85fr);
+      gap:clamp(18px,2vw,34px);
+    }
+    .terminal{
+      min-height:390px;
+      border:1px solid var(--line);
+      border-radius:var(--radius-lg);
+      background:var(--code);
+      padding:24px;
+      box-shadow:var(--shadow);
+      color:#d6e2e7;
+      font-family:var(--mono);
+    }
+    .terminal-head{
+      margin-bottom:18px;
+      color:#8ea3ad;
+      font-family:var(--font);
+      font-size:10px;
+      letter-spacing:.4px;
+    }
+    .term-line{
+      margin:10px 0;
+      font-size:11px;
+      line-height:1.65;
+    }
+    .term-line .ok{color:#70dfbd}
+    .term-line .blue{color:#97b4ff}
+    .term-line .gold{color:#edc36a}
+    .timeline{
+      min-height:390px;
+      border:1px solid var(--line);
+      border-radius:var(--radius-lg);
+      background:var(--surface);
+      padding:28px 28px 28px 42px;
+    }
+    .timeline-item{
+      position:relative;
+      padding:0 0 25px 22px;
+      border-left:1px solid var(--line);
+    }
+    .timeline-item:last-child{
+      padding-bottom:0;
+      border-left-color:transparent;
+    }
+    .timeline-item::before{
+      content:"";
+      position:absolute;
+      left:-5px;
+      top:5px;
+      width:9px;height:9px;border-radius:50%;
+      background:var(--accent);
+      box-shadow:0 0 0 5px var(--accent-soft);
+    }
+    .timeline-item b{
+      display:block;
+      font-size:13px;
+      line-height:1.45;
+    }
+    .timeline-item p{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.65;
+    }
+
+    .stack{
+      display:flex;
+      flex-wrap:wrap;
+      gap:9px;
+      margin-bottom:26px;
+    }
+    .chip{
+      padding:8px 11px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:var(--surface);
+      color:var(--text-2);
+      font-size:11px;
+    }
+    .module-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:13px;
+    }
+    .module{
+      min-height:118px;
+      padding:17px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:var(--surface);
+    }
+    .module code{
+      color:var(--accent-2);
+      font-family:var(--mono);
+      font-size:11px;
+      font-weight:700;
+    }
+    .module p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.6;
+    }
+
+    footer{
+      border-top:1px solid var(--line);
+      padding:38px 0 52px;
+      color:var(--muted);
+      font-size:11px;
+    }
+    .footer-inner{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+    }
+
+    @media (min-width:1800px){
+      .hero-grid{grid-template-columns:minmax(0,.82fr) minmax(760px,1.18fr)}
+      .workspace{min-height:620px}
+      .workspace-ui{min-height:572px}
+      .workspace-ui{grid-template-columns:190px minmax(0,1fr) 240px}
+      .chat{padding:22px}
+      .bubble{font-size:12px}
+      .task-head{font-size:11px}
+      .micro{font-size:9px}
+      .artifact-item{font-size:10px}
+    }
+
+    @media (max-width:1220px){
+      .hero-grid{grid-template-columns:1fr;gap:44px}
+      .workspace{min-height:560px}
+      .section-head{grid-template-columns:1fr;gap:14px;align-items:start}
       .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .layers{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .engineering{grid-template-columns:1fr}
-      .code-map{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .arch-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .layer-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .evidence-grid{grid-template-columns:1fr}
+      .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
-    @media(max-width:760px){
-      .wrap{padding-left:18px;padding-right:18px}
-      .navin{height:62px}
-      .navlinks a:not(.github){display:none}
-      .hero{padding:48px 0 42px}
-      h1{font-size:clamp(50px,16vw,76px);line-height:1.1;letter-spacing:-2.2px}
-      .stats,.cards,.layers,.code-map{grid-template-columns:1fr}
-      .head{align-items:flex-start;flex-direction:column;gap:12px}
-      .ui{grid-template-columns:78px minmax(0,1fr)}
-      .artifacts{display:none}
-      .side{padding:12px 6px}
-      .person{font-size:9px;padding:7px 5px}
-      .arch{grid-template-columns:1fr}
-      .arrow{transform:rotate(90deg);min-height:26px}
-      .workspace{min-height:auto}
-      .ui{min-height:430px}
-      section{padding:58px 0}
+
+    @media (max-width:820px){
+      .page{padding-inline:18px}
+      .nav-links > a{display:none}
+      .hero{padding-top:44px}
+      h1{font-size:clamp(54px,16vw,82px)}
+      .hero-metrics,.cards,.layer-strip,.engineering,.module-grid{grid-template-columns:1fr}
+      .workspace-ui{grid-template-columns:82px minmax(0,1fr)}
+      .artifact-panel{display:none}
+      .sidebar{padding:13px 6px}
+      .person{padding:7px 5px;font-size:8px}
+      .panel-title{margin-inline:3px}
+      .chat{padding:12px}
+      .arch-row{grid-template-columns:1fr}
+      .arch-node{min-height:98px}
+      .footer-inner{align-items:flex-start;flex-direction:column}
+    }
+
+    @media (prefers-reduced-motion:reduce){
+      *{scroll-behavior:auto!important;transition:none!important}
     }
   </style>
 </head>
+
 <body>
   <nav class="nav">
-    <div class="wrap navin">
-      <div class="brand"><div class="mark">A</div><div>AgentHub</div></div>
-      <div class="navlinks">
-        <a href="#overview">项目概览</a><a href="#architecture">核心架构</a><a href="#engineering">工程设计</a><a href="#evidence">执行闭环</a>
-        <a class="github" href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noreferrer">GitHub ↗</a>
+    <div class="page nav-inner">
+      <a class="brand" href="#top" aria-label="AgentHub 首页">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path class="hub-line" d="M12 12 6.5 6.5M12 12l5.5-5.5M12 12l-5 6M12 12l5 6"/>
+            <circle class="hub-node-a" cx="6.5" cy="6.5" r="2.15"/>
+            <circle class="hub-node-b" cx="17.5" cy="6.5" r="2.15"/>
+            <circle class="hub-node-b" cx="7" cy="18" r="2.15"/>
+            <circle class="hub-node-a" cx="17" cy="18" r="2.15"/>
+            <circle class="hub-core" cx="12" cy="12" r="2.7"/>
+          </svg>
+        </span>
+        <span>AgentHub</span>
+      </a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="#overview">项目概览</a>
+          <a href="#architecture">核心架构</a>
+          <a href="#engineering">工程设计</a>
+          <a href="#evidence">执行闭环</a>
+        </div>
+
+        <div class="nav-actions">
+          <a
+            class="icon-action"
+            href="https://github.com/YoungBossX/AgentHub"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="在 GitHub 打开 AgentHub"
+            title="GitHub"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .9a11.1 11.1 0 0 0-3.51 21.63c.56.1.76-.24.76-.54v-2.13c-3.12.68-3.78-1.33-3.78-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.69.08-.69 1.13.08 1.73 1.16 1.73 1.16 1 1.72 2.63 1.22 3.27.93.1-.73.39-1.22.71-1.5-2.49-.28-5.11-1.25-5.11-5.55 0-1.23.44-2.23 1.16-3.02-.12-.28-.5-1.43.11-2.98 0 0 .95-.3 3.05 1.15A10.6 10.6 0 0 1 12 6.1c.94 0 1.89.13 2.78.37 2.11-1.45 3.05-1.15 3.05-1.15.61 1.55.23 2.7.11 2.98.72.79 1.16 1.79 1.16 3.02 0 4.31-2.63 5.26-5.13 5.54.4.35.76 1.03.76 2.08v3.05c0 .3.2.65.77.54A11.1 11.1 0 0 0 12 .9Z"/>
+            </svg>
+          </a>
+
+          <button
+            class="icon-action"
+            id="themeToggle"
+            type="button"
+            aria-label="切换亮色和暗色主题"
+            aria-pressed="false"
+            title="切换主题"
+          >
+            <svg class="theme-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M12 2.5v2M12 19.5v2M4.5 12h-2M21.5 12h-2M5.3 5.3 6.7 6.7M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"
+                    stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <svg class="theme-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 15.3A8.2 8.2 0 0 1 8.7 4a8.25 8.25 0 1 0 11.3 11.3Z"
+                    stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </nav>
 
-  <main>
+  <main id="top">
     <section class="hero">
-      <div class="wrap hero-grid">
-        <div>
-          <div class="eyebrow"><span class="tag">Multi-Agent</span><span class="tag">Coding Workspace</span><span class="tag">Engineering Evidence</span></div>
-          <h1 class="grad">AgentHub</h1>
-          <p class="lead">面向本地开发工作流的 <strong>IM 式多 Agent 编程协作平台</strong>。将用户需求转换为可执行任务图，由不同角色 Agent 协同完成代码任务，并通过隔离执行、并发控制、实时事件流与工程产物形成完整交付闭环。</p>
-          <div class="actions"><a class="btn primary" href="#architecture">查看系统架构 ↓</a><a class="btn" href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noreferrer">查看源码 ↗</a></div>
-          <div class="stats">
-            <div class="stat"><b>Task Graph</b><span>任务拆解、角色分配与依赖编排</span></div>
-            <div class="stat"><b>Worktree + Lock</b><span>会话隔离与写入冲突控制</span></div>
-            <div class="stat"><b>Event + Artifact</b><span>运行状态与工程证据统一追踪</span></div>
+      <div class="page hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow">
+            <span class="tag">Multi-Agent</span>
+            <span class="tag">Coding Workspace</span>
+            <span class="tag">Engineering Evidence</span>
+          </div>
+
+          <h1><span class="gradient-text">AgentHub</span></h1>
+
+          <p class="lead">
+            面向本地开发工作流的 <strong>IM 式多 Agent 编程协作平台</strong>。
+            将用户需求转换为可执行任务图，由不同角色 Agent 协同完成代码任务，
+            并通过隔离执行、并发控制、实时事件流与工程产物形成完整交付闭环。
+          </p>
+
+          <div class="hero-note">从自然语言需求，推进到可检查的工程结果</div>
+
+          <div class="actions">
+            <a class="btn primary" href="#architecture">查看系统架构 ↓</a>
+            <a class="btn" href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noreferrer">查看源码 ↗</a>
+          </div>
+
+          <div class="hero-metrics">
+            <div class="metric">
+              <strong>Task Graph</strong>
+              <span>任务拆解、角色分配、Target 与依赖编排</span>
+            </div>
+            <div class="metric">
+              <strong>Worktree + Lock</strong>
+              <span>Session 级隔离与目标写入冲突控制</span>
+            </div>
+            <div class="metric">
+              <strong>Event + Artifact</strong>
+              <span>运行状态、Diff、Review、Preview 统一追踪</span>
+            </div>
           </div>
         </div>
 
         <div class="workspace" aria-label="AgentHub 产品界面示意">
-          <div class="window"><i></i><i></i><i></i></div>
-          <div class="ui">
-            <aside class="side"><div class="smalltitle">Agents</div><div class="person active">◎ Orchestrator</div><div class="person">◫ Frontend</div><div class="person">⌘ Backend</div><div class="person">✓ QA / Review</div><div class="smalltitle" style="margin-top:18px">Sessions</div><div class="person active">Login Page</div><div class="person">Dashboard</div></aside>
+          <div class="window-bar">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <div class="window-title">AgentHub Workspace · Live Execution</div>
+          </div>
+
+          <div class="workspace-ui">
+            <aside class="sidebar">
+              <div class="panel-title">Agents</div>
+              <div class="person active">◎ Orchestrator</div>
+              <div class="person">◫ Frontend</div>
+              <div class="person">⌘ Backend</div>
+              <div class="person">✓ QA / Review</div>
+
+              <div class="panel-title" style="margin-top:20px">Sessions</div>
+              <div class="person active">Login Page</div>
+              <div class="person">Dashboard</div>
+              <div class="person">Settings</div>
+            </aside>
+
             <div class="chat">
-              <div class="bubble user">@orchestrator 构建一个登录页，并完成前端实现与检查。</div>
+              <div class="bubble user">@orchestrator 构建一个登录页，并完成前后端实现与检查。</div>
               <div class="bubble agent">已生成执行计划。任务将按角色、Target 与依赖关系推进。</div>
-              <div class="task"><div class="tasktop"><b>Frontend · Login UI</b><span class="status">completed</span></div><div class="progress"><span style="width:100%"></span></div><div class="micro">target: frontend · worktree isolated</div></div>
-              <div class="task"><div class="tasktop"><b>Backend · API Contract</b><span class="status">running</span></div><div class="progress"><span style="width:72%"></span></div><div class="micro">provider resolved · task run active</div></div>
-              <div class="task"><div class="tasktop"><b>QA · Review</b><span class="status">ready</span></div><div class="progress"><span style="width:28%"></span></div><div class="micro">dependsOn: frontend + backend</div></div>
+
+              <div class="task">
+                <div class="task-head"><b>Frontend · Login UI</b><span class="status">completed</span></div>
+                <div class="progress"><span style="width:100%"></span></div>
+                <div class="micro">target: frontend · worktree isolated</div>
+              </div>
+
+              <div class="task">
+                <div class="task-head"><b>Backend · API Contract</b><span class="status">running</span></div>
+                <div class="progress"><span style="width:72%"></span></div>
+                <div class="micro">provider resolved · task run active</div>
+              </div>
+
+              <div class="task">
+                <div class="task-head"><b>QA · Review</b><span class="status">ready</span></div>
+                <div class="progress"><span style="width:28%"></span></div>
+                <div class="micro">dependsOn: frontend + backend</div>
+              </div>
             </div>
-            <aside class="artifacts"><div class="smalltitle">Artifacts</div><div class="mini"><span class="mint">✓ Diff</span><br/>App.tsx<br/>styles.css</div><div class="mini"><span class="blue">◉ Preview</span><br/>Vite React<br/>healthy</div><div class="mini"><span class="mint">✓ Review</span><br/>artifact ready</div><div class="mini"><span class="blue">⌁ Events</span><br/>TaskRunEvent<br/>streaming</div></aside>
+
+            <aside class="artifact-panel">
+              <div class="panel-title">Artifacts</div>
+              <div class="artifact-item"><b>✓ Diff</b><br>App.tsx<br>styles.css</div>
+              <div class="artifact-item"><span class="blue">◉ Preview</span><br>Vite React<br>healthy</div>
+              <div class="artifact-item"><b>✓ Review</b><br>artifact ready</div>
+              <div class="artifact-item"><span class="blue">⌁ Events</span><br>TaskRunEvent<br>streaming</div>
+            </aside>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="overview">
-      <div class="wrap">
-        <div class="head"><div><div class="kicker">01 · Overview</div><h2>把 AI 编程从“回答”推进到“交付”</h2></div><p>AgentHub 的核心不是增加更多聊天角色，而是建立从需求理解、任务编排、受控执行到结果验证的工程工作流。</p></div>
+    <section class="content" id="overview">
+      <div class="page">
+        <div class="section-head">
+          <div>
+            <div class="kicker">01 · Overview</div>
+            <h2>把 AI 编程从“回答”推进到“交付”</h2>
+          </div>
+          <p>AgentHub 的核心不是增加更多聊天角色，而是建立从需求理解、任务编排、受控执行到结果验证的工程工作流。</p>
+        </div>
+
         <div class="cards">
-          <article class="card"><div class="icon">⌁</div><h3>任务编排</h3><p>Planner 解析用户意图与角色提及，Orchestrator 生成 Task Graph，并对任务依赖、角色和 Target 进行组织。</p></article>
-          <article class="card"><div class="icon">⚙</div><h3>运行时路由</h3><p>通过 ProviderGateway 将角色职责与具体 Coding Provider 解耦，统一处理 Provider 解析、健康检查与运行配置。</p></article>
-          <article class="card"><div class="icon">⑂</div><h3>隔离与并发</h3><p>Session 级 Git Worktree 提供代码工作区隔离，Session Queue 与 Target Lock 控制写任务的安全执行顺序。</p></article>
-          <article class="card"><div class="icon">✓</div><h3>可验证交付</h3><p>执行结果沉淀为 Diff、Review、Preview、TaskRunEvent 等工程产物，前端能够持续展示真实运行过程。</p></article>
+          <article class="card">
+            <div class="card-icon">⌁</div>
+            <h3>任务编排</h3>
+            <p>Planner 解析用户意图与角色提及，Orchestrator 生成 Task Graph，并对依赖、角色与 Target 进行组织。</p>
+            <div class="card-code">planning.py · task_graph_builder.py</div>
+          </article>
+
+          <article class="card">
+            <div class="card-icon">⚙</div>
+            <h3>运行时路由</h3>
+            <p>ProviderGateway 将 Agent 角色与具体 Coding Provider 解耦，统一处理 Provider 解析、健康检查与运行配置。</p>
+            <div class="card-code">provider_gateway.py · runtime config</div>
+          </article>
+
+          <article class="card">
+            <div class="card-icon">⑂</div>
+            <h3>隔离与并发</h3>
+            <p>Session 级 Git Worktree 提供工作区隔离，Session Queue 与 Target Lock 控制写任务的安全执行顺序。</p>
+            <div class="card-code">session_queue.py · target_locks.py</div>
+          </article>
+
+          <article class="card">
+            <div class="card-icon">✓</div>
+            <h3>可验证交付</h3>
+            <p>执行结果沉淀为 Diff、Review、Preview、TaskRunEvent 等工程产物，前端持续展示真实运行过程。</p>
+            <div class="card-code">diffs.py · previews.py · events.py</div>
+          </article>
         </div>
       </div>
     </section>
 
-    <section id="architecture">
-      <div class="wrap">
-        <div class="head"><div><div class="kicker">02 · Architecture</div><h2>一条请求如何进入执行系统</h2></div><p>从 IM 会话进入 Planner，再经过任务图、运行时路由与受控工作区，最终生成持久化事件和可检查 Artifact。</p></div>
-        <div class="arch">
-          <div class="node"><b>Message</b><span>Session / Context</span></div><div class="arrow">→</div><div class="node"><b>Planner</b><span>Intent / Mentions / LLM</span></div><div class="arrow">→</div><div class="node"><b>Task Graph</b><span>Role / Target / DependsOn</span></div><div class="arrow">→</div><div class="node"><b>TaskRun</b><span>Queue / Lease / Lock</span></div><div class="arrow">→</div><div class="node"><b>ProviderGateway</b><span>Runtime Resolution</span></div><div class="arrow">→</div><div class="node"><b>Adapter</b><span>Controlled Execution</span></div>
+    <section class="content" id="architecture">
+      <div class="page">
+        <div class="section-head">
+          <div>
+            <div class="kicker">02 · Architecture</div>
+            <h2>一条请求如何进入执行系统</h2>
+          </div>
+          <p>从 IM Session 进入 Planner，再经过任务图、Scheduler、运行时路由和受控工作区，最终生成持久化事件与可检查 Artifact。</p>
         </div>
-        <div class="arch" style="margin-top:9px">
-          <div class="node"><b>Worktree / Target</b><span>Execution Boundary</span></div><div class="arrow">→</div><div class="node"><b>Diff / Review</b><span>Engineering Evidence</span></div><div class="arrow">→</div><div class="node"><b>Preview</b><span>Runtime Verification</span></div><div class="arrow">→</div><div class="node"><b>TaskRunEvent</b><span>Persistent Event Stream</span></div><div class="arrow">→</div><div class="node"><b>SSE / Web UI</b><span>Realtime Projection</span></div><div class="arrow">→</div><div class="node"><b>Artifacts</b><span>Delivery View</span></div>
+
+        <div class="architecture-shell">
+          <div class="arch-row">
+            <div class="arch-node accent"><b>User / Session</b><span>Message / Context</span></div>
+            <div class="arch-node"><b>Planner</b><span>Intent / Mention / LLM</span></div>
+            <div class="arch-node"><b>Task Graph</b><span>Role / Target / DependsOn</span></div>
+            <div class="arch-node blue"><b>Scheduler</b><span>Dependency / Queue</span></div>
+            <div class="arch-node blue"><b>ProviderGateway</b><span>Runtime Resolution</span></div>
+            <div class="arch-node"><b>Adapter</b><span>Codex / Claude Code</span></div>
+          </div>
+
+          <div class="arch-row">
+            <div class="arch-node"><b>Worktree / Target</b><span>Execution Boundary</span></div>
+            <div class="arch-node"><b>Target Lock</b><span>Write Isolation</span></div>
+            <div class="arch-node accent"><b>Diff / Review</b><span>Engineering Evidence</span></div>
+            <div class="arch-node accent"><b>Preview</b><span>Runtime Verification</span></div>
+            <div class="arch-node blue"><b>TaskRunEvent</b><span>Persistent Event Stream</span></div>
+            <div class="arch-node blue"><b>SSE / Web UI</b><span>Realtime Projection</span></div>
+          </div>
+
+          <div class="architecture-caption">Planning → Scheduling → Runtime → Isolation → Evidence → Realtime Projection</div>
         </div>
-        <div class="layers">
-          <article class="card layer"><div class="label">Interaction</div><h3>交互层</h3><ul><li>IM 式 Session</li><li>角色提及与上下文传递</li><li>任务卡片与产物面板</li></ul></article>
-          <article class="card layer"><div class="label">Orchestration</div><h3>编排层</h3><ul><li>Planner / LLM Planner</li><li>Task Graph Validation</li><li>Role / Target / Dependency</li></ul></article>
-          <article class="card layer"><div class="label">Execution</div><h3>执行层</h3><ul><li>ProviderGateway</li><li>Session Queue / Target Lock</li><li>Worktree / External Target</li></ul></article>
-          <article class="card layer"><div class="label">Evidence</div><h3>证据层</h3><ul><li>Diff / Review / Preview</li><li>TaskRunEvent</li><li>SSE / Diagnostics Projection</li></ul></article>
+
+        <div class="layer-strip">
+          <div class="layer"><small>Planning</small><strong>规划层</strong><span>Planner、Orchestrator、Task Graph：把自然语言需求转换成可执行工程任务。</span></div>
+          <div class="layer"><small>Execution</small><strong>执行层</strong><span>TaskRun、Scheduler、ProviderGateway：决定任务什么时候执行、由谁执行。</span></div>
+          <div class="layer"><small>Isolation</small><strong>隔离层</strong><span>Git Worktree、Target Scope、Target Lock：控制工作目录和写入边界。</span></div>
+          <div class="layer"><small>Evidence</small><strong>证据层</strong><span>Diff、Review、Preview、TaskRunEvent、SSE：让执行结果可检查、可追踪。</span></div>
         </div>
       </div>
     </section>
 
-    <section id="engineering">
-      <div class="wrap">
-        <div class="head"><div><div class="kicker">03 · Engineering Design</div><h2>核心工程设计</h2></div><p>围绕多 Agent 同时修改代码、Provider 差异、长任务可观测性和结果验证，形成明确的运行时边界。</p></div>
+    <section class="content" id="engineering">
+      <div class="page">
+        <div class="section-head">
+          <div>
+            <div class="kicker">03 · Engineering</div>
+            <h2>工程设计重点</h2>
+          </div>
+          <p>项目把多 Agent 协作拆成规划、运行时、隔离、并发与证据模型几个独立问题，避免把所有职责塞进一个“Orchestrator 类”。</p>
+        </div>
+
         <div class="engineering">
-          <article class="card eng"><div class="label">Isolation & Concurrency</div><h3>Git Worktree + Queue + Target Lock</h3><ul><li>不同 Session 绑定独立工作区，避免会话之间互相污染。</li><li>只读任务可并行执行，写任务按照 Session Queue 管理执行顺序。</li><li>Target Lock 对共享写目标建立互斥边界，RunEngine 统一管理执行生命周期。</li></ul><div class="src">session_queue.py · target_locks.py · run_engine.py</div></article>
-          <article class="card eng"><div class="label">Runtime Abstraction</div><h3>ProviderGateway + Adapter</h3><ul><li>角色配置与具体模型/CLI 解耦，运行时根据 role、target、capability 解析 Provider。</li><li>Provider 健康、容量与执行上下文集中在 Gateway 层管理。</li><li>Adapter 将 Codex CLI、Claude Code CLI 等执行方式统一到一致的 Agent 事件接口。</li></ul><div class="src">provider_gateway.py · codex_adapter.py · claude_code_adapter.py</div></article>
-          <article class="card eng"><div class="label">Traceability</div><h3>TaskRunEvent + SSE</h3><ul><li>Agent 执行过程标准化为事件，并持久化为 TaskRunEvent。</li><li>前端通过 SSE 按事件增量更新任务状态、执行轨迹和产物。</li><li>持久化事件可继续用于会话恢复、执行回放和运行诊断投影。</li></ul><div class="src">events.py · models.py · workspace-shell.tsx</div></article>
-          <article class="card eng"><div class="label">Verification</div><h3>Diff + Review + Preview</h3><ul><li>执行后采集真实 Git Diff 或文件快照差异，展示实际代码变更。</li><li>Review Artifact 对变更进行独立审查，Preview Service 启动本地前端验证。</li><li>统一 Artifact 模型把代码差异、审查结果和预览状态组织为交付证据。</li></ul><div class="src">diffs.py · reviews.py · previews.py · artifact_*.py</div></article>
+          <article class="eng-card">
+            <div class="num">01 / TASK GRAPH</div>
+            <h3>任务不是聊天消息，而是可调度节点</h3>
+            <ul>
+              <li>Task 记录角色、Target、依赖与 Intent。</li>
+              <li>任务图校验后再进入 Scheduler。</li>
+              <li>前置任务完成后，下游任务才能进入可运行状态。</li>
+            </ul>
+            <code>planning.py · plan_validator.py · task_graph_builder.py</code>
+          </article>
+
+          <article class="eng-card">
+            <div class="num">02 / PROVIDER RUNTIME</div>
+            <h3>角色职责与具体模型 / CLI 解耦</h3>
+            <ul>
+              <li>ProviderGateway 根据 role / target / capability 做运行时解析。</li>
+              <li>统一处理 Provider 健康、容量与 Adapter 能力。</li>
+              <li>Planner 和 TaskRun 不需要绑定某一个 Coding CLI。</li>
+            </ul>
+            <code>provider_gateway.py · codex_adapter.py · claude_code_adapter.py</code>
+          </article>
+
+          <article class="eng-card">
+            <div class="num">03 / ISOLATION</div>
+            <h3>Worktree 隔离会话，Lock 控制写冲突</h3>
+            <ul>
+              <li>不同 Session 在独立 Git Worktree 中工作。</li>
+              <li>写任务通过 Session Queue 控制运行顺序。</li>
+              <li>同一 Target 使用写锁建立互斥边界。</li>
+            </ul>
+            <code>session_queue.py · scheduler.py · target_locks.py</code>
+          </article>
+
+          <article class="eng-card">
+            <div class="num">04 / EVENT MODEL</div>
+            <h3>执行过程先持久化，再实时投影到前端</h3>
+            <ul>
+              <li>Adapter 事件标准化为 TaskRunEvent。</li>
+              <li>事件落 SQLite 后通过 SSE 增量推送。</li>
+              <li>Diff、Review、Preview 与 Diagnostics 统一形成证据链。</li>
+            </ul>
+            <code>events.py · run_engine.py · run_diagnostics.py</code>
+          </article>
         </div>
       </div>
     </section>
 
-    <section id="evidence">
-      <div class="wrap evidence">
-        <div>
-          <div class="kicker">04 · Execution Evidence</div><h2 style="font-size:34px;letter-spacing:-1.2px;margin:6px 0 18px">运行过程本身就是可检查的数据</h2>
-          <div class="terminal"><div class="term-title">task-run / frontend-login-page</div>
-            <div class="line"><span class="eventblue">planner.completed</span>   → task graph persisted</div>
-            <div class="line"><span class="eventblue">provider.resolved</span>    → coding provider selected</div>
-            <div class="line"><span class="ok">session_queue.running</span>  → write scope acquired</div>
-            <div class="line"><span class="gold">adapter.event</span>          → file / shell activity</div>
-            <div class="line"><span class="ok">diff.collected</span>         → code changes recorded</div>
-            <div class="line"><span class="ok">review.created</span>         → review artifact ready</div>
-            <div class="line"><span class="ok">preview.healthy</span>        → local preview verified</div>
-            <div class="line"><span class="eventblue">task_run.completed</span>  → events & artifacts persisted</div>
+    <section class="content" id="evidence">
+      <div class="page">
+        <div class="section-head">
+          <div>
+            <div class="kicker">04 · Evidence</div>
+            <h2>执行结果必须可追踪、可检查</h2>
+          </div>
+          <p>AgentHub 不把“模型说完成了”视为最终结果，而是继续采集真实代码变化、运行状态与前端预览，形成工程交付证据。</p>
+        </div>
+
+        <div class="evidence-grid">
+          <div class="terminal" aria-label="TaskRunEvent 示例">
+            <div class="terminal-head">TASK RUN · event stream</div>
+            <div class="term-line"><span class="blue">[01]</span> provider.resolution_started · role=frontend</div>
+            <div class="term-line"><span class="ok">[02]</span> provider.health_checked · local-codex-cli healthy</div>
+            <div class="term-line"><span class="blue">[03]</span> session_queue.running · target=frontend</div>
+            <div class="term-line"><span class="gold">[04]</span> adapter.event · file_edit App.tsx</div>
+            <div class="term-line"><span class="gold">[05]</span> adapter.event · file_edit styles.css</div>
+            <div class="term-line"><span class="ok">[06]</span> diff.collected · artifact ready</div>
+            <div class="term-line"><span class="ok">[07]</span> preview.healthy · vite target running</div>
+            <div class="term-line"><span class="blue">[08]</span> task_run.completed · evidence projected to UI</div>
+          </div>
+
+          <div class="timeline">
+            <div class="timeline-item">
+              <b>Task planned</b>
+              <p>Planner 输出角色、目标、依赖和执行意图。</p>
+            </div>
+            <div class="timeline-item">
+              <b>Runtime resolved</b>
+              <p>ProviderGateway 选择兼容的 Coding Provider / Adapter。</p>
+            </div>
+            <div class="timeline-item">
+              <b>Controlled execution</b>
+              <p>任务在 Session Worktree / Target Scope 中运行。</p>
+            </div>
+            <div class="timeline-item">
+              <b>Evidence collected</b>
+              <p>采集 Diff、Review、Preview 与运行诊断。</p>
+            </div>
+            <div class="timeline-item">
+              <b>Realtime projection</b>
+              <p>TaskRunEvent 持久化后通过 SSE 推送到 Workspace。</p>
+            </div>
           </div>
         </div>
-        <article class="card"><div class="label">Delivery Pipeline</div><div class="timeline" style="margin-top:18px"><div class="event"><b>Plan</b><p>将用户需求拆解为带角色、Target 与依赖的任务图。</p></div><div class="event"><b>Route</b><p>根据运行时配置和能力要求选择执行 Provider。</p></div><div class="event"><b>Guard</b><p>检查队列、写锁与工作区范围，建立执行边界。</p></div><div class="event"><b>Execute</b><p>Adapter 在分配的 Worktree 或 Target 中完成代码操作。</p></div><div class="event"><b>Verify</b><p>采集 Diff、Review 与 Preview，形成可检查工程产物。</p></div><div class="event"><b>Observe</b><p>TaskRunEvent 持久化并通过 SSE 投影到前端工作台。</p></div></div></article>
       </div>
     </section>
 
-    <section>
-      <div class="wrap">
-        <div class="head"><div><div class="kicker">05 · Technology</div><h2>技术栈与模块映射</h2></div><p>技术选择围绕任务编排、受控代码执行、实时状态同步和可验证工程产物展开。</p></div>
-        <div class="stack"><span class="chip">Python</span><span class="chip">FastAPI</span><span class="chip">Pydantic</span><span class="chip">SQLModel</span><span class="chip">SQLite</span><span class="chip">Next.js</span><span class="chip">TypeScript</span><span class="chip">Tailwind CSS</span><span class="chip">SSE</span><span class="chip">Git Worktree</span><span class="chip">Codex CLI</span><span class="chip">Claude Code CLI</span><span class="chip">Vite React</span><span class="chip">Task Graph</span><span class="chip">Provider Gateway</span></div>
-        <div class="code-map" style="margin-top:22px"><div class="module"><code>planning.py</code><p>提及解析、Planner/LLM Planner、任务图生成与校验。</p></div><div class="module"><code>run_engine.py</code><p>TaskRun 主执行链路、执行生命周期与产物收尾。</p></div><div class="module"><code>provider_gateway.py</code><p>Provider 解析、健康、容量与运行时证据。</p></div><div class="module"><code>session_queue.py</code><p>Session 运行队列与读写任务门控。</p></div><div class="module"><code>diffs.py / previews.py</code><p>代码变更采集与本地运行预览。</p></div><div class="module"><code>apps/web</code><p>Session、聊天、任务卡、执行轨迹与 Artifact 工作台。</p></div></div>
+    <section class="content" id="modules">
+      <div class="page">
+        <div class="section-head">
+          <div>
+            <div class="kicker">05 · Stack & Modules</div>
+            <h2>技术栈与核心模块</h2>
+          </div>
+          <p>项目围绕本地 Agent Runtime、Web Workspace、持久化事件和代码工作区隔离构建，模块边界直接对应主要工程职责。</p>
+        </div>
+
+        <div class="stack">
+          <span class="chip">Python</span>
+          <span class="chip">FastAPI</span>
+          <span class="chip">Pydantic</span>
+          <span class="chip">SQLModel</span>
+          <span class="chip">SQLite</span>
+          <span class="chip">Next.js</span>
+          <span class="chip">TypeScript</span>
+          <span class="chip">Tailwind CSS</span>
+          <span class="chip">SSE</span>
+          <span class="chip">Git Worktree</span>
+          <span class="chip">Codex CLI</span>
+          <span class="chip">Claude Code CLI</span>
+        </div>
+
+        <div class="module-grid">
+          <div class="module"><code>planning.py</code><p>Mention 解析、Planner / LLM Planner 与 Task Graph 生成。</p></div>
+          <div class="module"><code>run_engine.py</code><p>TaskRun 主执行链路、生命周期与执行收尾。</p></div>
+          <div class="module"><code>provider_gateway.py</code><p>Provider 解析、健康检查、容量与运行时映射。</p></div>
+          <div class="module"><code>scheduler.py</code><p>任务依赖、访问模式与可运行状态判断。</p></div>
+          <div class="module"><code>session_queue.py</code><p>Session 内写任务队列和并发运行 gate。</p></div>
+          <div class="module"><code>target_locks.py</code><p>Target 写锁获取、持有与终态释放。</p></div>
+          <div class="module"><code>codex_adapter.py</code><p>Codex CLI 适配与标准化运行事件。</p></div>
+          <div class="module"><code>claude_code_adapter.py</code><p>Claude Code CLI 适配与执行边界。</p></div>
+          <div class="module"><code>diffs.py / previews.py</code><p>真实代码变化采集与本地 Preview 生命周期。</p></div>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer><div class="wrap">AgentHub · Multi-Agent Coding Workspace · Architecture and capability descriptions are aligned with the public repository implementation.</div></footer>
+  <footer>
+    <div class="page footer-inner">
+      <span>AgentHub · From AI conversation to verifiable engineering delivery.</span>
+      <a href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noreferrer" style="white-space:nowrap">github.com/YoungBossX/AgentHub ↗</a>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const button = document.getElementById("themeToggle");
+      function renderTheme(theme) {
+        root.dataset.theme = theme;
+        const isDark = theme === "dark";
+        button.setAttribute("aria-pressed", String(!isDark));
+        button.setAttribute(
+          "aria-label",
+          isDark ? "当前为暗色主题，点击切换到亮色主题" : "当前为亮色主题，点击切换到暗色主题"
+        );
+        button.setAttribute(
+          "title",
+          isDark ? "暗色主题 · 点击切换" : "亮色主题 · 点击切换"
+        );
+      }
+
+      renderTheme(root.dataset.theme === "light" ? "light" : "dark");
+
+      button.addEventListener("click", () => {
+        const next = root.dataset.theme === "dark" ? "light" : "dark";
+        renderTheme(next);
+        try { localStorage.setItem("agenthub-theme", next); } catch (_) {}
+      });
+    })();
+  </script>
 </body>
 </html>
