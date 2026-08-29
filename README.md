@@ -17,7 +17,7 @@
 </p>
 
 
-[核心能力](#核心能力) · [系统架构](#系统架构) · [执行链路](#执行链路) · [技术栈](#技术栈) · [快速开始](#快速开始)
+[核心能力](#核心能力) · [系统架构](#系统架构) · [执行链路](#执行链路) · [技术栈](#技术栈) · [核心模块](#核心模块) · [快速开始](#快速开始)
 
 </div>
 
@@ -27,14 +27,28 @@
 
 AgentHub 是一个面向**本地开发工作流**的 Multi-Agent Coding Workspace。
 
-用户只需要在 Session 中提出开发需求，系统会完成任务规划、角色路由、运行调度与代码执行，并将执行结果沉淀为 **Diff / Review / Preview / TaskRunEvent** 等工程证据。
+用户在 Session 中提出开发需求后，系统完成需求理解、任务规划、角色路由、运行调度与代码执行，并将执行过程沉淀为 **TaskRun / TaskRunEvent / Diff / Review / Preview** 等可追踪工程结果。
 
-> **核心目标：不是让多个 Agent 同时“聊天”，而是让多个 Agent 围绕真实代码任务协作，并且让每一步执行都有边界、有状态、有结果可查。**
+> **核心目标：不是让多个 Agent 同时“聊天”，而是让多个 Agent 围绕真实代码任务协作，并让每一步执行都有边界、有状态、有结果可查。**
 
 ```text
-需求 → Planner / Orchestrator → Task Graph → Scheduler
-    → ProviderGateway → Coding Agent → Git Worktree / Target
-    → Diff / Review / Preview → TaskRunEvent → SSE → Web Workspace
+User Request
+    ↓
+Planner / Orchestrator
+    ↓
+Task Graph
+    ↓
+Scheduler
+    ↓
+ProviderGateway
+    ↓
+Coding Agent
+    ↓
+Git Worktree / Project Target
+    ↓
+Diff / Review / Preview
+    ↓
+TaskRunEvent → SSE → Web Workspace
 ```
 
 ---
@@ -43,12 +57,12 @@ AgentHub 是一个面向**本地开发工作流**的 Multi-Agent Coding Workspac
 
 | 能力                          | AgentHub 的实现                                              |
 | ----------------------------- | ------------------------------------------------------------ |
-| **Multi-Agent Orchestration** | 将需求拆分为 frontend / backend / qa 等角色任务，通过 Task Graph 描述依赖与目标 |
-| **Runtime Mapping**           | ProviderGateway 将角色与具体 Codex / Claude Code 运行时解耦，统一完成 Provider 解析与能力映射 |
-| **Workspace Isolation**       | 每个 Session 使用独立 Git Worktree，避免不同会话直接写入同一个代码工作区 |
+| **Multi-Agent Orchestration** | 将需求拆分为 frontend / backend / qa 等角色任务，并通过 Task Graph 描述依赖关系与执行目标 |
+| **Runtime Mapping**           | ProviderGateway 将角色与具体 Coding Provider 解耦，统一完成 Provider 解析、能力匹配与运行时选择 |
+| **Workspace Isolation**       | 每个 Session 使用独立 Git Worktree，避免不同会话直接写入同一工作目录 |
 | **Concurrency Control**       | Session Queue + Scheduler + Target Lock 协同控制写任务顺序与目标级互斥 |
-| **Realtime Trace**            | TaskRunEvent 持久化到 SQLite，并通过 SSE 增量推送前端        |
-| **Evidence Delivery**         | 真实代码修改进一步形成 Diff、Review、Preview 和运行诊断，而不是只返回文本结果 |
+| **Realtime Trace**            | TaskRunEvent 持久化到 SQLite，并通过 SSE 增量推送到前端      |
+| **Evidence Delivery**         | 将真实代码修改进一步组织为 Diff、Review、Preview 与运行诊断，而不是只返回文本结果 |
 
 ---
 
@@ -56,40 +70,57 @@ AgentHub 是一个面向**本地开发工作流**的 Multi-Agent Coding Workspac
 
 ```mermaid
 flowchart TB
-    U[User / Session] --> P[Planner / Orchestrator]
-    P --> TG[Task Graph]
 
-    TG --> TR1[Frontend TaskRun]
-    TG --> TR2[Backend TaskRun]
-    TG --> TR3[QA / Review TaskRun]
+    subgraph P["Planning Layer"]
+        U[User / Session]
+        O[Planner / Orchestrator]
+        TG[Task Graph]
+        U --> O --> TG
+    end
 
-    TR1 --> S[Scheduler / Session Queue]
-    TR2 --> S
-    TR3 --> S
+    subgraph E["Execution Layer"]
+        S[Scheduler / Session Queue]
+        PG[ProviderGateway]
+        C[Codex Adapter]
+        CL[Claude Code Adapter]
 
-    S --> PG[ProviderGateway]
-    PG --> C[Codex Adapter]
-    PG --> CL[Claude Code Adapter]
+        TG --> S
+        S --> PG
+        PG --> C
+        PG --> CL
+    end
 
-    C --> W[Git Worktree / Project Target]
-    CL --> W
+    subgraph I["Isolation Layer"]
+        W[Git Worktree / Project Target]
+        L[Target Lock / Scope Guard]
 
-    W --> D[Diff]
-    W --> R[Review]
-    W --> V[Preview]
+        C --> W
+        CL --> W
+        S --> L
+        L --> W
+    end
 
-    TR1 --> E[TaskRunEvent]
-    TR2 --> E
-    TR3 --> E
+    subgraph V["Evidence & Realtime Layer"]
+        D[Diff]
+        R[Review]
+        PVIEW[Preview]
+        EVT[TaskRunEvent]
+        DB[(SQLite)]
+        SSE[SSE]
+        WEB[Next.js Workspace]
 
-    D --> A[Artifact]
-    R --> A
-    V --> A
+        W --> D
+        W --> R
+        W --> PVIEW
 
-    E --> DB[(SQLite)]
-    DB --> SSE[SSE]
-    SSE --> WEB[Next.js Workspace]
-    A --> WEB
+        D --> WEB
+        R --> WEB
+        PVIEW --> WEB
+
+        S --> EVT
+        PG --> EVT
+        EVT --> DB --> SSE --> WEB
+    end
 ```
 
 ### 四层设计
@@ -97,32 +128,42 @@ flowchart TB
 | 层级          | 关键模块                                     | 主要职责                               |
 | ------------- | -------------------------------------------- | -------------------------------------- |
 | **Planning**  | Planner、Orchestrator、Task Graph            | 需求理解、角色路由、任务拆解与依赖组织 |
-| **Execution** | TaskRun、Scheduler、ProviderGateway、Adapter | 运行调度、Provider 选择与 Agent 执行   |
+| **Execution** | TaskRun、Scheduler、ProviderGateway、Adapter | 任务调度、Provider 选择与 Agent 执行   |
 | **Isolation** | Git Worktree、Target Scope、Target Lock      | 工作区隔离、代码边界与并发写保护       |
-| **Evidence**  | Diff、Review、Preview、TaskRunEvent、SSE     | 结果验证、运行追踪与前端实时展示       |
+| **Evidence**  | Diff、Review、Preview、TaskRunEvent、SSE     | 结果验证、执行追踪与前端实时展示       |
 
 ---
 
 ## 执行链路
 
-### 1. Planner：把自然语言需求变成任务图
+### 1. Planning & Task Graph
 
-用户发送需求后，Planner / Orchestrator 根据任务意图和角色能力生成多个 Task。
-
-每个 Task 重点描述：
+Planner / Orchestrator 将自然语言需求转换为可执行任务，并为任务建立角色、目标与依赖关系。
 
 ```text
-role       → 谁执行，例如 frontend / backend / qa
-target     → 允许作用在哪个代码目标
-dependsOn  → 当前任务依赖哪些前置任务
-intent     → 当前任务要完成什么工程目标
+User Request
+    ↓
+Intent / Mention Parsing
+    ↓
+Planner / LLM Planner
+    ↓
+Task Graph Validation
+    ↓
+Executable Tasks
 ```
 
-任务图在进入执行阶段前会经过结构校验，使后续 Scheduler 可以基于依赖关系推进任务。
+每个 Task 主要描述：
 
-### 2. Scheduler：决定任务什么时候执行
+- `role`：由哪个角色执行，如 frontend / backend / qa；
+- `target`：任务允许作用的代码目标；
+- `dependsOn`：任务之间的依赖关系；
+- `intent`：任务需要完成的工程目标。
 
-AgentHub 将任务状态、依赖、访问模式与目标锁共同纳入调度。
+---
+
+### 2. Scheduling & Isolation
+
+任务进入执行阶段后，Scheduler 根据依赖、访问模式和目标锁判断是否可运行。
 
 ```text
 TaskRun
@@ -133,25 +174,29 @@ Session Queue
    ↓
 Target Lock
    ↓
-Adapter Execution
+Worktree / Target
 ```
 
-- 只读任务可以并发执行；
+核心策略：
+
+- 只读任务可并发执行；
 - 写任务进入 Session 写队列；
-- 同一写目标通过 Target Lock 建立互斥边界；
-- TaskRun 生命周期负责维护运行状态与锁释放。
+- 同一目标通过 Target Lock 建立互斥边界；
+- Session 之间使用独立 Git Worktree 隔离工作目录。
 
-### 3. ProviderGateway：决定任务交给哪个 Coding Runtime
+---
 
-角色 Agent 不直接依赖某个模型或 CLI。
+### 3. Provider Runtime
 
-ProviderGateway 在 TaskRun 与具体 Coding Provider 之间建立统一运行层，负责：
+上层任务不直接依赖具体模型或 CLI。
+
+ProviderGateway 位于 TaskRun 与 Coding Runtime 之间，统一负责：
 
 - 根据 role / target / capability 解析运行 Provider；
 - Provider 健康检查；
 - 容量与并发控制；
-- Adapter 能力映射；
-- 运行事件与 Provider 证据记录。
+- Adapter 能力匹配；
+- Provider 运行证据与事件记录。
 
 当前主要 Coding Adapter：
 
@@ -160,28 +205,20 @@ CodexAdapter
 ClaudeCodeAdapter
 ```
 
-这样上层业务只依赖统一执行接口，不需要在 Planner 或 TaskRun 中耦合具体 CLI。
+因此 Planner、Task Graph 与 TaskRun 可以保持稳定，而底层 Coding Runtime 可以独立配置和扩展。
 
-### 4. Worktree + Target Lock：控制多 Agent 写冲突
+---
 
-不同 Session 通过 Git Worktree 获得独立代码工作目录：
+### 4. Evidence & Realtime Trace
 
-```text
-Repository
-├── main working tree
-├── session-A worktree
-├── session-B worktree
-└── session-C worktree
-```
-
-Worktree 解决不同 Session 之间的工作区隔离；Session Queue 与 Target Lock 进一步处理同一目标上的并发写入。
-
-### 5. TaskRunEvent + SSE：实时追踪执行过程
-
-Coding Adapter 输出的运行事件会被标准化并持久化为 TaskRunEvent：
+AgentHub 不把“模型输出完成”直接视为最终交付，而是继续采集可验证的工程结果。
 
 ```text
-Adapter Event
+Coding Agent
+    ↓
+File Changes
+    ↓
+Diff / Review / Preview
     ↓
 TaskRunEvent
     ↓
@@ -192,73 +229,56 @@ SSE
 Web Workspace
 ```
 
-前端通过 SSE 持续接收增量状态，可展示 Task、Provider、Queue、Artifact 与执行轨迹。
-
-### 6. Artifact：把 Agent 输出变成可验证结果
-
-AgentHub 不把“模型说完成了”视为最终交付。
-
-| Artifact         | 作用                                                 |
-| ---------------- | ---------------------------------------------------- |
-| **Diff**         | 查看真实文件修改与代码变化                           |
-| **Review**       | 对代码变更进行结构化审查                             |
-| **Preview**      | 启动并展示本地 Web 预览                              |
-| **TaskRunEvent** | 保存运行状态与执行轨迹                               |
-| **Diagnostics**  | 将 Queue、Provider、Preview 等运行信息投影为可读状态 |
+| 结果             | 作用                                     |
+| ---------------- | ---------------------------------------- |
+| **Diff**         | 查看真实文件修改与代码变化               |
+| **Review**       | 对代码变更形成结构化审查结果             |
+| **Preview**      | 启动并展示本地 Web 预览                  |
+| **TaskRunEvent** | 持久化任务执行状态与运行轨迹             |
+| **Diagnostics**  | 汇总 Queue、Provider、Preview 等运行状态 |
 
 ---
 
 ## 技术栈
 
-| 模块          | 技术                                                    |
-| ------------- | ------------------------------------------------------- |
-| Web Workspace | Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui |
-| API           | FastAPI、Pydantic、SQLModel                             |
-| Persistence   | SQLite                                                  |
-| Realtime      | Server-Sent Events (SSE)                                |
-| Agent Runtime | Codex CLI、Claude Code CLI、Adapter abstraction         |
-| Isolation     | Git Worktree、Target Scope、Target Lock                 |
-| Demo Frontend | Vite + React                                            |
-| Specification | OpenSpec                                                |
+| 模块              | 技术                                                    |
+| ----------------- | ------------------------------------------------------- |
+| **Web Workspace** | Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui |
+| **API**           | FastAPI、Pydantic、SQLModel                             |
+| **Persistence**   | SQLite                                                  |
+| **Realtime**      | Server-Sent Events (SSE)                                |
+| **Agent Runtime** | Codex CLI、Claude Code CLI、Adapter Abstraction         |
+| **Isolation**     | Git Worktree、Target Scope、Target Lock                 |
+| **Demo Frontend** | Vite + React                                            |
+| **Specification** | OpenSpec                                                |
 
 ---
 
-## 核心目录
+## 项目结构
 
 ```text
 AgentHub/
 ├── apps/
-│   ├── api/                 # FastAPI 后端
-│   │   └── app/
-│   │       ├── planning.py
-│   │       ├── run_engine.py
-│   │       ├── provider_gateway.py
-│   │       ├── session_queue.py
-│   │       ├── scheduler.py
-│   │       ├── target_locks.py
-│   │       ├── codex_adapter.py
-│   │       ├── claude_code_adapter.py
-│   │       ├── diffs.py
-│   │       └── previews.py
-│   │
-│   ├── web/                 # Next.js Workspace
-│   ├── demo/                # Vite React 示例目标
-│   └── demo-api/            # FastAPI 示例后端目标
-│
-├── openspec/                # Spec / change records
-├── docs/                    # Architecture / project docs
-└── scripts/                 # Development scripts
+│   ├── api/        # FastAPI Agent Runtime
+│   ├── web/        # Next.js Workspace
+│   ├── demo/       # Vite React 示例目标
+│   └── demo-api/   # FastAPI 示例后端目标
+├── docs/           # Architecture / project docs
+├── openspec/       # Spec / change records
+└── scripts/        # Development scripts
 ```
 
-### 核心模块
+---
+
+## 核心模块
 
 | 文件                     | 职责                                                 |
 | ------------------------ | ---------------------------------------------------- |
 | `planning.py`            | Mention 解析、Planner / LLM Planner、Task Graph 生成 |
 | `run_engine.py`          | TaskRun 主执行链路与运行生命周期                     |
-| `provider_gateway.py`    | Provider 解析、健康、容量、运行时映射                |
-| `session_queue.py`       | Session 内任务队列与读写调度                         |
+| `provider_gateway.py`    | Provider 解析、健康、容量与运行时映射                |
 | `scheduler.py`           | 任务依赖与可运行状态判断                             |
+| `session_queue.py`       | Session 内任务队列与读写调度                         |
 | `target_locks.py`        | Target 写锁管理                                      |
 | `codex_adapter.py`       | Codex CLI 执行适配                                   |
 | `claude_code_adapter.py` | Claude Code CLI 执行适配                             |
@@ -319,7 +339,16 @@ http://127.0.0.1:3000
 @orchestrator build a login page for the demo app
 ```
 
-系统会生成任务计划，并进入 TaskRun → Coding Agent → Diff / Review / Preview 的执行链路。
+系统将进入：
+
+```text
+Planning
+→ Task Graph
+→ Scheduling
+→ Coding Agent
+→ Diff / Review / Preview
+→ TaskRunEvent / SSE
+```
 
 ---
 
