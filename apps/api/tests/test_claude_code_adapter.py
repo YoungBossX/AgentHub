@@ -9,10 +9,19 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
 
-from app.adapters import AgentRunRequest, run_adapter_event_stream
+from app.adapters import AgentRunRequest, run_adapter_event_stream as _run_adapter_event_stream
 from app.claude_code_adapter import ClaudeCodeAdapter
 from app.main import adapter_for_type
 from app.models import Agent, Session, Task, TaskRun, Workspace
+
+
+def _allow_test_execution_ownership(_: DbSession) -> bool:
+    return True
+
+
+async def run_adapter_event_stream(db, adapter, request, **kwargs):
+    kwargs.setdefault("ownership_guard", _allow_test_execution_ownership)
+    return await _run_adapter_event_stream(db, adapter, request, **kwargs)
 
 
 class FakeClaudeCodeProcess:
@@ -218,7 +227,8 @@ async def test_claude_code_stream_json_events_persist_with_sequence_order(
     assert json.loads(persisted[1].payload_json)["text"] == "Applying focused change."
 
     db.refresh(task_run)
-    assert task_run.state == "completed"
+    assert task_run.state == "collecting_diff"
+    assert task_run.ended_at is None
     assert task_run.error_code is None
 
 

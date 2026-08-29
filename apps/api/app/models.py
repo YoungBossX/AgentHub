@@ -233,7 +233,7 @@ class SessionQueueEntry(SQLModel, table=True):
 
 
 class TargetLock(SQLModel, table=True):
-    id: str = Field(default_factory=new_id, primary_key=True)
+    id: str = Field(default_factory=new_id, primary_key=True, repr=False)
     lock_key: str = Field(index=True, unique=True)
     target_id: str = Field(index=True)
     session_id: Optional[str] = Field(default=None, foreign_key="session.id", index=True)

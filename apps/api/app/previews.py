@@ -513,22 +513,38 @@ def _preview_process_env(base_env: Optional[Mapping[str, str]] = None) -> dict[s
     env.pop("NODE", None)
 
     current_path = env.get("PATH", "")
+    path_separator = (
+        ":"
+        if current_path.startswith("/") and ":" in current_path
+        else os.pathsep
+    )
+    current_path_items = current_path.split(path_separator)
+    preferred_npm_paths = [
+        item
+        for item in current_path_items
+        if item.replace("\\", "/").endswith("/.npm-global/bin")
+    ]
     path_candidates = [
-        str(Path.home() / ".npm-global" / "bin"),
+        (
+            str(Path.home() / ".npm-global" / "bin")
+            if path_separator == os.pathsep
+            else ""
+        ),
+        *preferred_npm_paths,
         "/opt/homebrew/bin",
         "/usr/local/bin",
         "/usr/bin",
         "/bin",
         "/usr/sbin",
         "/sbin",
-        *current_path.split(os.pathsep),
+        *current_path_items,
     ]
     deduped_paths: list[str] = []
     for item in path_candidates:
         if not item or _is_codex_bundled_runtime_path(item) or item in deduped_paths:
             continue
         deduped_paths.append(item)
-    env["PATH"] = os.pathsep.join(deduped_paths)
+    env["PATH"] = path_separator.join(deduped_paths)
     return env
 
 

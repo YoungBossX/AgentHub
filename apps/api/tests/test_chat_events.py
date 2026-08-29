@@ -9,6 +9,8 @@ from sqlmodel import SQLModel, create_engine, select
 from app.events import append_task_run_event, list_session_events
 from app.main import app, get_db
 from app.models import Agent, Message, Session, Task, TaskRun, Workspace
+from app.task_run_scope import TaskRunScopeError
+from app.task_runs import require_task_run_artifact_scope_passed
 
 
 @pytest.fixture
@@ -159,12 +161,17 @@ def test_task_run_events_append_and_query_by_sequence(client: TestClient) -> Non
         assert first.sequence == 1
         assert second.sequence == 2
 
-        replayed = list_session_events(db, session_id=session.id, after_sequence=1)
-        assert [event.sequence for event in replayed] == [2]
-        assert replayed[0].event_type == "message.delta"
+        with pytest.raises(TaskRunScopeError) as exc_info:
+            require_task_run_artifact_scope_passed(db, task_run.id)
 
-    response = client.get(f"/sessions/{session.id}/events?after=1", headers={"accept": "text/event-stream"})
+        assert exc_info.value.error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
+        replayed = list_session_events(db, session_id=session.id, after_sequence=2)
+        assert [event.sequence for event in replayed] == [3]
+        assert replayed[0].event_type == "task.artifact_scope_refused"
+
+    response = client.get(f"/sessions/{session.id}/events?after=2", headers={"accept": "text/event-stream"})
 
     assert response.status_code == 200
-    assert "event: message.delta" in response.text
-    assert '"sequence":2' in response.text
+    assert "event: task.artifact_scope_refused" in response.text
+    assert '"sequence":3' in response.text
+    assert '"errorCode":"TASK_RUN_SCOPE_UNVERIFIABLE"' in response.text

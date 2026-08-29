@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Optional
 
 from app.guardrails import evaluate_network_access, evaluate_target_path
@@ -407,8 +407,16 @@ def _is_secret_key(key: str) -> bool:
 def _redact_string(value: str) -> str:
     if ".env" in value or "secrets/" in value or "secrets\\" in value:
         return "[redacted]"
-    expanded = Path(value).expanduser()
-    if expanded.is_absolute() and any(part in {".git", "node_modules"} for part in expanded.parts):
+    path_candidates = (
+        Path(value).expanduser(),
+        PurePosixPath(value),
+        PureWindowsPath(value),
+    )
+    if any(
+        candidate.is_absolute()
+        and any(part in {".git", "node_modules"} for part in candidate.parts)
+        for candidate in path_candidates
+    ):
         return "[redacted]"
     if len(value) > 500:
         return f"{value[:497].rstrip()}..."

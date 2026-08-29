@@ -54,10 +54,7 @@ def test_recovery_release_stale_lock_records_audit_event_and_unblocks_waiter() -
         db.add(second)
         db.commit()
         first_run = create_task_run(db, first.id)
-        first_run.lease_expires_at = utc_now() - timedelta(minutes=1)
-        db.add(first_run)
-        db.commit()
-        acquire_target_lock(
+        lock_result = acquire_target_lock(
             db,
             target_id=DEMO_FRONTEND_TARGET_ID,
             session_id=first.session_id,
@@ -65,6 +62,14 @@ def test_recovery_release_stale_lock_records_audit_event_and_unblocks_waiter() -
             worker_id="worker:recovery-test",
             lease_expires_at=first_run.lease_expires_at,
         )
+        assert lock_result.acquired is True
+        assert lock_result.lock is not None
+        expired_at = utc_now() - timedelta(minutes=1)
+        first_run.lease_expires_at = expired_at
+        lock_result.lock.lease_expires_at = expired_at
+        db.add(first_run)
+        db.add(lock_result.lock)
+        db.commit()
         try:
             create_task_run(db, second.id)
         except ValueError:
@@ -197,6 +202,7 @@ def seed_recovery_tasks(db: DbSession) -> tuple[Workspace, Session, Task, Task]:
         title="Upstream write",
         intent_type="frontend_change",
         status="pending",
+        priority=0,
         assigned_agent_id=agent.id,
         plan_json=json.dumps(plan, separators=(",", ":")),
     )
@@ -205,6 +211,7 @@ def seed_recovery_tasks(db: DbSession) -> tuple[Workspace, Session, Task, Task]:
         title="Downstream write",
         intent_type="frontend_change",
         status="pending",
+        priority=1,
         assigned_agent_id=agent.id,
         plan_json=json.dumps(plan, separators=(",", ":")),
         depends_on_task_ids=json.dumps([upstream.id], separators=(",", ":")),

@@ -139,7 +139,10 @@ _CATEGORY_PATTERNS: list[tuple[str, tuple[str, ...]]] = [
 ]
 
 _SECRET_KEY_RE = re.compile(
-    r"(api[_-]?key|token|secret|password|credential|authorization|bearer|private)",
+    r"(api[_-]?key|token|secret|password|credential|authorization|bearer|private|"
+    r"host[_-]?path|gitdir|fingerprint|digest|file[_-]?contents?|"
+    r"scope[_-]?control[_-]?key|control[_-]?key|"
+    r"protected(?:[_-]?tree)?[_-]?records?)",
     re.IGNORECASE,
 )
 _SECRET_VALUE_RE = re.compile(
@@ -148,8 +151,22 @@ _SECRET_VALUE_RE = re.compile(
     r"(api[_-]?key|token|secret|password)\s*[:=]\s*[^,\s)]+)",
     re.IGNORECASE,
 )
-_HOST_PATH_RE = re.compile(r"(/Users/[^\s'\"`,)]+|/private/[^\s'\"`,)]+|/var/folders/[^\s'\"`,)]+)")
-_PROTECTED_PATH_RE = re.compile(r"(\.env(?:\.[A-Za-z0-9_-]+)?|node_modules|secrets/)", re.IGNORECASE)
+_HOST_PATH_RE = re.compile(
+    r"((?<![A-Za-z0-9])(?i:file):/{2,}[^\r\n'\"`]*|"
+    r"(?<![A-Za-z0-9])(?i:[A-Za-z][A-Za-z0-9_.-]*)\s*:\s*/(?!/)[^\r\n'\"`]*|"
+    r"(?i:\bcwd)\s*:\s*(?:[A-Za-z]:[\\/]|\\\\|/(?!/))[^\r\n'\"`]*|"
+    r"(?<![A-Za-z0-9])[A-Za-z]:[\\/][^\r\n'\"`]*|"
+    r"\\\\[^\r\n'\"`]*|"
+    r"(?<!:)//[^\r\n'\"`]*|"
+    r"(?<![:/A-Za-z0-9])/(?!/)[^\r\n'\"`]*)"
+)
+_PROTECTED_PATH_RE = re.compile(
+    r"(\.git[\\/][^\s'\"`,)]*|\.env(?:\.[A-Za-z0-9_-]+)?|"
+    r"node_modules|secrets[\\/])",
+    re.IGNORECASE,
+)
+_RAW_CONTROL_VALUE_RE = re.compile(r"(?<![A-Fa-f0-9])[A-Fa-f0-9]{64}(?![A-Fa-f0-9])")
+_SAFE_PROTECTED_CATEGORIES = frozenset({".env", ".git", "node_modules", "secrets"})
 
 
 @dataclass(frozen=True)
@@ -279,18 +296,55 @@ def classify_run_failure(
             evidence={"state": task_run.state},
         ))
     if task_run.stale_detected_at is not None:
-        candidates.append(_failure("queue_stale", "TaskRun stale recovery evidence was recorded.", task_run.error_code, "task_run", task_run.stale_detected_at, {"staleReason": task_run.stale_reason}))
+        stale_category = (
+            "validation_failed"
+            if _category_from_error_code(task_run.error_code) == "validation_failed"
+            else "queue_stale"
+        )
+        candidates.append(
+            _failure(
+                stale_category,
+                _reason_for_category(stale_category),
+                task_run.error_code,
+                "task_run",
+                task_run.stale_detected_at,
+                {"staleReason": task_run.stale_reason},
+            )
+        )
 
     for event in events:
         payload = _json_dict(event.payload_json)
         text = " ".join(_compact_strings([event.event_type, json.dumps(payload, default=str)]))
-        category = _category_from_text(text)
+        explicit_category = _category_from_error_code(
+            _string_value(payload.get("errorCode"))
+        )
+        category = explicit_category or _category_from_text(text)
         if event.event_type == "task.stale":
-            category = "queue_stale"
+            category = (
+                "validation_failed"
+                if _category_from_error_code(
+                    _string_value(payload.get("errorCode"))
+                )
+                == "validation_failed"
+                else "queue_stale"
+            )
         elif event.event_type == "approval.requested":
             category = "queue_blocked"
         elif event.event_type == "recovery.action":
             category = category if category != "unknown" else "queue_stale"
+        elif event.event_type in {
+            "task.checkpoint.created",
+            "task.scope_validation.passed",
+        }:
+            category = explicit_category or "unknown"
+        elif event.event_type in {
+            "task.scope_validation.failed",
+            "task.artifact_scope_refused",
+        }:
+            category = (
+                _category_from_error_code(_string_value(payload.get("errorCode")))
+                or "validation_failed"
+            )
         elif event.event_type.startswith("artifact.preview") and _payload_status_failed(payload, "healthStatus"):
             category = "preview_failed"
         elif event.event_type.startswith("artifact.deploy"):
@@ -758,6 +812,8 @@ def _category_from_error_code(error_code: Optional[str]) -> Optional[str]:
         "target_lock_timeout": "lock_timeout",
         "worktree_dirty": "worktree_dirty",
         "validation_failed": "validation_failed",
+        "task_run_scope_violation": "validation_failed",
+        "task_run_scope_unverifiable": "validation_failed",
         "approval_denied": "approval_denied",
         "preview_failed": "preview_failed",
         "deploy_failed": "deploy_failed",
@@ -807,6 +863,11 @@ def _phase_for_event(event_type: str, payload: dict[str, Any]) -> str:
         return "worker_claim"
     if event_type == "task.stale" or event_type == "recovery.action":
         return "recovery"
+    if (
+        event_type.startswith("task.scope_validation.")
+        or event_type == "task.artifact_scope_refused"
+    ):
+        return "validation"
     if event_type.startswith("delivery."):
         if event_type in {"delivery.rolled_back", "delivery.rollback_refused"}:
             return "recovery"
@@ -845,12 +906,34 @@ def _phase_for_event(event_type: str, payload: dict[str, Any]) -> str:
 
 
 def _status_for_event(event_type: str, payload: dict[str, Any]) -> str:
-    status_text = " ".join(_compact_strings([payload.get("status"), payload.get("state"), payload.get("healthStatus"), event_type])).lower()
-    if any(term in status_text for term in ("failed", "error", "denied", "timeout", "blocked", "review_required")):
+    status_text = " ".join(
+        _compact_strings(
+            [
+                payload.get("status"),
+                payload.get("state"),
+                payload.get("result"),
+                payload.get("healthStatus"),
+                event_type,
+            ]
+        )
+    ).lower()
+    failure_terms = (
+        "failed",
+        "error",
+        "denied",
+        "refused",
+        "timeout",
+        "blocked",
+        "review_required",
+    )
+    if any(term in status_text for term in failure_terms):
         return "failed"
     if any(term in status_text for term in ("stale", "warning", "degraded", "interrupted")):
         return "warning"
-    if any(term in status_text for term in ("completed", "ready", "healthy", "success")):
+    if any(
+        term in status_text
+        for term in ("completed", "ready", "healthy", "success", "passed")
+    ):
         return "success"
     if any(term in status_text for term in ("queued", "requested", "waiting")):
         return "pending"
@@ -937,8 +1020,16 @@ def _safe_metadata(value: Any, *, depth: int = 0) -> Any:
             if index >= 20:
                 output["truncated"] = True
                 break
-            safe_key = _safe_string(str(key), max_length=80)
-            output[safe_key] = "[redacted]" if _SECRET_KEY_RE.search(str(key)) else _safe_metadata(item, depth=depth + 1)
+            raw_key = str(key)
+            safe_key = _safe_string(raw_key, max_length=80)
+            if raw_key == "protectedCategories":
+                output[safe_key] = _safe_protected_categories(item)
+            else:
+                output[safe_key] = (
+                    "[redacted]"
+                    if _SECRET_KEY_RE.search(raw_key)
+                    else _safe_metadata(item, depth=depth + 1)
+                )
         return output
     if isinstance(value, list):
         return [_safe_metadata(item, depth=depth + 1) for item in value[:12]]
@@ -955,9 +1046,21 @@ def _safe_string(value: str, *, max_length: int = 240) -> str:
     safe = _SECRET_VALUE_RE.sub("[redacted]", value)
     safe = _HOST_PATH_RE.sub("[redacted-path]", safe)
     safe = _PROTECTED_PATH_RE.sub("[redacted-path]", safe)
+    safe = _RAW_CONTROL_VALUE_RE.sub("[redacted-control]", safe)
     if len(safe) > max_length:
         return safe[: max_length - 15].rstrip() + "...[truncated]"
     return safe
+
+
+def _safe_protected_categories(value: Any) -> Any:
+    if (
+        isinstance(value, list)
+        and all(isinstance(category, str) for category in value)
+        and tuple(value) == tuple(sorted(set(value)))
+        and set(value).issubset(_SAFE_PROTECTED_CATEGORIES)
+    ):
+        return list(value)
+    return "[redacted]"
 
 
 def _status_label(state: str) -> str:

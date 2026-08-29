@@ -5,6 +5,8 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+import app.diffs as diffs_module
+import app.main as main_module
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
@@ -137,6 +139,28 @@ def expected_git_patch(worktree_path: Path, base_ref: str) -> str:
         capture_output=True,
         text=True,
     ).stdout
+
+
+def test_git_text_commands_decode_utf8_on_windows(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_run(*args, **kwargs):
+        calls.append(kwargs)
+        return subprocess.CompletedProcess(args[0], 0, stdout="中文路径\n", stderr="")
+
+    monkeypatch.setattr(diffs_module.subprocess, "run", fake_run)
+
+    assert diffs_module._run_git(tmp_path, ["status"]) == "中文路径\n"
+    assert diffs_module._run_git_diff_no_index(tmp_path, ["a", "b"]) == "中文路径\n"
+    assert all(call["encoding"] == "utf-8" for call in calls)
+    assert all(call["errors"] == "replace" for call in calls)
+
+    utf8_file = tmp_path / "中文.txt"
+    utf8_file.write_text("第一行\n第二行\n", encoding="utf-8")
+    assert diffs_module._line_count(utf8_file) == 2
 
 
 def test_collect_task_run_diff_stores_git_patch_and_excludes_node_modules(
@@ -483,7 +507,13 @@ def test_diff_api_returns_stored_diff_artifacts(
     client: TestClient,
     db: DbSession,
     demo_worktree: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(
+        main_module,
+        "require_task_run_artifact_scope_passed",
+        lambda db, task_run_id: None,
+    )
     task_run_id = create_run_fixture(db, demo_worktree)
     mutate_worktree(demo_worktree)
 

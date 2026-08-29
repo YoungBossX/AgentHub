@@ -161,6 +161,7 @@ class P18cSessionSetupEvidence:
     session_id: str
     memory_snapshot_id: str
     active_memory_rule_ids: tuple[str, ...]
+    active_memory_item_ids: tuple[str, ...]
     allowed_paths: tuple[str, ...]
     agents_md_hash: str
     claude_md_hash: str
@@ -177,6 +178,7 @@ class P18cSessionSetupEvidence:
             "sessionId": self.session_id,
             "memorySnapshotId": self.memory_snapshot_id,
             "activeMemoryRuleIds": list(self.active_memory_rule_ids),
+            "activeMemoryItemIds": list(self.active_memory_item_ids),
             "allowedPaths": list(self.allowed_paths),
             "agentsMdHash": self.agents_md_hash,
             "claudeMdHash": self.claude_md_hash,
@@ -330,6 +332,7 @@ def prepare_p18c_session_setup(
         session_id=session.id,
         memory_snapshot_id=snapshot.id,
         active_memory_rule_ids=tuple(rule.key for rule in P18C_MEMORY_RULES),
+        active_memory_item_ids=tuple(item.id for item in active_memory),
         allowed_paths=P18C_ALLOWED_PROJECT_PATHS,
         agents_md_hash=str(metadata["agentsMdHash"]),
         claude_md_hash=str(metadata["claudeMdHash"]),
@@ -504,8 +507,10 @@ def _has_frontend_code_changes(changed_files: tuple[str, ...]) -> bool:
 
 
 def _is_under_expected_root(project_root: str, expected_prefix: str) -> bool:
-    normalized_root = _normalize_path(project_root)
-    normalized_prefix = _normalize_path(expected_prefix).rstrip("/") + "/"
+    normalized_root = _normalize_path(str(Path(project_root).expanduser()))
+    normalized_prefix = (
+        _normalize_path(str(Path(expected_prefix).expanduser())).rstrip("/") + "/"
+    )
     return normalized_root == normalized_prefix.rstrip("/") or normalized_root.startswith(
         normalized_prefix
     )

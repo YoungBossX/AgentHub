@@ -200,6 +200,287 @@ def test_delivery_review_required_event_appears_in_validation_timeline(client: T
     assert item.title == "Validation"
 
 
+@pytest.mark.parametrize(
+    "error_code",
+    ("TASK_RUN_SCOPE_VIOLATION", "TASK_RUN_SCOPE_UNVERIFIABLE"),
+)
+def test_scope_guard_error_codes_are_classified_as_validation_failed(
+    client: TestClient,
+    error_code: str,
+) -> None:
+    with _db() as db:
+        run = _run(
+            db,
+            error_code=error_code,
+            error_message="The TaskRun scope guard refused the operation.",
+        )
+        diagnostics = build_task_run_diagnostics(db, run)
+
+    assert diagnostics.primary_failure is not None
+    assert diagnostics.primary_failure.category == "validation_failed"
+    assert diagnostics.summary.primary_category == "validation_failed"
+
+
+def test_artifact_scope_refusal_is_safe_validation_timeline_evidence(
+    client: TestClient,
+) -> None:
+    with _db() as db:
+        run = _run(db, state="completed")
+        append_task_run_event(
+            db,
+            run.id,
+            "task.artifact_scope_refused",
+            json.dumps(
+                {
+                    "result": "violation",
+                    "errorCode": "TASK_RUN_SCOPE_VIOLATION",
+                    "taskRunId": run.id,
+                    "targetId": "demo-frontend",
+                    "snapshotVersion": "agenthub.task_run_scope.v1",
+                    "changedPathCount": 2,
+                    "protectedEntryCount": 3,
+                    "protectedCategories": [".git", "secrets"],
+                    "reasonCategory": "scope_violation",
+                },
+                separators=(",", ":"),
+            ),
+        )
+        diagnostics = build_task_run_diagnostics(db, run)
+
+    factor = next(
+        factor
+        for factor in diagnostics.contributing_factors
+        if factor.category == "validation_failed"
+    )
+    assert factor.raw_error_code == "TASK_RUN_SCOPE_VIOLATION"
+    item = next(
+        item
+        for item in diagnostics.timeline
+        if item.metadata.get("eventType") == "task.artifact_scope_refused"
+    )
+    assert item.phase == "validation"
+    assert item.status == "failed"
+    assert item.metadata["result"] == "violation"
+    assert item.metadata["changedPathCount"] == 2
+    assert item.metadata["protectedEntryCount"] == 3
+    assert item.metadata["protectedCategories"] == [".git", "secrets"]
+
+
+def test_scope_validation_passed_is_success_evidence_not_a_failure(
+    client: TestClient,
+) -> None:
+    with _db() as db:
+        run = _run(db, state="completed")
+        append_task_run_event(
+            db,
+            run.id,
+            "task.scope_validation.passed",
+            json.dumps(
+                {
+                    "result": "passed",
+                    "taskRunId": run.id,
+                },
+                separators=(",", ":"),
+            ),
+        )
+        diagnostics = build_task_run_diagnostics(db, run)
+
+    assert diagnostics.primary_failure is None
+    assert diagnostics.contributing_factors == []
+    item = next(
+        item
+        for item in diagnostics.timeline
+        if item.metadata.get("eventType") == "task.scope_validation.passed"
+    )
+    assert item.phase == "validation"
+    assert item.status == "success"
+
+
+@pytest.mark.parametrize(
+    "event_type",
+    ("task.checkpoint.created", "task.scope_validation.passed"),
+)
+@pytest.mark.parametrize(
+    ("error_code", "expected_category"),
+    (
+        pytest.param(None, "unknown", id="text-only"),
+        pytest.param(
+            "TASK_RUN_SCOPE_UNVERIFIABLE",
+            "validation_failed",
+            id="scope-error",
+        ),
+        pytest.param(
+            "PROVIDER_UNAVAILABLE",
+            "provider_unavailable",
+            id="provider-error",
+        ),
+    ),
+)
+def test_informational_scope_events_suppress_only_text_failure_inference(
+    client: TestClient,
+    event_type: str,
+    error_code: Optional[str],
+    expected_category: str,
+) -> None:
+    with _db() as db:
+        run = _run(db)
+        payload = {
+            "reason": "The scope snapshot is unavailable.",
+            "taskRunId": run.id,
+        }
+        if error_code is not None:
+            payload["errorCode"] = error_code
+        append_task_run_event(
+            db,
+            run.id,
+            event_type,
+            json.dumps(payload, separators=(",", ":")),
+        )
+        diagnostics = build_task_run_diagnostics(db, run)
+
+    assert diagnostics.primary_failure is not None
+    assert diagnostics.primary_failure.category == expected_category
+
+
+def test_scope_diagnostics_redact_host_and_raw_control_evidence(
+    client: TestClient,
+) -> None:
+    raw_fingerprint = "a" * 64
+    raw_control_digest = "b" * 64
+    unc_path = r"\\server\share\repo\.git\config"
+    scope_control_key = "scope-control-key-must-not-leak"
+    control_key = "control-key-must-not-leak"
+    with _db() as db:
+        run = _run(db, state="completed")
+        append_task_run_event(
+            db,
+            run.id,
+            "task.artifact_scope_refused",
+            json.dumps(
+                {
+                    "result": "unverifiable",
+                    "errorCode": "TASK_RUN_SCOPE_UNVERIFIABLE",
+                    "taskRunId": run.id,
+                    "targetId": "demo-frontend",
+                    "snapshotVersion": "agenthub.task_run_scope.v1",
+                    "referenceUrl": "https://example.test/safe/path",
+                    "protectedEntryCount": 4,
+                    "protectedCategories": [
+                        ".env",
+                        ".git",
+                        "node_modules",
+                        "secrets",
+                    ],
+                    "unsafeEvidence": {
+                        "hostPath": "Z:\\private-host\\scope-fixture\\.git\\config",
+                        "linuxPath": "/home/agent/private/.git/config",
+                        "tempPath": "/tmp/agenthub/private-control",
+                        "rootPath": "/root/private/.git/config",
+                        "optPath": "/opt/agenthub/private-control",
+                        "workspacePath": "/workspace/repo/.git/config",
+                        "uncPath": unc_path,
+                        "fingerprint": raw_fingerprint,
+                        "protectedControlDigest": raw_control_digest,
+                        "scopeControlKey": scope_control_key,
+                        "controlKey": control_key,
+                        "protectedRecords": [
+                            {
+                                "path": "/workspace/repo/.git/HEAD",
+                                "content": "PROTECTED-RECORD-CONTENT",
+                            }
+                        ],
+                        "protectedTreeRecords": [
+                            {
+                                "path": unc_path,
+                                "content": "PROTECTED-TREE-CONTENT",
+                            }
+                        ],
+                        "fileContents": "TOP-SECRET-CONTENT",
+                    },
+                },
+                separators=(",", ":"),
+            ),
+        )
+        diagnostics = build_task_run_diagnostics(db, run)
+
+    exposed = json.dumps(diagnostics.model_dump(by_alias=True), default=str)
+    assert "X:" not in exposed
+    assert "/home/agent" not in exposed
+    assert "/tmp/agenthub" not in exposed
+    assert "/root/private" not in exposed
+    assert "/opt/agenthub" not in exposed
+    assert "/workspace/repo" not in exposed
+    assert "server" not in exposed
+    assert ".git/config" not in exposed
+    assert raw_fingerprint not in exposed
+    assert raw_control_digest not in exposed
+    assert scope_control_key not in exposed
+    assert control_key not in exposed
+    assert "PROTECTED-RECORD-CONTENT" not in exposed
+    assert "PROTECTED-TREE-CONTENT" not in exposed
+    assert "TOP-SECRET-CONTENT" not in exposed
+    assert "https://example.test/safe/path" in exposed
+    item = next(
+        item
+        for item in diagnostics.timeline
+        if item.metadata.get("eventType") == "task.artifact_scope_refused"
+    )
+    assert item.metadata["targetId"] == "demo-frontend"
+    assert item.metadata["protectedEntryCount"] == 4
+    assert item.metadata["referenceUrl"] == "https://example.test/safe/path"
+    assert item.metadata["protectedCategories"] == [
+        ".env",
+        ".git",
+        "node_modules",
+        "secrets",
+    ]
+
+
+def test_scope_diagnostics_fully_redact_spaced_and_cwd_host_paths(
+    client: TestClient,
+) -> None:
+    safe_url = "https://example.test/safe/path"
+    safe_categories = [".env", ".git", "node_modules", "secrets"]
+    locations = {
+        "windowsLocation": r"C:\Users\Jane Doe\Agent Hub\.git\config",
+        "uncLocation": r"\\server\Shared Repo\Agent Hub\.git\config",
+        "posixLocation": "/Users/Jane Doe/Agent Hub/.git/config",
+        "cwdLocation": "cwd:/Users/Jane Doe/Agent Hub/.git/config",
+        "rootLocation": "root:/home/alice/Agent Hub/.git/config",
+        "worktreeLocation": "worktree:/Users/Jane Doe/Agent Hub/.git/config",
+        "fileUriLocation": "file:///home/alice/Agent Hub/.git/config",
+    }
+    with _db() as db:
+        run = _run(db, state="completed")
+        append_task_run_event(
+            db,
+            run.id,
+            "task.artifact_scope_refused",
+            json.dumps(
+                {
+                    "result": "unverifiable",
+                    "errorCode": "TASK_RUN_SCOPE_UNVERIFIABLE",
+                    "taskRunId": run.id,
+                    "referenceUrl": safe_url,
+                    "protectedCategories": safe_categories,
+                    **locations,
+                },
+                separators=(",", ":"),
+            ),
+        )
+        diagnostics = build_task_run_diagnostics(db, run)
+
+    item = next(
+        item
+        for item in diagnostics.timeline
+        if item.metadata.get("eventType") == "task.artifact_scope_refused"
+    )
+    for key in locations:
+        assert item.metadata[key] == "[redacted-path]"
+    assert item.metadata["referenceUrl"] == safe_url
+    assert item.metadata["protectedCategories"] == safe_categories
+
+
 def test_timeline_covers_successful_run_with_artifact_references(client: TestClient) -> None:
     with _db() as db:
         run = _run(db, state="completed")

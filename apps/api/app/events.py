@@ -17,6 +17,24 @@ def append_task_run_event(
     event_type: str,
     payload_json: str = "{}",
 ) -> TaskRunEvent:
+    event = stage_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type=event_type,
+        payload_json=payload_json,
+    )
+    db.commit()
+    db.refresh(event)
+    publish_task_run_event(db, event)
+    return event
+
+
+def stage_task_run_event(
+    db: DbSession,
+    task_run_id: str,
+    event_type: str,
+    payload_json: str = "{}",
+) -> TaskRunEvent:
     max_sequence = db.exec(
         select(func.max(TaskRunEvent.sequence)).where(
             TaskRunEvent.task_run_id == task_run_id
@@ -30,14 +48,15 @@ def append_task_run_event(
         sequence=sequence,
     )
     db.add(event)
-    db.commit()
-    db.refresh(event)
+    db.flush()
+    return event
 
+
+def publish_task_run_event(db: DbSession, event: TaskRunEvent) -> None:
+    task_run_id = event.task_run_id
     session_id = session_id_for_task_run(db, task_run_id)
     if session_id is not None:
         publish_event(session_id, event)
-
-    return event
 
 
 def list_session_events(

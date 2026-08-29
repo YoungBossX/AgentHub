@@ -28,6 +28,10 @@ from app.scheduler import (
 )
 from app.routes.messages import auto_start_safe_tasks
 from app.session_queue import entry_for_task_run, mark_task_run_running
+from app.task_run_scope import (
+    clear_task_run_target_lock_acquisition_context,
+    store_task_run_target_lock_acquisition_context,
+)
 from app.task_runs import (
     TaskRunLifecycleError,
     claim_task_run_for_worker,
@@ -530,22 +534,33 @@ def test_provisioned_project_runs_use_durable_queue_and_release_target_lock(tmp_
             worker_id="worker:provisioned-first",
             lease_expires_at=first_run.lease_expires_at,
         )
-        second_run = create_task_run(db, second.id)
-        second_entry = entry_for_task_run(db, second_run.id)
-
         assert lock_result.acquired is True
-        assert entry_for_task_run(db, first_run.id).state == "running"
-        assert second_run.state == "queued"
-        assert second_entry.state == "waiting_lock"
-        assert second_entry.target_id == "external-frontend-notes-app"
-        assert lock_diagnostics_for_task_run(db, first_run.id)["state"] == "held"
-        assert held_lock_for_target(db, "external-frontend-notes-app") is not None
+        assert lock_result.lock is not None
+        store_task_run_target_lock_acquisition_context(
+            first_run.id,
+            target_id="external-frontend-notes-app",
+            session_id=session.id,
+            worker_id="worker:provisioned-first",
+            lock_id=lock_result.lock.id,
+        )
+        try:
+            second_run = create_task_run(db, second.id)
+            second_entry = entry_for_task_run(db, second_run.id)
 
-        transition_task_run(db, first_run.id, "completed")
+            assert entry_for_task_run(db, first_run.id).state == "running"
+            assert second_run.state == "queued"
+            assert second_entry.state == "waiting_lock"
+            assert second_entry.target_id == "external-frontend-notes-app"
+            assert lock_diagnostics_for_task_run(db, first_run.id)["state"] == "held"
+            assert held_lock_for_target(db, "external-frontend-notes-app") is not None
 
-        assert held_lock_for_target(db, "external-frontend-notes-app") is None
-        assert lock_diagnostics_for_task_run(db, first_run.id)["state"] == "released"
-        assert entry_for_task_run(db, first_run.id).state == "completed"
+            transition_task_run(db, first_run.id, "completed")
+
+            assert held_lock_for_target(db, "external-frontend-notes-app") is None
+            assert lock_diagnostics_for_task_run(db, first_run.id)["state"] == "released"
+            assert entry_for_task_run(db, first_run.id).state == "completed"
+        finally:
+            clear_task_run_target_lock_acquisition_context(first_run.id)
 
 
 def test_file_overlap_conflict_blocks_unsequenced_write_task() -> None:

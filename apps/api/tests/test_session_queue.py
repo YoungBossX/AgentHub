@@ -2,11 +2,22 @@ import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 
+import app.session_queue as session_queue_module
+import app.task_runs as task_runs_module
+import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.models import Agent, Session, SessionQueueEntry, Task, TaskRun, Workspace
+from app.models import (
+    Agent,
+    Session,
+    SessionQueueEntry,
+    Task,
+    TaskRun,
+    TaskRunEvent,
+    Workspace,
+)
 from app.scheduler import SCHEDULER_READY
 from app.session_queue import entry_for_task_run, queue_gate_for_task_run, recover_queue_entries
 from app.task_runs import create_task_run, transition_task_run
@@ -50,9 +61,21 @@ def test_same_session_write_queue_blocks_until_prior_write_terminal() -> None:
         assert scheduler["state"] == SCHEDULER_READY
 
 
-def test_readonly_task_can_run_while_same_session_write_is_queued() -> None:
+def test_readonly_task_can_run_while_same_session_write_is_queued(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        task_runs_module,
+        "CAPABILITIES_BY_ADAPTER",
+        {
+            **task_runs_module.CAPABILITIES_BY_ADAPTER,
+            "scripted_mock": ("review",),
+        },
+    )
     with queue_db() as db:
-        workspace, session, first, _ = seed_queue_tasks(db)
+        workspace, session, first, unused_second = seed_queue_tasks(db)
+        db.delete(unused_second)
+        db.commit()
         qa = Agent(name="QA Agent", role="qa", adapter_type="scripted_mock", provider="local")
         review = Task(
             session_id=session.id,
@@ -82,24 +105,98 @@ def test_readonly_task_can_run_while_same_session_write_is_queued() -> None:
 
 def test_recovery_keeps_terminal_task_run_from_becoming_runnable() -> None:
     with queue_db() as db:
-        _, _, first, _ = seed_queue_tasks(db)
-        first_run = create_task_run(db, first.id)
-        first_entry = entry_for_task_run(db, first_run.id)
-        first_entry.state = "running"
-        first_run.state = "completed"
-        db.add(first_entry)
-        db.add(first_run)
-        db.commit()
+        run_id = seed_terminal_queue_run(db)
 
         recovered = recover_queue_entries(db)
-        gate = queue_gate_for_task_run(db, first_run.id)
-        stored_entry = entry_for_task_run(db, first_run.id)
-        stored_run = db.get(TaskRun, first_run.id)
+        gate = queue_gate_for_task_run(db, run_id)
+        stored_entry = entry_for_task_run(db, run_id)
+        stored_run = db.get(TaskRun, run_id)
 
-        assert [entry.task_run_id for entry in recovered] == [first_run.id]
+        assert [entry.task_run_id for entry in recovered] == [run_id]
         assert stored_run.state == "completed"
         assert stored_entry.state == "completed"
         assert gate.runnable is False
+
+
+def test_queue_recovery_event_failure_rolls_back_before_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with queue_db() as db:
+        run_id = seed_terminal_queue_run(db)
+        failure_injected = False
+        original_flush = db.flush
+
+        def fail_advanced_event_once(objects=None) -> None:
+            nonlocal failure_injected
+            has_advanced_event = any(
+                isinstance(item, TaskRunEvent)
+                and item.event_type == "session_queue.advanced"
+                for item in db.new
+            )
+            if has_advanced_event and not failure_injected:
+                failure_injected = True
+                raise RuntimeError("injected queue event insertion failure")
+            original_flush(objects)
+
+        monkeypatch.setattr(db, "flush", fail_advanced_event_once)
+        with pytest.raises(
+            RuntimeError,
+            match="injected queue event insertion failure",
+        ):
+            recover_queue_entries(db)
+
+        rolled_back_entry = entry_for_task_run(db, run_id)
+        rolled_back_events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == run_id)
+            .where(TaskRunEvent.event_type == "session_queue.advanced")
+        ).all()
+        rolled_back_state = rolled_back_entry.state
+        rolled_back_event_count = len(rolled_back_events)
+        recovered = recover_queue_entries(db)
+        durable_entry = entry_for_task_run(db, run_id)
+        durable_events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == run_id)
+            .where(TaskRunEvent.event_type == "session_queue.advanced")
+        ).all()
+
+        assert failure_injected is True
+        assert rolled_back_state == "running"
+        assert rolled_back_event_count == 0
+        assert [entry.task_run_id for entry in recovered] == [run_id]
+        assert durable_entry.state == "completed"
+        assert len(durable_events) == 1
+
+
+def test_queue_recovery_publication_failure_is_noncritical(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with queue_db() as db:
+        run_id = seed_terminal_queue_run(db)
+        publication_attempts: list[str] = []
+
+        def fail_publication(db_arg, event) -> None:
+            publication_attempts.append(event.event_type)
+            raise RuntimeError("injected queue event publication failure")
+
+        monkeypatch.setattr(
+            session_queue_module,
+            "publish_task_run_event",
+            fail_publication,
+        )
+        recovered = recover_queue_entries(db)
+        durable_entry = entry_for_task_run(db, run_id)
+        durable_events = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == run_id)
+            .where(TaskRunEvent.event_type == "session_queue.advanced")
+        ).all()
+
+        assert publication_attempts == ["session_queue.advanced"]
+        assert [entry.task_run_id for entry in recovered] == [run_id]
+        assert durable_entry.state == "completed"
+        assert len(durable_events) == 1
 
 
 @contextmanager
@@ -112,6 +209,30 @@ def queue_db() -> Iterator[DbSession]:
     SQLModel.metadata.create_all(engine)
     with DbSession(engine) as db:
         yield db
+
+
+def seed_terminal_queue_run(db: DbSession) -> str:
+    _, session, first, _ = seed_queue_tasks(db)
+    task_run = TaskRun(
+        task_id=first.id,
+        agent_id=first.assigned_agent_id,
+        state="completed",
+        worktree_path=session.worktree_path,
+    )
+    entry = SessionQueueEntry(
+        session_id=session.id,
+        task_id=first.id,
+        task_run_id=task_run.id,
+        access_mode="write",
+        target_id=DEMO_FRONTEND_TARGET_ID,
+        target_lock_key=f"target:{DEMO_FRONTEND_TARGET_ID}:write",
+        position=1,
+        state="running",
+    )
+    db.add(entry)
+    db.add(task_run)
+    db.commit()
+    return task_run.id
 
 
 def seed_queue_tasks(db: DbSession) -> tuple[Workspace, Session, Task, Task]:
@@ -144,6 +265,7 @@ def seed_queue_tasks(db: DbSession) -> tuple[Workspace, Session, Task, Task]:
         title="First write",
         intent_type="frontend_change",
         status="pending",
+        priority=0,
         assigned_agent_id=frontend.id,
         plan_json=json.dumps(plan, separators=(",", ":")),
     )
@@ -152,6 +274,7 @@ def seed_queue_tasks(db: DbSession) -> tuple[Workspace, Session, Task, Task]:
         title="Second write",
         intent_type="frontend_change",
         status="pending",
+        priority=1,
         assigned_agent_id=frontend.id,
         plan_json=json.dumps(plan, separators=(",", ":")),
     )

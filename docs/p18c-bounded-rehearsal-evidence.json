@@ -1,0 +1,385 @@
+{
+  "schemaVersion": "agenthub.p18c_bounded_rehearsal_evidence.v1",
+  "generatedAt": "2026-08-29T07:37:25.313559+00:00",
+  "setup": {
+    "rehearsalRoot": "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals",
+    "projectRoot": "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app",
+    "targetId": "external-p18c-library-app",
+    "externalTargetDbId": "d1486fb7-2d49-4cce-9d77-380ce6c51051",
+    "sessionId": "e65ba76a-5abe-440b-a34d-f0b7dca8ed0c",
+    "memorySnapshotId": "b884d8c2-4042-45b2-9af7-d057c63294a5",
+    "activeMemoryRuleIds": [
+      "p18c-project-location",
+      "p18c-frontend-stack",
+      "p18c-localstorage-persistence",
+      "p18c-change-log-required",
+      "p18c-platform-boundary",
+      "p18c-provider-evidence-required"
+    ],
+    "activeMemoryItemIds": [
+      "dbc396fa-af9d-4b0e-8808-a4fe4b453896",
+      "56010ca5-85cc-4d5c-b995-96f88c5c4041",
+      "7f08b339-1c74-403a-a7bf-b36bfb55f2e2",
+      "01c0e2f5-762f-452c-bf15-317d8d90a10f",
+      "58d60769-f466-431a-892e-1c29464f9273",
+      "2394f1ce-afce-4466-9b9c-6a84af3ead78"
+    ],
+    "allowedPaths": [
+      "src",
+      "public",
+      "index.html",
+      "package.json",
+      "pnpm-lock.yaml",
+      "tsconfig.json",
+      "tsconfig.app.json",
+      "tsconfig.node.json",
+      "vite.config.ts"
+    ],
+    "agentsMdHash": "2b74cf4bea8ce3c2ccfde8f7a61184396585c037740317646c358e4d5c2c22ce",
+    "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+    "targetRegistryVersion": "d7d0f67d74ddbf2c4cfc0794b5e9d100b15172c6c1d0b0b35d7f8efc54c2c95e",
+    "runtimeConfigVersion": "2c9bf9a484309146265bcbfa854130ce91d41f42e812a37a9027012443a1f2fa",
+    "contextPackHash": "44269c3f5d09e1d24eb8c1ac4523e6e821b58f9e326fdadc03dfb6a6884061b3"
+  },
+  "initialTargetCommit": "9a5178716e5df1ee632d1e314d3734e2aa43105e",
+  "prompt": "帮我在桌面开发一个简单的图书管理系统。有登录页面，初始账户和密码是 18088888888 / 888888。登录后进入管理页面，只需要有图书管理功能：加入图书、删除图书、修改图书、查询图书。",
+  "promptSha256": "05c1a2c76180ddeb728829e1488674659ab14f78b869d0eae173105679aaf97d",
+  "taskId": "71811fb2-276a-41b9-ae01-c66b5829a947",
+  "attempts": [
+    {
+      "taskRunId": "e933edce-b7c2-4f0b-8b04-fd6296e20a74",
+      "adapterRunId": "codex-f4ddf8c7-9559-4188-8b58-911c4c249a48",
+      "state": "failed",
+      "errorCode": "TASK_RUN_TIMEOUT",
+      "errorMessage": "TaskRun exceeded its maximum runtime.",
+      "baseRef": "9a5178716e5df1ee632d1e314d3734e2aa43105e",
+      "headRef": null,
+      "scopeDecision": null,
+      "retryOfRunId": null
+    },
+    {
+      "taskRunId": "ad06c60b-e288-4edb-a61b-4d3c81299cf9",
+      "adapterRunId": null,
+      "state": "failed",
+      "errorCode": "TASK_RUN_SCOPE_UNVERIFIABLE",
+      "errorMessage": "The task run has no verifiable scope evidence.",
+      "baseRef": "9a5178716e5df1ee632d1e314d3734e2aa43105e",
+      "headRef": null,
+      "scopeDecision": null,
+      "retryOfRunId": "e933edce-b7c2-4f0b-8b04-fd6296e20a74"
+    },
+    {
+      "taskRunId": "aab84938-ab59-45a9-acd2-2c26897bc14a",
+      "adapterRunId": null,
+      "state": "failed",
+      "errorCode": "TASK_RUN_SCOPE_UNVERIFIABLE",
+      "errorMessage": "The task run has no verifiable scope evidence.",
+      "baseRef": "9a5178716e5df1ee632d1e314d3734e2aa43105e",
+      "headRef": null,
+      "scopeDecision": null,
+      "retryOfRunId": "e933edce-b7c2-4f0b-8b04-fd6296e20a74"
+    },
+    {
+      "taskRunId": "1c83525d-2488-4772-8d0b-2cc293a4163c",
+      "adapterRunId": "codex-3f1b6528-7816-4fd7-b5b4-0e9fa360fb53",
+      "state": "failed",
+      "errorCode": "ADAPTER_EXECUTION_ERROR",
+      "errorMessage": "Adapter execution failed unexpectedly.",
+      "baseRef": "9a5178716e5df1ee632d1e314d3734e2aa43105e",
+      "headRef": "9a5178716e5df1ee632d1e314d3734e2aa43105e+worktree",
+      "scopeDecision": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "1c83525d-2488-4772-8d0b-2cc293a4163c",
+        "targetId": "external-p18c-library-app",
+        "workspaceId": "09b894ca-72db-4125-ae18-3d92277fe49e",
+        "scopePolicySchemaVersion": "agenthub.effective_write_scope.v1",
+        "scopePolicyIdentity": "677d0749aa19a27dfa98e1a8365db64eb7d0cdd35d557b90b277ef97657ee194",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "baselineIdentity": "547904f7-aa0b-49d5-9a28-2aec9e33a7ad",
+        "baselineCapturedAt": "2026-08-29T07:29:57.281374+00:00",
+        "executionAttemptId": "4981b7bc-6561-4308-acb0-103bacf24280",
+        "status": "passed",
+        "changedPathCount": 0,
+        "timestamp": "2026-08-29T07:33:03.605134+00:00",
+        "errorCode": null,
+        "reason": null
+      },
+      "retryOfRunId": "e933edce-b7c2-4f0b-8b04-fd6296e20a74"
+    }
+  ],
+  "providerCompletion": {
+    "taskRunId": "1c83525d-2488-4772-8d0b-2cc293a4163c",
+    "adapterRunId": "codex-3f1b6528-7816-4fd7-b5b4-0e9fa360fb53",
+    "turnCompletedEventObserved": true,
+    "scopeDecision": {
+      "schemaVersion": "agenthub.task_run_scope_validation.v2",
+      "taskRunId": "1c83525d-2488-4772-8d0b-2cc293a4163c",
+      "targetId": "external-p18c-library-app",
+      "workspaceId": "09b894ca-72db-4125-ae18-3d92277fe49e",
+      "scopePolicySchemaVersion": "agenthub.effective_write_scope.v1",
+      "scopePolicyIdentity": "677d0749aa19a27dfa98e1a8365db64eb7d0cdd35d557b90b277ef97657ee194",
+      "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+      "baselineIdentity": "547904f7-aa0b-49d5-9a28-2aec9e33a7ad",
+      "baselineCapturedAt": "2026-08-29T07:29:57.281374+00:00",
+      "executionAttemptId": "4981b7bc-6561-4308-acb0-103bacf24280",
+      "status": "passed",
+      "changedPathCount": 0,
+      "timestamp": "2026-08-29T07:33:03.605134+00:00",
+      "errorCode": null,
+      "reason": null
+    },
+    "finalizerErrorCode": "ADAPTER_EXECUTION_ERROR",
+    "finalizerLimitation": "Provider completed and scope passed; the pre-fix Git text decoder failed during collecting_diff, so the durable TaskRun remains failed."
+  },
+  "diff": {
+    "diffId": "0ed19075-f53e-4706-a3b4-8cfbe4da2a70",
+    "artifactId": "bc542c97-0761-4e52-8ff4-367d694b83aa",
+    "baseRef": "9a5178716e5df1ee632d1e314d3734e2aa43105e",
+    "headRef": "9a5178716e5df1ee632d1e314d3734e2aa43105e+worktree",
+    "changedFiles": [
+      "index.html",
+      "package.json",
+      "src/App.tsx",
+      "src/library.d.ts",
+      "src/library.js",
+      "src/library.test.mjs",
+      "src/main.tsx",
+      "src/styles.css",
+      "src/vite-env.d.ts",
+      "tsconfig.app.json",
+      "tsconfig.json",
+      "tsconfig.node.json",
+      "vite.config.ts"
+    ],
+    "stats": {
+      "filesChanged": 13,
+      "additions": 1269,
+      "deletions": 0,
+      "files": [
+        {
+          "path": "index.html",
+          "additions": 17,
+          "deletions": 0
+        },
+        {
+          "path": "package.json",
+          "additions": 24,
+          "deletions": 0
+        },
+        {
+          "path": "src/App.tsx",
+          "additions": 560,
+          "deletions": 0
+        },
+        {
+          "path": "src/library.d.ts",
+          "additions": 21,
+          "deletions": 0
+        },
+        {
+          "path": "src/library.js",
+          "additions": 61,
+          "deletions": 0
+        },
+        {
+          "path": "src/library.test.mjs",
+          "additions": 60,
+          "deletions": 0
+        },
+        {
+          "path": "src/main.tsx",
+          "additions": 10,
+          "deletions": 0
+        },
+        {
+          "path": "src/styles.css",
+          "additions": 470,
+          "deletions": 0
+        },
+        {
+          "path": "src/vite-env.d.ts",
+          "additions": 1,
+          "deletions": 0
+        },
+        {
+          "path": "tsconfig.app.json",
+          "additions": 20,
+          "deletions": 0
+        },
+        {
+          "path": "tsconfig.json",
+          "additions": 7,
+          "deletions": 0
+        },
+        {
+          "path": "tsconfig.node.json",
+          "additions": 12,
+          "deletions": 0
+        },
+        {
+          "path": "vite.config.ts",
+          "additions": 6,
+          "deletions": 0
+        }
+      ]
+    },
+    "patchSha256": "33d771fe9c00c105b9efdea901d5abf7e852c0120f769006bb73f9957064cd9f"
+  },
+  "review": {
+    "reviewId": "15904c56-ec8c-44cd-8749-88ac9ca0c5b5",
+    "artifactId": "1d961fd1-db5b-4346-a300-76e710ac6f3d",
+    "status": "warning",
+    "riskLevel": "medium",
+    "filesReviewed": [
+      "index.html",
+      "package.json",
+      "src/App.tsx",
+      "src/library.d.ts",
+      "src/library.js",
+      "src/library.test.mjs",
+      "src/main.tsx",
+      "src/styles.css",
+      "src/vite-env.d.ts",
+      "tsconfig.app.json",
+      "tsconfig.json",
+      "tsconfig.node.json",
+      "vite.config.ts"
+    ],
+    "summary": "Scripted Review Agent found 3 advisory findings with medium risk."
+  },
+  "validation": {
+    "artifactId": "4a17b1b6-e755-4c7b-b802-aa0bce1c2337",
+    "commands": [
+      {
+        "evidenceId": "f5fda4e5-406a-46f2-ab70-1c343c45f7d3",
+        "command": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-p18c-closeout\\pnpm.cmd test",
+        "cwd": "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app",
+        "exitCode": 0,
+        "stdoutSha256": "b2917f012eb38f74ae27509bb93b557f6f75ffaf13b9e9abfe40f65d82909d2f",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdoutTail": "TAP version 13\n# Subtest: filterBooks 可按书名、作者、ISBN 和分类查询\nok 1 - filterBooks 可按书名、作者、ISBN 和分类查询\n  ---\n  duration_ms: 0.9061\n  ...\n# Subtest: filterBooks 忽略关键词两端空格，空关键词返回全部图书\nok 2 - filterBooks 忽略关键词两端空格，空关键词返回全部图书\n  ---\n  duration_ms: 0.1086\n  ...\n# Subtest: createBookRecord 清理文本并将库存规范为非负整数\nok 3 - createBookRecord 清理文本并将库存规范为非负整数\n  ---\n  duration_ms: 0.1022\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 60.7567\n",
+        "stderrTail": "",
+        "startedAt": "2026-08-29T07:37:20.951442+00:00",
+        "finishedAt": "2026-08-29T07:37:21.142693+00:00"
+      },
+      {
+        "evidenceId": "c3bca917-77f6-4eef-9a19-ce9749ee7d0a",
+        "command": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-p18c-closeout\\pnpm.cmd check",
+        "cwd": "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app",
+        "exitCode": 0,
+        "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdoutTail": "",
+        "stderrTail": "",
+        "startedAt": "2026-08-29T07:37:21.142693+00:00",
+        "finishedAt": "2026-08-29T07:37:21.885427+00:00"
+      },
+      {
+        "evidenceId": "5769a409-71a5-4966-9199-c509979fcf5b",
+        "command": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-p18c-closeout\\pnpm.cmd build",
+        "cwd": "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app",
+        "exitCode": 0,
+        "stdoutSha256": "6465d2c8b255cfe69364653bae200b8f2c22c895824eac64f9297837cdc774f6",
+        "stderrSha256": "834942bac46bfcbb66cf53dd774688f4a974faa118fb666d3b3e0a7f8fcc9c29",
+        "stdoutTail": "vite v7.3.3 building client environment for production...\ntransforming...\n✓ 30 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.61 kB │ gzip:  0.44 kB\ndist/assets/index-OzU9Jf2M.css   15.25 kB │ gzip:  4.39 kB\ndist/assets/index-Cd15msmg.js   208.08 kB │ gzip: 65.45 kB\n✓ built in 474ms\n",
+        "stderrTail": "You are using Node.js 22.11.0. Vite requires Node.js version 20.19+ or 22.12+. Please upgrade your Node.js version.\n",
+        "startedAt": "2026-08-29T07:37:21.885427+00:00",
+        "finishedAt": "2026-08-29T07:37:23.368689+00:00"
+      }
+    ]
+  },
+  "preview": {
+    "artifactId": "9904ad87-0cda-498e-8f6b-697e75c22d7b",
+    "evidenceId": "8f902044-6651-46e1-9845-3919fe0d2fcc",
+    "command": "pnpm dev --host 127.0.0.1 --port 7037",
+    "url": "http://127.0.0.1:7037",
+    "healthy": true,
+    "httpStatus": 200,
+    "bodySha256OrError": "8ce4c6d986a0ebaee23262b783eca553bbc1f2d36b4e9a4b87b60f58636444af",
+    "logSha256": "6a130d949fb0c51af39238d194f0aa8034dfba27511bb81faa96e6d863d6b0ae",
+    "logTail": "You are using Node.js 22.11.0. Vite requires Node.js version 20.19+ or 22.12+. Please upgrade your Node.js version.\n\n  VITE v7.3.3  ready in 227 ms\n\n  ➜  Local:   http://127.0.0.1:7037/\n",
+    "processStopped": true,
+    "sourceRoot": "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app",
+    "servedRoot": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-p18c-closeout\\validation-app"
+  },
+  "staging": {
+    "artifactId": "73b1c068-db1e-4a99-9cb8-ea960e73edaf",
+    "evidenceId": "5d163c18-c796-48a3-9248-5e44226593cc",
+    "command": "python -m http.server 7039 --bind 127.0.0.1 --directory C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-p18c-closeout\\validation-app\\dist",
+    "url": "http://127.0.0.1:7039",
+    "healthy": true,
+    "httpStatus": 200,
+    "bodySha256OrError": "7a955fbb252e4665a3479615823ce65d371b701f2c0a6160787184e71db742b8",
+    "outputFiles": [
+      "assets/index-Cd15msmg.js",
+      "assets/index-OzU9Jf2M.css",
+      "index.html"
+    ],
+    "processStopped": true
+  },
+  "compliance": {
+    "artifactId": "c6d5d1c7-336d-4c85-929b-a547120893e8",
+    "report": {
+      "memorySnapshotId": "b884d8c2-4042-45b2-9af7-d057c63294a5",
+      "activeMemoryRuleIds": [
+        "p18c-project-location",
+        "p18c-frontend-stack",
+        "p18c-localstorage-persistence",
+        "p18c-change-log-required",
+        "p18c-platform-boundary",
+        "p18c-provider-evidence-required"
+      ],
+      "changedFiles": [
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\index.html",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\package.json",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\src\\App.tsx",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\src\\library.d.ts",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\src\\library.js",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\src\\library.test.mjs",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\src\\main.tsx",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\src\\styles.css",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\src\\vite-env.d.ts",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\tsconfig.app.json",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\tsconfig.json",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\tsconfig.node.json",
+        "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\p18c-library-app\\vite.config.ts",
+        "docs/change-log.md"
+      ],
+      "expectedTargetPath": "~/Desktop/agenthub-rehearsals/",
+      "docsChangeLogUpdated": true,
+      "forbiddenPlatformPathsTouched": false,
+      "unexpectedBackendOrDatabaseCreated": false,
+      "providerEvidenceExists": true,
+      "snapshotConsistencyRate": 1.0,
+      "violations": [],
+      "summary": "passed"
+    },
+    "providerEvidence": {
+      "providerId": "local-codex-cli",
+      "adapterType": "codex",
+      "taskRunId": "1c83525d-2488-4772-8d0b-2cc293a4163c",
+      "diffArtifactId": "bc542c97-0761-4e52-8ff4-367d694b83aa",
+      "buildOrValidationEvidenceId": "4a17b1b6-e755-4c7b-b802-aa0bce1c2337",
+      "complete": true
+    }
+  },
+  "metrics": {
+    "preferenceRecallRate": 1.0,
+    "projectMemoryRecallRate": 0.8333333333333334,
+    "crossAgentConsistencyRate": 1.0,
+    "snapshotConsistencyRate": 1.0,
+    "changeLogMissingRate": 0.0,
+    "targetBoundaryViolationCount": 0,
+    "persistenceMemoryViolationCount": 0,
+    "providerEvidenceViolationCount": 0,
+    "taskSuccessDelta": null
+  },
+  "limitations": [
+    "The planner used the audited fallback because the configured LLM planner was disabled.",
+    "The first real provider attempt timed out after Corepack signature verification failed.",
+    "The final provider turn completed and scope passed, but its TaskRun finalizer failed before the UTF-8 Git decoder fix; the fresh diff and review were collected afterward from the same bounded worktree.",
+    "Check/test/build reused the repository dependency cache through a temporary validation mirror; no dependency installation was performed.",
+    "The Vite cache version warns that Node 22.11.0 is below its preferred 22.12+, although build and preview completed.",
+    "Task success delta remains unknown because there is no comparable live no-memory control run."
+  ]
+}

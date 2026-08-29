@@ -541,7 +541,7 @@ def _merge_stats(*stats_items: dict[str, Any]) -> dict[str, Any]:
 
 def _line_count(path: Path) -> int:
     try:
-        return len(path.read_text().splitlines())
+        return len(path.read_text(encoding="utf-8", errors="replace").splitlines())
     except OSError:
         return 0
 
@@ -566,6 +566,8 @@ def _run_git(worktree_path: Path, args: list[str]) -> str:
             cwd=worktree_path,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
         )
     except OSError as exc:
@@ -583,6 +585,8 @@ def _run_git_diff_no_index(worktree_path: Path, args: list[str]) -> str:
             cwd=worktree_path,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
         )
     except OSError as exc:

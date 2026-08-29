@@ -5,8 +5,12 @@ from typing import Optional
 from sqlmodel import Session as DbSession
 from sqlmodel import func, select
 
-from app.events import append_task_run_event
-from app.models import SessionQueueEntry, Task, TaskRun, utc_now
+from app.events import (
+    append_task_run_event,
+    publish_task_run_event,
+    stage_task_run_event,
+)
+from app.models import SessionQueueEntry, Task, TaskRun, TaskRunEvent, utc_now
 
 QUEUE_TERMINAL_STATES = {"completed", "failed", "interrupted", "cancelled"}
 WRITE_ACCESS_MODE = "write"
@@ -182,9 +186,35 @@ def mark_task_run_terminal(
     terminal_state: str,
     reason: Optional[str] = None,
 ) -> None:
+    try:
+        event = stage_task_run_terminal(
+            db,
+            task_run_id,
+            terminal_state,
+            reason=reason,
+        )
+        if event is None:
+            return
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    try:
+        db.refresh(event)
+        publish_task_run_event(db, event)
+    except Exception:
+        db.rollback()
+
+
+def stage_task_run_terminal(
+    db: DbSession,
+    task_run_id: str,
+    terminal_state: str,
+    reason: Optional[str] = None,
+) -> Optional[TaskRunEvent]:
     entry = entry_for_task_run(db, task_run_id)
     if entry is None:
-        return
+        return None
     state = terminal_state if terminal_state in QUEUE_TERMINAL_STATES else "failed"
     now = utc_now()
     entry.state = state
@@ -192,15 +222,26 @@ def mark_task_run_terminal(
     entry.blocked_reason = reason or f"TaskRun entered terminal state: {state}."
     entry.updated_at = now
     db.add(entry)
-    db.commit()
-    db.refresh(entry)
-    _append_queue_event(db, entry, "session_queue.advanced")
+    db.flush()
+    return stage_task_run_event(
+        db,
+        task_run_id=entry.task_run_id,
+        event_type="session_queue.advanced",
+        payload_json=json.dumps(
+            _queue_diagnostics(entry),
+            separators=(",", ":"),
+        ),
+    )
 
 
 def queue_diagnostics_for_task_run(db: DbSession, task_run_id: str) -> Optional[dict]:
     entry = entry_for_task_run(db, task_run_id)
     if entry is None:
         return None
+    return _queue_diagnostics(entry)
+
+
+def _queue_diagnostics(entry: SessionQueueEntry) -> dict:
     return {
         "queueEntryId": entry.id,
         "queueKind": entry.queue_kind,

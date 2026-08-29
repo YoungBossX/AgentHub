@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+import app.main as main_module
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
@@ -399,7 +400,13 @@ def test_preview_rejects_backend_target_before_starting_process(
 def test_preview_api_starts_lists_and_stops_preview(
     db: DbSession,
     demo_worktree: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(
+        main_module,
+        "require_task_run_artifact_scope_passed",
+        lambda db, task_run_id: None,
+    )
     task_run_id = create_task_run_fixture(db, demo_worktree)
     runner = RecordingRunner()
     service = PreviewService(

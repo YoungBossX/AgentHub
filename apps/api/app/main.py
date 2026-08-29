@@ -88,7 +88,7 @@ from app.memory_store import (
     transition_memory_item,
 )
 from app.mission_trace import build_session_mission_trace
-from app.models import Agent, MemoryItem, Task, TaskRun
+from app.models import Agent, Artifact, MemoryItem, Preview, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import SessionExecutionLedger
 from app.models import TaskRunEvent
@@ -180,10 +180,12 @@ from app.task_runs import (
     interrupt_task_run,
     list_task_runs,
     metrics_for_run,
+    require_task_run_artifact_scope_passed,
     retry_task_run,
     retry_with_scripted_mock,
     transition_task_run,
 )
+from app.task_run_scope import TaskRunScopeError
 
 
 @asynccontextmanager
@@ -1411,6 +1413,7 @@ def collect_diff_for_task_run(
 ) -> DiffArtifactResponse:
     if db.get(TaskRun, task_run_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    _require_artifact_scope_passed(db, task_run_id)
     try:
         diff_artifact = collect_task_run_diff(db, task_run_id)
         create_scripted_review_for_task_run(db, task_run_id)
@@ -1558,6 +1561,7 @@ def create_review_for_task_run(
 ) -> ReviewArtifactResponse:
     if db.get(TaskRun, task_run_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="TaskRun not found")
+    _require_artifact_scope_passed(db, task_run_id)
     try:
         review = create_scripted_review_for_task_run(db, task_run_id)
         refresh_session_ledger_for_task_run(db, task_run_id)
@@ -1629,6 +1633,7 @@ def start_preview_for_task_run(
     db: DbSession = Depends(get_db),
     previews: PreviewService = Depends(get_preview_service),
 ) -> PreviewResponse:
+    _require_artifact_scope_passed(db, task_run_id)
     try:
         preview = previews.start_task_run_preview(db, task_run_id)
         if preview.health_status == "healthy":
@@ -1679,6 +1684,8 @@ def create_mock_deployment_for_preview(
     db: DbSession = Depends(get_db),
     deployments: DeployService = Depends(get_deploy_service),
 ) -> DeploymentResponse:
+    source_task_run_id = _source_task_run_id_for_preview(db, preview_id)
+    _require_artifact_scope_passed(db, source_task_run_id)
     try:
         deployment = deployments.create_deployment(
             db,
@@ -1690,6 +1697,45 @@ def create_mock_deployment_for_preview(
     except DeployError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return deployment_response(deployment)
+
+
+def _require_artifact_scope_passed(db: DbSession, task_run_id: str) -> None:
+    if db.get(TaskRun, task_run_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="TaskRun not found",
+        )
+    try:
+        require_task_run_artifact_scope_passed(db, task_run_id)
+    except TaskRunScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{exc.error_code}: {exc.message}",
+        ) from exc
+
+
+def _source_task_run_id_for_preview(
+    db: DbSession,
+    preview_id: str,
+) -> str:
+    preview = db.get(Preview, preview_id)
+    if preview is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preview not found",
+        )
+    artifact = db.get(Artifact, preview.artifact_id)
+    if artifact is None or artifact.artifact_type != "preview":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Preview source evidence is unavailable.",
+        )
+    if db.get(TaskRun, artifact.task_run_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Preview source TaskRun is unavailable.",
+        )
+    return artifact.task_run_id
 
 
 @app.get("/task-runs/{task_run_id}/deployments", response_model=list[DeploymentResponse])

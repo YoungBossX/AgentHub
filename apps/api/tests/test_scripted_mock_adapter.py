@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
 
-from app.adapters import AgentRunRequest, run_adapter_event_stream
+from app.adapters import AgentRunRequest, run_adapter_event_stream as _run_adapter_event_stream
 from app.diffs import collect_task_run_diff
 from app.models import Agent, Session, Task, TaskRun, Workspace
 from app.scripted_mock import ScriptedMockAdapter
@@ -17,6 +17,15 @@ from app.task_runs import create_task_run as create_lifecycle_task_run
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _allow_test_execution_ownership(_: DbSession) -> bool:
+    return True
+
+
+async def run_adapter_event_stream(db, adapter, request, **kwargs):
+    kwargs.setdefault("ownership_guard", _allow_test_execution_ownership)
+    return await _run_adapter_event_stream(db, adapter, request, **kwargs)
 
 
 @pytest.fixture
@@ -88,13 +97,16 @@ def create_task_run(db: DbSession, worktree_path: Path) -> TaskRun:
 
 
 def run_request(
+    db: DbSession,
     task_run: TaskRun,
     instruction: str,
     plan_context: Optional[dict] = None,
 ) -> AgentRunRequest:
+    task = db.get(Task, task_run.task_id)
+    assert task is not None
     return AgentRunRequest(
         taskRunId=task_run.id,
-        sessionId="session-id",
+        sessionId=task.session_id,
         workspaceId="workspace-id",
         worktreePath=task_run.worktree_path,
         agentId=task_run.agent_id,
@@ -120,7 +132,7 @@ async def test_scripted_mock_login_page_mutates_demo_worktree_and_persists_event
 ) -> None:
     task_run = create_task_run(db, demo_worktree)
     adapter = ScriptedMockAdapter()
-    request = run_request(task_run, "Build a login page for the demo app.")
+    request = run_request(db, task_run, "Build a login page for the demo app.")
 
     persisted = await run_adapter_event_stream(db, adapter, request)
 
@@ -153,7 +165,7 @@ async def test_scripted_mock_followup_updates_primary_button_text(
 ) -> None:
     task_run = create_task_run(db, demo_worktree)
     adapter = ScriptedMockAdapter()
-    request = run_request(task_run, 'Change the primary button text to "Sign in".')
+    request = run_request(db, task_run, 'Change the primary button text to "Sign in".')
 
     await run_adapter_event_stream(db, adapter, request)
 
@@ -170,7 +182,7 @@ async def test_scripted_mock_followup_updates_demo_heading_text(
 ) -> None:
     task_run = create_task_run(db, demo_worktree)
     adapter = ScriptedMockAdapter()
-    request = run_request(task_run, 'Change the demo heading text to "Welcome back".')
+    request = run_request(db, task_run, 'Change the demo heading text to "Welcome back".')
 
     await run_adapter_event_stream(db, adapter, request)
 
@@ -189,7 +201,7 @@ async def test_scripted_mock_followup_run_collects_second_diff_in_same_worktree(
     await run_adapter_event_stream(
         db,
         adapter,
-        run_request(first_run, "Build a login page for the demo app."),
+        run_request(db, first_run, "Build a login page for the demo app."),
     )
     first_diff = collect_task_run_diff(db, first_run.id)
 
@@ -212,7 +224,7 @@ async def test_scripted_mock_followup_run_collects_second_diff_in_same_worktree(
     await run_adapter_event_stream(
         db,
         adapter,
-        run_request(followup_run, 'Change the primary button text to "Sign in".'),
+        run_request(db, followup_run, 'Change the primary button text to "Sign in".'),
     )
     followup_diff = collect_task_run_diff(db, followup_run.id)
 
@@ -232,6 +244,7 @@ async def test_scripted_mock_forced_failure_emits_error_without_mutation(
     baseline = (demo_worktree / "apps/demo/src/App.tsx").read_text()
     adapter = ScriptedMockAdapter()
     request = run_request(
+        db,
         task_run,
         "Build a login page for the demo app.",
         {"forceFailure": True},
@@ -252,6 +265,7 @@ async def test_scripted_mock_guardrail_blocks_protected_path_mutation(
     task_run = create_task_run(db, demo_worktree)
     adapter = ScriptedMockAdapter()
     request = run_request(
+        db,
         task_run,
         "Build a login page for the demo app.",
         {"targetPath": ".env"},

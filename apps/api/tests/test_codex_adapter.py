@@ -10,9 +10,19 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.adapters import AgentRunRequest, run_adapter_event_stream
-from app.codex_adapter import CodexAdapter
+from app.adapters import AgentRunRequest, run_adapter_event_stream as _run_adapter_event_stream
+import app.codex_adapter as codex_adapter_module
+from app.codex_adapter import CodexAdapter, SubprocessCodexRunner
 from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
+
+
+def _allow_test_execution_ownership(_: DbSession) -> bool:
+    return True
+
+
+async def run_adapter_event_stream(db, adapter, request, **kwargs):
+    kwargs.setdefault("ownership_guard", _allow_test_execution_ownership)
+    return await _run_adapter_event_stream(db, adapter, request, **kwargs)
 
 
 class FakeCodexProcess:
@@ -62,6 +72,26 @@ class FakeCodexRunner:
         if self.error is not None:
             raise self.error
         return self.process
+
+
+def test_subprocess_codex_runner_decodes_jsonl_as_utf8(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(codex_adapter_module.subprocess, "Popen", fake_popen)
+
+    SubprocessCodexRunner().start(["codex", "exec"], tmp_path)
+
+    assert captured["encoding"] == "utf-8"
+    assert captured["errors"] == "replace"
+    assert captured["text"] is True
 
 
 @pytest.fixture
@@ -207,7 +237,8 @@ async def test_codex_stdout_jsonl_events_persist_with_sequence_order(
     )
 
     db.refresh(task_run)
-    assert task_run.state == "completed"
+    assert task_run.state == "collecting_diff"
+    assert task_run.ended_at is None
     assert task_run.error_code is None
     assert task_run.error_message is None
 
@@ -243,7 +274,7 @@ async def test_codex_nonzero_exit_maps_to_task_run_error_and_captures_stderr(
 
 
 @pytest.mark.anyio
-async def test_codex_transient_reconnecting_error_does_not_fail_completed_run(
+async def test_codex_transient_reconnecting_error_does_not_fail_adapter_completed_run(
     db: DbSession,
     tmp_path: Path,
 ) -> None:
@@ -278,7 +309,8 @@ async def test_codex_transient_reconnecting_error_does_not_fail_completed_run(
     assert reconnect_payload["text"].startswith("Reconnecting... 2/5")
 
     db.refresh(task_run)
-    assert task_run.state == "completed"
+    assert task_run.state == "collecting_diff"
+    assert task_run.ended_at is None
     assert task_run.error_code is None
     assert task_run.error_message is None
 
@@ -314,7 +346,8 @@ async def test_codex_final_reconnecting_error_is_not_terminal_by_itself(
     assert payload["text"].startswith("Reconnecting... 5/5")
 
     db.refresh(task_run)
-    assert task_run.state == "completed"
+    assert task_run.state == "collecting_diff"
+    assert task_run.ended_at is None
     assert task_run.error_code is None
 
 

@@ -1,6 +1,7 @@
 import json
 from typing import Any, Optional
 
+from sqlalchemy import literal_column
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
@@ -170,7 +171,9 @@ def _recent_messages(
     messages = db.exec(
         select(Message)
         .where(Message.session_id == session_id)
-        .order_by(Message.created_at.desc(), Message.id.desc())
+        # SQLite is the current persistence contract. Its rowid preserves
+        # message insertion order when the wall-clock timestamps collide.
+        .order_by(Message.created_at.desc(), literal_column("message.rowid").desc())
         .limit(limit)
     ).all()
     return [

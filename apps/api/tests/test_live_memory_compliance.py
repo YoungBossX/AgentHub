@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
@@ -92,6 +93,18 @@ def test_wrong_project_location_is_flagged() -> None:
 
     assert "project_location_memory_violation" in report.violations
     assert report.expected_target_path == "~/Desktop/agenthub-rehearsals/"
+
+
+def test_expanded_home_project_location_is_accepted() -> None:
+    evidence = _compliant_evidence(
+        project_root=str(
+            Path.home() / "Desktop" / "agenthub-rehearsals" / "library-app"
+        )
+    )
+
+    report = check_live_memory_compliance(evidence)
+
+    assert "project_location_memory_violation" not in report.violations
 
 
 def test_missing_frontend_stack_is_flagged() -> None:
@@ -211,12 +224,17 @@ def test_prepare_p18c_session_setup_creates_target_session_and_snapshot(
         target = db.get(ExternalProjectTarget, setup.external_target_db_id)
 
     assert setup.rehearsal_root == str((tmp_path / "agenthub-rehearsals").resolve())
-    assert setup.project_root.endswith("agenthub-rehearsals/p18c-library-app")
+    assert Path(setup.project_root).parts[-2:] == (
+        "agenthub-rehearsals",
+        "p18c-library-app",
+    )
     assert setup.target_id == "external-p18c-library-app"
     assert "src" in setup.allowed_paths
     assert "package.json" in setup.allowed_paths
     assert "vite.config.ts" in setup.allowed_paths
     assert setup.active_memory_rule_ids == tuple(rule.key for rule in P18C_MEMORY_RULES)
+    assert len(setup.active_memory_item_ids) == len(P18C_MEMORY_RULES)
+    assert len(set(setup.active_memory_item_ids)) == len(P18C_MEMORY_RULES)
     assert setup.agents_md_hash
     assert setup.claude_md_hash
     assert setup.target_registry_version
@@ -228,6 +246,10 @@ def test_prepare_p18c_session_setup_creates_target_session_and_snapshot(
     assert snapshot is not None
     assert target is not None
     assert target.target_id == setup.target_id
+
+    payload = setup.to_payload()
+    assert payload["activeMemoryRuleIds"] == [rule.key for rule in P18C_MEMORY_RULES]
+    assert payload["activeMemoryItemIds"] == list(setup.active_memory_item_ids)
 
 
 def test_prepare_p18c_session_setup_reuses_existing_target(tmp_path) -> None:
@@ -248,6 +270,7 @@ def test_prepare_p18c_session_setup_reuses_existing_target(tmp_path) -> None:
     assert first.target_id == second.target_id
     assert first.external_target_db_id == second.external_target_db_id
     assert first.session_id != second.session_id
+    assert first.active_memory_item_ids == second.active_memory_item_ids
 
 
 def _compliant_evidence(**overrides: object) -> LiveMemoryComplianceEvidence:

@@ -1,10 +1,13 @@
 import asyncio
+import json
 import shutil
 import subprocess
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+import app.main as main_module
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
@@ -14,6 +17,7 @@ from app.main import app, get_db, get_preview_service
 from app.models import Agent, Artifact, Deployment, Diff, Session, Task, TaskRun, Workspace
 from app.previews import PreviewProcess, PreviewProcessDiagnostics, PreviewService
 from app import run_engine as run_engine_module
+from app.target_registry import DEMO_FRONTEND_TARGET_ID
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -84,6 +88,10 @@ def seed_codex_task(db: DbSession, worktree_path: Path) -> str:
         title="Build login page",
         intent_type="frontend_change",
         assigned_agent_id=agent.id,
+        plan_json=json.dumps(
+            {"targetId": DEMO_FRONTEND_TARGET_ID},
+            separators=(",", ":"),
+        ),
     )
     db.add(workspace)
     db.add(session)
@@ -96,6 +104,7 @@ def seed_codex_task(db: DbSession, worktree_path: Path) -> str:
 
 def test_forced_codex_failure_recovers_through_scripted_diff_preview_and_deploy(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     engine = create_engine(
         "sqlite://",
@@ -121,6 +130,11 @@ def test_forced_codex_failure_recovers_through_scripted_diff_preview_and_deploy(
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_preview_service] = lambda: preview_service
+    monkeypatch.setattr(
+        main_module,
+        "schedule_task_run_execution",
+        lambda background_tasks: None,
+    )
     try:
         client = TestClient(app)
         failed = client.post(f"/tasks/{task_id}/runs/force-codex-failure").json()

@@ -10,6 +10,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
 import pytest
+import app.main as main_module
 from app.deployments import (
     CommandResult,
     DeployError,
@@ -499,7 +500,15 @@ def test_local_staging_provider_reports_missing_output_without_ready_artifact(
         assert "output directory missing" in "\n".join(json.loads(artifact.meta_json)["logs"])
 
 
-def test_deploy_api_creates_and_lists_mock_deployments(tmp_path: Path) -> None:
+def test_deploy_api_creates_and_lists_mock_deployments(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        main_module,
+        "require_task_run_artifact_scope_passed",
+        lambda db, task_run_id: None,
+    )
     with next(db_fixture()) as db:
         preview_id, task_run_id = create_preview_fixture(db, tmp_path / "session-worktree")
 
@@ -531,7 +540,15 @@ def test_deploy_api_creates_and_lists_mock_deployments(tmp_path: Path) -> None:
         assert ledger_response.json()["latestDeploymentStatus"] == "ready"
 
 
-def test_deploy_api_can_select_local_staging_provider(tmp_path: Path) -> None:
+def test_deploy_api_can_select_local_staging_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        main_module,
+        "require_task_run_artifact_scope_passed",
+        lambda db, task_run_id: None,
+    )
     with next(db_fixture()) as db:
         worktree = tmp_path / "session-worktree"
         (worktree / "apps/demo").mkdir(parents=True)
@@ -574,7 +591,15 @@ def test_deploy_api_can_select_local_staging_provider(tmp_path: Path) -> None:
         assert response.json()["statusHistory"][-1]["status"] == "ready"
 
 
-def test_deploy_api_creates_blocked_external_provider_card(tmp_path: Path) -> None:
+def test_deploy_api_creates_blocked_external_provider_card(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        main_module,
+        "require_task_run_artifact_scope_passed",
+        lambda db, task_run_id: None,
+    )
     with next(db_fixture()) as db:
         preview_id, _ = create_preview_fixture(db, tmp_path / "session-worktree")
 

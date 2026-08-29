@@ -1,3 +1,7 @@
+import hashlib
+import json
+import os
+import re
 from dataclasses import dataclass
 from typing import Literal, Optional
 
@@ -22,6 +26,7 @@ AGENTHUB_PLATFORM_TARGET_ID = "agenthub-platform"
 DEMO_BACKEND_BASE_URL = "http://127.0.0.1:5174"
 
 GLOBAL_DENIED_PATHS = (".env*", "node_modules", ".git", "secrets")
+EFFECTIVE_WRITE_SCOPE_SCHEMA_VERSION = "agenthub.effective_write_scope.v1"
 
 
 class TargetRegistryError(KeyError):
@@ -59,12 +64,35 @@ class TargetProject:
         return role in self.allowed_agents
 
     def allows_path(self, path: str) -> bool:
-        normalized = _normalize_path(path)
-        return any(_matches_path_pattern(normalized, allowed) for allowed in self.allowed_paths)
+        if not is_canonical_repository_path(path):
+            return False
+        try:
+            allowed_patterns = tuple(
+                canonical_write_scope_pattern(allowed) for allowed in self.allowed_paths
+            )
+        except (TargetRegistryError, TypeError):
+            return False
+        return any(
+            _matches_path_pattern(path, allowed)
+            for allowed in allowed_patterns
+        )
 
     def denies_path(self, path: str) -> bool:
-        normalized = _normalize_path(path)
-        return any(_matches_path_pattern(normalized, denied) for denied in self.denied_paths)
+        if not is_canonical_repository_path(path):
+            return True
+        if protected_repository_path_category(path) is not None:
+            return True
+        try:
+            denied_patterns = tuple(
+                canonical_write_scope_pattern(denied)
+                for denied in (*self.denied_paths, *GLOBAL_DENIED_PATHS)
+            )
+        except (TargetRegistryError, TypeError):
+            return True
+        return any(
+            _matches_path_pattern(path, denied)
+            for denied in denied_patterns
+        )
 
     def permits_path(self, path: str) -> bool:
         return self.allows_path(path) and not self.denies_path(path)
@@ -185,6 +213,32 @@ def maybe_get_target_for_workspace(
         return None
 
 
+def effective_write_scope_identity(target: TargetProject) -> str:
+    """Return a stable identity for the target's effective path policy."""
+    target_id = target.target_id
+    if not isinstance(target_id, str) or not target_id.strip():
+        raise TargetRegistryError("Target write-scope policy is invalid")
+    try:
+        allowed_paths = tuple(
+            canonical_write_scope_pattern(pattern) for pattern in target.allowed_paths
+        )
+        denied_paths = tuple(
+            canonical_write_scope_pattern(pattern)
+            for pattern in (*target.denied_paths, *GLOBAL_DENIED_PATHS)
+        )
+    except TypeError as exc:
+        raise TargetRegistryError("Target write-scope policy is invalid") from exc
+
+    payload = {
+        "schemaVersion": EFFECTIVE_WRITE_SCOPE_SCHEMA_VERSION,
+        "targetId": target_id,
+        "allowedPaths": sorted(set(allowed_paths)),
+        "deniedPaths": sorted(set(denied_paths)),
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def external_target_to_project(target: ExternalProjectTarget) -> TargetProject:
     target_type = _target_type_for_external_project(target.project_type)
     allowed_paths = tuple(allowed_paths_for(target))
@@ -268,10 +322,101 @@ def _normalize_path(path: str) -> str:
     return normalized.rstrip("/")
 
 
+def is_canonical_repository_path(path: object) -> bool:
+    if (
+        not isinstance(path, str)
+        or not path
+        or path != path.strip()
+        or "\\" in path
+        or path.startswith("/")
+        or "*" in path
+        or "?" in path
+        or any(ord(character) < 32 or ord(character) == 127 for character in path)
+    ):
+        return False
+    components = path.split("/")
+    return all(
+        component not in {"", ".", ".."} and ":" not in component
+        for component in components
+    )
+
+
+def protected_repository_path_category(
+    path: object,
+    *,
+    case_sensitive: bool | None = None,
+) -> str | None:
+    """Classify a repository path for the rootless policy API.
+
+    This helper has no filesystem root and therefore cannot observe a mounted
+    volume's case rule.  ``case_sensitive`` is available to callers that have
+    an assigned-root observation, while the default keeps the existing
+    platform policy fallback (sensitive on POSIX, insensitive on Windows).
+    Snapshot collection supplies its own root-bound resolver and does not rely
+    on this fallback for protected aliases.
+    """
+    if not isinstance(path, str):
+        return None
+    if case_sensitive is None:
+        case_sensitive = os.name != "nt"
+    for component in path.split("/"):
+        normalized = component if case_sensitive else component.casefold()
+        if normalized == (".git" if case_sensitive else ".git"):
+            return ".git"
+        if normalized == ("node_modules" if case_sensitive else "node_modules"):
+            return "node_modules"
+        if normalized == ("secrets" if case_sensitive else "secrets"):
+            return "secrets"
+        if normalized.startswith(".env"):
+            return ".env"
+    return None
+
+
+def canonical_write_scope_pattern(pattern: object) -> str:
+    if not isinstance(pattern, str) or any(
+        ord(character) < 32 or ord(character) == 127 for character in pattern
+    ):
+        raise TargetRegistryError("Target write-scope policy is invalid")
+    normalized = pattern.replace("\\", "/").strip()
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or re.match(r"^[A-Za-z]:", normalized)
+    ):
+        raise TargetRegistryError("Target write-scope policy is invalid")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    normalized = normalized.rstrip("/")
+    if (
+        not normalized
+        or "?" in normalized
+        or (
+            "*" in normalized
+            and (normalized.count("*") != 1 or not normalized.endswith("*"))
+        )
+    ):
+        raise TargetRegistryError("Target write-scope policy is invalid")
+    if normalized == "*":
+        return normalized
+
+    path_part = normalized[:-1] if normalized.endswith("*") else normalized
+    path_part = path_part.rstrip("/")
+    components = path_part.split("/")
+    if not path_part or any(
+        component in {"", ".", ".."} or ":" in component
+        for component in components
+    ):
+        raise TargetRegistryError("Target write-scope policy is invalid")
+    return normalized
+
+
 def _matches_path_pattern(path: str, pattern: str) -> bool:
     normalized_pattern = _normalize_path(pattern)
     if normalized_pattern.endswith("*"):
-        return path.startswith(normalized_pattern[:-1])
+        prefix = normalized_pattern[:-1]
+        if "/" not in normalized_pattern:
+            return any(segment.startswith(prefix) for segment in path.split("/"))
+        return path.startswith(prefix)
 
     if "/" not in normalized_pattern:
         return normalized_pattern in path.split("/")

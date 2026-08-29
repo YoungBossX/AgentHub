@@ -2,6 +2,48 @@
 
 本文档记录了稳定的项目状态，后续的 Codex 提示可引用此文档，而无需重复长上下文块。
 
+## 当前快照与阅读约定
+
+截至 2026-08-29，`agenthub-p18b-memory-effectiveness-rehearsal` 的 4.1/4.2 因缺少
+真实 workflow/chat-routing 证据保持打开；
+`agenthub-p18c-live-memory-compliance-library-app` 已通过新的 Windows 有界演练补齐
+精确 AGENTS/CLAUDE/context 哈希、六个活跃 MemoryItem ID、13 个 changed-files、
+Diff/Review、check/test/build、preview/staging 和合规证据，5.1 已闭合为 24/24。
+`agenthub-taskrun-scope-preview-hardening` 的 1.1 至 1.7 已完成，并通过严格 OpenSpec
+校验。`openspec list` 中标记为 `No tasks` 的条目没有任务清单，不能仅凭该状态推导为
+已实现或未实现。
+
+任务元数据完成不等于项目冻结证据闭合。`docs/p18b-freeze-review.md` 已于
+2026-08-07 重建，但不是原稿恢复；复核发现当前 P18b 实现/测试没有执行 Planner、coding agent、
+PlanValidator、scheduler 或聊天路由，无法验证原先已勾选的 OpenSpec 4.1/4.2；因此 P18b
+4.1/4.2 已重新打开，P18b 仍未冻结。P18c 原稿仍未进入 Git，但新的
+`docs/p18c-freeze-review.md` 与 `docs/p18c-bounded-rehearsal-evidence.json` 已冻结一次完整
+的新演练。真实 Codex provider turn 完成且作用域通过；TaskRun 后处理因修复前 Git GBK
+解码缺陷保持 failed，修复后从同一 Session/Task/外部 Git 基线补采 Diff/Review 与验证制品，
+没有改写 TaskRun 终态。`docs/p19-freeze-review.md` 已按当前代码、历史基线和 fresh
+121-test planner 回归重建；P19 路由冻结完成。整个项目仍受 P18b 4.1/4.2 与当前
+TaskRun-scope hardening 收尾状态阻断。
+
+当前实现仍保持本地单用户 Agent Coding Workspace / 强演示 MVP 边界：SQLite、
+SSE、每个 Session 一个工作树，以及 `CodexAdapter`、`ClaudeCodeAdapter` 和
+`ScriptedMockAdapter` 三条适配器路径。生产部署、多用户协作、外部 IM、Docker
+sandbox、WebSocket、提供者市场和 PR 自动创建仍不属于当前基线。
+
+本文档按时间累积历史状态。下文出现的“正在进行”“等待冻结”或“后续任务”等措辞
+是对应阶段的历史快照，不能覆盖本节的当前状态；判断现状时应同时核对当前代码、
+对应 OpenSpec 任务清单和 `docs/change-log.md`。
+
+收尾审计在既有文档中发现 80 处反引号路径，指向 36 个当前不存在的文档。其中 18 个
+可确认由公开仓库清理提交 `88cb0e8` 删除；另外 18 个的来源和处置尚未确认。它们不是
+Markdown 链接，但部分文字仍以“参见”或“证据记录在”的方式承担导航语义，因此不能视为已经
+解决。当前公开入口以 [README](../README.md)、[架构说明](architecture.md)、
+[演示脚本](demo-script.md)、[变更日志](change-log.md) 和现存 OpenSpec 制品为准；
+缺失的冻结材料仍按上一段作为项目级收尾阻断处理。
+
+当前 P18 实现会在运行时编译确定性 `AGENTS.md` / `CLAUDE.md` 指令制品并记录
+哈希；当前 Git 基线从未跟踪仓库根目录 `CLAUDE.md`。主工作树中的本地未跟踪
+`CLAUDE.md` 不属于当前 Git 基线，且不能作为已导出桥接制品的交付证据。
+
 ## 非 Git 外部项目证据链状态
 
 2026-06-10 修复了新项目外部目录的 Diff/Review 证据链。AgentHub 现在在非 Git 外部 target 创建 TaskRun 时，会在现有 `preRunCheckpoint` 指标中记录允许路径内的文件快照。TaskRun 完成后，如果目标目录没有 Git `baseRef`，Diff 采集会使用执行前快照和当前文件树生成统一的 Diff artifact，后续 Review、ArtifactVersion、Ledger 和右侧证据工作台继续消费同一套 Diff/Review 产物。
@@ -3056,7 +3098,7 @@ P18 将目标注册表、PlanValidator、护栏、运行时配置和调度器作
 
 ### P19 规划器路由加固
 
-P19 正在进行中，已通过新颖应用回归集完成了路由加固核心。
+P19 已完成冻结复核，并通过当前新颖应用回归集验证路由加固核心。
 
 当前 P19 基线：
 
@@ -3071,7 +3113,8 @@ P19 正在进行中，已通过新颖应用回归集完成了路由加固核心�
 - P18c 库管理应用路由现在会在存在准备好的外部前端目标时创建一个目标范围的前端任务。
 - 缺失的 desktop/external 目标会要求设置目标，而不是写入任意主机路径。
 
-P19 尚未完成最终冻结审查。P18c 实时执行保持暂停，直到 P19 冻结证据确认规划器路由不再是阻塞因素。
+P19 冻结评审见 `docs/p19-freeze-review.md`。P18c 已在 2026-08-29 的新有界演练中完成
+24/24；规划器路由不再是 P18c 阻断因素。全项目剩余阻断见本文顶部当前快照。
 
 ### P24 部署提供者状态卡片
 

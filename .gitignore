@@ -103,6 +103,10 @@ docs/*
 !docs/architecture.md
 !docs/history/
 !docs/history/change-log-archive.md
+!docs/p18b-freeze-review.md
+!docs/p18c-freeze-review.md
+!docs/p18c-bounded-rehearsal-evidence.json
+!docs/p19-freeze-review.md
 
 # Extra local temp files
 *.local
