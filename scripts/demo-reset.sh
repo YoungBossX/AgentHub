@@ -2,21 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT_DIR/scripts/python-env.sh"
 API_DIR="$ROOT_DIR/apps/api"
 DATA_DIR="$API_DIR/data"
 DB_PATH="$DATA_DIR/agenthub.sqlite3"
 BACKUP_ROOT="$DATA_DIR/backups"
 STAMP="$(date +"%Y%m%d-%H%M%S")"
 BACKUP_DIR="$BACKUP_ROOT/demo-reset-$STAMP"
-PYTHON_BIN="$ROOT_DIR/.venv/bin/python"
-
-if [[ ! -x "$PYTHON_BIN" ]]; then
-  echo "Missing backend Python environment at $PYTHON_BIN"
-  echo "Create it first:"
-  echo "  python3 -m venv .venv"
-  echo "  .venv/bin/python -m pip install -r apps/api/requirements.txt"
-  exit 1
-fi
+PYTHON_BIN="$AGENTHUB_PYTHON_BIN"
 
 if [[ -e "$DB_PATH" ]] && command -v lsof >/dev/null 2>&1; then
   if lsof "$DB_PATH" >/dev/null 2>&1; then

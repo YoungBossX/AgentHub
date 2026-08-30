@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "$0")/python-env.sh"
 cd "$(dirname "$0")/../apps/demo-api"
-../../.venv/bin/python -m compileall app tests
+"$AGENTHUB_PYTHON_BIN" -m compileall app tests

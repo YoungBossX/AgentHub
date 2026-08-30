@@ -162,5 +162,5 @@ background worker，尚未进入 P19 断言；初始化当前 schema 后同一�
 
 P19 的共享提示、非任务路由、验证证据、target 边界、新型应用回归、P18c task-creation smoke
 和 provider 边界均有可追溯证据。P19 保持 **Complete**；P18c 已在本轮独立完成 24/24。
-整个项目仍受 P18b 4.1/4.2 和当前 TaskRun-scope hardening 收尾状态约束，不能因 P19 冻结而
-宣称全项目完成。
+在 2026-08-29 P19 独立复核结束时，整个项目仍受当时尚未闭合的 P18b 4.1/4.2 约束，
+因此该阶段不能只凭 P19 冻结宣称全项目完成；后续当前状态以 `docs/project-state.md` 为准。

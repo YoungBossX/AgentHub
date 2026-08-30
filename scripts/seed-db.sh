@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "$0")/python-env.sh"
 cd "$(dirname "$0")/../apps/api"
-../../.venv/bin/python -m app.seed
+"$AGENTHUB_PYTHON_BIN" -m app.seed

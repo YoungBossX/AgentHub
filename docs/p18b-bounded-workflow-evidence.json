@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "p18b-bounded-product-workflow-v2",
+  "evidenceSource": "bounded_product_workflow",
+  "liveProviderSuccessClaimed": false,
+  "workspaceId": "68490240-9b0c-4810-91d3-9b53ffbec484",
+  "sessionId": "a5c51974-5299-4ac5-8226-779487edd9e3",
+  "messageId": "86fd272f-288d-4d87-85c1-1bb309d4774a",
+  "request": "@orchestrator build a login page for the demo app；请用简洁中文总结，代码改动必须更新 docs/change-log.md 并运行项目验证。",
+  "worktree": {
+    "label": "isolated_temporary_worktree",
+    "existedDuringRun": true,
+    "absolutePathPersisted": false
+  },
+  "memoryItemIds": {
+    "userPreference": "d0f8508d-b6ef-4cfe-acbc-56728b195f78",
+    "projectRule": "41bfed48-c754-45ac-90d9-44f3335e62fe"
+  },
+  "expectedMemoryIds": [
+    "41bfed48-c754-45ac-90d9-44f3335e62fe",
+    "d0f8508d-b6ef-4cfe-acbc-56728b195f78"
+  ],
+  "plannerRetrievedMemoryIds": [
+    "41bfed48-c754-45ac-90d9-44f3335e62fe",
+    "d0f8508d-b6ef-4cfe-acbc-56728b195f78"
+  ],
+  "codingRetrievedMemoryIds": [
+    "41bfed48-c754-45ac-90d9-44f3335e62fe",
+    "d0f8508d-b6ef-4cfe-acbc-56728b195f78"
+  ],
+  "memorySnapshotIds": {
+    "planner": "ad71a9ae-8f41-4c24-909e-d4e251d43fee",
+    "coding": "ad71a9ae-8f41-4c24-909e-d4e251d43fee"
+  },
+  "workflow": {
+    "messagePersisted": true,
+    "plannerInputBuilt": true,
+    "taskGraphValidatedAndPersisted": true,
+    "planValidator": {
+      "validator": "app.plan_validator.validate_task_graph",
+      "passed": true,
+      "validatedTaskCount": 3
+    },
+    "taskIds": [
+      "b119d32b-7458-4273-b72f-3b1b2bd07542",
+      "b7ee13f8-a664-468e-b660-73b4805d8ad7",
+      "140a085b-76c4-4801-afde-212495d0a45c"
+    ],
+    "taskStates": {
+      "orchestrator": {
+        "taskId": "b119d32b-7458-4273-b72f-3b1b2bd07542",
+        "status": "completed",
+        "schedulerState": "completed"
+      },
+      "frontend": {
+        "taskId": "b7ee13f8-a664-468e-b660-73b4805d8ad7",
+        "status": "pending",
+        "schedulerState": "ready"
+      },
+      "qa": {
+        "taskId": "140a085b-76c4-4801-afde-212495d0a45c",
+        "status": "waiting_dependency",
+        "schedulerState": "waiting_dependency"
+      }
+    },
+    "frontendTaskId": "b7ee13f8-a664-468e-b660-73b4805d8ad7",
+    "planner": "deterministic_login_v1",
+    "plannerFallback": {
+      "attemptedPlanner": "llm_v1",
+      "reason": "disabled",
+      "providerId": "disabled",
+      "providerType": "disabled",
+      "plannerSource": "disabled",
+      "status": "disabled"
+    },
+    "codingContextBuilt": true,
+    "schedulerRefreshTaskIds": [
+      "b7ee13f8-a664-468e-b660-73b4805d8ad7",
+      "140a085b-76c4-4801-afde-212495d0a45c"
+    ],
+    "executionBoundary": {
+      "schedulerStateBeforeTaskRun": "ready",
+      "taskRunId": "f4e39ad9-cf9d-4323-b8e7-134ca66e8eb7",
+      "taskRunState": "queued",
+      "adapterType": "codex",
+      "adapterExecuted": false
+    }
+  },
+  "ordinaryChat": {
+    "sessionId": "fe2e7a76-1664-42fa-a2a9-3cf9a50c8cff",
+    "messageId": "b681e41a-76f3-4670-a4cb-b4f1cc1eedb8",
+    "request": "你好",
+    "createdTaskIds": [],
+    "createdTaskRunIds": [],
+    "responseMessageId": "dfaa0bbd-585c-49aa-b4ef-50c8a24b936f",
+    "responseSenderType": "orchestrator",
+    "responseMessageKind": "chat",
+    "nonExecuting": true
+  },
+  "limitations": [
+    "The live Planner was disabled; the product's deterministic fallback created the validated task graph.",
+    "The coding task reached a queued TaskRun with a selected adapter, but the adapter was not executed; this run makes no task-success or changed-file claim.",
+    "The ordinary-chat assertion covers the bounded deterministic fallback path, not every live provider response."
+  ],
+  "payloadSha256": "42bfc7a1d61bd6efaa4e6dfc3e7b2b371de7e6e2ae43f7e396ab6cfeab3f968b"
+}

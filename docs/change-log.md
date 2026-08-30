@@ -1,5 +1,70 @@
 # AgentHub 变更日志
 
+## Close Windows validation and documentation-maintenance gaps
+
+**日期:** 2026-08-30
+
+### 变更
+
+- 新增 `scripts/python-env.sh`，让 Bash 包装脚本按确定顺序识别当前工作树 `.venv`、
+  Git 主检出目录共享 `.venv`、激活的 Conda 环境或显式 `AGENTHUB_PYTHON_BIN`；九个
+  API/demo 包装脚本不再硬编码 Unix `.venv/bin/python`。
+- API 与 demo-api 测试包装脚本为 pytest 创建已验证、运行级唯一且自动清理的外部
+  `--basetemp`，绕开 Windows 默认 `pytest-of-XCC` 目录的既有 ACL 损坏，同时避免把
+  Git 敏感测试临时目录放入仓库。
+- README 将 Node 前置条件收紧到 Vite 8 实际要求的 20.19+ 或 22.12+，并记录
+  Node 22.11 触发 Vitest `ERR_REQUIRE_ESM` 的环境原因。
+- 将 `docs/project-state.md` 从 3160 行历史累积稿压缩为 103 行当前基线；原内容完整
+  移入 `docs/history/project-state-archive.md`，新增历史索引并补齐 README 文档入口。
+- 按用户授权写入一份外部记忆压缩更新说明；未直接编辑 `MEMORY.md`，并保留 P18b/P18c
+  的证据边界与当前未提交状态。
+- 新增 P18b live provider 探针：`codex-cli 0.151.0` 在 ephemeral/read-only、系统临时
+  目录和零 tool-call 条件下于 6,234 ms 返回预期文本；证据不扩展为 Planner、adapter、
+  TaskRun、changed-files 或具体 model/upstream provider 成功声明。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| 锁文件依赖安装 | registry 下载在剩余包上 `ETIMEDOUT`；未改 `package.json`/lockfile，验证改用主检出目录的同锁依赖缓存 |
+| `pnpm check` | 通过；web ESLint/tsc、API compileall、demo tsc、demo-api compileall 全部通过 |
+| Node 24.19 `pnpm test:web` | 13 files / 96 tests passed；Node 22.11 的 `ERR_REQUIRE_ESM` 不再出现 |
+| Node 24.19 `pnpm test` | 96 web tests、1130 API passed / 1 skipped、5 demo-api passed |
+| pytest 临时目录 | 默认目录复现 `PermissionError`；新 wrapper 的独立 basetemp 完整回归通过并自动清理 |
+| P18b provider probe | Codex CLI exit 0；精确响应匹配；0 tool-call events；项目文件未作为工作目录 |
+| 独立只读复核 | PASS；无阻断问题、安全回归、无关功能变更或残留测试垃圾 |
+
+## Freeze P18b with bounded workflow and execution-boundary evidence
+
+**日期:** 2026-08-29
+
+### 变更
+
+- 新增 `app.p18b_workflow_rehearsal`，在临时 SQLite/Session/worktree 中保存真实用户偏好
+  与项目规则 MemoryItem，并复用消息持久化、Planner 输入、公开 PlanValidator、scheduler、
+  TaskRun 创建和 frontend coding context 路径。
+- 新增集成回归，验证两条实际记忆同时进入 Planner/coding context、使用同一 snapshot，
+  并形成 `completed` / `ready` / `waiting_dependency` 的三任务调度状态；普通“你好”路径
+  只生成 chat 回复、0 Task/0 TaskRun。
+- frontend coding task 通过 PlanValidator 和 scheduler `ready` 准入后创建 queued TaskRun，
+  选择 `codex` adapter，但有意不运行 adapter，不声称 task success 或 changed-files。
+- 保存 `docs/p18b-bounded-workflow-evidence.json`；证据 SHA-256 为
+  `42bfc7a1d61bd6efaa4e6dfc3e7b2b371de7e6e2ae43f7e396ab6cfeab3f968b`。
+- 闭合 P18b 4.1/4.2；实时 Planner 为 disabled，adapter 未执行，P18b 完成为 19/19。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| `tests/test_p18b_workflow_rehearsal.py` | 通过，1 passed；52 条既有 warnings |
+| fresh bounded workflow runner | 通过；实际 MemoryItem/snapshot/task/TaskRun/chat ID 已持久化 |
+| P18b 相关回归 | 通过，68 passed；1261 条既有 warnings |
+| API 全量回归 | 1130 passed / 1 skipped；15527 条既有 warnings |
+| Web / demo-api | Vitest 96 passed；demo-api 5 passed |
+| component checks | web ESLint+tsc、API compileall、demo tsc、demo-api compileall 通过 |
+| `pnpm check` wrapper | Corepack 网络访问受阻；精确 pnpm 运行后又受 Windows `.venv/bin/python` 脚本路径阻塞，未记为通过 |
+| strict OpenSpec / `openspec list` | 通过；P18b 为 Complete（19/19） |
+
 ## Clear the Windows publication gate
 
 **日期:** 2026-08-29

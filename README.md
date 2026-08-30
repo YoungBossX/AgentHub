@@ -17,7 +17,7 @@
 </p>
 
 
-[核心能力](#核心能力) · [系统架构](#系统架构) · [执行链路](#执行链路) · [技术栈](#技术栈) · [核心模块](#核心模块) · [快速开始](#快速开始)
+[核心能力](#核心能力) · [系统架构](#系统架构) · [执行链路](#执行链路) · [技术栈](#技术栈) · [核心模块](#核心模块) · [快速开始](#快速开始) · [交付文档](#交付文档)
 
 </div>
 
@@ -50,6 +50,20 @@ Diff / Review / Preview
     ↓
 TaskRunEvent → SSE → Web Workspace
 ```
+
+---
+
+## 交付文档
+
+| 文档 | 用途 |
+|---|---|
+| [`docs/demo-script.md`](docs/demo-script.md) | 录屏、现场演示和答辩脚本 |
+| [`docs/architecture.md`](docs/architecture.md) | 架构、核心链路、模块地图和可靠性边界 |
+| [`docs/project-state.md`](docs/project-state.md) | 当前基线、冻结证据、已知限制与交付状态 |
+| [`AGENTS.md`](AGENTS.md) | AI 协作守则和项目 guardrails |
+| [`openspec/changes`](openspec/changes) | Spec、任务拆解和演进记录 |
+| [`docs/change-log.md`](docs/change-log.md) | 当前工程变更和验证记录 |
+| [`docs/history/README.md`](docs/history/README.md) | 历史状态与旧变更记录索引 |
 
 ---
 
@@ -291,29 +305,52 @@ AgentHub/
 
 ### 环境要求
 
-- Node.js ≥ 18
-- pnpm ≥ 9
+- Node.js 20.19+ 或 22.12+
+- pnpm ≥ 9（`package.json` 锁定 `pnpm@10.33.4`）
 - Python ≥ 3.9
 - Git
 
-### 1. 安装依赖
+当前锁文件中的 Vite 8 要求 Node `^20.19.0 || >=22.12.0`。Node 22.11 等更早的
+22.x 版本可能在 Vitest 启动阶段表现为 `ERR_REQUIRE_ESM`。
+
+### 1. 安装 JavaScript 依赖
 
 ```bash
 pnpm install
+```
 
+仓库仅放行 `esbuild`、`sharp`、`unrs-resolver` 三个工具链依赖的构建脚本。不要使用
+全量 `pnpm approve-builds --all` 绕过 `pnpm-workspace.yaml` 中的最小 allowlist。
+
+### 2. 创建 Python 环境
+
+macOS / Linux：
+
+```bash
 python3 -m venv .venv
 .venv/bin/pip install -r apps/api/requirements.txt
+```
 
+Windows：
+
+```powershell
+python -m venv .venv
+.venv\Scripts\pip install -r apps\api\requirements.txt
+```
+
+### 3. 安装 Demo 应用依赖
+
+```bash
 pnpm demo:setup
 ```
 
-### 2. 初始化数据库
+### 4. 初始化数据库
 
 ```bash
 pnpm db:init
 ```
 
-### 3. 启动服务
+### 5. 启动服务
 
 终端 1：
 
@@ -333,7 +370,7 @@ pnpm dev:web
 http://127.0.0.1:3000
 ```
 
-### 4. 发送任务
+### 6. 发送任务
 
 ```text
 @orchestrator build a login page for the demo app
@@ -349,6 +386,12 @@ Planning
 → Diff / Review / Preview
 → TaskRunEvent / SSE
 ```
+
+### Windows 包装脚本
+
+项目 `pnpm` 后端命令通过 Git Bash 脚本运行。脚本会依次识别显式
+`AGENTHUB_PYTHON_BIN`、当前工作树 `.venv`、主检出目录共享 `.venv` 以及激活的
+Conda 环境；pytest 使用运行级唯一、自动清理的外部临时目录。
 
 ---
 

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "p18b-live-provider-probe-v1",
+  "timestampUtc": "2026-08-30T08:57:41Z",
+  "providerTool": "codex-cli",
+  "cliVersion": "0.151.0",
+  "probeMode": {
+    "ephemeral": true,
+    "sandbox": "read-only",
+    "gitRepositoryCheckSkipped": true,
+    "workingDirectory": "system_temp"
+  },
+  "prompt": "Return exactly P18B_PROVIDER_PROBE_OK and nothing else. Do not run commands, inspect files, or modify anything.",
+  "expectedResponse": "P18B_PROVIDER_PROBE_OK",
+  "observedResponse": "P18B_PROVIDER_PROBE_OK",
+  "threadId": "01a051e3-8748-7a12-88ac-561508a14411",
+  "exitCode": 0,
+  "durationMs": 6234,
+  "toolCallEvents": 0,
+  "liveProviderResponded": true,
+  "projectWritesClaimed": false,
+  "limitations": [
+    "This probe proves a live authenticated response through Codex CLI; it is not Planner, adapter, coding TaskRun, or changed-files evidence.",
+    "The JSONL response did not expose a model or upstream provider identifier, so no specific model/provider claim is made.",
+    "Plugin icon-path and unsupported PowerShell shell-snapshot warnings were emitted but did not block the response."
+  ],
+  "payloadSha256": "e6f12a14a3bfea9ae3757efe2559f95f0780c8c682e77f5996f5f2014dd49f9d"
+}

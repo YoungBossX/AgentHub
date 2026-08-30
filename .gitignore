@@ -101,9 +101,14 @@ docs/*
 !docs/change-log.md
 !docs/demo-script.md
 !docs/architecture.md
+!docs/project-state.md
 !docs/history/
 !docs/history/change-log-archive.md
+!docs/history/project-state-archive.md
+!docs/history/README.md
 !docs/p18b-freeze-review.md
+!docs/p18b-bounded-workflow-evidence.json
+!docs/p18b-provider-probe-evidence.json
 !docs/p18c-freeze-review.md
 !docs/p18c-bounded-rehearsal-evidence.json
 !docs/p19-freeze-review.md

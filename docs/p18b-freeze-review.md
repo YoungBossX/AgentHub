@@ -4,6 +4,10 @@
 
 **重建复核日期：** 2026-08-07
 
+**4.1 有界工作流复核日期：** 2026-08-29
+
+**4.2 执行边界复核日期：** 2026-08-29
+
 **OpenSpec：** `agenthub-p18b-memory-effectiveness-rehearsal`
 
 ## 重建说明
@@ -26,6 +30,9 @@ Planner 或编码代理成功。
 - 复用 P18 记忆存储、检索、上下文和快照能力的结构化报告；
 - 对确定性、fake-client 和 real-provider 证据来源的显式区分；
 - 对无法由当前证据计算的指标使用 `unknown`，而不是推断正向结果。
+- 一次 fresh、有界的产品工作流演练，将两条已保存 MemoryItem 送入真实消息、
+  Planner 输入、任务图、调度状态和 frontend coding context 组装路径；同一演练还证明
+  普通聊天保持非执行，并让编码任务通过 PlanValidator、scheduler 和 queued TaskRun 边界。
 
 ## 场景证据
 
@@ -84,6 +91,49 @@ control 和 treatment 创建执行期快照。用于本轮复核报告的实际�
 因此这些 1.0 和 precision 数值只能描述当前 deterministic fixture 的运行结果，不
 构成多个真实代理、独立快照、真实写入防护或严格因果对照的证据。
 
+## 4.1 有界产品工作流演练
+
+2026-08-29 使用内存 SQLite 和隔离临时 worktree 执行
+`app.p18b_workflow_rehearsal`，完整证据保存在
+`docs/p18b-bounded-workflow-evidence.json`。该 runner 没有重建并行记忆栈，而是实际调用
+`create_memory_item`、`create_session_message`、`build_llm_planner_input`、
+`plan_for_message`、任务图校验、scheduler 刷新和 `build_session_context_pack`。
+
+| 证据 | fresh 结果 |
+|---|---|
+| payload SHA-256 | `42bfc7a1d61bd6efaa4e6dfc3e7b2b371de7e6e2ae43f7e396ab6cfeab3f968b` |
+| workspace / coding session | `68490240-9b0c-4810-91d3-9b53ffbec484` / `a5c51974-5299-4ac5-8226-779487edd9e3` |
+| coding user message | `86fd272f-288d-4d87-85c1-1bb309d4774a` |
+| user-preference MemoryItem | `d0f8508d-b6ef-4cfe-acbc-56728b195f78` |
+| project-rule MemoryItem | `41bfed48-c754-45ac-90d9-44f3335e62fe` |
+| shared memory snapshot | `ad71a9ae-8f41-4c24-909e-d4e251d43fee` |
+| planned task IDs | `b119d32b-7458-4273-b72f-3b1b2bd07542`, `b7ee13f8-a664-468e-b660-73b4805d8ad7`, `140a085b-76c4-4801-afde-212495d0a45c` |
+| planner | `deterministic_login_v1`; live Planner `disabled` |
+| scheduler states | orchestrator `completed`; frontend `ready`; qa `waiting_dependency` |
+| queued coding TaskRun | `f4e39ad9-cf9d-4323-b8e7-134ca66e8eb7`; adapter `codex`; 未执行 adapter |
+
+两条实际 MemoryItem ID 都出现在 Planner 和 frontend coding context 的检索结果中，
+二者使用同一个 snapshot ID。持久化任务包含 `taskGraph` 和 `planDraft`，说明运行到达了
+真实产品规划路径，而不是只做 retrieval helper 演练。绝对临时路径未写入证据。
+
+该 v2 证据替代 4.1-only 的 v1 payload，同时闭合 4.1 和 4.2。它只将 coding task
+推进到 queued TaskRun，不启动 adapter、没有 changed-files，也不声称 task success。
+
+## 4.2 普通聊天与编码执行边界
+
+同一 fresh 演练另外创建独立 Session `fe2e7a76-1664-42fa-a2a9-3cf9a50c8cff`，保存普通
+聊天消息 `b681e41a-76f3-4670-a4cb-b4f1cc1eedb8`（内容为“你好”），并调用真实
+`plan_for_message`、synthetic planning completion 和 scheduler refresh 路径。结果为 0 Task、
+0 TaskRun，只新增一条 orchestrator `chat` 回复
+`dfaa0bbd-585c-49aa-b4ef-50c8a24b936f`；因此该 bounded deterministic fallback 路径
+保持非执行。
+
+编码路径对已持久化的三任务图重新调用公开
+`app.plan_validator.validate_task_graph`，3 个任务全部通过。frontend task 随后由 scheduler
+判定为 `ready`，`create_task_run` 成功创建 `queued` TaskRun，并选择 `codex` adapter。
+runner 有意不调度 adapter；这证明请求通过计划校验、调度准入和 TaskRun 创建边界，
+但不把“进入执行边界”表述为“编码执行成功”。
+
 ## 提供者可用性与证据边界
 
 本轮报告中的 provider 证据为：
@@ -95,28 +145,48 @@ control 和 treatment 创建执行期快照。用于本轮复核报告的实际�
 | provider ID | `null` |
 | reason | `P18b deterministic rehearsal did not request live provider execution.` |
 
-因此本轮没有请求 Claude、Codex 或其他实时 Planner/编码代理，也不声称实时提供者
-成功。`docs/project-state.md` 保留了 2026-06-05 当时相关 API key 未设置的历史记录；
-该历史环境状态不等同于 2026-08-07 的当前环境探测结果。
+上述 bounded workflow 本身没有请求 Claude、Codex 或其他实时 Planner/编码代理，
+`not_requested` 不能被解释为 provider 不可用。为闭合 4.3，2026-08-30 另行执行了
+一次 `codex-cli 0.151.0` 的 ephemeral/read-only 探针：在系统临时目录中跳过 Git 仓库
+检查，请求精确返回 `P18B_PROVIDER_PROBE_OK`；6,234 ms 后以 exit 0 返回该文本，JSONL
+中没有 tool-call 事件。证据保存于 `docs/p18b-provider-probe-evidence.json`。
 
-## 安全边界与未验证项
+该 live 探针只证明当时 Codex CLI 能获得已认证响应，不是 Planner、adapter、编码
+TaskRun、task success 或 changed-files 证据；JSONL 未公开具体 model/upstream provider，
+因此不作相应声明。`docs/history/project-state-archive.md` 保留了 2026-06-05 当时相关
+API key 未设置的历史记录；该历史环境状态不等同于本次 live 探针。
+
+## 安全边界
 
 - stale/archived 记忆和 pending-review/untrusted 外部建议不会进入活跃指导上下文；
 - P18b 不增加自动长期学习、embeddings/RRF/graph 检索、提供者市场、生产部署、
   新适配器或护栏绕过。
 
-上述两项分别由当前 deterministic retrieval 测试和范围审计支持。但是
-`memory_rehearsal.py` 及其测试没有实际调用 Planner、coding agent、PlanValidator、
-scheduler、adapter 或聊天路由。因此以下验收均为 **UNVERIFIED**：
-
-- OpenSpec 4.1 的“有边界真实工作流演练”；
-- 普通聊天保持非执行状态且不创建 coding TaskRun；
-- coding 请求仍经过 PlanValidator、scheduler 和 adapter 执行边界。
-
-按 Definition of Done，`tasks.md` 的 4.1 和 4.2 已重新打开；在补齐证据前不得用现有
-架构意图替代运行验证。
+上述两项分别由当前 deterministic retrieval 测试和范围审计支持。v2 runner 已实际调用
+消息、Planner 输入、公开 PlanValidator、scheduler、TaskRun 创建和 coding context；普通
+聊天则保持 0 Task / 0 TaskRun。adapter 未执行的边界已在证据中显式记录。
 
 ## 验证
+
+### 2026-08-29 4.1 / 4.2 有界工作流复核
+
+| 检查 | 结果 |
+|---|---|
+| `tests/test_p18b_workflow_rehearsal.py` | 通过，1 passed；52 条既有 warnings |
+| fresh `app.p18b_workflow_rehearsal` | 通过；实际 ID、task states 和 SHA-256 如上 |
+| Planner/coding memory ID 与 snapshot | 两条预期记忆均命中；snapshot 一致 |
+| chat / execution boundary | 普通聊天 0 Task/0 TaskRun；coding 通过 validator/scheduler 并创建 queued TaskRun |
+| live provider / coding execution | Planner disabled；adapter 未执行；不声称成功 |
+| P18b 相关回归 | 通过，68 passed；1261 条既有 warnings |
+| API 全量回归 | 通过，1130 passed / 1 skipped；15527 条既有 warnings |
+| Web / demo-api | Vitest 96 passed；demo-api 5 passed |
+| component checks | web ESLint+tsc、API compileall、demo tsc、demo-api compileall 均通过 |
+| strict OpenSpec / `openspec list` | 通过；P18b 为 Complete（19/19） |
+
+根 `pnpm check` 首次仍被 Corepack 请求 npm registry 阻塞。使用本机已有的精确
+`pnpm@10.33.4` 与只读依赖联接后，web check 通过，但 Bash wrapper 在 Windows 上固定
+引用不存在的 `.venv/bin/python`。因此本轮没有把 wrapper 记为通过，而是分别 fresh
+执行并通过四个 component check；未安装新依赖。
 
 ### 2026-08-07 重建复核
 
@@ -145,14 +215,13 @@ scheduler、adapter 或聊天路由。因此以下验收均为 **UNVERIFIED**：
 - 实时 Planner/编码代理的 control/treatment 成功率和真实提供者延迟尚无本轮证据；
 - 缺少真实 changed-file 对照时，变更日志缺失率保持未知；
 - 场景数量有限，未来修改检索、上下文注入或快照语义时必须重跑并对比稳定报告；
-- 需要补充真实工作流 smoke，分别证明普通聊天不会创建 coding TaskRun，且 coding
-  请求仍经过 PlanValidator 和 scheduler；在此之前 P18b 不能完整冻结；
+- 普通聊天证据覆盖 bounded deterministic fallback，不替代所有实时 Planner provider 的
+  线上行为验证；
 - 若后续引入实时提供者证据，必须记录实际 provider/runtime 可用性、失败原因、延迟和
   成本，并继续与 deterministic/fake-client 证据分开标注。
 
 ## 冻结结论
 
-P18b 的本地 deterministic retrieval/report slice 具备可复核证据，本文件重建了该
-部分的评审记录，但没有恢复原冻结文档或证明 P18b 已冻结。OpenSpec 4.1/4.2 要求的
-真实工作流 smoke 和普通聊天/执行边界验收仍未验证，因此 P18b 仍是项目级收尾阻断。
-该结论也不扩展为实时代理有效性、生产部署就绪或整个 AgentHub 项目已完成。
+P18b 的本地 deterministic retrieval/report、产品工作流、普通聊天非执行和编码准入边界
+均具备 fresh 可复核证据，OpenSpec 19/19 任务已闭合，P18b 可以按当前 bounded local
+范围冻结。该结论不扩展为实时代理任务成功、生产部署就绪或所有 provider 路径的线上验证。
