@@ -75,7 +75,7 @@ TaskRunEvent → SSE → Web Workspace
 | **Runtime Mapping**           | ProviderGateway 将角色与具体 Coding Provider 解耦，统一完成 Provider 解析、能力匹配与运行时选择 |
 | **Workspace Isolation**       | 每个 Session 使用独立 Git Worktree，避免不同会话直接写入同一工作目录 |
 | **Concurrency Control**       | Session Queue + Scheduler + Target Lock 协同控制写任务顺序与目标级互斥 |
-| **Realtime Trace**            | TaskRunEvent 持久化到 SQLite，并通过 SSE 增量推送到前端      |
+| **Realtime Trace**            | TaskRunEvent 持久化到 SQLite，通过 SSE 增量推送，并以 Session 级游标支持断线恢复 |
 | **Evidence Delivery**         | 将真实代码修改进一步组织为 Diff、Review、Preview 与运行诊断，而不是只返回文本结果 |
 
 ---
@@ -248,7 +248,7 @@ Web Workspace
 | **Diff**         | 查看真实文件修改与代码变化               |
 | **Review**       | 对代码变更形成结构化审查结果             |
 | **Preview**      | 启动并展示本地 Web 预览                  |
-| **TaskRunEvent** | 持久化任务执行状态与运行轨迹             |
+| **TaskRunEvent** | 持久化任务执行状态与运行轨迹，并提供 Session 级 SSE 恢复游标 |
 | **Diagnostics**  | 汇总 Queue、Provider、Preview 等运行状态 |
 
 ---

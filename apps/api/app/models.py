@@ -211,7 +211,7 @@ class TaskRunEvent(SQLModel, table=True):
     event_type: str
     payload_json: str = "{}"
     sequence: int
-    created_at: datetime = Field(default_factory=utc_now)
+    created_at: datetime = Field(default_factory=utc_now, index=True)
 
 
 class SessionQueueEntry(SQLModel, table=True):

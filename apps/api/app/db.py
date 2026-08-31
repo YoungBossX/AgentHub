@@ -23,10 +23,29 @@ engine = create_engine(
 def create_db_and_tables() -> None:
     SQLModel.metadata.create_all(engine)
     ensure_demo_schema_columns()
+    ensure_demo_schema_indexes()
 
 
 def ensure_demo_schema_columns() -> None:
     _ensure_sqlite_demo_schema_columns(engine)
+
+
+def ensure_demo_schema_indexes() -> None:
+    _ensure_sqlite_demo_schema_indexes(engine)
+
+
+def _ensure_sqlite_demo_schema_indexes(db_engine: Engine) -> None:
+    if not str(db_engine.url).startswith("sqlite"):
+        return
+    if "taskrunevent" not in inspect(db_engine).get_table_names():
+        return
+    with db_engine.begin() as connection:
+        connection.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_taskrunevent_created_at "
+                "ON taskrunevent (created_at)"
+            )
+        )
 
 
 def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:

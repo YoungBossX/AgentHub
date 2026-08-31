@@ -91,7 +91,7 @@ Message
 | Agent | Orchestrator、frontend、backend、qa 等角色 |
 | Task | Planner 生成的可执行任务 |
 | TaskRun | 一次任务执行尝试，记录 adapter、状态、错误和指标 |
-| TaskRunEvent | 持久化事件流，用于 SSE 恢复和运行诊断 |
+| TaskRunEvent | 持久化事件流，以 Session 级 `(created_at, id)` 游标支持 SSE 恢复和运行诊断 |
 | Artifact | Diff、Review、Preview、Deploy、Workbench 等制品的统一载体 |
 | Diff | 真实 Git Diff 或文件快照 Diff |
 | Preview | Vite React 本地预览 URL、端口和健康状态 |
@@ -109,6 +109,8 @@ AgentHub 当前采用“本地可验证、边界保守”的可靠性策略：
 - Agent 执行期不静默安装依赖。
 - TaskRun 终态会释放 target lock，避免旧运行长期阻塞。
 - Diff/Review/Preview/Deploy 失败会写入事件和诊断，而不是只在后台日志里消失。
+- SSE 使用标准消息帧；重连优先读取 `Last-Event-ID`，并从 SQLite 按 Session 游标重放，
+  内存 queue 只承担单进程内的即时唤醒。
 - ScriptedMockAdapter 是显式 fallback，不伪装成真实 Codex/Claude 成功。
 
 ## 技术选型理由
@@ -141,6 +143,7 @@ AgentHub 当前采用“本地可验证、边界保守”的可靠性策略：
 | `apps/api/app/planning.py` 规划逻辑集中 | 意图识别、fallback、任务生成耦合度较高 | 后续拆为 contracts、routing、fallback、normalization、validation |
 | `apps/web/src/components/task-card-list.tsx` 较大 | execution trace 已拆出，但 run controls、artifact action 和 plan review 仍在同一组件 | 后续继续拆出 run controls、artifact chips、plan review panel |
 | `apps/web/src/lib/api.ts` 类型和 client 集中 | API 类型很多，局部改动容易影响阅读 | 后续按 workspace/session/task-run/artifact/runtime 拆客户端模块 |
+| SSE 即时唤醒仍为单进程内机制 | 持久事件不会丢失，但完全丢失唤醒且无后续事件时，已连接客户端要等原生重连 | 若产品扩展到多 worker，再引入共享通知或心跳轮询；当前本地单进程基线保持 SQLite 为事实源 |
 | 部分冻结/内部文档未公开跟踪 | 历史证据完整但公开入口需要筛选 | 当前只放行比赛必要文档，避免一次性提交内部草稿 |
 
 ## 答辩推荐讲法

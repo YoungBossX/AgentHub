@@ -4,7 +4,12 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 from uuid import uuid4
 
-from app.db import create_db_and_tables, engine, _ensure_sqlite_demo_schema_columns
+from app.db import (
+    _ensure_sqlite_demo_schema_columns,
+    _ensure_sqlite_demo_schema_indexes,
+    create_db_and_tables,
+    engine,
+)
 from app.external_workspaces import list_external_project_targets
 from app.models import (
     Agent,
@@ -531,6 +536,40 @@ def test_sqlite_schema_compatibility_adds_artifact_version_edit_columns() -> Non
 
     assert {"parent_version_id", "content_md", "content_hash", "editor_source"} <= columns
     assert row == (None, "", "", "system")
+
+
+def test_sqlite_schema_compatibility_adds_task_run_event_cursor_index() -> None:
+    legacy_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    with legacy_engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE taskrunevent (
+                    id VARCHAR NOT NULL PRIMARY KEY,
+                    task_run_id VARCHAR NOT NULL,
+                    event_type VARCHAR NOT NULL,
+                    payload_json VARCHAR NOT NULL,
+                    sequence INTEGER NOT NULL,
+                    created_at DATETIME NOT NULL
+                )
+                """
+            )
+        )
+
+    _ensure_sqlite_demo_schema_indexes(legacy_engine)
+    _ensure_sqlite_demo_schema_indexes(legacy_engine)
+
+    with legacy_engine.connect() as connection:
+        indexes = {
+            row[1]
+            for row in connection.execute(text("PRAGMA index_list(taskrunevent)"))
+        }
+
+    assert "ix_taskrunevent_created_at" in indexes
 
 
 def test_seed_records_are_queryable() -> None:

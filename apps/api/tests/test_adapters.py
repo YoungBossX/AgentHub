@@ -15,7 +15,7 @@ from app.adapters import (
     AgentRunRequest,
     run_adapter_event_stream as _run_adapter_event_stream,
 )
-from app.events import list_session_events
+from app.events import format_session_cursor, list_session_events
 from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.task_runs import interrupt_task_run
 
@@ -826,7 +826,14 @@ async def test_fake_adapter_events_persist_with_database_sequence_order(
     assert [event.sequence for event in persisted] == [1, 2, 3]
     assert [event.task_run_id for event in persisted] == [task_run.id] * 3
     assert persisted[1].payload_json == '{"text":"working"}'
-    assert [event.sequence for event in list_session_events(db, session.id, 1)] == [2, 3]
+    assert [
+        event.sequence
+        for event in list_session_events(
+            db,
+            session.id,
+            format_session_cursor(persisted[0]),
+        )
+    ] == [2, 3]
     assert adapter.cleaned_run_id == f"fake-{task_run.id}"
     db.refresh(task_run)
     task = db.get(Task, task_run.task_id)

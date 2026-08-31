@@ -1,4 +1,6 @@
+import asyncio
 from collections.abc import Iterator
+from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -6,9 +8,16 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 
-from app.events import append_task_run_event, list_session_events
+from app import events as events_module
+from app import main as main_module
+from app.events import (
+    append_task_run_event,
+    list_session_events,
+    publish_event,
+    stage_task_run_event,
+)
 from app.main import app, get_db
-from app.models import Agent, Message, Session, Task, TaskRun, Workspace
+from app.models import Agent, Message, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.task_run_scope import TaskRunScopeError
 from app.task_runs import require_task_run_artifact_scope_passed
 
@@ -76,6 +85,46 @@ def client() -> Iterator[TestClient]:
 def db_from_override() -> Iterator[DbSession]:
     override = app.dependency_overrides[get_db]
     return override()
+
+
+def create_session_event_pair() -> tuple[str, str, str, str, str]:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+        agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="Replay task",
+            intent_type="frontend_change",
+            assigned_agent_id=agent.id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = TaskRun(
+            task_id=task.id,
+            agent_id=agent.id,
+            state="created",
+            worktree_path=session.worktree_path,
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        first = append_task_run_event(db, task_run.id, "task.state")
+        second = append_task_run_event(db, task_run.id, "message.delta")
+        first.created_at = datetime(2026, 5, 17, 10, 0, 0)
+        second.created_at = first.created_at + timedelta(seconds=1)
+        db.add(first)
+        db.add(second)
+        db.commit()
+
+        return (
+            session.id,
+            first.id,
+            second.id,
+            events_module.format_session_cursor(first),
+            events_module.format_session_cursor(second),
+        )
 
 
 def test_messages_are_persisted_and_scoped_to_selected_session(
@@ -161,17 +210,353 @@ def test_task_run_events_append_and_query_by_sequence(client: TestClient) -> Non
         assert first.sequence == 1
         assert second.sequence == 2
 
+        replayed = list_session_events(
+            db,
+            session_id=session.id,
+            after=events_module.format_session_cursor(first),
+        )
+        assert [event.sequence for event in replayed] == [2]
+        assert replayed[0].event_type == "message.delta"
+
+    response = client.get(
+        f"/sessions/{session.id}/events?after={events_module.format_session_cursor(first)}",
+        headers={"accept": "text/event-stream"},
+    )
+
+    assert response.status_code == 200
+    assert "event: message.delta" not in response.text
+    assert '"sequence":2' in response.text
+
+
+def test_task_run_scope_refusal_is_replayed_as_standard_session_message(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+        agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="Scope refusal task",
+            intent_type="frontend_change",
+            assigned_agent_id=agent.id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = TaskRun(
+            task_id=task.id,
+            agent_id=agent.id,
+            state="created",
+            worktree_path=session.worktree_path,
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        baseline = append_task_run_event(db, task_run.id, "task.state")
         with pytest.raises(TaskRunScopeError) as exc_info:
             require_task_run_artifact_scope_passed(db, task_run.id)
 
         assert exc_info.value.error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
-        replayed = list_session_events(db, session_id=session.id, after_sequence=2)
-        assert [event.sequence for event in replayed] == [3]
-        assert replayed[0].event_type == "task.artifact_scope_refused"
+        refused = db.exec(
+            select(TaskRunEvent)
+            .where(TaskRunEvent.task_run_id == task_run.id)
+            .where(TaskRunEvent.event_type == "task.artifact_scope_refused")
+        ).one()
+        session_id = session.id
+        baseline_cursor = events_module.format_session_cursor(baseline)
+        refused_cursor = events_module.format_session_cursor(refused)
 
-    response = client.get(f"/sessions/{session.id}/events?after=2", headers={"accept": "text/event-stream"})
+    response = client.get(
+        f"/sessions/{session_id}/events?after={baseline_cursor}",
+        headers={"accept": "text/event-stream"},
+    )
 
     assert response.status_code == 200
-    assert "event: task.artifact_scope_refused" in response.text
-    assert '"sequence":3' in response.text
+    assert "event:" not in response.text
+    assert f"id: {refused_cursor}" in response.text
+    assert '"eventType":"task.artifact_scope_refused"' in response.text
     assert '"errorCode":"TASK_RUN_SCOPE_UNVERIFIABLE"' in response.text
+
+
+def test_session_replay_uses_created_at_and_id_across_task_runs(
+    client: TestClient,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+        agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        first_task = Task(
+            session_id=session.id,
+            title="First task",
+            intent_type="frontend_change",
+            assigned_agent_id=agent.id,
+        )
+        second_task = Task(
+            session_id=session.id,
+            title="Second task",
+            intent_type="frontend_change",
+            assigned_agent_id=agent.id,
+        )
+        db.add(first_task)
+        db.add(second_task)
+        db.commit()
+        db.refresh(first_task)
+        db.refresh(second_task)
+
+        first_run = TaskRun(
+            task_id=first_task.id,
+            agent_id=agent.id,
+            state="created",
+            worktree_path=session.worktree_path,
+        )
+        second_run = TaskRun(
+            task_id=second_task.id,
+            agent_id=agent.id,
+            state="created",
+            worktree_path=session.worktree_path,
+        )
+        db.add(first_run)
+        db.add(second_run)
+        db.commit()
+        db.refresh(first_run)
+        db.refresh(second_run)
+
+        first_event = append_task_run_event(
+            db,
+            task_run_id=first_run.id,
+            event_type="task.state",
+        )
+        second_event = append_task_run_event(
+            db,
+            task_run_id=second_run.id,
+            event_type="task.state",
+        )
+        first_event.created_at = datetime(2026, 5, 17, 10, 0, 0)
+        second_event.created_at = first_event.created_at + timedelta(seconds=1)
+        db.add(first_event)
+        db.add(second_event)
+        db.commit()
+
+        assert first_event.sequence == 1
+        assert second_event.sequence == 1
+        replayed = list_session_events(
+            db,
+            session_id=session.id,
+            after=events_module.format_session_cursor(first_event),
+        )
+
+    assert [event.id for event in replayed] == [second_event.id]
+    assert [event.sequence for event in replayed] == [1]
+
+
+def test_session_events_reject_malformed_cursor(client: TestClient) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+
+    response = client.get(f"/sessions/{session.id}/events?after=1")
+
+    assert response.status_code == 400
+
+
+def test_session_events_replay_from_last_event_id(client: TestClient) -> None:
+    session_id, first_id, second_id, first_cursor, _ = create_session_event_pair()
+
+    response = client.get(
+        f"/sessions/{session_id}/events",
+        headers={"Last-Event-ID": first_cursor},
+    )
+
+    assert response.status_code == 200
+    assert f'"id":"{first_id}"' not in response.text
+    assert f'"id":"{second_id}"' in response.text
+
+
+def test_session_events_prefer_last_event_id_over_query_cursor(client: TestClient) -> None:
+    session_id, first_id, second_id, first_cursor, second_cursor = create_session_event_pair()
+
+    response = client.get(
+        f"/sessions/{session_id}/events",
+        params={"after": second_cursor},
+        headers={"Last-Event-ID": first_cursor},
+    )
+
+    assert response.status_code == 200
+    assert f'"id":"{first_id}"' not in response.text
+    assert f'"id":"{second_id}"' in response.text
+
+
+def test_session_events_prefer_last_event_id_before_validating_after_query(
+    client: TestClient,
+) -> None:
+    session_id, first_id, second_id, first_cursor, _ = create_session_event_pair()
+
+    response = client.get(
+        f"/sessions/{session_id}/events",
+        params={"after": "not-a-cursor"},
+        headers={"Last-Event-ID": first_cursor},
+    )
+
+    assert response.status_code == 200
+    assert f'"id":"{first_id}"' not in response.text
+    assert f'"id":"{second_id}"' in response.text
+
+
+def test_session_events_reject_malformed_last_event_id(client: TestClient) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+
+    response = client.get(
+        f"/sessions/{session.id}/events",
+        headers={"Last-Event-ID": "malformed"},
+    )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_stream_registers_before_backlog_and_deduplicates_queued_events(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+        agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="Streaming task",
+            intent_type="frontend_change",
+            assigned_agent_id=agent.id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = TaskRun(
+            task_id=task.id,
+            agent_id=agent.id,
+            state="created",
+            worktree_path=session.worktree_path,
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        first = append_task_run_event(db, task_run.id, "task.state")
+        second = append_task_run_event(db, task_run.id, "message.delta")
+        third = append_task_run_event(db, task_run.id, "completed")
+        first.created_at = datetime(2026, 5, 17, 10, 0, 0)
+        second.created_at = first.created_at + timedelta(seconds=1)
+        third.created_at = second.created_at + timedelta(seconds=1)
+        db.add(first)
+        db.add(second)
+        db.add(third)
+        db.commit()
+        first_id = first.id
+        second_id = second.id
+        third_id = third.id
+
+        registered_before_backlog: list[bool] = []
+        replay_calls = 0
+
+        def replay_with_event_published_during_query(
+            replay_db: DbSession,
+            *,
+            session_id: str,
+            after: str | None,
+        ) -> list:
+            nonlocal replay_calls
+            replay_calls += 1
+            if replay_calls == 1:
+                registered_before_backlog.append(
+                    bool(events_module._session_subscribers[session_id])
+                )
+                publish_event(session_id, second)
+                return [first, second]
+            return events_module.list_session_events(
+                replay_db,
+                session_id=session_id,
+                after=after,
+            )
+
+        monkeypatch.setattr(main_module, "list_session_events", replay_with_event_published_during_query)
+        response = await main_module.stream_session_events(
+            session.id,
+            after=None,
+            last_event_id=None,
+            stream=True,
+            db=db,
+        )
+        body = response.body_iterator
+
+        first_frame = await anext(body)
+        second_frame = await anext(body)
+        publish_event(session.id, third)
+        third_frame = await asyncio.wait_for(anext(body), timeout=1)
+        await body.aclose()
+
+    assert registered_before_backlog == [True]
+    assert '"id":"' + first_id + '"' in first_frame
+    assert '"id":"' + second_id + '"' in second_frame
+    assert '"id":"' + third_id + '"' in third_frame
+
+
+@pytest.mark.anyio
+async def test_stream_replays_persisted_order_when_notifications_are_reversed(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+        agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="Reversed notification task",
+            intent_type="frontend_change",
+            assigned_agent_id=agent.id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = TaskRun(
+            task_id=task.id,
+            agent_id=agent.id,
+            state="created",
+            worktree_path=session.worktree_path,
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        response = await main_module.stream_session_events(
+            session.id,
+            after=None,
+            last_event_id=None,
+            stream=True,
+            db=db,
+        )
+        body = response.body_iterator
+        first_frame_task = asyncio.create_task(anext(body))
+        for _ in range(10):
+            await asyncio.sleep(0)
+            if events_module._session_subscribers.get(session.id):
+                break
+        assert events_module._session_subscribers.get(session.id)
+
+        fixed_now = datetime(2026, 8, 30, 12, 0, 0)
+        monkeypatch.setattr(events_module, "_naive_utc_now", lambda: fixed_now)
+        first = stage_task_run_event(db, task_run.id, "task.state")
+        second = stage_task_run_event(db, task_run.id, "message.delta")
+        db.commit()
+        db.refresh(first)
+        db.refresh(second)
+
+        assert first.created_at < second.created_at
+        first_id = first.id
+        second_id = second.id
+        publish_event(session.id, second)
+        publish_event(session.id, first)
+        first_frame = await asyncio.wait_for(first_frame_task, timeout=1)
+        second_frame = await asyncio.wait_for(anext(body), timeout=1)
+        await body.aclose()
+
+    assert '"id":"' + first_id + '"' in first_frame
+    assert '"id":"' + second_id + '"' in second_frame

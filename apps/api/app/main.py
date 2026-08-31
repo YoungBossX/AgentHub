@@ -3,7 +3,7 @@ import asyncio
 import json
 from typing import Any, AsyncIterator, Optional
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session as DbSession
@@ -64,7 +64,14 @@ from app.diffs import (
     list_task_run_diffs,
     record_diff_collection_failure,
 )
-from app.events import encode_sse_event, list_session_events, subscribe_session_events
+from app.events import (
+    encode_sse_event,
+    event_is_after_session_cursor,
+    format_session_cursor,
+    list_session_events,
+    parse_session_cursor,
+    subscribe_session_events,
+)
 from app.external_evidence import (
     ExternalEvidenceError,
     StoredCommandEvidence,
@@ -1755,21 +1762,55 @@ def read_task_run_deployments(
 @app.get("/sessions/{session_id}/events")
 async def stream_session_events(
     session_id: str,
-    after: int = Query(default=0, ge=0),
+    after: str | None = Query(default=None),
+    last_event_id: str | None = Header(default=None),
     stream: bool = False,
     db: DbSession = Depends(get_db),
 ) -> StreamingResponse:
     if get_session(db, session_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    resume_after = last_event_id if last_event_id else after
+    if resume_after is not None:
+        try:
+            parse_session_cursor(resume_after)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    def persisted_events_after(cursor: str | None):
+        # Use a fresh read transaction for every replay. The request-scoped
+        # Session can otherwise keep an older SQLite snapshot for the lifetime
+        # of the streaming response.
+        with DbSession(db.get_bind()) as replay_db:
+            return list_session_events(
+                replay_db,
+                session_id=session_id,
+                after=cursor,
+            )
 
     async def event_generator() -> AsyncIterator[str]:
-        for event in list_session_events(db, session_id=session_id, after_sequence=after):
-            yield encode_sse_event(event)
-
-        if stream:
-            async for event in subscribe_session_events(session_id):
-                if event.sequence > after:
+        last_emitted_cursor = resume_after
+        if not stream:
+            for event in persisted_events_after(resume_after):
+                if event_is_after_session_cursor(event, last_emitted_cursor):
                     yield encode_sse_event(event)
+                    last_emitted_cursor = format_session_cursor(event)
+            return
+
+        async with subscribe_session_events(session_id) as queue:
+            for event in persisted_events_after(resume_after):
+                if event_is_after_session_cursor(event, last_emitted_cursor):
+                    yield encode_sse_event(event)
+                    last_emitted_cursor = format_session_cursor(event)
+
+            while True:
+                # Queue items are wake-ups only. Re-read persisted evidence in
+                # cursor order so reversed cross-TaskRun publish notifications
+                # cannot advance the client past an older committed event.
+                await queue.get()
+                for event in persisted_events_after(last_emitted_cursor):
+                    if event_is_after_session_cursor(event, last_emitted_cursor):
+                        yield encode_sse_event(event)
+                        last_emitted_cursor = format_session_cursor(event)
 
     return StreamingResponse(
         event_generator(),

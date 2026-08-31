@@ -5,7 +5,7 @@
 
 ## 当前快照
 
-截至 2026-08-30，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
+截至 2026-08-31，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
 核心闭环为：
 
 ```text
@@ -16,7 +16,7 @@ requirement -> orchestrator plan -> agent execution -> real git diff -> real pre
 一个持久工作树。运行时保留 `CodexAdapter`、`ClaudeCodeAdapter` 与
 `ScriptedMockAdapter`，真实 provider 不可用时必须诚实失败或显式降级，不能伪造成功。
 
-### 最近闭合的 OpenSpec
+### 已闭合的 OpenSpec
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
@@ -24,6 +24,7 @@ requirement -> orchestrator plan -> agent execution -> real git diff -> real pre
 | `agenthub-p18c-live-memory-compliance-library-app` | 24/24，Complete | [P18c 冻结审查](p18c-freeze-review.md)、[有界证据](p18c-bounded-rehearsal-evidence.json) |
 | `agenthub-p19-planner-routing-hardening` | Complete | [P19 冻结审查](p19-freeze-review.md) |
 | `agenthub-taskrun-scope-preview-hardening` | 1.1-1.7 Complete | 受保护路径、工作树身份和 preview 边界实现及测试 |
+| `agenthub-session-sse-recovery` | 6/6，Complete | Session 级持久游标、标准 SSE 消息帧、原生重连和刷新重试回归 |
 
 `openspec list` 中的 `No tasks` 只表示该 change 没有任务清单，不能据此推导功能已实现
 或未实现。判断项目状态必须同时核对代码、对应 OpenSpec 制品和
@@ -61,6 +62,18 @@ Session/Task/Git 基线补采证据，没有改写 TaskRun 终态，也没有把
 P19 冻结的是 Planner 路由和相关回归。它不扩大产品范围，也不替代 P18b/P18c 的独立
 证据边界。
 
+### Session SSE recovery
+
+Session 事件流保留 TaskRun 内的 `sequence`，并以持久化的 `(created_at, id)` 作为
+跨 TaskRun 恢复游标。服务端输出浏览器 `EventSource.onmessage` 可接收的标准消息帧，
+重连时优先采用 `Last-Event-ID`；订阅先于 backlog，内存 queue 只负责唤醒，事件内容
+始终从 SQLite 按游标顺序重新读取。前端按 Session 保存游标，保持浏览器原生重连，
+并对任务刷新执行 single-flight、dirty 合并和有界退避重试。
+
+完整回归在 Node 24.19 / pnpm 10.33.4 环境下通过：Web 102 项、API 1146 项通过并
+跳过 1 项、demo-api 5 项。即时订阅仍是单进程内机制；若持久化成功后的唤醒完全丢失
+且没有后续事件，已连接客户端需要等待原生重连恢复。该限制不改变持久事件作为事实源。
+
 ## 安全与产品边界
 
 - SQLite 是演示数据库，不要求 Postgres。
@@ -89,10 +102,10 @@ Agent 运行时的命令与路径护栏。
 
 ## 交付状态
 
-2026-08-30 本轮发布前复核时，远程 `dev` 为 `e70d341`，远程 `main` 已因 README / landing
-page 更新前进到 `ad5e4ab`。P18b 冻结闭合、Windows 验证脚本兼容和文档收尾已通过完整
-回归与独立只读复核；发布时必须把本轮提交整合到 `ad5e4ab` 之后，再依次快进 `dev` 与
-`main`。发布后的实际交付哈希应以 `git ls-remote` 回读为准。
+2026-08-31 回读远端时，`dev` 与 `main` 均为 `affdb73`；该提交已交付 P18b 冻结闭合、
+Windows 验证脚本兼容和上一轮文档收尾。Session SSE recovery 已在当前隔离工作树完成
+验证，但尚未提交或推送，因此不能把它计入 `affdb73` 的远端交付内容。后续发布仍应以
+`git ls-remote` 回读的实际哈希为准。
 
 ## 历史与维护
 

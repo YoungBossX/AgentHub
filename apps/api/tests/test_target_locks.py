@@ -571,7 +571,9 @@ def test_target_lock_lifecycle_sse_omits_private_generations() -> None:
             "payload",
             "sequence",
             "createdAt",
+            "cursor",
         }
+        assert data["cursor"] == events_module.format_session_cursor(event)
         assert data["id"] == event.id
         assert data["taskRunId"] == event.task_run_id
         assert data["eventType"] == event.event_type

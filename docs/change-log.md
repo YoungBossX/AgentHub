@@ -1,5 +1,43 @@
 # AgentHub 变更日志
 
+## Repair persisted Session SSE recovery
+
+**日期:** 2026-08-31
+
+### 变更
+
+- 将 Session SSE 改为浏览器 `EventSource.onmessage` 可接收的标准 `message`
+  帧；生命周期类型保留在 JSON `eventType` 中，不再使用 SSE `event:` 行。
+- 保留 TaskRun 内的 `TaskRunEvent.sequence`，并用持久化的
+  `(created_at, id)` 严格排序对作为 Session 级恢复游标，避免不同 TaskRun
+  都从序号 1 开始时漏掉后续运行事件。
+- 新事件在 SQLite writer lock 内分配严格递增的 `created_at`，并为新旧数据库
+  幂等维护 `created_at` 索引，避免 Windows 重复时钟值和随机 UUID 打乱并发事件。
+- Session 流在读取持久 backlog 前注册内存订阅；queue 只负责唤醒，每次唤醒
+  都以新数据库事务按游标重放持久事件。同步 FastAPI worker 使用
+  `call_soon_threadsafe` 通知 async 订阅，反序通知不会越过较旧的已提交事件。
+- 原生 EventSource 重连优先使用 `Last-Event-ID`。
+- 前端按 Session 保存游标，事件到达后不重建 EventSource，连接错误时保留
+  浏览器原生重连；同 Session 刷新使用 single-flight/dirty 合并并对瞬时失败
+  最多执行三次指数退避，切换 Session 时取消 retry 并丢弃迟到结果。
+- 合并最新主线时保留了 TaskRun scope refusal 的 SSE 回归覆盖，并将断言更新为
+  标准消息帧语义。
+- 收尾同步 README、架构和项目状态：明确 Session 级恢复语义、单进程即时唤醒边界，
+  并区分远端 `affdb73` 已交付基线与当前尚未提交的 SSE 修复。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| SSE 聚焦 backend pytest（events/chat/models index/target-lock） | 通过，22 项；182 个既有 `datetime.utcnow()` 弃用警告 |
+| SSE 聚焦 web Vitest（API/workspace shell） | 通过，2 files / 46 tests |
+| `openspec validate agenthub-session-sse-recovery --strict` | 通过 |
+| Node 24.19 + pnpm 10.33.4 `pnpm check` | 通过，Web ESLint/TypeScript、API Python compile、demo TypeScript、demo-api compile 全绿 |
+| Node 24.19 + pnpm 10.33.4 `pnpm test` | 通过，Web 13 files / 102 tests；API 1146 passed / 1 skipped；demo-api 5 passed |
+| 独立子代理复核 | 通过；其发现的游标乱序、跨线程 queue 唤醒和刷新重试缺口均已修复并新增回归覆盖 |
+| Markdown 链接与 UTF-8 审计 | 151 个 Markdown 文件，0 个缺失相对链接；当前文档严格 UTF-8 解码通过 |
+| `git diff --check` | 通过 |
+
 ## Close Windows validation and documentation-maintenance gaps
 
 **日期:** 2026-08-30

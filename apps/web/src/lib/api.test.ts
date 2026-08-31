@@ -1125,9 +1125,24 @@ describe("message and event API", () => {
     )
   })
 
-  it("builds an SSE subscription URL for a selected session", () => {
-    expect(sessionEventsUrl("http://127.0.0.1:8000", "session-1", 4)).toBe(
-      "http://127.0.0.1:8000/sessions/session-1/events?after=4&stream=true",
+  it("encodes an opaque SSE cursor for a selected session", () => {
+    expect(
+      sessionEventsUrl(
+        "http://127.0.0.1:8000",
+        "session-1",
+        "2026-07-14T10:30:00Z:run/1?next=true & more",
+      ),
+    ).toBe(
+      "http://127.0.0.1:8000/sessions/session-1/events?after=2026-07-14T10%3A30%3A00Z%3Arun%2F1%3Fnext%3Dtrue+%26+more&stream=true",
+    )
+  })
+
+  it("omits after when an SSE cursor is empty or absent", () => {
+    expect(sessionEventsUrl("http://127.0.0.1:8000", "session-1")).toBe(
+      "http://127.0.0.1:8000/sessions/session-1/events?stream=true",
+    )
+    expect(sessionEventsUrl("http://127.0.0.1:8000", "session-1", "")).toBe(
+      "http://127.0.0.1:8000/sessions/session-1/events?stream=true",
     )
   })
 

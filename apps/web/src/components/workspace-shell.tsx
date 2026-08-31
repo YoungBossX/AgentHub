@@ -15,6 +15,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react"
@@ -63,6 +64,9 @@ import {
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
+const SSE_TASK_REFRESH_MAX_RETRIES = 3
+const SSE_TASK_REFRESH_INITIAL_DELAY_MS = 250
+
 type WorkspaceShellProps = {
   backendUrl: string
   healthSlot?: ReactNode
@@ -86,7 +90,7 @@ export function WorkspaceShell({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [tasks, setTasks] = useState<SessionTask[]>([])
   const [draft, setDraft] = useState("")
-  const [lastEventSequence, setLastEventSequence] = useState(0)
+  const sessionEventCursorsRef = useRef(new Map<string, string>())
   const [artifactRefreshVersion, setArtifactRefreshVersion] = useState(0)
   const [evidenceArtifactItems, setEvidenceArtifactItems] = useState<ArtifactPanelItem[]>([])
   const [workbenchArtifacts, setWorkbenchArtifacts] = useState<ArtifactWorkbenchArtifact[]>([])
@@ -231,34 +235,93 @@ export function WorkspaceShell({
       return
     }
 
+    let active = true
+    let refreshInFlight = false
+    let refreshRequested = false
+    let retryAttempt = 0
+    let retryTimer: number | null = null
     const source = new EventSource(
-      sessionEventsUrl(backendUrl, selectedSessionId, lastEventSequence),
+      sessionEventsUrl(
+        backendUrl,
+        selectedSessionId,
+        sessionEventCursorsRef.current.get(selectedSessionId),
+      ),
     )
     source.onmessage = (event) => {
+      if (!active) {
+        return
+      }
       try {
-        const payload = JSON.parse(event.data) as { sequence?: number }
-        if (typeof payload.sequence === "number") {
-          setLastEventSequence((current) => Math.max(current, payload.sequence ?? 0))
+        const payload = JSON.parse(event.data) as { cursor?: unknown }
+        if (typeof payload.cursor === "string" && payload.cursor.length > 0) {
+          sessionEventCursorsRef.current.set(selectedSessionId, payload.cursor)
         }
+        setArtifactRefreshVersion((current) => current + 1)
       } catch (error) {
         reportSyncError("无法解析会话事件", error)
         return
       }
-      listSessionTasks(backendUrl, selectedSessionId)
-        .then((nextTasks) => {
-          setTasks(nextTasks)
-          setSyncError(null)
-        })
-        .catch((error) => reportSyncError("无法刷新任务时间线", error))
+      requestTaskRefresh()
     }
-    source.onerror = () => {
-      source.close()
+
+    function requestTaskRefresh() {
+      if (!active) {
+        return
+      }
+      refreshRequested = true
+      retryAttempt = 0
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer)
+        retryTimer = null
+      }
+      void runTaskRefresh()
+    }
+
+    async function runTaskRefresh() {
+      if (!active || refreshInFlight || !refreshRequested) {
+        return
+      }
+      refreshRequested = false
+      refreshInFlight = true
+      try {
+        const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
+        if (!active) {
+          return
+        }
+        retryAttempt = 0
+        setTasks(nextTasks)
+        setSyncError(null)
+      } catch (error) {
+        if (!active) {
+          return
+        }
+        reportSyncError("无法刷新任务时间线", error)
+        if (retryAttempt < SSE_TASK_REFRESH_MAX_RETRIES) {
+          const retryDelayMs =
+            SSE_TASK_REFRESH_INITIAL_DELAY_MS * 2 ** retryAttempt
+          retryAttempt += 1
+          refreshRequested = true
+          retryTimer = window.setTimeout(() => {
+            retryTimer = null
+            void runTaskRefresh()
+          }, retryDelayMs)
+        }
+      } finally {
+        refreshInFlight = false
+        if (active && retryTimer === null && refreshRequested) {
+          void runTaskRefresh()
+        }
+      }
     }
 
     return () => {
+      active = false
+      if (retryTimer !== null) {
+        window.clearTimeout(retryTimer)
+      }
       source.close()
     }
-  }, [backendUrl, lastEventSequence, reportSyncError, selectedSessionId])
+  }, [backendUrl, reportSyncError, selectedSessionId])
 
   function selectSession(sessionId: string) {
     setSyncError(null)
@@ -650,7 +713,7 @@ export function WorkspaceShell({
                       </span>
                     </div>
                     <TaskCardList
-                      artifactRefreshKey={lastEventSequence + artifactRefreshVersion}
+                      artifactRefreshKey={artifactRefreshVersion}
                       backendUrl={backendUrl}
                       busy={isPending}
                       onApproveRun={handleApproveTaskRun}

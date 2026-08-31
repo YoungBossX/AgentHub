@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiRequestError } from "@/lib/api"
@@ -7,6 +7,7 @@ import { WorkspaceShell } from "./workspace-shell"
 
 const navigationMocks = vi.hoisted(() => ({
   replace: vi.fn(),
+  search: "session=session-1",
 }))
 
 const apiMocks = vi.hoisted(() => ({
@@ -36,7 +37,7 @@ const apiMocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useRouter: () => ({ replace: navigationMocks.replace }),
-  useSearchParams: () => new URLSearchParams("session=session-1"),
+  useSearchParams: () => new URLSearchParams(navigationMocks.search),
 }))
 
 vi.mock("@/lib/api", async (importOriginal) => ({
@@ -307,20 +308,36 @@ const runtimeConfig = {
 }
 
 class MockEventSource {
+  static instances: MockEventSource[] = []
+
   onerror: (() => void) | null = null
   onmessage: ((event: MessageEvent) => void) | null = null
 
-  constructor(readonly url: string) {}
+  constructor(readonly url: string) {
+    MockEventSource.instances.push(this)
+  }
 
   close = vi.fn()
+}
+
+function deferred<T>() {
+  let reject!: (error: unknown) => void
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, reject, resolve }
 }
 
 describe("WorkspaceShell", () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    MockEventSource.instances = []
+    navigationMocks.search = "session=session-1"
     vi.stubGlobal("EventSource", MockEventSource)
     apiMocks.sessionEventsUrl.mockReturnValue(
-      "http://127.0.0.1:8000/sessions/session-1/events?after=0&stream=true",
+      "http://127.0.0.1:8000/sessions/session-1/events?stream=true",
     )
     apiMocks.getSessionArtifactWorkbench.mockResolvedValue({
       artifacts: [],
@@ -334,8 +351,315 @@ describe("WorkspaceShell", () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     cleanup()
     vi.unstubAllGlobals()
+  })
+
+  it("keeps one EventSource after a message and resumes each session from its own cursor", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    const view = render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1)
+    })
+    const firstSessionSource = MockEventSource.instances[0]
+
+    firstSessionSource.onmessage?.(
+      new MessageEvent("message", {
+        data: JSON.stringify({
+          createdAt: "2026-07-14T10:30:00Z",
+          cursor: "cursor/session-1?event=1",
+          eventType: "task.updated",
+          id: "event-1",
+          payload: {},
+          sequence: 1,
+          taskRunId: "run-1",
+        }),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(2)
+    })
+    expect(MockEventSource.instances).toHaveLength(1)
+
+    navigationMocks.search = "session=session-2"
+    view.rerender(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(2)
+    })
+    expect(firstSessionSource.close).toHaveBeenCalledTimes(1)
+    expect(apiMocks.sessionEventsUrl).toHaveBeenLastCalledWith(
+      "http://127.0.0.1:8000",
+      "session-2",
+      undefined,
+    )
+
+    navigationMocks.search = "session=session-1"
+    view.rerender(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(3)
+    })
+    expect(apiMocks.sessionEventsUrl).toHaveBeenLastCalledWith(
+      "http://127.0.0.1:8000",
+      "session-1",
+      "cursor/session-1?event=1",
+    )
+  })
+
+  it("ignores stale SSE task refresh results after changing sessions", async () => {
+    const staleEmptyTasks = deferred<never[]>()
+    const sessionTwoTask = {
+      assignedAgentId: "agent-frontend",
+      assignedAgentName: "Frontend Agent",
+      assignedAgentRole: "frontend",
+      createdAt: "2026-07-14T10:30:00Z",
+      dependsOnTaskIds: [],
+      id: "task-session-2",
+      intentType: "frontend_change",
+      planJson: {},
+      priority: 1,
+      sessionId: "session-2",
+      status: "pending",
+      taskRuns: [],
+      title: "Current session task",
+      updatedAt: "2026-07-14T10:30:00Z",
+    }
+    const sessionTwoArtifact = {
+      artifactId: "artifact-session-2",
+      artifactType: "document",
+      contentHash: "content-hash",
+      createdAt: "2026-07-14T10:30:00Z",
+      editable: false,
+      rendererKind: "markdown_document",
+      safeMeta: {},
+      status: "ready",
+      taskRunId: "run-session-2",
+      title: "Session two workbench artifact",
+      updatedAt: "2026-07-14T10:30:00Z",
+      version: 1,
+      versions: [],
+    }
+    apiMocks.getSessionArtifactWorkbench.mockImplementation(async (_backendUrl, sessionId) => ({
+      artifacts: sessionId === "session-2" ? [sessionTwoArtifact] : [],
+      sessionId,
+    }))
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks
+      .mockResolvedValueOnce([])
+      .mockImplementationOnce(() => staleEmptyTasks.promise)
+      .mockResolvedValueOnce([sessionTwoTask])
+
+    const view = render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1)
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(1)
+    })
+    const source = MockEventSource.instances[0]
+
+    await act(async () => {
+      source.onmessage?.(new MessageEvent("message", { data: "{}" }))
+    })
+    await waitFor(() => {
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(2)
+    })
+
+    navigationMocks.search = "session=session-2"
+    view.rerender(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(3)
+      expect(screen.getByText("Current session task")).toBeTruthy()
+      expect(screen.getByRole("button", { name: /文档/ })).toBeTruthy()
+    })
+    fireEvent.click(screen.getByRole("button", { name: /文档/ }))
+    expect(screen.getAllByText("Session two workbench artifact").length).toBeGreaterThan(0)
+
+    await act(async () => {
+      staleEmptyTasks.resolve([])
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText("Current session task")).toBeTruthy()
+    expect(screen.getAllByText("Session two workbench artifact").length).toBeGreaterThan(0)
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+
+  it("ignores a stale SSE task refresh failure after changing sessions", async () => {
+    const staleFailure = deferred<never[]>()
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks
+      .mockResolvedValueOnce([])
+      .mockImplementationOnce(() => staleFailure.promise)
+      .mockResolvedValueOnce([])
+
+    const view = render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1)
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(1)
+    })
+    const source = MockEventSource.instances[0]
+    source.onmessage?.(new MessageEvent("message", { data: "{}" }))
+    await waitFor(() => {
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(2)
+    })
+
+    navigationMocks.search = "session=session-2"
+    view.rerender(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={searchableSessions}
+        workspace={workspace}
+      />,
+    )
+    await waitFor(() => {
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(3)
+    })
+
+    await act(async () => {
+      staleFailure.reject(new Error("stale session refresh failed"))
+      await Promise.resolve()
+    })
+
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+
+  it("allows EventSource to reconnect after an error and closes it during cleanup", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    const view = render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1)
+    })
+    const source = MockEventSource.instances[0]
+
+    source.onerror?.()
+    expect(source.close).not.toHaveBeenCalled()
+
+    view.unmount()
+    expect(source.close).toHaveBeenCalledTimes(1)
+  })
+
+  it("retries a transient SSE task refresh without waiting for another event", async () => {
+    const recoveredTask = {
+      assignedAgentId: "agent-frontend",
+      assignedAgentName: "Frontend Agent",
+      assignedAgentRole: "frontend",
+      createdAt: "2026-08-30T12:00:00Z",
+      dependsOnTaskIds: [],
+      id: "task-after-retry",
+      intentType: "frontend_change",
+      planJson: {},
+      priority: 1,
+      sessionId: "session-1",
+      status: "completed",
+      taskRuns: [],
+      title: "Recovered after transient refresh failure",
+      updatedAt: "2026-08-30T12:00:00Z",
+    }
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new TypeError("temporary refresh failure"))
+      .mockResolvedValueOnce([recoveredTask])
+
+    render(
+      <WorkspaceShell
+        backendUrl="http://127.0.0.1:8000"
+        initialAgents={initialAgents}
+        initialSessions={initialSessions}
+        workspace={workspace}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1)
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(1)
+    })
+    vi.useFakeTimers()
+    const source = MockEventSource.instances[0]
+
+    await act(async () => {
+      source.onmessage?.(
+        new MessageEvent("message", {
+          data: JSON.stringify({ cursor: "session-1-retry-cursor" }),
+        }),
+      )
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(2)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250)
+    })
+    vi.useRealTimers()
+
+    await waitFor(() => {
+      expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(3)
+      expect(screen.getByText("Recovered after transient refresh failure")).toBeTruthy()
+      expect(screen.queryByRole("alert")).toBeNull()
+    })
   })
 
   it("shows a backend sync warning instead of leaking rejected session fetches", async () => {

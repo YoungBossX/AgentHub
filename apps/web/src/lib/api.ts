@@ -1081,12 +1081,13 @@ export async function createSessionMessage(
 export function sessionEventsUrl(
   backendUrl: string,
   sessionId: string,
-  afterSequence = 0,
+  afterCursor?: string,
 ) {
-  const params = new URLSearchParams({
-    after: String(afterSequence),
-    stream: "true",
-  })
+  const params = new URLSearchParams()
+  if (afterCursor) {
+    params.set("after", afterCursor)
+  }
+  params.set("stream", "true")
   return apiUrl(backendUrl, `/sessions/${sessionId}/events?${params.toString()}`)
 }
 
