@@ -23,7 +23,7 @@
 - 合并最新主线时保留了 TaskRun scope refusal 的 SSE 回归覆盖，并将断言更新为
   标准消息帧语义。
 - 收尾同步 README、架构和项目状态：明确 Session 级恢复语义、单进程即时唤醒边界，
-  并区分远端 `affdb73` 已交付基线与当前尚未提交的 SSE 修复。
+  并区分远端 `affdb73` 前序基线与 SSE 实现提交 `54d0586` 的交付内容。
 
 ### 验证
 
@@ -36,6 +36,7 @@
 | Node 24.19 + pnpm 10.33.4 `pnpm test` | 通过，Web 13 files / 102 tests；API 1146 passed / 1 skipped；demo-api 5 passed |
 | 独立子代理复核 | 通过；其发现的游标乱序、跨线程 queue 唤醒和刷新重试缺口均已修复并新增回归覆盖 |
 | Markdown 链接与 UTF-8 审计 | 151 个 Markdown 文件，0 个缺失相对链接；当前文档严格 UTF-8 解码通过 |
+| 远端发布回读 | `dev`、`main` 均已接收 SSE 实现提交 `54d0586` |
 | `git diff --check` | 通过 |
 
 ## Close Windows validation and documentation-maintenance gaps
