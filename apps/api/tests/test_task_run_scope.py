@@ -1332,6 +1332,54 @@ def test_exact_protected_and_empty_ordinary_paths_do_not_probe_case_semantics(
     ) == ("empty-directory",)
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows directory stat regression")
+def test_windows_directory_path_observation_ignores_transient_enumeration_bit(
+    tmp_path,
+) -> None:
+    empty = tmp_path / "empty-directory"
+    empty.mkdir()
+    raw_before = empty.lstat()
+    observation_before = task_run_scope._path_observation(empty)
+
+    with os.scandir(empty) as iterator:
+        assert tuple(iterator) == ()
+
+    raw_after = empty.lstat()
+    transient_bit = 0x10000000
+    if (
+        raw_before.st_file_attributes ^ raw_after.st_file_attributes
+    ) != transient_bit:
+        pytest.skip("runtime does not expose the transient directory bit")
+
+    assert observation_before == task_run_scope._path_observation(empty)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows directory stat regression")
+def test_windows_directory_path_identity_preserves_every_other_attribute() -> None:
+    transient_bit = 0x10000000
+    durable_attributes = stat.FILE_ATTRIBUTE_DIRECTORY | stat.FILE_ATTRIBUTE_HIDDEN
+    path_stat = SimpleNamespace(
+        st_dev=11,
+        st_ino=22,
+        st_mode=stat.S_IFDIR | 0o777,
+        st_file_attributes=durable_attributes | transient_bit,
+    )
+
+    assert task_run_scope._path_filesystem_identity(
+        path_stat,
+        kind="directory",
+    ) == (11, 22, stat.S_IFDIR | 0o777, durable_attributes)
+    assert task_run_scope._path_filesystem_identity(
+        path_stat,
+        kind="file",
+    ) == (
+        11,
+        22,
+        stat.S_IFDIR | 0o777,
+        durable_attributes | transient_bit,
+    )
+
+
 def test_absolute_containment_uses_each_parent_case_semantics(tmp_path) -> None:
     outer = tmp_path / "Outer"
     root = outer / "Repo"

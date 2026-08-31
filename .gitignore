@@ -112,6 +112,8 @@ docs/*
 !docs/p18c-freeze-review.md
 !docs/p18c-bounded-rehearsal-evidence.json
 !docs/p19-freeze-review.md
+!docs/current-baseline-delivery-readiness-review.md
+!docs/current-baseline-delivery-readiness-evidence.json
 
 # Extra local temp files
 *.local

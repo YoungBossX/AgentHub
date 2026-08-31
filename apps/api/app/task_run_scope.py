@@ -61,6 +61,12 @@ _FILE_READ_CHUNK_SIZE = 1024 * 1024
 _WINDOWS_DEFAULT_DATA_STREAM = "::$DATA"
 _WINDOWS_ERROR_HANDLE_EOF = 38
 _WINDOWS_STREAM_NAME_LENGTH = 260 + 36
+# CPython on Windows can expose this undocumented bit through
+# lstat().st_file_attributes for a new directory until its first enumeration.
+# GetFileAttributesW and the post-enumeration lstat both report the durable
+# attributes without it. Normalize it only for directory path observations;
+# descriptor and regular-file identities remain exact.
+_WINDOWS_TRANSIENT_DIRECTORY_STAT_ATTRIBUTE = 0x10000000
 _ABSENT_FINGERPRINT = hashlib.sha256(
     b"agenthub.task_run_scope.absent.v1"
 ).hexdigest()
@@ -2708,6 +2714,22 @@ def _filesystem_identity(path_stat: os.stat_result) -> tuple[int, int, int, int]
     )
 
 
+def _path_filesystem_identity(
+    path_stat: os.stat_result,
+    *,
+    kind: str,
+) -> tuple[int, int, int, int]:
+    identity = _filesystem_identity(path_stat)
+    if os.name != "nt" or kind != "directory":
+        return identity
+    return (
+        identity[0],
+        identity[1],
+        identity[2],
+        identity[3] & ~_WINDOWS_TRANSIENT_DIRECTORY_STAT_ATTRIBUTE,
+    )
+
+
 def _path_observation(
     path: Path, *, absent_allowed: bool = False
 ) -> tuple[str, tuple[int, int, int, int]] | None:
@@ -2719,7 +2741,8 @@ def _path_observation(
         raise _SnapshotCaptureError from exc
     except OSError as exc:
         raise _SnapshotCaptureError from exc
-    return _path_kind_from_stat(path_stat), _filesystem_identity(path_stat)
+    kind = _path_kind_from_stat(path_stat)
+    return kind, _path_filesystem_identity(path_stat, kind=kind)
 
 
 def _path_kind(path: Path, *, absent_allowed: bool = False) -> str | None:

@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "agenthub.current_baseline_delivery_readiness.v1",
+  "generatedAt": "2026-08-31T14:38:26.227326+00:00",
+  "setup": {
+    "projectRoot": "C:\\Users\\XCC\\Desktop\\agenthub-rehearsals\\delivery-readiness-20260831-221051",
+    "targetId": "external-delivery-readiness-20260831-221051",
+    "externalTargetDbId": "a5ccfae0-4054-446d-bb22-e52e40ef1300",
+    "baseCommit": "e1db640abf93431b47fdf1d0fb4553d4549477f3",
+    "workspaceId": "9df44d4b-766d-4863-afa4-59c746f11acd",
+    "sessionId": "22966723-193a-4bd9-b2ca-f1fd8e4c8bcc",
+    "messageId": "12ce8e50-b05d-433c-8c56-c5f7f7252f56",
+    "taskId": "546ca116-6b3c-4ad6-8a64-10fa4a9e251d"
+  },
+  "request": {
+    "text": "@frontend Apply one bounded frontend text correction in the registered external target. Edit only src/App.tsx and replace the exact visible text 'Launchpad for a visible coding-agent change' with 'Launchpad for a verified coding-agent change'. Do not modify any other file.",
+    "sha256": "02e115beb967b161e019968ae70e7ef55293dfd2ef6247028e42bc8d6addf6a4"
+  },
+  "memory": {
+    "snapshot": {
+      "memorySnapshotId": "c563b2e6-8756-4ccc-9143-f8f78208dbae",
+      "schemaVersion": "memory_snapshot_v1",
+      "agentsMdHash": "d6f853c22da67362f691d61a8940f23b1bc53f02c763578aa704255a068071cf",
+      "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+      "projectMemoryVersion": "376b12b76e500e163697690ce4f1c1e72a4aad51debd8366ce6c34ee655fd5c8",
+      "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "targetRegistryVersion": "563c5b24a663f299b6a26bd0bf91856542ee78ddf22c41d84affc097ce002e26",
+      "runtimeConfigVersion": "d2bc6f8808112e94a451d45e912e4ce42fbfc16adc0f06def60923915a2a6469",
+      "contextPackHash": "26afffd91f3297f11b6dc10edf1ce86771b311343be4bc659e3f283c35bac6c4"
+    },
+    "items": [
+      {"id": "c15a7b63-764b-4e02-9b49-8465692e7752", "contentSha256": "078f4e81295942fc4f9e2888d9747d660f746c1ec099e5c7088f7c2333982375"},
+      {"id": "927fb7c1-db5a-455b-af98-507b4bab9dde", "contentSha256": "ee4cc25df1cc55ca19e337335f53f6b0314b78c128f8302ea5fefcf2b6b7094b"},
+      {"id": "6b3b4053-0666-4159-89d2-d798fc5393c6", "contentSha256": "7ee8f7bef56ab5da26ab55fa6b2a5eece089a1570ae618c9dc2e342538aeb2f7"},
+      {"id": "15db2649-ad97-47ab-a193-24c8eb817892", "contentSha256": "154b139a43b1f8d770b81f0ba38d24bff5025d34e4c922dec707efaba533fe2f"},
+      {"id": "5606855b-3965-442c-953c-06c22cdb75d5", "contentSha256": "b1faf125cc8bdbce40bbb2d500ac34242fb9a62357980b79aa91ad3cd3b240d9"},
+      {"id": "4a2ede67-d31b-4ca1-b85a-117c9bdeab3c", "contentSha256": "588b0eb1ef265883516be70521518b7b14265e15c725e2a9b8d3bf6d3d682cf8"}
+    ]
+  },
+  "failedAttempt": {
+    "taskRunId": "da6532c4-e7b2-48fe-ad73-0d43079f3895",
+    "adapterRunId": "codex-31243690-9373-4423-ab30-2108124f617c",
+    "state": "failed",
+    "errorCode": "CODEX_GUARDRAIL_BLOCKED",
+    "errorMessage": "Command is outside the P0 allowlist."
+  },
+  "successfulRun": {
+    "taskRunId": "dd120d84-11ad-4d4f-91f8-799b84aa1970",
+    "adapterRunId": "codex-a814579f-0fa2-457b-bb4f-d29924c1dfca",
+    "state": "completed",
+    "startedAt": "2026-08-31T14:17:22.011739+00:00",
+    "endedAt": "2026-08-31T14:22:41.469065+00:00",
+    "baseRef": "e1db640abf93431b47fdf1d0fb4553d4549477f3",
+    "headRef": "e1db640abf93431b47fdf1d0fb4553d4549477f3+worktree",
+    "instructionSha256": "23580d1ae4342abcfe4f540c335ee87b33efe81aac774a7623412e93faacdbe6",
+    "instructionLength": 12770,
+    "providerId": "local-codex-cli",
+    "adapterType": "codex",
+    "fallbackPolicy": "explicit_only",
+    "providerHealth": "healthy",
+    "providerCliVersion": "codex-cli 0.151.0-alpha.7.1",
+    "scopeStatus": "passed",
+    "scopeChangedPathCount": 1,
+    "retryOfRunId": "da6532c4-e7b2-48fe-ad73-0d43079f3895"
+  },
+  "eventEvidence": {
+    "providerResolved": {"id": "9253e495-1ad2-42e8-9bdb-83310a089f58", "sequence": 9},
+    "providerHealthChecked": {"id": "34d0ec95-d4e9-40a1-abc8-3af8823f4da8", "sequence": 10},
+    "threadStarted": {"id": "27b8d3be-6886-4368-a488-32981e2c1d80", "sequence": 12, "threadId": "01a0582e-91b0-7ee3-b371-0ee2a45ce2dd"},
+    "turnCompleted": {"id": "a413544e-0acf-4cb8-b14e-4a8a84030019", "sequence": 58},
+    "scopePassed": {"id": "ea7d165b-a5c4-4d83-9df9-09f0990120b3", "sequence": 59},
+    "diffReady": {"id": "8a619bac-9ad3-4494-852e-f9be1a403bad", "sequence": 60},
+    "reviewReady": {"id": "e8652acb-ddba-4a5e-b762-e89bce06c5c5", "sequence": 61},
+    "taskCompleted": {"id": "459e27d8-c1d0-4ce1-a0b6-eb67b5dfc8fc", "sequence": 62},
+    "previewReady": {"id": "6beab7d6-b14f-460d-a69c-5f35146a0a6b", "sequence": 68, "healthStatus": "healthy"}
+  },
+  "diff": {
+    "id": "998db848-ea36-48ae-aaee-e80ee7e20540",
+    "artifactId": "84a6fd68-ad4c-4d6e-8038-b28262a04917",
+    "patchSha256": "d78ecf6bd58995c25e58acd6db5d8c128ee0140dfbcc0e98673a9c6eb5ee1519",
+    "changedFiles": ["src/App.tsx"],
+    "stats": {"filesChanged": 1, "additions": 1, "deletions": 1}
+  },
+  "review": {
+    "id": "2f505486-a0c2-4b8c-81d3-71d51c434e78",
+    "artifactId": "2f45a2ca-34df-4826-92fb-3e1655940928",
+    "status": "warning",
+    "riskLevel": "medium",
+    "findingCount": 2,
+    "findingBoundary": "Both findings were missing-command-evidence advisories created before the later passing evidence records."
+  },
+  "commandEvidence": [
+    {"id": "a06be579-3dda-48db-bce7-aba53b3d6825", "commandType": "check", "command": "pnpm check", "exitCode": 0, "status": "passed"},
+    {"id": "627365b5-9615-4838-9a9c-d79f8432921a", "commandType": "build", "command": "pnpm build", "exitCode": 0, "status": "passed"}
+  ],
+  "preview": {
+    "id": "a98c9cef-6864-48e7-a5f1-ae93745365c6",
+    "artifactId": "707c5206-9662-49d1-b8e8-555cc96a36e8",
+    "command": "pnpm dev --host 127.0.0.1 --port 10468",
+    "healthyEventRecorded": true,
+    "finalStatus": "stopped",
+    "statusReason": "Preview process was stopped.",
+    "stopObservation": {
+      "persistedStatusPrecededProcessTreeFix": true,
+      "descendantsFoundDuringCleanup": [41140, 42856],
+      "descendantNames": ["node.exe", "esbuild.exe"],
+      "manualCleanupCompleted": true
+    }
+  },
+  "repositoryValidation": {
+    "validatedAt": "2026-08-31T15:13:23.4409911+00:00",
+    "pnpmTest": {
+      "exitCode": 0,
+      "web": {"files": 13, "passed": 102},
+      "api": {"passed": 1153, "skipped": 1},
+      "demoApi": {"passed": 5}
+    },
+    "pnpmCheck": {"exitCode": 0},
+    "windowsPreviewStopSmoke": {
+      "processId": 16704,
+      "port": 1200,
+      "becameHealthy": true,
+      "targetProcessesAfterStop": 0,
+      "temporaryLogExistsAfterStop": false
+    },
+    "openSpecStrict": {"passed": 35, "failed": 0},
+    "markdownLinks": {"files": 168, "missingRelativeLinks": 0},
+    "utf8": {"files": 433, "decodeFailures": 0},
+    "stagingDryRun": {"exitCode": 0, "entries": 43},
+    "cleanup": {
+      "externalTargetExists": false,
+      "rehearsalDatabaseExists": false,
+      "sessionWorktreeExists": false,
+      "previewLogs": 0,
+      "targetProcesses": 0,
+      "taskTempDirectories": 0
+    },
+    "candidateAudit": {
+      "modifiedTrackedFiles": 15,
+      "untrackedFiles": 28,
+      "blockedArtifactPaths": 0,
+      "files": [
+        ".gitignore",
+        "README.md",
+        "apps/api/app/guardrails.py",
+        "apps/api/app/main.py",
+        "apps/api/app/planning.py",
+        "apps/api/app/planning_intents.py",
+        "apps/api/app/planning_tasks.py",
+        "apps/api/app/previews.py",
+        "apps/api/app/routes/agent_settings.py",
+        "apps/api/app/routes/session_events.py",
+        "apps/api/app/routes/task_artifacts.py",
+        "apps/api/app/routes/task_runs.py",
+        "apps/api/app/task_run_scope.py",
+        "apps/api/tests/test_chat_events.py",
+        "apps/api/tests/test_guardrails.py",
+        "apps/api/tests/test_previews.py",
+        "apps/api/tests/test_task_run_scope.py",
+        "apps/web/src/components/use-session-event-refresh.ts",
+        "apps/web/src/components/use-task-artifact-actions.ts",
+        "apps/web/src/components/workspace-shell-header.tsx",
+        "apps/web/src/components/workspace-shell-state.ts",
+        "apps/web/src/components/workspace-shell.tsx",
+        "docs/architecture.md",
+        "docs/change-log.md",
+        "docs/current-baseline-delivery-readiness-evidence.json",
+        "docs/current-baseline-delivery-readiness-review.md",
+        "docs/project-state.md",
+        "openspec/changes/agenthub-current-baseline-delivery-readiness/design.md",
+        "openspec/changes/agenthub-current-baseline-delivery-readiness/proposal.md",
+        "openspec/changes/agenthub-current-baseline-delivery-readiness/specs/delivery-readiness/spec.md",
+        "openspec/changes/agenthub-current-baseline-delivery-readiness/tasks.md",
+        "openspec/changes/agenthub-session-sse-heartbeat-polling/design.md",
+        "openspec/changes/agenthub-session-sse-heartbeat-polling/proposal.md",
+        "openspec/changes/agenthub-session-sse-heartbeat-polling/specs/session-sse-recovery/spec.md",
+        "openspec/changes/agenthub-session-sse-heartbeat-polling/tasks.md",
+        "openspec/changes/agenthub-source-structure-modularization/design.md",
+        "openspec/changes/agenthub-source-structure-modularization/proposal.md",
+        "openspec/changes/agenthub-source-structure-modularization/specs/source-structure/spec.md",
+        "openspec/changes/agenthub-source-structure-modularization/tasks.md",
+        "openspec/changes/agenthub-windows-scope-observation-stability/design.md",
+        "openspec/changes/agenthub-windows-scope-observation-stability/proposal.md",
+        "openspec/changes/agenthub-windows-scope-observation-stability/specs/taskrun-scope-guard/spec.md",
+        "openspec/changes/agenthub-windows-scope-observation-stability/tasks.md"
+      ]
+    }
+  },
+  "limitations": [
+    "The first attempt is preserved as failed and is not counted as provider success.",
+    "The scripted review remains warning because it is idempotent and predates the later passing command evidence.",
+    "The rehearsal Preview row reached stopped before the process-tree fix; its surviving Windows Vite descendants were discovered and terminated during cleanup, then the corrected lifecycle passed a fresh local integration smoke.",
+    "The healthy then stopped Preview is a local smoke, not production deployment evidence."
+  ]
+}

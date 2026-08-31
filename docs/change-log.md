@@ -1,5 +1,132 @@
 # AgentHub 变更日志
 
+## Prove current baseline delivery readiness
+
+**日期:** 2026-08-31
+
+### 变更
+
+- 新建单任务 `agenthub-current-baseline-delivery-readiness` OpenSpec，对当前本地候选集
+  执行真实 provider 演练、全量门禁、证据冻结和精确文件审计。
+- 命令护栏在 Windows 上接受精确 `codex` / `codex.exe` basename，同时继续拒绝
+  `codex-wrapper.exe` 等包装器；新增对应正反回归。
+- Preview 启动层在 Windows 上把精确 `pnpm` token 解析为 `pnpm.cmd`，但持久证据继续
+  使用可移植的 `pnpm dev`，不改变命令 allowlist、目标根目录或环境清洗边界。
+- Windows Preview 停止路径终止 tracked PID 的完整进程树，而非只终止 `pnpm.cmd`
+  包装器；关闭后删除 runner-owned 临时日志。真实 Vite lifecycle smoke 验证健康后停止
+  的目标端口进程为 0，临时日志不存在。
+- 在独立外部 Vite 目标完成一次真实本地 Codex CLI TaskRun；保存实际指令哈希、6 个
+  MemoryItem ID、snapshot/context hash、provider 事件、单文件 Diff、Review、检查、
+  构建与健康 Preview 证据。首次护栏拒绝保持 failed，未改写为成功。
+- 明确当前结论仅为本地候选集可进入提交/推送流程；尚未提交或远程交付，也不把本地
+  Preview 表述为生产部署。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| Windows launcher / Preview 聚焦 pytest | 15 Preview passed；完整 guard + Preview 28 passed |
+| Windows Vite lifecycle smoke | 健康后停止；目标端口进程 0；runner 临时日志不存在 |
+| Node 24.19 + pnpm 10.33.4 `pnpm test` | Web 102 passed；API 1,153 passed / 1 skipped；demo-api 5 passed |
+| Node 24.19 + pnpm 10.33.4 `pnpm check` | 通过 |
+| `openspec validate --changes --strict` | 35 passed / 0 failed |
+| 文档与编码 | 168 个 Markdown 文件 0 个缺失相对链接；433 个文本文件 UTF-8 解码通过 |
+| 候选集空白与敏感文件审计 | 通过；无数据库、日志、缓存、依赖目录或环境文件进入候选集 |
+
+## Stabilize Windows TaskRun scope directory observations
+
+**日期:** 2026-08-31
+
+### 变更
+
+- 新建单任务 `agenthub-windows-scope-observation-stability` OpenSpec，单独闭合完整
+  API 套件中已在 `d2b8f1b` 基线复现的 9 项 Windows scope 失败。
+- 诊断确认新建目录首次枚举前，CPython `lstat().st_file_attributes` 可报告瞬态
+  `0x10000000` 位；Win32 `GetFileAttributesW` 和枚举后 `lstat()` 均不包含该位。
+- 仅在 Windows 目录路径观察身份中剔除这一未文档化瞬态位；普通文件和 descriptor
+  身份、Git executable、reparse、ADS、device、inode、文件类型与其余属性保持严格。
+- 新增真实枚举 RED/GREEN 回归和“其余属性不被归一化”边界测试；无 schema、API、
+  adapter、前端、依赖或产品范围变化。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| 新增 Windows 枚举观察 RED | 预期失败，前后仅差 `0x10000000` |
+| 原 9 项 + 新增 2 项聚焦 GREEN | 11 passed；261 个既有 `datetime.utcnow()` 弃用警告 |
+| 完整 scope/registry/artifact/diagnostics/recovery 相邻安全矩阵 | 258 passed / 1 skipped；755 个既有弃用警告 |
+| Node 24.19 + pnpm 10.33.4 `pnpm test` | 通过；Web 102 passed，API 1,150 passed / 1 skipped，demo-api 5 passed |
+| Node 24.19 + pnpm 10.33.4 `pnpm check` | 通过 |
+
+
+## Start behavior-preserving source modularization
+
+**日期:** 2026-08-31
+
+### 变更
+
+- 新建 `agenthub-source-structure-modularization` OpenSpec，把 API 入口、Planner 和
+  workspace shell 拆分为五个可独立验证的任务，避免一次性重构跨越行为边界。
+- 完成任务 1.1：将 agent directory、profile draft、runtime config、memory settings
+  的 12 个 HTTP operations 和响应映射抽到 `routes/agent_settings.py`。
+- 完成任务 1.2：将 Task/TaskRun、artifact/preview/deployment 与 Session SSE 分别
+  抽到 `routes/task_runs.py`、`routes/task_artifacts.py` 和 `routes/session_events.py`。
+- 完成任务 1.3：将原 2,127 行 `planning.py` 拆为 415 行稳定路由入口、586 行
+  intent/target 解析模块和 1,244 行 task builder 模块。
+- 完成任务 1.4：将原 962 行 `workspace-shell.tsx` 拆为 501 行 composition component、
+  SSE refresh hook、TaskRun/artifact action hook、header/pipeline 组件和纯状态 helper。
+- `app.main:app` 继续通过 router composition 暴露原路径，并为既有 helper import 与
+  monkeypatch 测试保留显式兼容桥接；`main.py` 从 1,843 行降至 193 行。
+- SSE 的每秒 SQLite 补查、15 秒注释心跳和持久恢复游标原样迁移；本项未改变
+  数据库 schema 或前端行为；`plan_for_message` 继续作为 Planner 公共入口，并从
+  facade 重导出既有解析和内部 helper，保留测试与内部调用兼容性。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| Agent settings 聚焦 API pytest | 39 passed；307 个既有 `datetime.utcnow()` 弃用警告 |
+| TaskRun/artifact/SSE 聚焦 API pytest | 131 passed；1,551 个既有 `datetime.utcnow()` 弃用警告 |
+| Planner/消息/P18b 聚焦 API pytest | 155 passed；1,460 个既有 `datetime.utcnow()` 弃用警告 |
+| Planning 基线符号兼容审计 | 65 个 class/function/`TaskSpec` 符号全部仍可从 `app.planning` 访问 |
+| Web ESLint / TypeScript | 通过 |
+| 完整 Web Vitest | 13 files / 102 tests passed |
+| 最终 `pnpm test` | Web 102 passed；API 1,139 passed / 1 skipped / 9 failed，9 项与已复现基线集合相同；因 API 非零退出未串行进入 demo-api |
+| 独立 `pnpm demo:api:test` | 5 passed；1 个既有 `.pytest_cache` ACL 警告 |
+| 最终 Node 24.19 + pnpm 10.33.4 `pnpm check` | 通过 |
+| 剩余结构审计 | 已记录执行核心、task card、API client、task builder 和 preview renderer 的后续专项拆分边界 |
+| 完整 API pytest | 1,139 passed / 1 skipped / 9 failed；失败集合与已隔离复现的基线 TaskRun scope 问题完全相同 |
+| 基线/当前完整 OpenAPI 契约指纹 | 相同；SHA-256 `f1aa309de4f27c15938497241e40b249a97d91be7c94c003d71d6fd49171c63f` |
+| Node 24.19 + pnpm 10.33.4 `pnpm check` | 通过 |
+| `openspec validate agenthub-source-structure-modularization --strict` | 通过 |
+
+## Add durable Session SSE polling and idle heartbeat
+
+**日期:** 2026-08-31
+
+### 变更
+
+- 保留进程内 `asyncio.Queue` 作为低延迟唤醒快路径，同时让每条打开的 Session
+  SSE 流每秒以新数据库事务按持久 `(created_at, id)` 游标重放 SQLite 事件。
+- 其他 API worker 写入事件、进程内通知丢失或反序通知时，浏览器连接可在有界时间内
+  收到已提交事件，无需等待断线重连。
+- 连续 15 秒没有事件输出时发送 `: keep-alive` SSE 注释；注释不触发前端
+  `onmessage`，不改变 JSON 载荷契约，也不推进 `Last-Event-ID`。
+- 新增无本地通知的持久事件重放与空闲心跳回归测试，并同步 README、架构、项目状态
+  和 OpenSpec。该机制适配当前本地 SQLite 基线，不宣称分布式消息总线语义。
+
+### 验证
+
+| 命令 | 结果 |
+|---|---|
+| SSE 聚焦 backend pytest（events/chat） | 通过，22 项；175 个既有 `datetime.utcnow()` 弃用警告 |
+| Node 24.19 + pnpm 10.33.4 `pnpm check` | 通过 |
+| Web Vitest | 通过，13 files / 102 tests |
+| demo-api pytest | 通过，5 项；pytest cache 目录有 1 个既有 ACL 警告 |
+| 完整 API pytest | 1,139 passed / 1 skipped / 9 failed；9 项均为 TaskRun scope 路径观察失败 |
+| 基线隔离复现 | 相同 9 项在未包含本变更的 `d2b8f1b` 临时工作树中全部复现，确认不是 SSE 回归 |
+| `openspec validate agenthub-session-sse-heartbeat-polling --strict` | 通过 |
+
 ## Repair persisted Session SSE recovery
 
 **日期:** 2026-08-31

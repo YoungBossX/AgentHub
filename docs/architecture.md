@@ -44,13 +44,19 @@ Message
 
 | 模块 | 作用 |
 |---|---|
-| `apps/api/app/main.py` | FastAPI 应用入口，配置生命周期、CORS，并挂载已拆分的领域 router；仍保留尚未拆出的会话、任务、运行、制品等主业务路由 |
+| `apps/api/app/main.py` | FastAPI composition root，配置生命周期、CORS、领域 router，以及少量既有 helper 兼容桥接 |
 | `apps/api/app/dependencies.py` | FastAPI 共享依赖入口，集中提供数据库会话、worktree、preview 和 deploy service |
 | `apps/api/app/routes/health.py` | 基础健康检查路由 |
 | `apps/api/app/routes/registries.py` | Provider config 和 deployment provider registry 只读路由 |
+| `apps/api/app/routes/agent_settings.py` | Agent directory、profile draft、runtime config 和 memory settings 路由及响应映射 |
+| `apps/api/app/routes/task_runs.py` | Task、PMO plan decision 和 TaskRun 生命周期路由及响应映射 |
+| `apps/api/app/routes/task_artifacts.py` | Diff、Review、Workbench、command evidence、Preview 和 Deployment 路由 |
+| `apps/api/app/routes/session_events.py` | Session SSE 持久游标重放、跨进程轮询和空闲心跳 |
 | `apps/api/app/routes/workspaces.py` | Demo workspace 读取路由 |
 | `apps/api/app/routes/targets.py` | Workspace targets、外部项目分析/注册、本地文件夹浏览和项目 provisioning 路由 |
-| `apps/api/app/planning.py` | 解析提及、识别任务意图、生成 Orchestrator/role task plan |
+| `apps/api/app/planning.py` | Planner 稳定入口与 LLM/fallback 路由编排，继续导出 `plan_for_message` 和既有解析 helper |
+| `apps/api/app/planning_intents.py` | 提及、前端/应用契约意图、目标选择和安全边界解析 |
+| `apps/api/app/planning_tasks.py` | Orchestrator/direct assignment/fallback Task 图构建与元数据生成 |
 | `apps/api/app/run_engine.py` | TaskRun 执行入口，连接 adapter、diff/review/preview/deploy 收尾和后台运行 |
 | `apps/api/app/provider_gateway.py` | provider 选择、健康、容量、熔断、fallback 证据和错误分类 |
 | `apps/api/app/codex_adapter.py` | Codex CLI 适配器 |
@@ -70,7 +76,11 @@ Message
 | 模块 | 作用 |
 |---|---|
 | `apps/web/src/app/page.tsx` | 读取后端健康、workspace、agents、sessions，并渲染主工作台 |
-| `apps/web/src/components/workspace-shell.tsx` | 主工作台状态容器，管理 Session、消息、任务、SSE、产物选择和上下文托盘 |
+| `apps/web/src/components/workspace-shell.tsx` | 主工作台 composition component，连接 Session、消息、任务、制品和上下文托盘 |
+| `apps/web/src/components/use-session-event-refresh.ts` | SSE cursor、single-flight task refresh 和有界退避重试 hook |
+| `apps/web/src/components/use-task-artifact-actions.ts` | TaskRun、PMO plan、Review、Preview、Deployment 和 Workbench 操作 hook |
+| `apps/web/src/components/workspace-shell-header.tsx` | 当前会话 header、单聊/群聊切换和 demo pipeline 展示 |
+| `apps/web/src/components/workspace-shell-state.ts` | 产物合并、预览选择和 composer context 的纯状态 helper |
 | `apps/web/src/components/session-sidebar.tsx` | 左侧 Session 和 Agent 联系人入口 |
 | `apps/web/src/components/chat-thread.tsx` | 中央聊天消息流 |
 | `apps/web/src/components/message-composer.tsx` | 消息输入、制品上下文引用和发送载荷 |
@@ -109,8 +119,8 @@ AgentHub 当前采用“本地可验证、边界保守”的可靠性策略：
 - Agent 执行期不静默安装依赖。
 - TaskRun 终态会释放 target lock，避免旧运行长期阻塞。
 - Diff/Review/Preview/Deploy 失败会写入事件和诊断，而不是只在后台日志里消失。
-- SSE 使用标准消息帧；重连优先读取 `Last-Event-ID`，并从 SQLite 按 Session 游标重放，
-  内存 queue 只承担单进程内的即时唤醒。
+- SSE 使用标准消息帧；重连优先读取 `Last-Event-ID`，内存 queue 是同进程低延迟快路径，
+  流同时每秒从 SQLite 按 Session 游标重放，并在空闲 15 秒后发送无载荷注释心跳。
 - ScriptedMockAdapter 是显式 fallback，不伪装成真实 Codex/Claude 成功。
 
 ## 技术选型理由
@@ -139,11 +149,11 @@ AgentHub 当前采用“本地可验证、边界保守”的可靠性策略：
 
 | 问题 | 影响 | 建议 |
 |---|---|---|
-| `apps/api/app/main.py` 仍保留部分主业务路由 | 已拆出 health、registries、workspaces、targets 和共享 dependencies，但 session/task-run/artifact/runtime-config 等路径仍较长 | 后续按 session、task-run、artifact、runtime-config 继续拆 FastAPI routers |
-| `apps/api/app/planning.py` 规划逻辑集中 | 意图识别、fallback、任务生成耦合度较高 | 后续拆为 contracts、routing、fallback、normalization、validation |
+| `apps/api/app/planning_tasks.py` 仍包含较多任务构建器 | 27 个相关 builder 已与路由和意图解析隔离，但新增更多产品模式时可能再次增长 | 仅在新任务类型实质增加时再按 demo/external/fallback builder 拆分 |
+| `run_engine.py`、`task_run_scope.py`、`task_runs.py` 仍为 2,800-3,500 行 | 三者承载执行状态机、受保护路径和持久恢复不变量，机械拆分的回归风险高 | 后续分别为 worker lifecycle、scope snapshot、run persistence 建立专项 OpenSpec 与不变量测试后再拆 |
 | `apps/web/src/components/task-card-list.tsx` 较大 | execution trace 已拆出，但 run controls、artifact action 和 plan review 仍在同一组件 | 后续继续拆出 run controls、artifact chips、plan review panel |
+| `apps/web/src/components/preview-card.tsx` 较大 | Diff、Review、Preview、Deployment 和 Workbench renderer 仍集中 | 后续按 artifact kind 拆 renderer，并保持统一 card shell |
 | `apps/web/src/lib/api.ts` 类型和 client 集中 | API 类型很多，局部改动容易影响阅读 | 后续按 workspace/session/task-run/artifact/runtime 拆客户端模块 |
-| SSE 即时唤醒仍为单进程内机制 | 持久事件不会丢失，但完全丢失唤醒且无后续事件时，已连接客户端要等原生重连 | 若产品扩展到多 worker，再引入共享通知或心跳轮询；当前本地单进程基线保持 SQLite 为事实源 |
 | 部分冻结/内部文档未公开跟踪 | 历史证据完整但公开入口需要筛选 | 当前只放行比赛必要文档，避免一次性提交内部草稿 |
 
 ## 答辩推荐讲法

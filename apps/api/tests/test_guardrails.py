@@ -90,6 +90,23 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
             "Make the button text more friendly.",
         ]
     )
+    codex_windows_path = evaluate_command(
+        [
+            "C:/Users/demo/AppData/Local/OpenAI/Codex/bin/current/codex.exe",
+            "--ask-for-approval",
+            "never",
+            "exec",
+            "--json",
+            "--cd",
+            "C:/worktree",
+            "--sandbox",
+            "workspace-write",
+            "Make the button text more friendly.",
+        ]
+    )
+    codex_lookalike = evaluate_command(
+        ["C:/tools/codex-wrapper.exe", "exec", "Do something unsafe."]
+    )
     claude_code = evaluate_command(
         [
             "/Users/demo/.npm-global/bin/claude",
@@ -115,6 +132,8 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
     assert allowed.approval is None
     assert git_with_cwd.allowed is True
     assert codex_app_path.allowed is True
+    assert codex_windows_path.allowed is True
+    assert codex_lookalike.allowed is False
     assert claude_code.allowed is True
 
     assert blocked.allowed is False

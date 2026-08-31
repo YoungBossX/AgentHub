@@ -1,5 +1,6 @@
 import json
 import shutil
+import subprocess
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,7 +21,10 @@ from app.previews import (
     PreviewProcess,
     PreviewProcessDiagnostics,
     PreviewService,
+    SubprocessPreviewRunner,
     _preview_process_env,
+    _resolve_preview_launch_command,
+    _stop_preview_process,
 )
 
 
@@ -103,6 +107,109 @@ def test_preview_process_env_prefers_system_node_over_codex_bundled_node() -> No
     paths = env["PATH"].split(":")
     assert "/Applications/Codex.app/Contents/Resources" not in paths
     assert paths.index("/Users/luotianhang/.npm-global/bin") < paths.index("/usr/local/bin")
+
+
+def test_windows_preview_launch_resolves_only_pnpm_to_cmd(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.previews.shutil.which",
+        lambda name, path=None: "C:/tools/pnpm.cmd" if name == "pnpm.cmd" else None,
+    )
+    command = ["pnpm", "dev", "--host", "127.0.0.1", "--port", "4173"]
+
+    assert _resolve_preview_launch_command(
+        command,
+        platform_name="nt",
+        search_path="C:/tools",
+    ) == [
+        "C:/tools/pnpm.cmd",
+        "dev",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "4173",
+    ]
+    assert _resolve_preview_launch_command(
+        ["pnpm-wrapper", "dev"],
+        platform_name="nt",
+        search_path="C:/tools",
+    ) == ["pnpm-wrapper", "dev"]
+    assert _resolve_preview_launch_command(
+        command,
+        platform_name="posix",
+        search_path="/usr/local/bin",
+    ) == command
+
+
+class FakePreviewSubprocess:
+    def __init__(self, *, running: bool = True) -> None:
+        self.pid = 4242
+        self.running = running
+        self.terminate_calls = 0
+        self.kill_calls = 0
+        self.wait_calls: list[int] = []
+
+    def poll(self) -> Optional[int]:
+        return None if self.running else 0
+
+    def terminate(self) -> None:
+        self.terminate_calls += 1
+        self.running = False
+
+    def kill(self) -> None:
+        self.kill_calls += 1
+        self.running = False
+
+    def wait(self, timeout: int) -> int:
+        self.wait_calls.append(timeout)
+        self.running = False
+        return 0
+
+
+def test_windows_preview_stop_terminates_process_tree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = FakePreviewSubprocess()
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr("app.previews.subprocess.run", fake_run)
+
+    _stop_preview_process(process, platform_name="nt")  # type: ignore[arg-type]
+
+    assert calls == [["taskkill", "/PID", "4242", "/T", "/F"]]
+    assert process.wait_calls == [5]
+    assert process.terminate_calls == 0
+    assert process.kill_calls == 0
+
+
+def test_preview_runner_stop_removes_temporary_log(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = FakePreviewSubprocess()
+    log_path = tmp_path / "agenthub-preview-test.log"
+    log_file = log_path.open("w+", encoding="utf-8")
+    log_file.write("ready")
+    runner = SubprocessPreviewRunner()
+    runner._processes[process.pid] = process  # type: ignore[assignment]
+    runner._log_paths[process.pid] = log_path
+    runner._log_files[process.pid] = log_file
+    monkeypatch.setattr(
+        "app.previews.subprocess.run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 0),
+    )
+
+    runner.stop(process.pid)
+
+    assert not log_path.exists()
+    assert process.pid not in runner._processes
+    assert process.pid not in runner._log_paths
+    assert process.pid not in runner._log_files
 
 
 def create_task_run_fixture(db: DbSession, worktree_path: Path) -> str:

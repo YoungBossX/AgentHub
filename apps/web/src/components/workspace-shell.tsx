@@ -1,13 +1,5 @@
 "use client"
 
-import {
-  Check,
-  Circle,
-  CircleDot,
-  Radio,
-  UserRound,
-  Users,
-} from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   type FormEvent,
@@ -15,12 +7,21 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
 } from "react"
 
 import { ArtifactPanel } from "@/components/artifact-panel"
+import { WorkspaceHeader } from "@/components/workspace-shell-header"
+import {
+  appendContextItem,
+  contextIntentDraft,
+  mergeArtifactPanelItems,
+  moveContextItem,
+  removeContextItem,
+} from "@/components/workspace-shell-state"
+import { useSessionEventRefresh } from "@/components/use-session-event-refresh"
+import { useTaskArtifactActions } from "@/components/use-task-artifact-actions"
 import { ChatThread } from "@/components/chat-thread"
 import {
   buildComposerMessageContext,
@@ -33,40 +34,19 @@ import { type ArtifactPanelItem } from "@/components/preview-card"
 import { SessionSidebar } from "@/components/session-sidebar"
 import { type ArtifactContextIntent, TaskCardList } from "@/components/task-card-list"
 import {
-  approveTaskRun,
-  createPreviewDeployment,
   createSessionMessage,
-  createTaskRun,
-  createTaskRunReview,
   createWorkspaceSession,
-  decideTaskPlan,
-  denyTaskRun,
-  forceCodexFailure,
   getSessionArtifactWorkbench,
-  interruptTaskRun,
-  listTaskRunPreviews,
   listSessionMessages,
   listSessionTasks,
-  retryTaskRun,
-  retryTaskRunWithFallback,
-  saveArtifactWorkbenchEdit,
-  sessionEventsUrl,
-  startTaskRunPreview,
-  stopPreview,
   ApiRequestError,
   type ArtifactWorkbenchArtifact,
   type AgentContact,
   type ChatMessage,
-  type PreviewArtifact,
   type SessionTask,
   type Workspace,
   type WorkspaceSession,
 } from "@/lib/api"
-import { cn } from "@/lib/utils"
-
-const SSE_TASK_REFRESH_MAX_RETRIES = 3
-const SSE_TASK_REFRESH_INITIAL_DELAY_MS = 250
-
 type WorkspaceShellProps = {
   backendUrl: string
   healthSlot?: ReactNode
@@ -90,7 +70,6 @@ export function WorkspaceShell({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [tasks, setTasks] = useState<SessionTask[]>([])
   const [draft, setDraft] = useState("")
-  const sessionEventCursorsRef = useRef(new Map<string, string>())
   const [artifactRefreshVersion, setArtifactRefreshVersion] = useState(0)
   const [evidenceArtifactItems, setEvidenceArtifactItems] = useState<ArtifactPanelItem[]>([])
   const [workbenchArtifacts, setWorkbenchArtifacts] = useState<ArtifactWorkbenchArtifact[]>([])
@@ -230,98 +209,14 @@ export function WorkspaceShell({
     }
   }, [backendUrl, reportSyncError, selectedSessionId])
 
-  useEffect(() => {
-    if (!selectedSessionId) {
-      return
-    }
-
-    let active = true
-    let refreshInFlight = false
-    let refreshRequested = false
-    let retryAttempt = 0
-    let retryTimer: number | null = null
-    const source = new EventSource(
-      sessionEventsUrl(
-        backendUrl,
-        selectedSessionId,
-        sessionEventCursorsRef.current.get(selectedSessionId),
-      ),
-    )
-    source.onmessage = (event) => {
-      if (!active) {
-        return
-      }
-      try {
-        const payload = JSON.parse(event.data) as { cursor?: unknown }
-        if (typeof payload.cursor === "string" && payload.cursor.length > 0) {
-          sessionEventCursorsRef.current.set(selectedSessionId, payload.cursor)
-        }
-        setArtifactRefreshVersion((current) => current + 1)
-      } catch (error) {
-        reportSyncError("无法解析会话事件", error)
-        return
-      }
-      requestTaskRefresh()
-    }
-
-    function requestTaskRefresh() {
-      if (!active) {
-        return
-      }
-      refreshRequested = true
-      retryAttempt = 0
-      if (retryTimer !== null) {
-        window.clearTimeout(retryTimer)
-        retryTimer = null
-      }
-      void runTaskRefresh()
-    }
-
-    async function runTaskRefresh() {
-      if (!active || refreshInFlight || !refreshRequested) {
-        return
-      }
-      refreshRequested = false
-      refreshInFlight = true
-      try {
-        const nextTasks = await listSessionTasks(backendUrl, selectedSessionId)
-        if (!active) {
-          return
-        }
-        retryAttempt = 0
-        setTasks(nextTasks)
-        setSyncError(null)
-      } catch (error) {
-        if (!active) {
-          return
-        }
-        reportSyncError("无法刷新任务时间线", error)
-        if (retryAttempt < SSE_TASK_REFRESH_MAX_RETRIES) {
-          const retryDelayMs =
-            SSE_TASK_REFRESH_INITIAL_DELAY_MS * 2 ** retryAttempt
-          retryAttempt += 1
-          refreshRequested = true
-          retryTimer = window.setTimeout(() => {
-            retryTimer = null
-            void runTaskRefresh()
-          }, retryDelayMs)
-        }
-      } finally {
-        refreshInFlight = false
-        if (active && retryTimer === null && refreshRequested) {
-          void runTaskRefresh()
-        }
-      }
-    }
-
-    return () => {
-      active = false
-      if (retryTimer !== null) {
-        window.clearTimeout(retryTimer)
-      }
-      source.close()
-    }
-  }, [backendUrl, reportSyncError, selectedSessionId])
+  useSessionEventRefresh({
+    backendUrl,
+    reportSyncError,
+    selectedSessionId,
+    setArtifactRefreshVersion,
+    setSyncError,
+    setTasks,
+  })
 
   function selectSession(sessionId: string) {
     setSyncError(null)
@@ -371,173 +266,34 @@ export function WorkspaceShell({
     setArtifactRefreshVersion((current) => current + 1)
   }
 
-  function handleCreateTaskRun(taskId: string) {
-    runClientAction(async () => {
-      await createTaskRun(backendUrl, taskId)
-      await refreshSelectedTasks()
-    }, "无法启动任务运行")
-  }
-
-  function handleForceCodexFailure(taskId: string) {
-    runClientAction(async () => {
-      await forceCodexFailure(backendUrl, taskId)
-      await refreshSelectedTasks()
-      refreshArtifacts()
-    }, "无法模拟 Codex 失败")
-  }
-
-  function handleInterruptTaskRun(taskRunId: string) {
-    runClientAction(async () => {
-      await interruptTaskRun(backendUrl, taskRunId)
-      await refreshSelectedTasks()
-    }, "无法中断任务运行")
-  }
-
-  function handleRetryTaskRun(taskRunId: string) {
-    runClientAction(async () => {
-      await retryTaskRun(backendUrl, taskRunId)
-      await refreshSelectedTasks()
-    }, "无法重试任务运行")
-  }
-
-  function handleRetryTaskRunWithFallback(taskRunId: string) {
-    runClientAction(async () => {
-      await retryTaskRunWithFallback(backendUrl, taskRunId)
-      await refreshSelectedTasks()
-    }, "无法使用 ScriptedMockAdapter 兜底重试")
-  }
-
-  function handleApproveTaskRun(taskRunId: string) {
-    runClientAction(async () => {
-      await approveTaskRun(backendUrl, taskRunId)
-      await refreshSelectedTasks()
-    }, "无法批准任务运行")
-  }
-
-  function handleApprovePlan(taskId: string) {
-    runClientAction(async () => {
-      await decideTaskPlan(
-        backendUrl,
-        taskId,
-        "approve",
-        "用户已在 AgentHub 界面批准 PMO 计划。",
-      )
-      await refreshSelectedTasks()
-    }, "无法批准 PMO 计划")
-  }
-
-  function handleRejectPlan(taskId: string) {
-    runClientAction(async () => {
-      await decideTaskPlan(
-        backendUrl,
-        taskId,
-        "reject",
-        "用户已在 AgentHub 界面拒绝 PMO 计划。",
-      )
-      await refreshSelectedTasks()
-    }, "无法拒绝 PMO 计划")
-  }
-
-  function handleRequestPlanClarification(taskId: string) {
-    runClientAction(async () => {
-      await decideTaskPlan(
-        backendUrl,
-        taskId,
-        "clarification",
-        "用户要求 Main Agent 先澄清计划。",
-      )
-      await refreshSelectedTasks()
-    }, "无法请求 PMO 澄清")
-  }
-
-  function handleDenyTaskRun(taskRunId: string) {
-    runClientAction(async () => {
-      await denyTaskRun(
-        backendUrl,
-        taskRunId,
-        "用户已在 AgentHub 界面拒绝审批请求。",
-      )
-      await refreshSelectedTasks()
-    }, "无法拒绝任务运行")
-  }
-
-  function handleOpenPreview(preview: PreviewArtifact) {
-    setSelectedArtifactId(`preview:${preview.id}`)
-    setPreviewFrameKey((current) => current + 1)
-  }
-
-  function handleRefreshPreviews(taskRunId: string) {
-    runClientAction(async () => {
-      const previews = await listTaskRunPreviews(backendUrl, taskRunId)
-      const hasHealthyPreview = previews.some(
-        (preview) => preview.healthStatus === "healthy",
-      )
-      const shouldRestartSelectedPreview =
-        selectedPreview?.taskRunId === taskRunId &&
-        selectedPreview.healthStatus !== "healthy" &&
-        !hasHealthyPreview
-      const latestPreview = shouldRestartSelectedPreview
-        ? await startTaskRunPreview(backendUrl, taskRunId)
-        : preferredPreview(previews)
-      if (latestPreview && selectedPreview?.taskRunId === taskRunId) {
-        setSelectedArtifactId(`preview:${latestPreview.id}`)
-        setPreviewFrameKey((current) => current + 1)
-      }
-      refreshArtifacts()
-      setSyncError(null)
-    }, "无法刷新预览")
-  }
-
-  function handleStartPreview(taskRunId: string) {
-    runClientAction(async () => {
-      const preview = await startTaskRunPreview(backendUrl, taskRunId)
-      setSelectedArtifactId(`preview:${preview.id}`)
-      setPreviewFrameKey((current) => current + 1)
-      refreshArtifacts()
-      setSyncError(null)
-    }, "无法启动预览")
-  }
-
-  function handleCreateReview(taskRunId: string) {
-    runClientAction(async () => {
-      const review = await createTaskRunReview(backendUrl, taskRunId)
-      setSelectedArtifactId(`review:${review.id}`)
-      refreshArtifacts()
-      setSyncError(null)
-    }, "无法创建评审产物")
-  }
-
-  function handleCreateDeployment(previewId: string) {
-    runClientAction(async () => {
-      const deployment = await createPreviewDeployment(backendUrl, previewId)
-      setSelectedArtifactId(`deployment:${deployment.id}`)
-      refreshArtifacts()
-      setSyncError(null)
-    }, "无法创建部署卡片")
-  }
-
-  function handleStopPreview(previewId: string) {
-    runClientAction(async () => {
-      await stopPreview(backendUrl, previewId)
-      if (selectedPreview?.id === previewId) {
-        setPreviewFrameKey((current) => current + 1)
-      }
-      refreshArtifacts()
-      setSyncError(null)
-    }, "无法停止预览")
-  }
-
-  function handleSaveArtifactEdit(artifactId: string, contentMd: string, summary: string) {
-    runClientAction(async () => {
-      await saveArtifactWorkbenchEdit(backendUrl, artifactId, {
-        contentMd,
-        summary,
-      })
-      refreshArtifacts()
-      setSelectedArtifactId(`workbench:${artifactId}`)
-      setSyncError(null)
-    }, "无法保存产物版本")
-  }
+  const {
+    handleCreateTaskRun,
+    handleForceCodexFailure,
+    handleInterruptTaskRun,
+    handleRetryTaskRun,
+    handleRetryTaskRunWithFallback,
+    handleApproveTaskRun,
+    handleApprovePlan,
+    handleRejectPlan,
+    handleRequestPlanClarification,
+    handleDenyTaskRun,
+    handleOpenPreview,
+    handleRefreshPreviews,
+    handleStartPreview,
+    handleCreateReview,
+    handleCreateDeployment,
+    handleStopPreview,
+    handleSaveArtifactEdit,
+  } = useTaskArtifactActions({
+    backendUrl,
+    refreshArtifacts,
+    refreshSelectedTasks,
+    runClientAction,
+    selectedPreview,
+    setPreviewFrameKey,
+    setSelectedArtifactId,
+    setSyncError,
+  })
 
   const handleArtifactsChange = useCallback((artifacts: ArtifactPanelItem[]) => {
     setEvidenceArtifactItems(artifacts)
@@ -635,51 +391,17 @@ export function WorkspaceShell({
         />
 
         <main className="flex min-h-0 flex-col overflow-hidden bg-[#fbfcfc]">
-          <header
-            className="shrink-0 border-b border-[var(--border)] bg-white/95 px-5 py-4"
-            data-region="top-header"
-          >
-            <div className="rounded-lg border border-[var(--border)] bg-white px-4 py-3 shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
-                  <span className="font-semibold text-[var(--text-muted)]">
-                    AgentHub
-                  </span>
-                  <span className="text-slate-300">›</span>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-slate-950">
-                    <Radio aria-hidden="true" size={15} />
-                    当前会话
-                  </span>
-                </div>
-                <div className="hidden shrink-0 sm:flex">{healthSlot}</div>
-              </div>
-
-              <div className="mt-5 flex flex-col gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-xl font-semibold leading-tight text-slate-950 xl:text-2xl">
-                    {selectedSession?.title ?? "未选择会话"}
-                  </h2>
-                  <p className="mt-2 truncate text-sm text-[var(--muted-foreground)]">
-                    {tasks.length} 个任务 · {hasCompletedRun ? "已有执行证据" : "等待运行"}
-                  </p>
-                </div>
-
-                <ConversationModeSwitch
-                  mode={conversationMode}
-                  onModeChange={setConversationMode}
-                />
-
-                <DemoPipeline
-                  hasCompletedRun={hasCompletedRun}
-                  hasRecoveredRun={hasRecoveredRun}
-                  hasRequirement={hasRequirement}
-                  hasRunningTask={hasRunningTask}
-                  hasTasks={tasks.length > 0}
-                />
-                <div className="sm:hidden">{healthSlot}</div>
-              </div>
-            </div>
-          </header>
+          <WorkspaceHeader
+            conversationMode={conversationMode}
+            hasCompletedRun={hasCompletedRun}
+            hasRecoveredRun={hasRecoveredRun}
+            hasRequirement={hasRequirement}
+            hasRunningTask={hasRunningTask}
+            healthSlot={healthSlot}
+            onModeChange={setConversationMode}
+            selectedSessionTitle={selectedSession?.title ?? "未选择会话"}
+            taskCount={tasks.length}
+          />
 
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden bg-[#fbfcfc] p-5">
             {syncError ? (
@@ -776,187 +498,4 @@ export function WorkspaceShell({
       </div>
     </section>
   )
-}
-
-function preferredPreview(previews: PreviewArtifact[]) {
-  return [...previews].reverse().find((preview) => preview.healthStatus === "healthy") ??
-    previews[previews.length - 1] ??
-    null
-}
-
-function ConversationModeSwitch({
-  mode,
-  onModeChange,
-}: {
-  mode: "direct" | "group"
-  onModeChange: (mode: "direct" | "group") => void
-}) {
-  return (
-    <section className="flex justify-end rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2">
-      <div className="grid grid-cols-2 rounded-full bg-white p-1 shadow-sm">
-        <button
-          aria-pressed={mode === "direct"}
-          className={cn(
-            "inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition",
-            mode === "direct"
-              ? "bg-slate-950 text-white"
-              : "text-slate-600 hover:bg-slate-100",
-          )}
-          onClick={() => onModeChange("direct")}
-          type="button"
-        >
-          <UserRound aria-hidden="true" size={14} />
-          单聊
-        </button>
-        <button
-          aria-pressed={mode === "group"}
-          className={cn(
-            "inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition",
-            mode === "group"
-              ? "bg-slate-950 text-white"
-              : "text-slate-600 hover:bg-slate-100",
-          )}
-          onClick={() => onModeChange("group")}
-          type="button"
-        >
-          <Users aria-hidden="true" size={14} />
-          群聊
-        </button>
-      </div>
-    </section>
-  )
-}
-
-function DemoPipeline({
-  hasCompletedRun,
-  hasRecoveredRun,
-  hasRequirement,
-  hasRunningTask,
-  hasTasks,
-}: {
-  hasCompletedRun: boolean
-  hasRecoveredRun: boolean
-  hasRequirement: boolean
-  hasRunningTask: boolean
-  hasTasks: boolean
-}) {
-  const stages = [
-    { label: "需求", state: hasRequirement ? "complete" : "pending" },
-    { label: "计划", state: hasTasks ? "complete" : "pending" },
-    {
-      label: "运行",
-      state: hasRecoveredRun
-        ? "recovered"
-        : hasCompletedRun
-          ? "complete"
-          : hasRunningTask
-            ? "running"
-            : "pending",
-    },
-    { label: "Diff", state: hasCompletedRun ? "ready" : "pending" },
-    { label: "预览", state: "pending" },
-    { label: "部署", state: "pending" },
-  ]
-
-  return (
-    <div className="flex max-w-full flex-col items-start gap-2">
-      <ol className="flex max-w-full items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {stages.map((stage, index) => (
-          <li className="flex shrink-0 items-center gap-2" key={stage.label}>
-            <span
-              className={cn(
-                "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3",
-                (stage.state === "complete" || stage.state === "ready") &&
-                  "border-black bg-black text-white",
-                stage.state === "running" && "border-blue-200 bg-blue-50 text-blue-700",
-                stage.state === "recovered" &&
-                  "border-emerald-200 bg-emerald-50 text-emerald-700",
-                stage.state === "pending" &&
-                  "border-transparent bg-[var(--surface-muted)] text-slate-500",
-              )}
-            >
-              {stage.state === "pending" ? (
-                <Circle aria-hidden="true" size={12} />
-              ) : stage.state === "running" ? (
-                <CircleDot aria-hidden="true" size={12} />
-              ) : (
-                <Check aria-hidden="true" size={12} />
-              )}
-              {stage.label}
-            </span>
-            {index < stages.length - 1 ? (
-              <span className="text-slate-300" aria-hidden="true">
-                /
-              </span>
-            ) : null}
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
-
-function mergeArtifactPanelItems(
-  evidenceItems: ArtifactPanelItem[],
-  workbenchArtifacts: ArtifactWorkbenchArtifact[],
-): ArtifactPanelItem[] {
-  const coveredArtifactIds = new Set(
-    evidenceItems.map((item) => item.artifact.artifactId),
-  )
-  const workbenchItems = workbenchArtifacts
-    .filter((artifact) => !coveredArtifactIds.has(artifact.artifactId))
-    .map(
-      (artifact): ArtifactPanelItem => ({
-        artifact,
-        id: `workbench:${artifact.artifactId}`,
-        kind: "workbench",
-        taskRunId: artifact.taskRunId,
-        taskTitle: artifact.title,
-      }),
-    )
-
-  return [...evidenceItems, ...workbenchItems]
-}
-
-function appendContextItem(
-  items: ComposerContextItem[],
-  nextItem: ComposerContextItem,
-) {
-  const withoutDuplicate = items.filter((item) => item.id !== nextItem.id)
-  return [...withoutDuplicate, nextItem]
-}
-
-function removeContextItem(
-  items: ComposerContextItem[],
-  itemId: string,
-) {
-  return items.filter((item) => item.id !== itemId)
-}
-
-function moveContextItem(
-  items: ComposerContextItem[],
-  itemId: string,
-  direction: "up" | "down",
-) {
-  const index = items.findIndex((item) => item.id === itemId)
-  if (index < 0) {
-    return items
-  }
-  const targetIndex = direction === "up" ? index - 1 : index + 1
-  if (targetIndex < 0 || targetIndex >= items.length) {
-    return items
-  }
-  const next = [...items]
-  const [item] = next.splice(index, 1)
-  next.splice(targetIndex, 0, item)
-  return next
-}
-
-function contextIntentDraft(intent: ArtifactContextIntent) {
-  const drafts: Record<ArtifactContextIntent, string> = {
-    ask: "请解释这个上下文的关键内容、当前状态和下一步建议。",
-    revise: "请基于这个上下文继续修改，并说明需要执行的任务。",
-    send_to_agent: "@orchestrator 请基于这个上下文安排后续处理。",
-  }
-  return drafts[intent]
 }

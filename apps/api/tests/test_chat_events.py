@@ -560,3 +560,82 @@ async def test_stream_replays_persisted_order_when_notifications_are_reversed(
 
     assert '"id":"' + first_id + '"' in first_frame
     assert '"id":"' + second_id + '"' in second_frame
+
+
+@pytest.mark.anyio
+async def test_stream_polls_persisted_events_without_local_notification(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(main_module, "SESSION_EVENT_POLL_INTERVAL_SECONDS", 0.01)
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+        agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="Cross-process polling task",
+            intent_type="frontend_change",
+            assigned_agent_id=agent.id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = TaskRun(
+            task_id=task.id,
+            agent_id=agent.id,
+            state="created",
+            worktree_path=session.worktree_path,
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        response = await main_module.stream_session_events(
+            session.id,
+            after=None,
+            last_event_id=None,
+            stream=True,
+            db=db,
+        )
+        body = response.body_iterator
+        frame_task = asyncio.create_task(anext(body))
+        for _ in range(10):
+            await asyncio.sleep(0)
+            if events_module._session_subscribers.get(session.id):
+                break
+        assert events_module._session_subscribers.get(session.id)
+
+        event = stage_task_run_event(db, task_run.id, "task.state")
+        db.commit()
+        db.refresh(event)
+        event_id = event.id
+
+        frame = await asyncio.wait_for(frame_task, timeout=1)
+        await body.aclose()
+
+    assert '"id":"' + event_id + '"' in frame
+
+
+@pytest.mark.anyio
+async def test_idle_stream_emits_comment_heartbeat(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(main_module, "SESSION_EVENT_POLL_INTERVAL_SECONDS", 0.01)
+    monkeypatch.setattr(main_module, "SESSION_EVENT_HEARTBEAT_INTERVAL_SECONDS", 0.02)
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+        response = await main_module.stream_session_events(
+            session.id,
+            after=None,
+            last_event_id=None,
+            stream=True,
+            db=db,
+        )
+        body = response.body_iterator
+        heartbeat = await asyncio.wait_for(anext(body), timeout=1)
+        await body.aclose()
+
+    assert heartbeat == ": keep-alive\n\n"

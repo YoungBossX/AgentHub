@@ -1,6 +1,7 @@
 import http.client
 import json
 import os
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -96,11 +97,16 @@ class SubprocessPreviewRunner:
             delete=False,
         )
         log_path = Path(log_file.name)
+        env = _preview_process_env()
+        launch_command = _resolve_preview_launch_command(
+            command,
+            search_path=env.get("PATH"),
+        )
         try:
             process = subprocess.Popen(
-                command,
+                launch_command,
                 cwd=cwd,
-                env=_preview_process_env(),
+                env=env,
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -123,14 +129,11 @@ class SubprocessPreviewRunner:
 
     def stop(self, process_id: int) -> None:
         process = self._processes.pop(process_id, None)
-        if process is not None:
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
-        self._close_log_file(process_id)
+        try:
+            if process is not None:
+                _stop_preview_process(process)
+        finally:
+            self._close_log_file(process_id)
 
     def diagnostics(self, process_id: int) -> PreviewProcessDiagnostics:
         process = self._processes.get(process_id)
@@ -158,6 +161,9 @@ class SubprocessPreviewRunner:
                 log_file.close()
             except OSError:
                 pass
+        log_path = self._log_paths.pop(process_id, None)
+        if log_path is not None:
+            _remove_preview_log(log_path)
 
     def _flush_log_file(self, process_id: int) -> None:
         log_file = self._log_files.get(process_id)
@@ -502,6 +508,67 @@ class PreviewService:
 
 def preview_command(port: int) -> list[str]:
     return ["pnpm", "dev", "--host", "127.0.0.1", "--port", str(port)]
+
+
+def _resolve_preview_launch_command(
+    command: list[str],
+    *,
+    platform_name: Optional[str] = None,
+    search_path: Optional[str] = None,
+) -> list[str]:
+    platform = os.name if platform_name is None else platform_name
+    if platform != "nt" or not command or Path(command[0]).name.lower() != "pnpm":
+        return list(command)
+    pnpm_cmd = shutil.which("pnpm.cmd", path=search_path)
+    if pnpm_cmd is None:
+        return list(command)
+    return [pnpm_cmd, *command[1:]]
+
+
+def _stop_preview_process(
+    process: subprocess.Popen,
+    *,
+    platform_name: Optional[str] = None,
+) -> None:
+    if process.poll() is not None:
+        return
+
+    platform = os.name if platform_name is None else platform_name
+    if platform == "nt":
+        try:
+            result = subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=10,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            result = None
+        if result is not None and result.returncode == 0:
+            try:
+                process.wait(timeout=5)
+                return
+            except subprocess.TimeoutExpired:
+                pass
+
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
+def _remove_preview_log(log_path: Path) -> None:
+    for attempt in range(20):
+        try:
+            log_path.unlink(missing_ok=True)
+            return
+        except OSError:
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
 
 
 def command_text(command: list[str]) -> str:

@@ -218,7 +218,7 @@ def _is_allowed_runtime_command(parts: list[str]) -> bool:
     if _is_vite_preview_command(parts):
         return True
 
-    if Path(parts[0]).name == "codex":
+    if Path(parts[0]).name.lower() in {"codex", "codex.exe"}:
         return True
 
     if _is_claude_code_command(parts):
