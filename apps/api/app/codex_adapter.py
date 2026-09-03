@@ -19,6 +19,7 @@ from app.adapters import (
     AgentRunRequest,
 )
 from app.guardrails import evaluate_command
+from app.process_environment import adapter_process_env
 
 DEFAULT_CODEX_BINARY = "/Applications/Codex.app/Contents/Resources/codex"
 STDERR_LIMIT = 1200
@@ -81,6 +82,7 @@ class SubprocessCodexRunner:
         process = subprocess.Popen(
             command,
             cwd=str(cwd),
+            env=adapter_process_env("codex"),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -143,7 +145,7 @@ class CodexAdapter(AgentAdapter):
             self._runs[run_id] = state
             return AdapterRun(adapterRunId=run_id)
 
-        guardrail_decision = evaluate_command(command)
+        guardrail_decision = evaluate_command(command, expected_cwd=cwd)
         if not guardrail_decision.allowed:
             state.start_error = PermissionError(
                 guardrail_decision.approval.reason
@@ -290,6 +292,10 @@ class CodexAdapter(AgentAdapter):
             "--skip-git-repo-check",
             "--sandbox",
             "workspace-write",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--",
             request.instruction,
         ]
 

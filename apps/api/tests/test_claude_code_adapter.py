@@ -10,7 +10,8 @@ from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
 
 from app.adapters import AgentRunRequest, run_adapter_event_stream as _run_adapter_event_stream
-from app.claude_code_adapter import ClaudeCodeAdapter
+import app.claude_code_adapter as claude_code_adapter_module
+from app.claude_code_adapter import ClaudeCodeAdapter, SubprocessClaudeCodeRunner
 from app.main import adapter_for_type
 from app.models import Agent, Session, Task, TaskRun, Workspace
 
@@ -74,6 +75,31 @@ class FakeClaudeCodeRunner:
         if self.error is not None:
             raise self.error
         return self.process
+
+
+def test_subprocess_claude_runner_receives_only_claude_provider_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-secret-value")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "claude-secret-value")
+    monkeypatch.setenv("AGENTHUB_DATABASE_URL", "sqlite:///private.sqlite3")
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(claude_code_adapter_module.subprocess, "Popen", fake_popen)
+
+    SubprocessClaudeCodeRunner().start(["claude", "--print"], tmp_path)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["ANTHROPIC_API_KEY"] == "claude-secret-value"
+    assert "OPENAI_API_KEY" not in env
+    assert "AGENTHUB_DATABASE_URL" not in env
 
 
 @pytest.fixture
@@ -179,9 +205,15 @@ async def test_claude_code_adapter_builds_documented_command_shape(
         "dontAsk",
         "--allowedTools",
         "Read,Write,Edit,MultiEdit",
+        "--tools",
+        "Read,Write,Edit,MultiEdit",
+        "--restricted",
+        "--safe-mode",
+        "--strict-mcp-config",
         "--no-session-persistence",
         "--max-budget-usd",
         "0.25",
+        "--",
         "Make the button text more friendly.",
     ]
     assert runner.cwd == tmp_path

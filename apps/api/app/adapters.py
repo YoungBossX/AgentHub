@@ -17,6 +17,7 @@ from app.models import Session as AgentHubSession
 from app.models import Task, TaskRun, TaskRunEvent
 from app.models import utc_now
 from app.task_run_scope import TaskRunScopeError
+from app.process_environment import redact_process_evidence
 
 AgentEventType = Literal[
     "message.delta",
@@ -139,7 +140,10 @@ def normalize_agent_event(
 
 
 def persist_agent_event(db: DbSession, event: AgentEvent) -> TaskRunEvent:
-    payload_json = json.dumps(event.payload, separators=(",", ":"))
+    payload_json = json.dumps(
+        redact_process_evidence(event.payload),
+        separators=(",", ":"),
+    )
     return append_task_run_event(
         db,
         task_run_id=event.task_run_id,
@@ -308,13 +312,18 @@ def _persist_guarded_agent_event(
         ):
             db.rollback()
             return None
+        safe_payload = redact_process_evidence(event.payload)
         stored = stage_task_run_event(
             db,
             task_run_id=event.task_run_id,
             event_type=event.type,
-            payload_json=json.dumps(event.payload, separators=(",", ":")),
+            payload_json=json.dumps(
+                safe_payload,
+                separators=(",", ":"),
+            ),
         )
-        terminal_state = _stage_task_run_event_state(db, task_run, task, event)
+        safe_event = event.model_copy(update={"payload": safe_payload})
+        terminal_state = _stage_task_run_event_state(db, task_run, task, safe_event)
         db.commit()
         db.refresh(stored)
     except Exception as exc:

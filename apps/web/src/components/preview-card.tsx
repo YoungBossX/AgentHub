@@ -26,6 +26,10 @@ import type {
 import { formatCompactDateTime } from "@/lib/date-format"
 import { cn } from "@/lib/utils"
 
+const PREVIEW_IFRAME_SANDBOX = "allow-forms allow-same-origin allow-scripts"
+const PREVIEW_IFRAME_PERMISSIONS =
+  "camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; usb 'none'; clipboard-read 'none'; clipboard-write 'none'"
+
 type PreviewCardProps = {
   busy?: boolean
   onCreateDeploy?: (previewId: string) => void
@@ -629,8 +633,11 @@ function ArtifactDetail({
       />
       {isPreviewHealthy(item.artifact) ? (
         <iframe
+          allow={PREVIEW_IFRAME_PERMISSIONS}
           className="min-h-[420px] w-full rounded-lg border border-[var(--border)] bg-white shadow-sm"
           key={`${item.artifact.id}-${frameKey}`}
+          referrerPolicy="no-referrer"
+          sandbox={PREVIEW_IFRAME_SANDBOX}
           src={item.artifact.url}
           title="Vite React 预览"
         />

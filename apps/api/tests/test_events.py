@@ -123,4 +123,46 @@ async def test_publish_event_from_worker_thread_wakes_subscriber_loop() -> None:
         await asyncio.to_thread(events.publish_event, "session-1", event)
         received = await asyncio.wait_for(queue.get(), timeout=0.2)
 
-    assert received is event
+    assert received is None
+
+
+@pytest.mark.anyio
+async def test_publish_event_coalesces_burst_into_one_payload_free_wake() -> None:
+    event = TaskRunEvent(
+        id=EVENT_ID,
+        task_run_id="run-1",
+        event_type="message.delta",
+        payload_json='{"chunk":"large-provider-payload"}',
+        sequence=1,
+        created_at=CREATED_AT,
+    )
+
+    async with events.subscribe_session_events("session-1") as queue:
+        await asyncio.to_thread(
+            lambda: [events.publish_event("session-1", event) for _ in range(1_000)]
+        )
+
+        assert queue.maxsize == 1
+        assert queue.qsize() == 1
+        assert await asyncio.wait_for(queue.get(), timeout=0.2) is None
+        assert queue.qsize() == 0
+
+
+@pytest.mark.anyio
+async def test_wakeup_schedules_only_one_outstanding_loop_callback() -> None:
+    scheduled: list[tuple[object, tuple[object, ...]]] = []
+
+    class StubLoop:
+        def call_soon_threadsafe(self, callback, *args) -> None:
+            scheduled.append((callback, args))
+
+    wakeup = events.SessionEventWakeup(StubLoop())  # type: ignore[arg-type]
+
+    for _ in range(1_000):
+        wakeup.notify()
+
+    assert len(scheduled) == 1
+    callback, args = scheduled.pop()
+    callback(*args)  # type: ignore[operator]
+    assert await asyncio.wait_for(wakeup.get(), timeout=0.2) is None
+    assert wakeup.empty()

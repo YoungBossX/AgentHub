@@ -18,6 +18,7 @@ from app.adapters import (
     AgentRunRequest,
 )
 from app.guardrails import evaluate_command
+from app.process_environment import adapter_process_env
 
 DEFAULT_CLAUDE_BINARY = "claude"
 STDERR_LIMIT = 1200
@@ -79,6 +80,7 @@ class SubprocessClaudeCodeRunner:
         process = subprocess.Popen(
             command,
             cwd=str(cwd),
+            env=adapter_process_env("claude_code"),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -271,9 +273,15 @@ class ClaudeCodeAdapter(AgentAdapter):
             "dontAsk",
             "--allowedTools",
             "Read,Write,Edit,MultiEdit",
+            "--tools",
+            "Read,Write,Edit,MultiEdit",
+            "--restricted",
+            "--safe-mode",
+            "--strict-mcp-config",
             "--no-session-persistence",
             "--max-budget-usd",
             self._max_budget_usd,
+            "--",
             request.instruction,
         ]
 

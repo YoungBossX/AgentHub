@@ -22,6 +22,30 @@ from app.project_profiles import ProjectProfile, build_project_profile
 DEFAULT_REHEARSAL_ROOT = Path.home() / "Desktop" / "agenthub-rehearsals"
 DEFAULT_FRONTEND_STACK = "vite-react"
 DEFAULT_BACKEND_STACK = "fastapi"
+PROVISIONED_PACKAGE_MANAGER = "pnpm@10.33.4"
+
+# Keep generated direct dependencies aligned with the repository's verified
+# dependency snapshots. A generated project's own lockfile, created by its
+# approved install step, remains the authority for transitive dependencies.
+PROVISIONED_FRONTEND_DEPENDENCIES = {
+    "@vitejs/plugin-react": "5.2.0",
+    "vite": "7.3.6",
+    "typescript": "5.9.3",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+}
+PROVISIONED_FRONTEND_DEV_DEPENDENCIES = {
+    "vitest": "4.1.11",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@types/node": "24.12.4",
+}
+PROVISIONED_BACKEND_REQUIREMENTS = (
+    "fastapi==0.121.3",
+    "httpx==0.28.1",
+    "uvicorn[standard]==0.38.0",
+    "pytest==8.4.2",
+)
 
 ProjectKind = Literal["existing_project", "new_project"]
 ProjectRole = Literal["frontend", "backend"]
@@ -566,25 +590,15 @@ def _write_frontend_skeleton(frontend_root: Path, slug: str) -> None:
                 "private": True,
                 "version": "0.1.0",
                 "type": "module",
+                "packageManager": PROVISIONED_PACKAGE_MANAGER,
                 "scripts": {
                     "dev": "vite --host 127.0.0.1",
                     "build": "tsc -b && vite build",
                     "check": "tsc --noEmit",
                     "test": "vitest run",
                 },
-                "dependencies": {
-                    "@vitejs/plugin-react": "latest",
-                    "vite": "latest",
-                    "typescript": "latest",
-                    "react": "latest",
-                    "react-dom": "latest",
-                },
-                "devDependencies": {
-                    "vitest": "latest",
-                    "@types/react": "latest",
-                    "@types/react-dom": "latest",
-                    "@types/node": "latest",
-                },
+                "dependencies": PROVISIONED_FRONTEND_DEPENDENCIES,
+                "devDependencies": PROVISIONED_FRONTEND_DEV_DEPENDENCIES,
             },
             indent=2,
             sort_keys=True,
@@ -722,7 +736,7 @@ def _write_backend_skeleton(backend_root: Path) -> None:
         encoding="utf-8",
     )
     (backend_root / "requirements.txt").write_text(
-        "fastapi\nuvicorn[standard]\npytest\n",
+        "\n".join(PROVISIONED_BACKEND_REQUIREMENTS) + "\n",
         encoding="utf-8",
     )
     (backend_root / "tests" / "test_health.py").write_text(

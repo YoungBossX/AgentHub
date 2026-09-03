@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
@@ -85,10 +86,16 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
             "--json",
             "--cd",
             "/tmp/worktree",
+            "--skip-git-repo-check",
             "--sandbox",
             "workspace-write",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--",
             "Make the button text more friendly.",
-        ]
+        ],
+        expected_cwd="/tmp/worktree",
     )
     codex_windows_path = evaluate_command(
         [
@@ -99,10 +106,16 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
             "--json",
             "--cd",
             "C:/worktree",
+            "--skip-git-repo-check",
             "--sandbox",
             "workspace-write",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--",
             "Make the button text more friendly.",
-        ]
+        ],
+        expected_cwd="C:/worktree",
     )
     codex_lookalike = evaluate_command(
         ["C:/tools/codex-wrapper.exe", "exec", "Do something unsafe."]
@@ -119,9 +132,15 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
             "dontAsk",
             "--allowedTools",
             "Read,Write,Edit,MultiEdit",
+            "--tools",
+            "Read,Write,Edit,MultiEdit",
+            "--restricted",
+            "--safe-mode",
+            "--strict-mcp-config",
             "--no-session-persistence",
             "--max-budget-usd",
             "1.00",
+            "--",
             "Change the primary button text.",
         ]
     )
@@ -149,6 +168,221 @@ def test_command_policy_allows_p0_commands_and_requires_approval_for_risky_ones(
     arbitrary_claude = evaluate_command(["claude", "auth", "status"])
     assert arbitrary_claude.allowed is False
     assert arbitrary_claude.approval is not None
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        [
+            "codex",
+            "--ask-for-approval",
+            "never",
+            "exec",
+            "--json",
+            "--cd",
+            "/tmp/worktree",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "danger-full-access",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "Change the app.",
+        ],
+        [
+            "codex",
+            "--ask-for-approval",
+            "never",
+            "exec",
+            "--json",
+            "--cd",
+            "/tmp/worktree",
+            "--skip-git-repo-check",
+            "--sandbox",
+            "workspace-write",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--add-dir",
+            "/tmp/outside",
+            "Change the app.",
+        ],
+        [
+            "codex",
+            "--dangerously-bypass-approvals-and-sandbox",
+            "exec",
+            "--json",
+            "--cd",
+            "/tmp/worktree",
+            "Change the app.",
+        ],
+        [
+            "claude",
+            "--print",
+            "--verbose",
+            "--output-format",
+            "stream-json",
+            "--include-partial-messages",
+            "--permission-mode",
+            "dontAsk",
+            "--allowedTools",
+            "Read,Write,Edit,MultiEdit",
+            "--tools",
+            "Read,Write,Edit,MultiEdit",
+            "--strict-mcp-config",
+            "--no-session-persistence",
+            "--max-budget-usd",
+            "1.00",
+            "Change the app.",
+        ],
+        [
+            "claude",
+            "--print",
+            "--verbose",
+            "--output-format",
+            "stream-json",
+            "--include-partial-messages",
+            "--permission-mode",
+            "dontAsk",
+            "--allowedTools",
+            "Read,Write,Edit,MultiEdit",
+            "--tools",
+            "Bash,Read,Write,Edit,MultiEdit",
+            "--restricted",
+            "--strict-mcp-config",
+            "--no-session-persistence",
+            "--max-budget-usd",
+            "1.00",
+            "Change the app.",
+        ],
+    ],
+)
+def test_command_policy_rejects_weakened_real_adapter_containment(
+    command: list[str],
+) -> None:
+    decision = evaluate_command(command, expected_cwd="/tmp/worktree")
+
+    assert decision.allowed is False
+    assert decision.approval is not None
+
+
+def _bounded_codex_command(
+    *,
+    cwd: str = "/tmp/worktree",
+    instruction: str = "Change the app.",
+) -> list[str]:
+    return [
+        "codex",
+        "--ask-for-approval",
+        "never",
+        "exec",
+        "--json",
+        "--cd",
+        cwd,
+        "--skip-git-repo-check",
+        "--sandbox",
+        "workspace-write",
+        "--ephemeral",
+        "--ignore-user-config",
+        "--ignore-rules",
+        "--",
+        instruction,
+    ]
+
+
+def _bounded_claude_command(
+    *,
+    instruction: str = "Change the app.",
+) -> list[str]:
+    return [
+        "claude",
+        "--print",
+        "--verbose",
+        "--output-format",
+        "stream-json",
+        "--include-partial-messages",
+        "--permission-mode",
+        "dontAsk",
+        "--allowedTools",
+        "Read,Write,Edit,MultiEdit",
+        "--tools",
+        "Read,Write,Edit,MultiEdit",
+        "--restricted",
+        "--safe-mode",
+        "--strict-mcp-config",
+        "--no-session-persistence",
+        "--max-budget-usd",
+        "1.00",
+        "--",
+        instruction,
+    ]
+
+
+def test_codex_command_policy_binds_cd_to_expected_worktree() -> None:
+    decision = evaluate_command(
+        _bounded_codex_command(cwd="/tmp/outside"),
+        expected_cwd="/tmp/worktree",
+    )
+
+    assert decision.allowed is False
+    assert decision.approval is not None
+
+
+@pytest.mark.parametrize("removed_index", [1, 4, 7, 8, 10, 11, 12, 13])
+def test_codex_command_policy_rejects_each_missing_containment_argument(
+    removed_index: int,
+) -> None:
+    command = _bounded_codex_command()
+    command.pop(removed_index)
+
+    assert evaluate_command(command, expected_cwd="/tmp/worktree").allowed is False
+
+
+@pytest.mark.parametrize("removed_index", [6, 8, 10, 12, 13, 14, 15, 18])
+def test_claude_command_policy_rejects_each_missing_containment_argument(
+    removed_index: int,
+) -> None:
+    command = _bounded_claude_command()
+    command.pop(removed_index)
+
+    assert evaluate_command(command).allowed is False
+
+
+@pytest.mark.parametrize(
+    ("command", "expected_cwd"),
+    [
+        (
+            _bounded_codex_command()[:-2]
+            + ["--sandbox", "danger-full-access", "--", "Change the app."],
+            "/tmp/worktree",
+        ),
+        (
+            _bounded_claude_command()[:-2]
+            + ["--tools", "Bash,Read,Write,Edit,MultiEdit", "--", "Change the app."],
+            None,
+        ),
+    ],
+)
+def test_command_policy_rejects_duplicate_conflicting_containment_arguments(
+    command: list[str],
+    expected_cwd: str | None,
+) -> None:
+    assert evaluate_command(command, expected_cwd=expected_cwd).allowed is False
+
+
+def test_command_policy_treats_option_like_instruction_as_prompt_text() -> None:
+    codex = evaluate_command(
+        _bounded_codex_command(
+            instruction="--dangerously-bypass-approvals-and-sandbox",
+        ),
+        expected_cwd="/tmp/worktree",
+    )
+    claude = evaluate_command(
+        _bounded_claude_command(instruction="--dangerously-skip-permissions")
+    )
+
+    assert codex.allowed is True
+    assert claude.allowed is True
 
 
 def test_path_policy_protects_sensitive_and_out_of_worktree_paths() -> None:

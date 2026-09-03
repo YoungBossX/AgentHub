@@ -59,7 +59,11 @@ class GuardrailDecision(GuardrailModel):
 CommandInput = Union[str, Sequence[str]]
 
 
-def evaluate_command(command: CommandInput) -> GuardrailDecision:
+def evaluate_command(
+    command: CommandInput,
+    *,
+    expected_cwd: Optional[Union[str, Path]] = None,
+) -> GuardrailDecision:
     parts = _command_parts(command)
     display = shlex.join(parts)
     if not parts:
@@ -69,7 +73,10 @@ def evaluate_command(command: CommandInput) -> GuardrailDecision:
             command=display,
         )
 
-    if _is_allowed_project_command(parts) or _is_allowed_runtime_command(parts):
+    if _is_allowed_project_command(parts) or _is_allowed_runtime_command(
+        parts,
+        expected_cwd=expected_cwd,
+    ):
         return GuardrailDecision(allowed=True)
 
     return _approval_decision(
@@ -208,7 +215,11 @@ def _is_allowed_project_command(parts: list[str]) -> bool:
     return tuple(parts) in PROJECT_COMMANDS
 
 
-def _is_allowed_runtime_command(parts: list[str]) -> bool:
+def _is_allowed_runtime_command(
+    parts: list[str],
+    *,
+    expected_cwd: Optional[Union[str, Path]],
+) -> bool:
     git_subcommand = _git_subcommand(parts)
     if git_subcommand is not None:
         if git_subcommand == "apply":
@@ -218,13 +229,43 @@ def _is_allowed_runtime_command(parts: list[str]) -> bool:
     if _is_vite_preview_command(parts):
         return True
 
-    if Path(parts[0]).name.lower() in {"codex", "codex.exe"}:
+    if _is_codex_command(parts, expected_cwd=expected_cwd):
         return True
 
     if _is_claude_code_command(parts):
         return True
 
     return False
+
+
+def _is_codex_command(
+    parts: list[str],
+    *,
+    expected_cwd: Optional[Union[str, Path]],
+) -> bool:
+    return (
+        len(parts) == 15
+        and Path(parts[0]).name.lower() in {"codex", "codex.exe"}
+        and parts[1:6]
+        == ["--ask-for-approval", "never", "exec", "--json", "--cd"]
+        and expected_cwd is not None
+        and _resolved_path(parts[6]) == _resolved_path(expected_cwd)
+        and parts[7:14]
+        == [
+            "--skip-git-repo-check",
+            "--sandbox",
+            "workspace-write",
+            "--ephemeral",
+            "--ignore-user-config",
+            "--ignore-rules",
+            "--",
+        ]
+        and bool(parts[14])
+    )
+
+
+def _resolved_path(path: Union[str, Path]) -> Path:
+    return Path(path).expanduser().resolve(strict=False)
 
 
 def _git_subcommand(parts: list[str]) -> Optional[str]:
@@ -254,30 +295,34 @@ def _is_vite_preview_command(parts: list[str]) -> bool:
 
 def _is_claude_code_command(parts: list[str]) -> bool:
     return (
-        len(parts) >= 13
-        and Path(parts[0]).name == "claude"
-        and "--print" in parts
-        and "--verbose" in parts
-        and _option_value(parts, "--output-format") == "stream-json"
-        and "--include-partial-messages" in parts
-        and _option_value(parts, "--permission-mode") == "dontAsk"
-        and _option_value(parts, "--allowedTools") in {
-            "Read,Edit,MultiEdit",
+        len(parts) == 20
+        and Path(parts[0]).name.lower() in {"claude", "claude.exe"}
+        and parts[1:9]
+        == [
+            "--print",
+            "--verbose",
+            "--output-format",
+            "stream-json",
+            "--include-partial-messages",
+            "--permission-mode",
+            "dontAsk",
+            "--allowedTools",
+        ]
+        and parts[9] == "Read,Write,Edit,MultiEdit"
+        and parts[10:17]
+        == [
+            "--tools",
             "Read,Write,Edit,MultiEdit",
-        }
-        and "--no-session-persistence" in parts
-        and _option_value(parts, "--max-budget-usd") is not None
+            "--restricted",
+            "--safe-mode",
+            "--strict-mcp-config",
+            "--no-session-persistence",
+            "--max-budget-usd",
+        ]
+        and bool(parts[17])
+        and parts[18] == "--"
+        and bool(parts[19])
     )
-
-
-def _option_value(parts: list[str], option: str) -> Optional[str]:
-    try:
-        index = parts.index(option)
-    except ValueError:
-        return None
-    if index + 1 >= len(parts):
-        return None
-    return parts[index + 1]
 
 
 def _is_system_path(path: Path) -> bool:

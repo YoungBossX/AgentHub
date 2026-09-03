@@ -79,6 +79,9 @@ def test_subprocess_codex_runner_decodes_jsonl_as_utf8(
     tmp_path: Path,
 ) -> None:
     captured: dict[str, object] = {}
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-secret-value")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "claude-secret-value")
+    monkeypatch.setenv("AGENTHUB_DATABASE_URL", "sqlite:///private.sqlite3")
 
     def fake_popen(command, **kwargs):
         captured["command"] = command
@@ -92,6 +95,11 @@ def test_subprocess_codex_runner_decodes_jsonl_as_utf8(
     assert captured["encoding"] == "utf-8"
     assert captured["errors"] == "replace"
     assert captured["text"] is True
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["OPENAI_API_KEY"] == "openai-secret-value"
+    assert "ANTHROPIC_API_KEY" not in env
+    assert "AGENTHUB_DATABASE_URL" not in env
 
 
 @pytest.fixture
@@ -191,6 +199,10 @@ async def test_codex_adapter_builds_documented_command_shape(tmp_path: Path) -> 
         "--skip-git-repo-check",
         "--sandbox",
         "workspace-write",
+        "--ephemeral",
+        "--ignore-user-config",
+        "--ignore-rules",
+        "--",
         "Make the button text more friendly.",
     ]
     assert runner.command.index("--ask-for-approval") < runner.command.index("exec")

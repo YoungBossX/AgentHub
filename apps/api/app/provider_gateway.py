@@ -16,6 +16,7 @@ from sqlmodel import Session as DbSession
 from app.events import append_task_run_event
 from app.models import utc_now
 from app.models import TaskRun
+from app.process_environment import adapter_process_env, redact_process_evidence
 from app.provider_configs import ProviderConfig, list_provider_configs
 
 CodingAdapterType = Literal["claude_code", "codex", "scripted_mock"]
@@ -352,7 +353,7 @@ class ProviderHealthProbe:
         version_runner: Optional[Callable[[str], tuple[bool, dict[str, Any]]]] = None,
     ) -> None:
         self._command_lookup = command_lookup or _default_command_lookup
-        self._version_runner = version_runner or _run_version_probe
+        self._version_runner = version_runner
 
     def check_provider(
         self,
@@ -393,7 +394,13 @@ class ProviderHealthProbe:
                 },
             )
 
-        ok, details = self._version_runner(executable)
+        if self._version_runner is None:
+            environment_profile = (
+                "codex" if provider.adapter_type == "codex" else "claude_code"
+            )
+            ok, details = _run_version_probe(executable, environment_profile)
+        else:
+            ok, details = self._version_runner(executable)
         safe_details = {
             "command": safe_command,
             "probe": "version",
@@ -1414,7 +1421,10 @@ def _default_command_lookup(command: str) -> Optional[str]:
     return shutil.which(command)
 
 
-def _run_version_probe(executable: str) -> tuple[bool, dict[str, Any]]:
+def _run_version_probe(
+    executable: str,
+    adapter_type: Literal["claude_code", "codex"],
+) -> tuple[bool, dict[str, Any]]:
     try:
         completed = subprocess.run(
             [executable, "--version"],
@@ -1422,16 +1432,19 @@ def _run_version_probe(executable: str) -> tuple[bool, dict[str, Any]]:
             check=False,
             text=True,
             timeout=3,
+            env=adapter_process_env(adapter_type),
         )
     except (OSError, subprocess.SubprocessError) as exc:
         return (
             False,
             {
-                "error": str(exc),
+                "error": redact_process_evidence(str(exc)),
                 "rawRedacted": True,
             },
         )
-    output = (completed.stdout or completed.stderr or "").strip()
+    output = redact_process_evidence(
+        (completed.stdout or completed.stderr or "").strip()
+    )
     return (
         completed.returncode == 0,
         {

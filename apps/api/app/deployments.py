@@ -26,6 +26,7 @@ from app.models import (
 )
 from app.models import Session as AgentHubSession
 from app.previews import UrlPreviewHealthChecker, reserve_preview_port
+from app.process_environment import project_process_env, redact_process_evidence
 from app.provider_evidence import provider_evidence_for_task_run
 from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
 from app.target_registry import (
@@ -113,6 +114,7 @@ class SubprocessCommandRunner:
         process = subprocess.run(
             shlex.split(command),
             cwd=cwd,
+            env=project_process_env(),
             capture_output=True,
             text=True,
             check=False,
@@ -138,6 +140,7 @@ class StaticDirectoryServer:
         ]
         process = subprocess.Popen(
             command,
+            env=project_process_env(),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             text=True,
@@ -303,9 +306,9 @@ class LocalStagingDeployProvider:
 
         build = self.command_runner.run(config.build_command, target_root)
         if build.stdout:
-            logs.append(build.stdout)
+            logs.append(redact_process_evidence(build.stdout))
         if build.stderr:
-            logs.append(build.stderr)
+            logs.append(redact_process_evidence(build.stderr))
         if build.exit_code != 0:
             return DeployProviderResult(
                 provider_id=self.provider_id,

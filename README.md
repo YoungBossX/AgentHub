@@ -197,6 +197,14 @@ Worktree / Target
 - 写任务进入 Session 写队列；
 - 同一目标通过 Target Lock 建立互斥边界；
 - Session 之间使用独立 Git Worktree 隔离工作目录。
+- Preview、staging build 和本地静态服务只接收显式公开的项目环境变量；
+  Codex、Claude Code、Claude Planner 及其 CLI 探针只接收对应 provider 的环境配置。
+- Codex 只能以 `workspace-write` 原生沙箱、无交互批准、临时会话且忽略非受管配置/规则
+  的固定命令形态启动；Claude Code 只能以 restricted + safe mode、显式文件工具集和
+  strict MCP 边界启动。用户派生指令位于 `--` 之后，不能被重新解释为 CLI 选项。
+- 内嵌 Vite Preview 使用固定 iframe sandbox，只保留脚本、表单和 Preview 自身 origin
+  能力；不授予顶层导航、弹窗、下载、modal、pointer lock 或 presentation，并关闭
+  敏感 Permissions Policy 能力与 Referrer 传递。
 
 ---
 

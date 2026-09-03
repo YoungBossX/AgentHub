@@ -1,5 +1,243 @@
 # AgentHub 变更日志
 
+## Bound Session SSE subscriber and replay memory
+
+**日期:** 2026-09-03
+
+### 变更
+
+- 新建单任务 `agenthub-session-sse-backpressure` OpenSpec，闭合慢客户端下同进程 wake
+  与 SQLite backlog 两个独立的按事件数增长路径。
+- 将无界 `asyncio.Queue[TaskRunEvent]` 替换为线程安全的合并 wake：每个 subscriber
+  最多一个 pending 状态和一个待执行 callback，wake 不保存 ORM event 或 payload。
+  多次 publish 合并后仍由 durable cursor 从 SQLite 读取全部事件。
+- Session replay 查询增加内部可选正数 limit；SSE 初始 backlog、one-shot、local wake
+  和 poll 统一按最多 100 行批次发送，不改变其他 `list_session_events` 调用者的默认结果。
+- 独立复核发现仅依赖“最后一批不足 100 行”会在持续生产时追逐新事件，导致 one-shot
+  不结束或初始 backlog 无法进入 live loop。当前每个 replay cycle 先捕获固定
+  high-water cursor，之后提交的行由下一轮 wake/poll/request 交付。
+- 保留标准 SSE 帧、Session cursor、`Last-Event-ID`、订阅先于 backlog、fresh SQLite
+  transaction、1 秒跨 worker poll、15 秒无载荷心跳、浏览器原生重连和前端 single-flight。
+- 内存边界按一个 wake 状态和一个 100-row batch 描述；不声称限制单事件 payload 字节、
+  删除持久事件或提供分布式消息总线。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| RED：1,000 次本地 publish | 失败；旧 queue 为 `maxsize=0 / qsize=1000` 并保存完整事件 |
+| RED：SQLite replay batch | 失败；旧路由没有 batch size，单次 `.all()` 物化全部游标后事件 |
+| RED：持续生产 high-water | 失败；新批处理初版多查询一批并吸收 snapshot 后事件 |
+| SSE 聚焦 pytest | 25 passed |
+| Event producer / Session queue / target lock 相邻 pytest | 95 passed |
+| Web EventSource 聚焦 Vitest | 1 file / 15 passed |
+| 最终完整 API pytest | 1,193 passed / 2 skipped；13,334 条既有 `datetime.utcnow()` 弃用警告 |
+| Python compile / 严格 OpenSpec / 候选集空白检查 | 通过 |
+| 独立只读补丁复核 | 发现持续生产追逐阻断项；固定 high-water 修复并复跑后无其他源码可证阻断项 |
+
+## Pin generated project dependencies and package manager
+
+**日期:** 2026-09-03
+
+### 变更
+
+- 新建单任务 `agenthub-generated-project-dependency-pinning` OpenSpec，闭合 selected-folder
+  provisioning 从受版本管理模板到审批后安装的依赖漂移链路。
+- 生成的前端 manifest 不再使用 9 个 `latest` 标签，改为当前已验证的 React、Vite、
+  TypeScript、Vitest 及类型包精确版本，并声明 `pnpm@10.33.4`，防止 Corepack 自动选择
+  未经验证的新包管理器版本。
+- 生成的后端 requirements 精确固定 FastAPI、HTTPX、Uvicorn 和 pytest；补入 HTTPX
+  是因为生成的健康测试直接使用 FastAPI `TestClient`。
+- 保持依赖安装审批、脚本、target/profile、Vite React/FastAPI skeleton 和 repair 路径
+  不变；repairable scaffold 继续不覆写用户已有 package/requirements manifests。
+- 明确本任务只固定直接依赖。生成项目首次批准安装产生并保留的自身 lockfile 才能冻结
+  JavaScript 传递图；没有把 Python 传递依赖或未生成的 lockfile 伪称为已锁定。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| RED：生成 manifest 精确版本 | 1 failed；原实现 9 个前端依赖均为 `latest` |
+| RED：生成 package manager | 1 failed；原 manifest 缺少 `packageManager`，真实 smoke 自动切换至 pnpm 11.25.0 并退出 1 |
+| Provisioning 聚焦 pytest | 8 passed |
+| Provisioning / external workspace / analyzer 相邻 pytest | 26 passed |
+| 全新生成前端真实 smoke | Node 25.7 / pnpm 10.33.4 install、TypeScript check、Vite build、audit 0、frozen-lockfile 重装通过 |
+| 生成后端版本与健康测试 | 四个精确版本匹配仓库环境；1 passed |
+| 完整 API pytest | 1,190 passed / 2 skipped；13,321 条既有 `datetime.utcnow()` 弃用警告 |
+| Python compile / 严格 OpenSpec / 候选集空白检查 | 通过 |
+| 独立只读补丁复核 | 未发现明确阻断项；输出截断造成的 source-to-sink 复核限制由主代理静态追踪、生成文件断言和真实 smoke 补足 |
+
+## Sandbox the embedded Vite Preview
+
+**日期:** 2026-09-02
+
+### 变更
+
+- 新建单任务 `agenthub-preview-iframe-sandbox` OpenSpec，在唯一的 Preview iframe sink
+  建立固定、可审计的浏览器能力边界。
+- sandbox 仅保留 `allow-forms allow-same-origin allow-scripts`，继续支持本地 Vite
+  module/HMR、React 交互、表单和 Preview-origin storage；不授予 top navigation、
+  popup、download、modal、pointer lock 或 presentation。
+- iframe 使用 `no-referrer`，并显式拒绝 camera、microphone、geolocation、payment、
+  USB、clipboard-read 与 clipboard-write Permissions Policy 能力。
+- 当前安全前提是 Web shell 与后端分配的 Preview 使用不同 loopback 端口；未来若改为
+  同源反向代理，必须重新评审 `allow-scripts + allow-same-origin`。本任务不声称限制
+  Preview 的 fetch/WebSocket/资源网络出口，也不新增 CSP 或代理层。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| RED：健康 Preview iframe 属性 | 1 failed / 8 passed；原实现的 `sandbox` 为 null |
+| Preview 组件 Vitest | 9 passed |
+| 完整 Web Vitest | 13 files / 102 passed |
+| Web ESLint / TypeScript | 通过 |
+| API compile / Demo TypeScript / demo-api compile | 使用显式仓库入口分别通过 |
+| 根 `pnpm check` 聚合入口 | 未完成；嵌套 shim 回退到不受支持的 Node 22.11，随后找不到 Bash；以上等价分项已显式通过 |
+| `openspec validate agenthub-preview-iframe-sandbox --strict` | 通过 |
+| 独立只读补丁复核 | 无阻断项；确认唯一 iframe sink、distinct-port origin 前提和残余网络/CSP边界 |
+
+## Enforce provider-native real-adapter execution containment
+
+**日期:** 2026-09-02
+
+### 变更
+
+- 新建单任务 `agenthub-real-adapter-execution-containment` OpenSpec，把真实适配器的
+  containment 从命令构造惯例提升为构造器与中央 allowlist 双重强制不变量。
+- Codex 固定使用 `workspace-write`、`never` approval、assigned `--cd`、ephemeral
+  session，并忽略用户配置及 user/project execpolicy rules；中央守卫拒绝
+  `danger-full-access`、sandbox bypass、`--add-dir` 和任何额外/缺失参数。
+- Claude Code 固定使用 restricted + safe mode、strict MCP、显式
+  `Read,Write,Edit,MultiEdit` 可用/自动许可工具集及无会话持久化；中央守卫拒绝缺失
+  containment flag 或包含 Bash 等冲突工具的命令。
+- 两个适配器都在用户派生 instruction 前插入 end-of-options `--`，避免以短横线开头的
+  请求被 CLI 解析为权限降级参数。
+- Codex 命令守卫同时接收实际 runner cwd，并将规范化后的 `--cd` 与该 worktree 绑定；
+  非空但指向外部目录的 alternate caller 命令不再能够通过 allowlist。
+- 边界按受信 provider CLI / 不受信目标仓库定义；不把 Claude tool-level restricted
+  模式误称为通用 OS/container，也不声称闭合恶意 provider 二进制、provider-only 网络
+  allowlist、跨平台 process-tree kill-on-close 或尚未执行的 hostile live canary。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| RED：弱化命令与旧 builder 形态 | 7 failed / 13 passed；确认旧守卫接受 sandbox 降级、额外目录、bypass、缺失 restricted 与 Bash 工具 |
+| 真实适配器与命令守卫最终聚焦 pytest | 69 passed；287 条既有 `datetime.utcnow()` 弃用警告 |
+| 完整 API pytest | 1,190 passed / 2 skipped；13,321 条既有弃用警告 |
+| Python compile / 严格 OpenSpec | 通过 |
+| 独立只读复核 | 发现 `--cd` 未绑定和负向覆盖复合缺失；两项均已修复并复跑最终门禁 |
+
+## Isolate subprocess environments and redact persisted child evidence
+
+**日期:** 2026-09-02
+
+### 变更
+
+- 新建单任务 `agenthub-subprocess-environment-isolation` OpenSpec，将 FastAPI 控制面
+  环境改为显式子进程角色白名单，不再默认传给 Codex、Claude Code、Claude CLI
+  Planner、Preview、staging build、本地静态服务或相关 CLI 可用性探针。
+- 项目进程只保留便携运行时变量和明确公开的 `VITE_`、`NEXT_PUBLIC_`、`PUBLIC_`
+  前缀；Codex 与 Claude 分别只获得自身 provider 凭据、配置、代理和证书变量。
+  环境键按大小写不敏感匹配，同时保留 Windows 原键名、`pnpm.cmd`、PATH 和 CLI
+  登录/配置发现行为。
+- Adapter event、`TaskRun.error_message`、Preview 诊断和 Deployment build log 在持久化
+  前统一脱敏精确环境密钥值、短值、Base URL 内嵌凭据、authorization bearer 与常见
+  secret assignment；普通诊断文本和事件/响应结构不变。
+- 独立只读复核发现 Claude Planner、Codex/Claude version probe、runtime provider
+  health probe 与 TaskRun 错误字段旁路，以及 `ANTHROPIC_AUTH_TOKEN`、
+  `NODE_EXTRA_CA_CERTS` 兼容缺口；均已加入同一角色环境策略和回归测试。
+- 明确 selected-provider credential 是受信 CLI 的必要权限；证据脱敏用于防止意外回显，
+  不宣称抵御 provider CLI 对自身凭据的任意变换或替代 OS/容器隔离。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| 子进程环境与相邻持久化聚焦 pytest | 208 passed；1,221 条既有 `datetime.utcnow()` 弃用警告 |
+| 最终环境/CLI probe 聚焦 pytest | 50 passed；206 条既有弃用警告 |
+| 完整 API pytest | 1,165 passed / 2 skipped；13,320 条既有弃用警告 |
+| Web lint / TypeScript / Vitest | 通过；13 files / 102 tests passed |
+| Demo TypeScript / demo-api | 通过；demo-api 5 passed |
+| `openspec validate agenthub-subprocess-environment-isolation --strict` | 通过 |
+| 独立只读补丁复核 | 发现的 probe、错误字段与兼容旁路已修复；任意凭据变换和 OS containment 明确留在后续安全边界 |
+
+## Refresh audited development and test dependencies
+
+**日期:** 2026-09-01
+
+### 变更
+
+- 新建单任务 `agenthub-development-toolchain-security-refresh` OpenSpec，闭合完整
+  pnpm 审计中 14 high、4 moderate、1 low、0 critical 的 19 条开发/测试工具链告警；
+  生产审计继续保持为 0。
+- Demo Vite 的 manifest floor 从 7.3.0 提升到 7.3.6；不迁移到 Vite 8。锁文件解析
+  Vite 7.3.6 与 esbuild 0.28.2，保留既有 React 插件、开发服务器和 `dist` 构建路径。
+- Web 工具链在现有兼容主版本内更新到 Vitest 4.1.11、ESLint 9.39.5 和 jsdom
+  27.4.0；对应树解析 Vite 8.0.16、js-yaml 4.3.2、ws 8.21.3 和
+  brace-expansion 1.1.18 / 5.0.9。
+- pnpm 的固定 peer/transitive 快照不会由定向 update 自动重选，因此仅对已审计的
+  Vite 8.0.12、PostCSS 8.5.14、nanoid 3.3.12 和 brace-expansion 5.0.6 添加
+  精确版本 override；最终开发 PostCSS 为 8.5.26、nanoid 为 3.3.18。
+- 根 manifest 声明 Vite、jsdom 和 Vitest 的共同 Node 引擎边界
+  `^20.19.0 || ^22.12.0 || >=24.0.0`；完整门禁使用 conda `agent` 的 Node 25.7。
+- 本机全局 npm 前缀的 Corepack 目录受 ACL 保护，无法由非管理员原位替换。改为在
+  用户目录安装 Corepack 0.34.5，并由其重建 `E:\NodeJs` 的 pnpm shims；普通
+  `pnpm --version` 现返回 10.33.4，未设置 `COREPACK_INTEGRITY_KEYS=0` 或其他签名旁路。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| 基线完整 `pnpm audit` | exit 1；14 high / 4 moderate / 1 low / 0 critical |
+| 最终完整 `pnpm audit` | exit 0；630 个依赖，所有严重级别为 0 |
+| 最终 `pnpm audit --prod` | exit 0；74 个生产依赖，所有严重级别为 0 |
+| 支持运行时冻结安装 | Node 25.7 / pnpm 10.33.4；通过 |
+| Demo check / production build | 通过；Vite 7.3.6，29 modules transformed，`dist` 正常输出 |
+| Web lint / TypeScript / Vitest | 通过；13 files / 102 tests passed |
+| Next production build | 通过；现有 App Router 路由完成构建 |
+| 完整 `pnpm check` | 通过 |
+| 完整 `pnpm test` | Web 102 passed；API 1,152 passed / 2 skipped；demo-api 5 passed |
+| Demo 运行时 smoke | HTTP 200；仅监听 127.0.0.1:4187；Vite HMR client、React entry 和 root 均存在 |
+| 普通 pnpm / Corepack shim | `pnpm --version` 10.33.4；签名 keyid 错误不再复现 |
+| 独立只读补丁复核 | 任务状态同步后无漏洞旁路、override 失效、Node 边界或兼容回归发现 |
+
+## Refresh audited Web production dependencies
+
+**日期:** 2026-09-01
+
+### 变更
+
+- 新建单任务 `agenthub-production-dependency-security-refresh` OpenSpec，闭合 Web
+  生产依赖审计中 9 high、21 moderate、4 low、0 critical 的 34 项告警。
+- 将 Next.js 与 `eslint-config-next` 的 manifest floor 同步到 16.3.3，当前锁文件解析为
+  16.3.4；其生产依赖解析为 PostCSS 8.5.23、nanoid 3.3.18 和 sharp 0.35.4。
+- 将 Monaco Editor 升级到 0.56.0，并通过根 pnpm override 将 DOMPurify 固定在
+  3.4.13，避免 Monaco 固定的 3.4.8 仍落入后续 sanitizer advisories。
+- 刷新后的 Next 树暴露 `@babel/core@7.29.0` source-map 任意文件读取 low 告警；
+  使用第二个根 override 固定 Babel 7.29.6，保留 Babel 7 兼容边界而不升级到 Babel 8。
+- Next 16.3.4 production build 同步更新受版本管理的 `next-env.d.ts`，加入当前
+  production route 与 root-params 类型引用；没有手写兼容 shim 或应用 API 变更。
+- 不混入应用功能、UTC 迁移、结构拆分或无关直接依赖升级。完整依赖审计仍记录开发/
+  测试工具链告警，留给后续独立 OpenSpec，不将生产审计归零误表述为全依赖归零。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| 基线 `pnpm audit --prod` | exit 1；9 high / 21 moderate / 4 low / 0 critical |
+| 最终 `pnpm audit --prod` | exit 0；critical/high/moderate/low/info 全部为 0 |
+| `pnpm install --frozen-lockfile` | 通过；manifest、override 与 lockfile 一致 |
+| Web lint / TypeScript | 通过 |
+| Web Vitest | 13 files / 102 tests passed |
+| Next 16.3.4 production build | 通过；7 个 App Router 路由完成静态/动态构建 |
+| 完整 `pnpm test` | Web 102 passed；API 1,152 passed / 2 skipped；demo-api 5 passed |
+| 完整 `pnpm check` | 通过 |
+| 条件性 API skip 复核 | POSIX exact-case 与 Windows 瞬态目录位两项环境条件 skip；158 passed / 2 skipped |
+| 完整开发/测试依赖审计 | 仍有 14 high / 4 moderate / 1 low，仅位于 Vite/Vitest、ESLint、jsdom 等工具链路径 |
+| 独立只读补丁复核 | 无生产漏洞旁路、override 失效或 Next/Monaco/React 兼容回归发现 |
+
 ## Prove current baseline delivery readiness
 
 **日期:** 2026-08-31

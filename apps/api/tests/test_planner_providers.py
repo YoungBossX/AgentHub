@@ -16,6 +16,7 @@ from app.planner_providers import (
     OpenAICompatibleChatPlannerProvider,
     OpenAIResponsesPlannerProvider,
     PlannerProviderError,
+    SubprocessPlannerCommandRunner,
     get_planner_provider_protocol,
     get_planner_provider_preset,
     list_planner_provider_protocols,
@@ -25,6 +26,31 @@ from app.planner_providers import (
     resolve_planner_provider,
     validate_planner_provider_base_url,
 )
+
+
+def test_claude_planner_subprocess_receives_only_claude_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "claude-secret-value")
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-secret-value")
+    monkeypatch.setenv("AGENTHUB_DATABASE_URL", "sqlite:///private.sqlite3")
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("app.planner_providers.subprocess.run", fake_run)
+
+    result = SubprocessPlannerCommandRunner().run(["claude", "--print"], timeout=10)
+
+    assert result.returncode == 0
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["ANTHROPIC_API_KEY"] == "claude-secret-value"
+    assert "OPENAI_API_KEY" not in env
+    assert "AGENTHUB_DATABASE_URL" not in env
 
 
 def test_disabled_planner_provider_records_disabled_source() -> None:

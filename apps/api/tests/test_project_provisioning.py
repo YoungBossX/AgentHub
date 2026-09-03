@@ -101,6 +101,28 @@ def test_project_provisioning_apply_scaffolds_registers_targets_and_activates_se
         assert (selected_root / "frontend" / "src" / "App.tsx").exists()
         assert (selected_root / "frontend" / "vite.config.ts").exists()
         package_json = json.loads((selected_root / "frontend" / "package.json").read_text())
+        assert package_json["packageManager"] == "pnpm@10.33.4"
+        assert package_json["dependencies"] == {
+            "@vitejs/plugin-react": "5.2.0",
+            "react": "19.2.6",
+            "react-dom": "19.2.6",
+            "typescript": "5.9.3",
+            "vite": "7.3.6",
+        }
+        assert package_json["devDependencies"] == {
+            "@types/node": "24.12.4",
+            "@types/react": "19.2.14",
+            "@types/react-dom": "19.2.3",
+            "vitest": "4.1.11",
+        }
+        assert (
+            selected_root / "backend" / "requirements.txt"
+        ).read_text().splitlines() == [
+            "fastapi==0.121.3",
+            "httpx==0.28.1",
+            "uvicorn[standard]==0.38.0",
+            "pytest==8.4.2",
+        ]
         app_tsconfig = json.loads((selected_root / "frontend" / "tsconfig.app.json").read_text())
         node_tsconfig = json.loads((selected_root / "frontend" / "tsconfig.node.json").read_text())
         assert "@types/node" in package_json["devDependencies"]
@@ -199,6 +221,10 @@ def test_project_provisioning_apply_repairs_agenthub_scaffold_missing_backend_ta
         (selected_root / "frontend" / "src" / "App.tsx").write_text(
             "export default function App() { return null }\n"
         )
+        existing_package_json = '{"dependencies":{"react":"18.3.1"}}\n'
+        (selected_root / "frontend" / "package.json").write_text(
+            existing_package_json
+        )
         (selected_root / "backend" / "app").mkdir(parents=True)
         (selected_root / "backend" / "app" / "main.py").write_text(
             "from fastapi import FastAPI\n"
@@ -241,6 +267,12 @@ def test_project_provisioning_apply_repairs_agenthub_scaffold_missing_backend_ta
         ]
         assert body["session"]["activeFrontendTargetId"] == "external-frontend-pomodoro-app"
         assert body["session"]["activeBackendTargetId"] == "external-backend-pomodoro-app"
+        assert (selected_root / "frontend" / "package.json").read_text() == (
+            existing_package_json
+        )
+        assert (selected_root / "backend" / "requirements.txt").read_text() == (
+            "fastapi\n"
+        )
         targets = client.get(f"/workspaces/{workspace['id']}/external-targets").json()
         assert [target["targetId"] for target in targets] == [
             "external-frontend-pomodoro-app",

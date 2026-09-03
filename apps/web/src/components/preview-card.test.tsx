@@ -66,6 +66,23 @@ describe("PreviewCard", () => {
 
     const frame = screen.getByTitle("Vite React 预览")
     expect(frame.getAttribute("src")).toBe("http://127.0.0.1:5173")
+    expect(frame.getAttribute("sandbox")).toBe("allow-forms allow-same-origin allow-scripts")
+    expect(frame.getAttribute("referrerpolicy")).toBe("no-referrer")
+    expect(frame.getAttribute("allow")).toBe(
+      "camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; usb 'none'; clipboard-read 'none'; clipboard-write 'none'",
+    )
+    for (const forbiddenToken of [
+      "allow-downloads",
+      "allow-modals",
+      "allow-popups",
+      "allow-popups-to-escape-sandbox",
+      "allow-pointer-lock",
+      "allow-presentation",
+      "allow-top-navigation",
+      "allow-top-navigation-by-user-activation",
+    ]) {
+      expect(frame.getAttribute("sandbox")?.split(" ")).not.toContain(forbiddenToken)
+    }
     expect(screen.getAllByText("127.0.0.1:5173").length).toBeGreaterThan(0)
 
     fireEvent.click(screen.getByRole("button", { name: "刷新面板" }))

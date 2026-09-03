@@ -1,4 +1,5 @@
 import asyncio
+import json
 from collections.abc import AsyncIterator
 
 import pytest
@@ -14,6 +15,7 @@ from app.adapters import (
     AgentEvent,
     AgentRunRequest,
     run_adapter_event_stream as _run_adapter_event_stream,
+    persist_agent_event,
 )
 from app.events import format_session_cursor, list_session_events
 from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
@@ -135,6 +137,31 @@ def create_task_run(db: DbSession) -> tuple[Session, TaskRun]:
     db.commit()
     db.refresh(task_run)
     return session, task_run
+
+
+def test_persist_agent_event_redacts_sensitive_environment_values(
+    db: DbSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _, task_run = create_task_run(db)
+    monkeypatch.setenv("CUSTOM_SERVICE_TOKEN", "custom-secret-value")
+
+    stored = persist_agent_event(
+        db,
+        AgentEvent(
+            type="message.delta",
+            taskRunId=task_run.id,
+            payload={
+                "text": "prefix custom-secret-value token=inline-secret",
+                "tokenCount": 12,
+            },
+        ),
+    )
+
+    assert json.loads(stored.payload_json) == {
+        "text": "prefix [redacted] token=[redacted]",
+        "tokenCount": 12,
+    }
 
 
 def invalidate_session_relationship(
@@ -923,6 +950,43 @@ async def test_adapter_terminal_event_retains_scope_runtime_without_decision(
     assert task_run.state == expected_state
     assert task_run_scope.get_task_run_scope_runtime_context(task_run.id) is not None
     task_run_scope.clear_task_run_scope_runtime_context(task_run.id)
+
+
+@pytest.mark.anyio
+async def test_adapter_error_redacts_task_run_error_message(
+    db: DbSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session, task_run = create_task_run(db)
+    monkeypatch.setenv("CUSTOM_SERVICE_TOKEN", "custom-secret-value")
+
+    class SecretErrorAdapter(FakeAdapter):
+        async def streamEvents(self, run_id: str) -> AsyncIterator[AgentEvent]:
+            yield AgentEvent(
+                type="error",
+                taskRunId=run_id.replace("fake-", ""),
+                sequence=1,
+                payload={
+                    "code": "TEST_FAILURE",
+                    "message": "Adapter printed custom-secret-value.",
+                },
+            )
+
+    request = AgentRunRequest(
+        taskRunId=task_run.id,
+        sessionId=session.id,
+        workspaceId="workspace-id",
+        worktreePath=task_run.worktree_path,
+        agentId=task_run.agent_id,
+        adapterType="codex",
+        instruction="Fail without leaking secrets.",
+    )
+
+    persisted = await run_adapter_event_stream(db, SecretErrorAdapter(), request)
+
+    db.refresh(task_run)
+    assert task_run.error_message == "Adapter printed [redacted]."
+    assert json.loads(persisted[0].payload_json)["message"] == "Adapter printed [redacted]."
 
 
 @pytest.mark.anyio

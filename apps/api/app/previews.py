@@ -21,6 +21,7 @@ from app.events import append_task_run_event
 from app.models import Artifact, Preview, Task, TaskRun, Workspace, utc_now
 from app.models import Session as AgentHubSession
 from app.provider_evidence import provider_evidence_for_task_run
+from app.process_environment import project_process_env, redact_process_evidence
 from app.scheduler import DEPENDENCY_COMPLETE_STATUSES, dependency_ids_for_task
 from app.target_registry import (
     DEMO_FRONTEND_TARGET_ID,
@@ -576,7 +577,7 @@ def command_text(command: list[str]) -> str:
 
 
 def _preview_process_env(base_env: Optional[Mapping[str, str]] = None) -> dict[str, str]:
-    env = dict(os.environ if base_env is None else base_env)
+    env = project_process_env(os.environ if base_env is None else base_env)
     env.pop("NODE", None)
 
     current_path = env.get("PATH", "")
@@ -667,7 +668,8 @@ def _diagnostics_metadata(diagnostics: PreviewProcessDiagnostics) -> dict[str, o
 
 
 def _compact_log_excerpt(value: str, limit: int = 1000) -> str:
-    text = " ".join(value.replace("\r", "\n").split())
+    safe_value = redact_process_evidence(value)
+    text = " ".join(safe_value.replace("\r", "\n").split())
     if len(text) <= limit:
         return text
     return text[:limit].rstrip() + "..."

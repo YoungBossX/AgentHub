@@ -12,6 +12,7 @@ from app.planner_providers import (
     validate_planner_provider_base_url,
 )
 from app.provider_configs import ProviderConfig
+from app.process_environment import adapter_process_env
 
 
 CLI_COMMANDS_BY_ADAPTER = {
@@ -95,12 +96,16 @@ def check_runtime_role_provider(
         )
 
     try:
+        environment_profile = (
+            "codex" if provider.adapter_type == "codex" else "claude_code"
+        )
         subprocess.run(
             [executable, "--version"],
             capture_output=True,
             check=True,
             text=True,
             timeout=3,
+            env=adapter_process_env(environment_profile),
         )
     except (subprocess.SubprocessError, OSError):
         return ProviderHealthCheckResult(

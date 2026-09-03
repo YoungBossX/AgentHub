@@ -10,6 +10,7 @@ from sqlmodel import SQLModel, create_engine, select
 
 from app import events as events_module
 from app import main as main_module
+from app.routes import session_events as session_event_routes
 from app.events import (
     append_task_run_event,
     list_session_events,
@@ -217,6 +218,12 @@ def test_task_run_events_append_and_query_by_sequence(client: TestClient) -> Non
         )
         assert [event.sequence for event in replayed] == [2]
         assert replayed[0].event_type == "message.delta"
+        assert [
+            event.id
+            for event in list_session_events(db, session_id=session.id, limit=1)
+        ] == [first.id]
+        with pytest.raises(ValueError, match="limit must be positive"):
+            list_session_events(db, session_id=session.id, limit=0)
 
     response = client.get(
         f"/sessions/{session.id}/events?after={events_module.format_session_cursor(first)}",
@@ -462,6 +469,8 @@ async def test_stream_registers_before_backlog_and_deduplicates_queued_events(
             *,
             session_id: str,
             after: str | None,
+            through: str | None = None,
+            limit: int | None = None,
         ) -> list:
             nonlocal replay_calls
             replay_calls += 1
@@ -475,6 +484,8 @@ async def test_stream_registers_before_backlog_and_deduplicates_queued_events(
                 replay_db,
                 session_id=session_id,
                 after=after,
+                through=through,
+                limit=limit,
             )
 
         monkeypatch.setattr(main_module, "list_session_events", replay_with_event_published_during_query)
@@ -492,6 +503,7 @@ async def test_stream_registers_before_backlog_and_deduplicates_queued_events(
         publish_event(session.id, third)
         third_frame = await asyncio.wait_for(anext(body), timeout=1)
         await body.aclose()
+        assert not events_module._session_subscribers.get(session.id)
 
     assert registered_before_backlog == [True]
     assert '"id":"' + first_id + '"' in first_frame
@@ -560,6 +572,116 @@ async def test_stream_replays_persisted_order_when_notifications_are_reversed(
 
     assert '"id":"' + first_id + '"' in first_frame
     assert '"id":"' + second_id + '"' in second_frame
+
+
+@pytest.mark.anyio
+async def test_stream_replays_large_backlog_in_bounded_batches(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(session_event_routes, "SESSION_EVENT_REPLAY_BATCH_SIZE", 2)
+
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Session one")).one()
+        agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        task = Task(
+            session_id=session.id,
+            title="Bounded replay task",
+            intent_type="frontend_change",
+            assigned_agent_id=agent.id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        task_run = TaskRun(
+            task_id=task.id,
+            agent_id=agent.id,
+            state="created",
+            worktree_path=session.worktree_path,
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+
+        persisted = [
+            append_task_run_event(db, task_run.id, event_type)
+            for event_type in ("task.state", "message.delta", "completed")
+        ]
+        persisted_ids = [event.id for event in persisted]
+        expected_high_water = events_module.format_session_cursor(persisted[-1])
+        observed_limits: list[int | None] = []
+        observed_high_water_cursors: list[str | None] = []
+        late_event_id: str | None = None
+
+        def recording_replay(
+            replay_db: DbSession,
+            *,
+            session_id: str,
+            after: str | None,
+            through: str | None = None,
+            limit: int | None = None,
+        ) -> list[TaskRunEvent]:
+            nonlocal late_event_id
+            if late_event_id is None:
+                late_event_id = append_task_run_event(
+                    db,
+                    task_run.id,
+                    "post-snapshot.event",
+                ).id
+            observed_limits.append(limit)
+            observed_high_water_cursors.append(through)
+            replay_kwargs: dict[str, object] = {
+                "after": after,
+                "limit": limit,
+            }
+            if through is not None:
+                replay_kwargs["through"] = through
+            events = events_module.list_session_events(
+                replay_db,
+                session_id=session_id,
+                **replay_kwargs,
+            )
+            return events if limit is None else events[:limit]
+
+        monkeypatch.setattr(main_module, "list_session_events", recording_replay)
+        response = await main_module.stream_session_events(
+            session.id,
+            after=None,
+            last_event_id=None,
+            stream=False,
+            db=db,
+        )
+        body = response.body_iterator
+        frames = [frame async for frame in body]
+        await body.aclose()
+
+        monkeypatch.setattr(
+            main_module,
+            "list_session_events",
+            events_module.list_session_events,
+        )
+        followup_response = await main_module.stream_session_events(
+            session.id,
+            after=expected_high_water,
+            last_event_id=None,
+            stream=False,
+            db=db,
+        )
+        followup_body = followup_response.body_iterator
+        followup_frames = [frame async for frame in followup_body]
+        await followup_body.aclose()
+
+    assert observed_limits == [2, 2]
+    assert observed_high_water_cursors == [expected_high_water, expected_high_water]
+    assert len(frames) == len(persisted_ids)
+    assert all(
+        f'"id":"{event_id}"' in frame
+        for event_id, frame in zip(persisted_ids, frames, strict=True)
+    )
+    assert late_event_id is not None
+    assert all(f'"id":"{late_event_id}"' not in frame for frame in frames)
+    assert len(followup_frames) == 1
+    assert f'"id":"{late_event_id}"' in followup_frames[0]
 
 
 @pytest.mark.anyio

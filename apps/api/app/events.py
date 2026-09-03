@@ -4,6 +4,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from threading import Lock
 from typing import AsyncIterator, DefaultDict, Optional
 from uuid import UUID
 
@@ -14,10 +15,45 @@ from sqlmodel import func, select
 from app.models import Task, TaskRun, TaskRunEvent
 
 
+class SessionEventWakeup:
+    """Coalesce cross-thread notifications without retaining event payloads."""
+
+    maxsize = 1
+
+    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
+        self._loop = loop
+        self._event = asyncio.Event()
+        self._state_lock = Lock()
+        self._pending = False
+
+    def notify(self) -> None:
+        with self._state_lock:
+            if self._pending:
+                return
+            self._pending = True
+        try:
+            self._loop.call_soon_threadsafe(self._event.set)
+        except RuntimeError:
+            with self._state_lock:
+                self._pending = False
+
+    async def get(self) -> None:
+        await self._event.wait()
+        with self._state_lock:
+            self._event.clear()
+            self._pending = False
+
+    def qsize(self) -> int:
+        with self._state_lock:
+            return int(self._pending)
+
+    def empty(self) -> bool:
+        return self.qsize() == 0
+
+
 @dataclass(frozen=True)
 class SessionEventSubscriber:
-    loop: asyncio.AbstractEventLoop
-    queue: asyncio.Queue[TaskRunEvent]
+    queue: SessionEventWakeup
 
 
 _session_subscribers: DefaultDict[str, list[SessionEventSubscriber]] = defaultdict(list)
@@ -131,6 +167,9 @@ def list_session_events(
     db: DbSession,
     session_id: str,
     after: str | None = None,
+    *,
+    through: str | None = None,
+    limit: int | None = None,
 ) -> list[TaskRunEvent]:
     statement = (
         select(TaskRunEvent)
@@ -149,7 +188,35 @@ def list_session_events(
                 ),
             )
         )
-    return db.exec(statement.order_by(TaskRunEvent.created_at, TaskRunEvent.id)).all()
+    if through is not None:
+        created_at, event_id = parse_session_cursor(through)
+        statement = statement.where(
+            or_(
+                TaskRunEvent.created_at < created_at,
+                and_(
+                    TaskRunEvent.created_at == created_at,
+                    TaskRunEvent.id <= event_id,
+                ),
+            )
+        )
+    statement = statement.order_by(TaskRunEvent.created_at, TaskRunEvent.id)
+    if limit is not None:
+        if limit < 1:
+            raise ValueError("Session event replay limit must be positive")
+        statement = statement.limit(limit)
+    return db.exec(statement).all()
+
+
+def latest_session_event_cursor(db: DbSession, session_id: str) -> str | None:
+    event = db.exec(
+        select(TaskRunEvent)
+        .join(TaskRun)
+        .join(Task)
+        .where(Task.session_id == session_id)
+        .order_by(TaskRunEvent.created_at.desc(), TaskRunEvent.id.desc())
+        .limit(1)
+    ).first()
+    return format_session_cursor(event) if event is not None else None
 
 
 def session_id_for_task_run(db: DbSession, task_run_id: str) -> Optional[str]:
@@ -162,12 +229,9 @@ def session_id_for_task_run(db: DbSession, task_run_id: str) -> Optional[str]:
 
 def publish_event(session_id: str, event: TaskRunEvent) -> None:
     for subscriber in list(_session_subscribers.get(session_id, ())):
-        try:
-            subscriber.loop.call_soon_threadsafe(subscriber.queue.put_nowait, event)
-        except RuntimeError:
-            # A response loop can close between the subscriber snapshot and
-            # notification. Persisted replay remains the source of truth.
-            continue
+        # The event itself is already durable. Keep only one payload-free wake
+        # per subscriber; the stream replays every row from SQLite by cursor.
+        subscriber.queue.notify()
 
 
 def encode_sse_event(event: TaskRunEvent) -> str:
@@ -197,12 +261,10 @@ def event_is_after_session_cursor(event: TaskRunEvent, cursor: str | None) -> bo
 @asynccontextmanager
 async def subscribe_session_events(
     session_id: str,
-) -> AsyncIterator[asyncio.Queue[TaskRunEvent]]:
-    queue: asyncio.Queue[TaskRunEvent] = asyncio.Queue()
-    subscriber = SessionEventSubscriber(
-        loop=asyncio.get_running_loop(),
-        queue=queue,
-    )
+) -> AsyncIterator[SessionEventWakeup]:
+    loop = asyncio.get_running_loop()
+    queue = SessionEventWakeup(loop)
+    subscriber = SessionEventSubscriber(queue=queue)
     _session_subscribers[session_id].append(subscriber)
     try:
         yield queue

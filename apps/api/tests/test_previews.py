@@ -95,6 +95,9 @@ def test_preview_process_env_prefers_system_node_over_codex_bundled_node() -> No
     env = _preview_process_env(
         {
             "NODE": "/Applications/Codex.app/Contents/Resources/node",
+            "OPENAI_API_KEY": "openai-secret-value",
+            "AGENTHUB_DATABASE_URL": "sqlite:///private.sqlite3",
+            "VITE_PUBLIC_API": "http://127.0.0.1:5174",
             "PATH": (
                 "/Applications/Codex.app/Contents/Resources:"
                 "/Users/luotianhang/.npm-global/bin:"
@@ -104,6 +107,9 @@ def test_preview_process_env_prefers_system_node_over_codex_bundled_node() -> No
     )
 
     assert "NODE" not in env
+    assert "OPENAI_API_KEY" not in env
+    assert "AGENTHUB_DATABASE_URL" not in env
+    assert env["VITE_PUBLIC_API"] == "http://127.0.0.1:5174"
     paths = env["PATH"].split(":")
     assert "/Applications/Codex.app/Contents/Resources" not in paths
     assert paths.index("/Users/luotianhang/.npm-global/bin") < paths.index("/usr/local/bin")
@@ -603,6 +609,37 @@ def test_unhealthy_preview_persists_health_status_without_ready_event(
         )
     ).all()
     assert len(failed_events) == 1
+
+
+def test_unhealthy_preview_redacts_diagnostics_before_persistence(
+    db: DbSession,
+    demo_worktree: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    task_run_id = create_task_run_fixture(db, demo_worktree)
+    monkeypatch.setenv("CUSTOM_SERVICE_TOKEN", "custom-secret-value")
+    runner = RecordingRunner(
+        diagnostics=PreviewProcessDiagnostics(
+            running=False,
+            exit_code=1,
+            output_tail="vite leaked custom-secret-value",
+        )
+    )
+    service = PreviewService(
+        process_runner=runner,
+        health_checker=StaticHealthChecker(healthy=False),
+        port_allocator=lambda: 4328,
+        health_attempts=1,
+    )
+
+    stored = service.start_task_run_preview(db, task_run_id)
+
+    artifact = db.get(Artifact, stored.artifact_id)
+    assert artifact is not None
+    metadata = json.loads(artifact.meta_json)
+    assert metadata["processDiagnostics"]["outputTail"] == "vite leaked [redacted]"
+    assert "custom-secret-value" not in artifact.meta_json
+    assert "custom-secret-value" not in str(stored.status_reason)
 
 
 def test_start_preview_returns_quickly_when_process_exits(

@@ -59,6 +59,7 @@ Message
 | `apps/api/app/planning_tasks.py` | Orchestrator/direct assignment/fallback Task 图构建与元数据生成 |
 | `apps/api/app/run_engine.py` | TaskRun 执行入口，连接 adapter、diff/review/preview/deploy 收尾和后台运行 |
 | `apps/api/app/provider_gateway.py` | provider 选择、健康、容量、熔断、fallback 证据和错误分类 |
+| `apps/api/app/process_environment.py` | 按子进程角色构造最小环境，并在证据持久化前脱敏已配置密钥 |
 | `apps/api/app/codex_adapter.py` | Codex CLI 适配器 |
 | `apps/api/app/claude_code_adapter.py` | Claude Code CLI 适配器 |
 | `apps/api/app/scripted_mock.py` | 确定性 fallback 适配器，会产生真实文件修改和 Diff |
@@ -116,11 +117,18 @@ AgentHub 当前采用“本地可验证、边界保守”的可靠性策略：
 - 每个 Session 一个 worktree，不把不同 Session 写到同一个工作区。
 - Adapter 只能在分配的 worktree 或 target allowed path 内工作。
 - `.git/`、`.env*`、`node_modules/`、`secrets/` 等路径受保护。
+- Preview、staging build 和本地静态服务使用项目进程环境白名单，不继承 provider、
+  数据库或 AgentHub 控制面密钥；Codex、Claude Code、Claude Planner 及 CLI 探针只接收
+  对应 provider 的运行时环境。公开前缀变量由配置者负责保证确实可公开。
+- Adapter、Preview 和 Deployment 的子进程输出在进入事件、TaskRun 错误或 artifact
+  前执行精确敏感值与 secret assignment 脱敏；这属于意外回显防护，不替代 OS 沙箱，
+  也不宣称阻止受信 provider CLI 主动变换自身凭据。
 - Agent 执行期不静默安装依赖。
 - TaskRun 终态会释放 target lock，避免旧运行长期阻塞。
 - Diff/Review/Preview/Deploy 失败会写入事件和诊断，而不是只在后台日志里消失。
-- SSE 使用标准消息帧；重连优先读取 `Last-Event-ID`，内存 queue 是同进程低延迟快路径，
-  流同时每秒从 SQLite 按 Session 游标重放，并在空闲 15 秒后发送无载荷注释心跳。
+- SSE 使用标准消息帧；重连优先读取 `Last-Event-ID`。同进程低延迟快路径为每订阅者
+  一个无 payload 的合并 wake，SQLite 回放按固定 high-water cursor 分成最多 100 行的
+  批次；流同时每秒轮询持久事件，并在空闲 15 秒后发送无载荷注释心跳。
 - ScriptedMockAdapter 是显式 fallback，不伪装成真实 Codex/Claude 成功。
 
 ## 技术选型理由

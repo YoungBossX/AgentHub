@@ -1,4 +1,5 @@
 import json
+import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -19,6 +20,7 @@ from app.deployments import (
     LocalStagingDeployProvider,
     ManualExternalDeployProvider,
     MockDeployProvider,
+    SubprocessCommandRunner,
     UnavailableExternalDeployProvider,
     StagingServerProcess,
     StaticDirectoryServer,
@@ -220,12 +222,15 @@ def test_static_directory_server_uses_current_python_interpreter(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
+    captured_kwargs: dict[str, object] = {}
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-secret-value")
 
     class FakeProcess:
         pid = 5151
 
     def fake_popen(command, **kwargs):
         calls.append(command)
+        captured_kwargs.update(kwargs)
         return FakeProcess()
 
     monkeypatch.setattr("app.deployments.subprocess.Popen", fake_popen)
@@ -238,6 +243,37 @@ def test_static_directory_server_uses_current_python_interpreter(
     assert process.pid == 5151
     assert calls[0][0] == sys.executable
     assert process.command.startswith(sys.executable)
+    env = captured_kwargs["env"]
+    assert isinstance(env, dict)
+    assert "OPENAI_API_KEY" not in env
+
+
+def test_staging_build_runner_excludes_control_plane_secrets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-secret-value")
+    monkeypatch.setenv("AGENTHUB_DATABASE_URL", "sqlite:///private.sqlite3")
+    monkeypatch.setenv("VITE_PUBLIC_API", "http://127.0.0.1:5174")
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+
+    import app.deployments as deployments_module
+
+    monkeypatch.setattr(deployments_module.subprocess, "run", fake_run)
+
+    result = SubprocessCommandRunner().run("pnpm build", tmp_path)
+
+    assert result.exit_code == 0
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert "OPENAI_API_KEY" not in env
+    assert "AGENTHUB_DATABASE_URL" not in env
+    assert env["VITE_PUBLIC_API"] == "http://127.0.0.1:5174"
 
 
 def test_mock_deploy_persists_deployment_artifact_and_ready_event(tmp_path: Path) -> None:
@@ -475,6 +511,39 @@ def test_local_staging_provider_reports_failed_build_without_ready_artifact(
         metadata = json.loads(artifact.meta_json)
         assert metadata["statusHistory"][-1]["status"] == "failed"
         assert "Build command failed" in "\n".join(metadata["logs"])
+
+
+def test_local_staging_redacts_build_output_before_persistence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CUSTOM_SERVICE_TOKEN", "custom-secret-value")
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, _ = create_preview_fixture(db, worktree)
+        provider = LocalStagingDeployProvider(
+            command_runner=RecordingBuildRunner(
+                exit_code=1,
+                stdout="build exposed custom-secret-value",
+                stderr="token=inline-secret",
+                create_output=False,
+            ),
+            static_server=RecordingStaticServer(),
+            health_checker=StaticHealthChecker(),
+            port_allocator=lambda: 45221,
+        )
+        service = DeployService(providers=(provider,))
+
+        stored = service.create_deployment(db, preview_id, provider_id="local_staging")
+        artifact = db.get(Artifact, stored.artifact_id)
+
+        assert artifact is not None
+        assert "custom-secret-value" not in artifact.meta_json
+        assert "inline-secret" not in artifact.meta_json
+        logs = json.loads(artifact.meta_json)["logs"]
+        assert "build exposed [redacted]" in logs
+        assert "token=[redacted]" in logs
 
 
 def test_local_staging_provider_reports_missing_output_without_ready_artifact(

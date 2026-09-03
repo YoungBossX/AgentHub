@@ -725,11 +725,16 @@ def test_runtime_provider_health_checks_local_cli_with_version_probe(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[list[str]] = []
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-secret-value")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "claude-secret-value")
+    monkeypatch.setenv("AGENTHUB_DATABASE_URL", "sqlite:///private.sqlite3")
 
     monkeypatch.setattr("app.provider_health.shutil.which", lambda command: f"/bin/{command}")
 
-    def fake_run(command: list[str], **_: object) -> object:
+    def fake_run(command: list[str], **kwargs: object) -> object:
         calls.append(command)
+        captured.update(kwargs)
         return object()
 
     monkeypatch.setattr("app.provider_health.subprocess.run", fake_run)
@@ -760,6 +765,11 @@ def test_runtime_provider_health_checks_local_cli_with_version_probe(
     assert result.auth_status == "available"
     assert result.availability == "available"
     assert calls == [["/bin/codex", "--version"]]
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["OPENAI_API_KEY"] == "openai-secret-value"
+    assert "ANTHROPIC_API_KEY" not in env
+    assert "AGENTHUB_DATABASE_URL" not in env
 
 
 def _workspace(db: DbSession) -> Workspace:

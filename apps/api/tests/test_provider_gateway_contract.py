@@ -1,4 +1,5 @@
 import json
+import subprocess
 from typing import Optional
 
 from sqlalchemy.pool import StaticPool
@@ -310,6 +311,33 @@ def test_provider_health_probe_reports_healthy_cli_without_leaking_path() -> Non
     assert evidence["safeDetails"]["command"] == "codex"
     assert "secret-value" not in evidence["safeDetails"]["output"]
     assert "/Users/demo/.env/bin/codex" not in json.dumps(evidence)
+
+
+def test_default_provider_health_probe_uses_selected_adapter_environment(
+    monkeypatch,
+) -> None:
+    provider = ProviderRegistry().get("local-codex-cli")
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-secret-value")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "claude-secret-value")
+    monkeypatch.setenv("AGENTHUB_DATABASE_URL", "sqlite:///private.sqlite3")
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, stdout="codex 1.0", stderr="")
+
+    monkeypatch.setattr("app.provider_gateway.subprocess.run", fake_run)
+    probe = ProviderHealthProbe(command_lookup=lambda command: "C:/tools/codex.exe")
+
+    health = probe.check_provider(provider)
+
+    assert health.status == "healthy"
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["OPENAI_API_KEY"] == "openai-secret-value"
+    assert "ANTHROPIC_API_KEY" not in env
+    assert "AGENTHUB_DATABASE_URL" not in env
 
 
 def test_provider_health_probe_reports_unavailable_cli() -> None:

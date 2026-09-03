@@ -10,6 +10,8 @@ from typing import Any, Mapping, Protocol
 from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
+from app.process_environment import adapter_process_env, redact_process_evidence
+
 from app.config import Settings, get_settings
 from app.planner_contracts import (
     conversation_outcome_json_schema,
@@ -457,6 +459,7 @@ class SubprocessPlannerCommandRunner:
             text=True,
             timeout=timeout,
             check=False,
+            env=adapter_process_env("claude_code"),
         )
 
 
@@ -540,8 +543,8 @@ class ClaudeCliPlannerProvider:
             )
 
         duration_ms = _duration_ms(started)
-        stderr = _excerpt(completed.stderr or "")
-        stdout = completed.stdout or ""
+        stderr = _excerpt(redact_process_evidence(completed.stderr or ""))
+        stdout = redact_process_evidence(completed.stdout or "")
         if completed.returncode != 0:
             code = _planner_error_code_for_text(stderr or stdout)
             return PlannerProviderResult(
