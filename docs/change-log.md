@@ -1,5 +1,44 @@
 # AgentHub 变更日志
 
+## Refresh final Browserslist security snapshot and Vite peer boundary
+
+**日期:** 2026-09-03
+
+### 变更
+
+- 最终候选完整审计在此前归零后新增报告 Browserslist 4.28.2 的 2 条 high advisory；
+  新建单任务 `agenthub-browserslist-security-refresh`，不沿用已经过时的“审计为 0”结论。
+- source-to-sink 复核确认 Demo React plugin 与 Web lint 配置通过共享 Babel 7 helper
+  使用同一 Browserslist；依赖路径已确认，但未把 advisory 自动升级为运行时可利用结论。
+- 先尝试 pnpm 10.33.4 定向 lock-only 更新；命令不改 manifest 但仍保留 4.28.2，随后
+  才使用条件 override 将 `browserslist <=4.28.6` 映射到首个修复版 4.28.7。
+- fresh resolution 暴露既有 `vite@8.0.12 -> 8.0.16` 全局 override 会改写 peer
+  dependency：Demo plugin 的 Vite 4-8 兼容范围被错误收窄为 Vite 8，产生 peer conflict。
+  当前 override 只作用于 `vitest@4.1.11` 与 `@vitest/mocker@4.1.11`，Demo 继续使用
+  Vite 7.3.6，Web Vitest 继续使用 Vite 8.0.16。
+- 最终候选审计排除了不属于任何 OpenSpec、含过时完成度比例和越界路线图推断的本地
+  `analysis/task-completion-analysis.md`；该文件未进入 Git 历史。构建、pytest cache、
+  `__pycache__` 与本轮可再生临时目录已清理。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| 基线完整 `pnpm audit` | exit 1；2 high，均为 Browserslist advisory |
+| 定向兼容 lock refresh | exit 0、manifest 未变，但仍解析 Browserslist 4.28.2，证明需要条件 override |
+| 最终依赖图 | 唯一 Browserslist 4.28.7；Demo Vite 7.3.6；Vitest/mocker Vite 8.0.16 |
+| pnpm 10.33.4 lock regeneration / frozen install | 通过；不再报告 Vite peer conflict |
+| 完整 / production audit | 均 exit 0；No known vulnerabilities found |
+| Demo check / production build | 通过；Vite 7.3.6，29 modules transformed |
+| Web lint / TypeScript / Vitest / production build | 通过；13 files / 102 tests，Next 16.3.4 build 通过 |
+| 根 `pnpm check` | 在 Node 25.7 且显式 Git Bash PATH 下通过 |
+| 根 `pnpm test` | Web 102 passed；API 1,193 passed / 2 skipped；demo-api 5 passed |
+| 独立只读补丁复核 | 无阻断项；确认无旧 Browserslist、无 importer 漂移或 Vite peer 污染 |
+
+包管理器审计结果只覆盖当前 registry advisory 数据，不证明所有 AgentHub 源码或运行时
+安全问题均不存在。首 PATH Node 22.11.0 低于仓库声明的 22.12.0 floor，因此本轮 Node
+门禁使用 conda `Agent` 的 Node 25.7；pnpm 固定为项目声明的 10.33.4。
+
 ## Bound Session SSE subscriber and replay memory
 
 **日期:** 2026-09-03

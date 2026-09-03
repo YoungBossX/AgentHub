@@ -29,6 +29,15 @@ Expected changes are override metadata, the Browserslist package/snapshot, its
 current data packages, and the `update-browserslist-db` peer-context key.
 Workspace importers and direct dependency manifests must not otherwise change.
 
+Fresh resolution also exposes a compatibility defect in the candidate's prior
+`vite@8.0.12 -> 8.0.16` override: pnpm applies overrides to peer dependencies,
+so `@vitejs/plugin-react@5.2.0` is rewritten from its upstream Vite 4-8 range to
+an exact Vite 8 peer while the Demo intentionally uses Vite 7.3.6. Preserve the
+security-fixed Vite 8 snapshot by scoping the override to its actual
+`vitest@4.1.11` and `@vitest/mocker@4.1.11` parents. The Demo plugin's original
+peer range must remain intact, and frozen installation must report no peer
+conflict.
+
 ## Validation
 
 Use the original complete `pnpm audit` as the security trigger. Verify that

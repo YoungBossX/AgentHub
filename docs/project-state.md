@@ -32,6 +32,7 @@ requirement -> orchestrator plan -> agent execution -> real git diff -> real pre
 | `agenthub-current-baseline-delivery-readiness` | 1/1，Complete | 真实 Codex 有界运行、Windows launcher 修复、全量门禁与候选集审计 |
 | `agenthub-production-dependency-security-refresh` | 1/1，Complete | Web 生产依赖审计从 34 项告警降至 0 |
 | `agenthub-development-toolchain-security-refresh` | 1/1，Complete | 完整开发/测试依赖审计从 19 条 advisory 降至 0；本机 pnpm shim 恢复 |
+| `agenthub-browserslist-security-refresh` | 1/1，Complete | 最终候选审计新增的 2 条 high advisory 闭合；Vite override 不再污染 Demo peer 范围 |
 | `agenthub-subprocess-environment-isolation` | 1/1，Complete | 项目子进程最小环境、provider 环境分离及持久证据脱敏 |
 | `agenthub-real-adapter-execution-containment` | 1/1，Complete | Codex 原生 workspace sandbox 与 Claude restricted/safe file-only 边界由构造器和命令守卫双重强制 |
 | `agenthub-preview-iframe-sandbox` | 1/1，Complete | Preview iframe 最小 sandbox、Permissions Policy 与 no-referrer 边界 |
@@ -202,6 +203,25 @@ override 仅替换 pnpm 保留的已审计脆弱快照，不扩展为无关依�
 `pnpm --version` 返回 10.33.4，未关闭签名校验；受 ACL 保护的全局 Corepack 包未被
 破坏性替换。
 
+### Final Browserslist security refresh
+
+2026-09-03 的最终候选 `pnpm audit` 在此前归零后新增报告 Browserslist 4.28.2 的
+2 条 high advisory。该快照由 Demo `@vitejs/plugin-react` 与 Web
+`eslint-config-next` 经共享 Babel 7 工具链引入；依赖路径得到确认，但没有把 advisory
+路径直接表述为已证明可利用的 AgentHub 运行时漏洞。
+
+pnpm 10.33.4 的定向 lock-only 更新没有重选该兼容 transitive，因此根策略仅将
+`browserslist <=4.28.6` 映射到首个修复版 4.28.7。锁文件最终只有一个 Browserslist
+版本。重新解析同时发现既有全局 Vite override 会把 `@vitejs/plugin-react` 的 Vite 4-8
+peer 范围改写成精确 Vite 8，导致使用 Vite 7.3.6 的 Demo 出现 peer conflict。当前
+override 已收窄到 `vitest@4.1.11` 与 `@vitest/mocker@4.1.11` 两个实际父依赖：Demo
+保持 Vite 7.3.6，Web 测试工具链保持 Vite 8.0.16，冻结安装不再报告 peer conflict。
+
+Node 25.7 / pnpm 10.33.4 下，完整和生产审计均为 0 known vulnerabilities；Demo
+check/build、Web check/102 tests/build、根 `pnpm check` 以及 Web 102 + API 1,193 passed /
+2 skipped + demo-api 5 的完整测试均通过。该结果是包管理器 advisory 快照，不是“项目
+不存在任何安全漏洞”的泛化证明。
+
 ### Production dependency security refresh
 
 2026-09-01 的 fresh `pnpm audit --prod` 在已交付锁文件上发现 34 项 Web 生产依赖
@@ -329,15 +349,14 @@ Agent 运行时的命令与路径护栏。
 
 ## 交付状态
 
-`be48efa` 是本轮候选集之前已交付到 `origin/dev` 与 `origin/main` 的共同基线，包含
-Windows scope 观察修复、SSE heartbeat polling、结构拆分和交付就绪证据。本地分支名、
-工作树测试结果或文档记录都不能单独证明后续候选已远程交付；必须以包含候选的提交及
-`git ls-remote` 回读结果为准。
+`be48efa` 是本轮候选集之前已交付到 `origin/dev` 与 `origin/main` 的共同基线。先行候选
+`fc70f29` 已在 2026-09-03 回读到 `origin/dev`，但 `origin/main` 当时仍为 `be48efa`。
+最终审计随后发现其全局 Vite override 的 peer 范围污染，并完成上述收窄修正；因此
+`fc70f29` 不能单独作为最终修正已交付的证据。
 
-生产/开发依赖安全刷新、子进程环境隔离、真实适配器 containment、Preview iframe
-sandbox、生成项目依赖固定与 SSE backpressure 组成 `be48efa` 之后的下一候选集。文档
-中的通过结果证明相应本地快照；是否已远程交付应按上一段的提交与远程引用证据判断，
-避免该状态说明在提交或推送后立即过期。
+最终候选是否已远程交付，必须以包含当前 Browserslist/Vite 修正的 `fc70f29` 后继提交
+以及 `git ls-remote` 回读为准。本地分支名、工作树测试或本状态文档都不能替代该证据，
+也不能据此推断 `main` 已同步。
 
 ## 历史与维护
 

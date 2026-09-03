@@ -15,6 +15,17 @@ patched release without upgrading unrelated packages.
 - **AND** Demo Vite 7 and the existing Web toolchain retain their current direct
   dependency versions and pass their checks, tests, and production builds
 
+### Requirement: Vite security overrides preserve compatible peer declarations
+
+The patched Vite 8 snapshot SHALL be enforced only for its Vitest owners and
+SHALL NOT rewrite the Demo React plugin's upstream Vite 7-compatible peer range.
+
+#### Scenario: Workspace installation resolves peers
+
+- **WHEN** pnpm performs a frozen workspace installation
+- **THEN** Vitest and its mocker resolve Vite 8.0.16
+- **AND** the Demo React plugin resolves Vite 7.3.6 without a peer conflict
+
 ### Requirement: Audit evidence remains narrowly stated
 
 Dependency audit documentation SHALL describe the package-manager advisory

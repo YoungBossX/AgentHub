@@ -13,6 +13,9 @@ and reverified.
   pnpm override boundary only if pnpm retains the vulnerable snapshot.
 - Redirect only the audited vulnerable Browserslist range to the first patched
   release after the compatible refresh proves insufficient.
+- Narrow the existing Vite 8 security override to the two Vitest owners that
+  require it, because fresh resolution proves the global selector rewrites the
+  Demo React plugin's compatible Vite 7 peer range into an invalid Vite 8 peer.
 - Regenerate the lockfile without upgrading the owning Vite, React, Babel,
   Next.js, or ESLint package families.
 - Re-run complete and production dependency audits plus the repository's build,

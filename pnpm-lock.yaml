@@ -6,12 +6,13 @@ settings:
 
 overrides:
   '@babel/core': 7.29.6
+  '@vitest/mocker@4.1.11>vite': 8.0.16
   brace-expansion@5.0.6: 5.0.9
   browserslist@<=4.28.6: 4.28.7
   dompurify: 3.4.13
   nanoid@3.3.12: 3.3.18
   postcss@8.5.14: 8.5.26
-  vite@8.0.12: 8.0.16
+  vitest@4.1.11>vite: 8.0.16
 
 importers:
 
@@ -1386,7 +1387,7 @@ packages:
     resolution: {integrity: sha512-YmKkfhOAi3wsB1PhJq5Scj3GXMn3WvtQ/JC0xoopuHoXSdmtdStOpFrYaT1kie2YgFBcIe64ROzMYRjCrYOdYw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
-      vite: 8.0.16
+      vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
 
   '@vitest/expect@4.1.11':
     resolution: {integrity: sha512-VX2x5vNJXET47KAFzwERI+KRMtTTCSWTfSMKsW7JsUsXV4psq++e3DvZpuTDOpHcxytiDs6p2nhVb2tVDiiUYw==}
