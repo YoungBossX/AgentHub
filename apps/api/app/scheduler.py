@@ -9,6 +9,7 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
+from app.execution_worktrees import requires_integration
 from app.models import Artifact, Diff, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
@@ -88,12 +89,19 @@ def evaluate_dependency_readiness(db: DbSession, task: Task) -> SchedulerDecisio
 
     waiting_dependency_ids: list[str] = []
     failed_dependency_ids: list[str] = []
+    waiting_for_integration = False
     for dependency_id in dependency_ids:
         dependency = db.get(Task, dependency_id)
         if dependency is None:
             waiting_dependency_ids.append(dependency_id)
             continue
         if dependency.status in DEPENDENCY_COMPLETE_STATUSES:
+            from app.dag_integration import integration_for_run, latest_run
+
+            run = latest_run(db, dependency.id)
+            if run is not None and requires_integration(run) and integration_for_run(db, run) is None:
+                waiting_dependency_ids.append(dependency_id)
+                waiting_for_integration = True
             continue
         if dependency.status in DEPENDENCY_BLOCKING_STATUSES:
             failed_dependency_ids.append(dependency_id)
@@ -113,7 +121,11 @@ def evaluate_dependency_readiness(db: DbSession, task: Task) -> SchedulerDecisio
         return SchedulerDecision(
             state=SCHEDULER_WAITING_DEPENDENCY,
             runnable=False,
-            reason="Waiting for upstream dependencies to complete.",
+            reason=(
+                "Waiting for isolated upstream outputs to be integrated."
+                if waiting_for_integration
+                else "Waiting for upstream dependencies to complete."
+            ),
             dependency_ids=dependency_ids,
             blocking_dependency_ids=waiting_dependency_ids,
         )
@@ -618,6 +630,10 @@ def _evaluate_pending_write_queue_readiness(
         .where(TaskRun.task_id == task.id)
         .order_by(TaskRun.created_at.desc(), TaskRun.id.desc())
     ).first()
+    if latest_run is not None:
+        # Persisted queue readiness above is authoritative once this task owns a
+        # queue entry. Later entries must not make the queue head wait on them.
+        return None
     blockers = db.exec(
         select(SessionQueueEntry)
         .where(SessionQueueEntry.session_id == task.session_id)
@@ -625,8 +641,6 @@ def _evaluate_pending_write_queue_readiness(
         .where(SessionQueueEntry.state.notin_({"completed", "failed", "interrupted", "cancelled"}))
         .order_by(SessionQueueEntry.position, SessionQueueEntry.id)
     ).all()
-    if latest_run is not None:
-        blockers = [entry for entry in blockers if entry.task_run_id != latest_run.id]
     if not blockers:
         return None
     return SchedulerDecision(

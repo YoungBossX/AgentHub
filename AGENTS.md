@@ -23,6 +23,11 @@ the conflict before coding.
 - Do not silently install dependencies.
 - If code or engineering files change, update `docs/change-log.md`.
 - Do not commit or push unless explicitly instructed.
+- Runtime exception for `agenthub-parallel-dag-execution` phase 4: the server
+  may commit validated demo patches in its newly allocated integration worktree
+  and fast-forward the assigned clean canonical Session worktree. This does not
+  authorize committing/pushing the AgentHub development checkout or letting an
+  adapter modify Git control files.
 
 ## Current Demo Stack
 
@@ -31,8 +36,9 @@ the conflict before coding.
 - Backend: FastAPI, Pydantic, SQLModel, and SQLite in `apps/api`.
 - Realtime: SSE. Do not add WebSocket for the final demo baseline.
 - Demo app boundary: the agent-modified demo app is Vite React only.
-- Diff and isolation: Git CLI diffs from one session-level git worktree per
-  Session.
+- Diff and isolation: one canonical session-level git worktree per Session;
+  explicitly isolated demo writes may use server-owned TaskRun execution worktrees
+  under `agenthub-parallel-dag-execution` phase 3.
 - Real adapter paths:
   - `CodexAdapter` uses the local Codex CLI inside the assigned session
     worktree.
@@ -91,8 +97,11 @@ Deferred examples:
   SessionExecutionLedger, and Review.
 - `TaskRunEvent`, `SessionExecutionLedger`, and `Review` are the only support
   entities beyond the core model.
-- Each Session gets exactly one persisted worktree path.
-- Multiple TaskRuns in the same Session reuse that Session worktree.
+- Each Session gets exactly one persisted canonical worktree path.
+- By default, TaskRuns reuse that Session worktree and writes remain serial.
+- Focused exception: `executionMode=isolated_write` for built-in demo writes may
+  allocate a validated, per-TaskRun worktree/branch, persisted in TaskRun metrics.
+  Keep the canonical Session path unchanged; do not preview/deploy unmerged outputs.
 - Different Sessions must not share a worktree.
 - Preview supports only Vite React and runs:
 
@@ -145,12 +154,16 @@ Expected P0 runtime command families:
 - Git read/worktree/diff commands needed for session worktrees and artifacts,
   such as `git rev-parse`, `git worktree`, `git diff`, `git status`, and
   optional `git apply --check`.
+- The phase-4 server-only join coordinator may apply target-validated patches
+  in a fresh integration worktree, create a local integration commit with hooks
+  disabled, and perform a verified `git merge --ff-only` into the clean assigned
+  Session worktree. Conflicts must not mutate canonical files; no push or reset.
 - Vite React preview command:
   `pnpm dev --host 127.0.0.1 --port <port>`.
-- Local Codex CLI invocation for `CodexAdapter`, only inside
-  `Session.worktreePath`.
-- Local Claude Code CLI invocation for `ClaudeCodeAdapter`, only inside
-  `Session.worktreePath`.
+- Local Codex CLI invocation for `CodexAdapter`, only inside the validated
+  TaskRun worktree (canonical Session path by default).
+- Local Claude Code CLI invocation for `ClaudeCodeAdapter`, only inside the validated
+  TaskRun worktree (canonical Session path by default).
 - Controlled `ScriptedMockAdapter` scripts, only inside the assigned session
   worktree and demo app boundary.
 

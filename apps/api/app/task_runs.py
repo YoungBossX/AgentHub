@@ -12,6 +12,11 @@ from sqlmodel import Session as DbSession
 from sqlmodel import select
 
 from app.events import append_task_run_event
+from app.execution_worktrees import (
+    EXECUTION_WORKTREE_KEY,
+    ExecutionWorktreeError,
+    allocate_execution_worktree,
+)
 from app.diffs import capture_base_ref_for_worktree, capture_file_snapshot_for_worktree
 from app.agent_selection_policy import AgentSelectionError, validate_agent_selection
 from app.memory_snapshots import (
@@ -166,8 +171,30 @@ def create_task_run(
     _recover_terminal_target_locks_before_run_creation(db)
     _ensure_scheduler_allows_run_creation(db, task)
 
+    # Freeze the canonical baseline against the join coordinator's SQLite
+    # writer transaction until this run/checkpoint is persisted. A no-op write
+    # acquires the lock without changing Session identity or timestamps.
+    db.execute(
+        update(AgentHubSession).where(AgentHubSession.id == session.id)
+        .values(updated_at=AgentHubSession.updated_at)
+        .execution_options(synchronize_session=False)
+    )
     now = utc_now()
+    run_id = str(uuid4())
     worktree_path = _worktree_path_for_task(db, task, session)
+    from app.scheduler import target_id_for_task
+
+    try:
+        execution_worktree, isolation_fallback = allocate_execution_worktree(
+            db, task=task, session=session, run_id=run_id,
+            target_id=target_id_for_task(task, db), access_mode=execution_access_mode,
+            previous_run_id=retry_of_run_id or fallback_from_run_id,
+        )
+    except ExecutionWorktreeError as exc:
+        db.rollback()
+        raise TaskRunLifecycleError(str(exc)) from exc
+    if execution_worktree is not None:
+        worktree_path = execution_worktree["worktreePath"]
     base_ref = capture_base_ref_for_worktree(worktree_path)
     metrics = {
         "adapterType": selected_adapter,
@@ -183,6 +210,16 @@ def create_task_run(
         metrics["fallbackFromRunId"] = fallback_from_run_id
     if retry_metadata is not None:
         metrics.update(retry_metadata)
+    if execution_worktree is not None:
+        metrics[EXECUTION_WORKTREE_KEY] = execution_worktree
+        if retry_of_run_id or fallback_from_run_id:
+            metrics["executionRetry"] = {
+                "strategy": "fresh_branch_from_base",
+                "requestedMode": (retry_metadata or {}).get("retryMode"),
+                "previousRunId": retry_of_run_id or fallback_from_run_id,
+            }
+    elif isolation_fallback is not None:
+        metrics["executionIsolationFallback"] = {"mode": "serial", "reason": isolation_fallback}
     checkpoint = _pre_run_checkpoint_for_task(
         db,
         task,
@@ -201,6 +238,7 @@ def create_task_run(
     task.updated_at = now
     runner_id = _new_runner_id()
     task_run = TaskRun(
+        id=run_id,
         task_id=task.id,
         agent_id=agent.id,
         state=initial_state,
@@ -371,12 +409,43 @@ def claim_task_run_for_worker(
         raise TaskRunLifecycleError("Only queued TaskRuns can be claimed by a worker.")
 
     now = utc_now()
-    task_run.runner_id = worker_id
-    task_run.last_heartbeat_at = now
-    task_run.lease_expires_at = _lease_expires_at(now, lease_seconds)
-    task_run.updated_at = now
-    db.add(task_run)
+    if task_run.runner_id == worker_id:
+        return task_run
+    if (
+        isinstance(task_run.runner_id, str)
+        and not task_run.runner_id.startswith("local:")
+        and (
+            task_run.lease_expires_at is None
+            or task_run.lease_expires_at > now
+        )
+    ):
+        raise TaskRunLifecycleError("TaskRun is already claimed by another worker.")
+
+    previous_runner_id = task_run.runner_id
+    lease_expires_at = _lease_expires_at(now, lease_seconds)
+    statement = (
+        update(TaskRun)
+        .where(TaskRun.id == task_run.id)
+        .where(TaskRun.state == "queued")
+    )
+    if previous_runner_id is None:
+        statement = statement.where(TaskRun.runner_id.is_(None))
+    else:
+        statement = statement.where(TaskRun.runner_id == previous_runner_id)
+    result = db.execute(
+        statement.values(
+            runner_id=worker_id,
+            last_heartbeat_at=now,
+            lease_expires_at=lease_expires_at,
+            updated_at=now,
+        ).execution_options(synchronize_session=False)
+    )
     db.commit()
+    if result.rowcount != 1:
+        db.expire_all()
+        raise TaskRunLifecycleError("TaskRun was claimed by another worker.")
+    db.expire_all()
+    task_run = _task_run_or_raise(db, task_run_id)
     db.refresh(task_run)
     append_task_run_event(
         db,
@@ -395,6 +464,50 @@ def claim_task_run_for_worker(
         ),
     )
     return task_run
+
+
+def release_task_run_claim(
+    db: DbSession,
+    task_run_id: str,
+    *,
+    worker_id: str,
+    reason: str,
+) -> bool:
+    """Release a queued dispatch claim that did not cross the execution gate."""
+
+    now = utc_now()
+    result = db.execute(
+        update(TaskRun)
+        .where(TaskRun.id == task_run_id)
+        .where(TaskRun.state == "queued")
+        .where(TaskRun.runner_id == worker_id)
+        .values(
+            runner_id=_new_runner_id(),
+            last_heartbeat_at=now,
+            lease_expires_at=_lease_expires_at(now),
+            updated_at=now,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+    if result.rowcount != 1:
+        db.expire_all()
+        return False
+    db.expire_all()
+    append_task_run_event(
+        db,
+        task_run_id=task_run_id,
+        event_type="run.claim_released",
+        payload_json=json.dumps(
+            {
+                "workerId": worker_id,
+                "reason": reason,
+                "releasedAt": now.isoformat(),
+            },
+            separators=(",", ":"),
+        ),
+    )
+    return True
 
 
 def stale_task_runs(

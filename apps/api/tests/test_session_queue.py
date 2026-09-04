@@ -61,6 +61,21 @@ def test_same_session_write_queue_blocks_until_prior_write_terminal() -> None:
         assert scheduler["state"] == SCHEDULER_READY
 
 
+def test_scheduler_observation_does_not_demote_running_queue_entry() -> None:
+    with queue_db() as db:
+        _, _, first, _ = seed_queue_tasks(db)
+        run = create_task_run(db, first.id)
+        session_queue_module.mark_task_run_running(db, run.id, "Execution started.")
+        before = entry_for_task_run(db, run.id)
+        started_at, updated_at = before.started_at, before.updated_at
+
+        assert queue_gate_for_task_run(db, run.id).runnable is True
+        after = entry_for_task_run(db, run.id)
+        assert after.state == "running"
+        assert after.started_at == started_at
+        assert after.updated_at == updated_at
+
+
 def test_readonly_task_can_run_while_same_session_write_is_queued(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

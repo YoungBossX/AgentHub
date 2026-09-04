@@ -33,6 +33,13 @@ const baseTask: SessionTask = {
 }
 
 describe("TaskCardList", () => {
+  it("does not present a synthetic Review join as a provider execution", () => {
+    render(<TaskCardList tasks={[{ ...baseTask, intentType: "review", status: "completed", taskRuns: [] }]} />)
+    expect(screen.getByText("Review/QA join")).toBeTruthy()
+    expect(screen.getByText(/no separate provider run was executed/)).toBeTruthy()
+    expect(screen.queryByText("Waiting for UI Start run.")).toBeNull()
+  })
+
   it("renders task titles, assigned agents, statuses, and dependencies", () => {
     render(createElement(TaskCardList, { tasks: [baseTask] }))
 

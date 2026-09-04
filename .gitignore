@@ -114,6 +114,12 @@ docs/*
 !docs/p19-freeze-review.md
 !docs/current-baseline-delivery-readiness-review.md
 !docs/current-baseline-delivery-readiness-evidence.json
+!docs/parallel-dag-freeze-review.md
+!docs/evidence/
+docs/evidence/*
+!docs/evidence/parallel-dag-phase5/
+docs/evidence/parallel-dag-phase5/*
+!docs/evidence/parallel-dag-phase5/*.json
 
 # Extra local temp files
 *.local

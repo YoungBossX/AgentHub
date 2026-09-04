@@ -394,8 +394,22 @@ export type SessionTask = {
   assignedAgentId: string | null
   assignedAgentRole: string | null
   taskRuns: TaskRun[]
+  integrationArtifacts?: IntegrationDiagnostic[]
   createdAt: string
   updatedAt: string
+}
+
+export type IntegrationDiagnostic = {
+  artifactId: string
+  artifactType: string
+  status: string
+  createdAt: string
+  verified: boolean
+  sourceRunIds?: string[]
+  mergeCommit?: string
+  changedFiles?: string[]
+  conflictingFiles?: string[]
+  reason?: string
 }
 
 export type PMOPlanDecisionAction = "approve" | "reject" | "clarification"

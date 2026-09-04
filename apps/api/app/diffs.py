@@ -11,6 +11,11 @@ from sqlmodel import select
 
 from app.artifact_versions import record_artifact_version
 from app.events import append_task_run_event
+from app.execution_worktrees import (
+    ExecutionWorktreeError,
+    requires_integration,
+    validate_execution_worktree,
+)
 from app.models import Artifact, Diff, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
@@ -133,6 +138,13 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
     if task_run is None:
         raise DiffCollectionError(f"TaskRun not found: {task_run_id}")
 
+    execution_worktree = None
+    if requires_integration(task_run):
+        try:
+            execution_worktree = validate_execution_worktree(db, task_run)
+        except ExecutionWorktreeError as exc:
+            raise DiffCollectionError(str(exc)) from exc
+
     worktree_path = Path(task_run.worktree_path)
     if not worktree_path.exists():
         raise DiffCollectionError(f"TaskRun worktree does not exist: {task_run.worktree_path}")
@@ -184,6 +196,7 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
                 "changedFiles": changed_files,
                 "stats": stats,
                 "providerEvidence": provider_evidence,
+                **({"executionWorktree": execution_worktree} if execution_worktree else {}),
                 **({"snapshotDiff": snapshot_result["metadata"]} if snapshot_result else {}),
             },
             separators=(",", ":"),

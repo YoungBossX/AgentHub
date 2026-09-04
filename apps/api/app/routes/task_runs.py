@@ -45,6 +45,26 @@ from app.task_runs import (
 router = APIRouter()
 
 
+@router.post("/tasks/{task_id}/integration/retry")
+def retry_join_integration(
+    task_id: str, background_tasks: BackgroundTasks, db: DbSession = Depends(get_db),
+) -> dict[str, Any]:
+    from app.dag_integration import IntegrationError, integrate_join
+
+    if db.get(Task, task_id) is None:
+        raise HTTPException(status_code=404, detail="Join task not found.")
+    db.commit()
+    try:
+        artifact = integrate_join(db.get_bind(), task_id, retry=True)
+    except IntegrationError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if artifact is None:
+        raise HTTPException(status_code=409, detail="Required branches are not completed or Session is busy.")
+    schedule_task_run_execution(background_tasks)
+    return {"artifactId": artifact.id, "artifactType": artifact.artifact_type,
+            "status": artifact.status, "metadata": json.loads(artifact.meta_json)}
+
+
 def task_run_response(db: DbSession, task_run: TaskRun) -> TaskRunResponse:
     from app.preview_deploy_jobs import job_diagnostics_for_task_run
     from app.session_queue import queue_diagnostics_for_task_run
@@ -108,6 +128,8 @@ def latest_approval_request(
 
 
 def task_response(db: DbSession, task: Task) -> TaskResponse:
+    from app.dag_integration import integration_diagnostics
+
     assigned_role = None
     if task.assigned_agent_id is not None:
         agent = db.get(Agent, task.assigned_agent_id)
@@ -133,6 +155,7 @@ def task_response(db: DbSession, task: Task) -> TaskResponse:
         assignedAgentId=task.assigned_agent_id,
         assignedAgentRole=assigned_role,
         taskRuns=[task_run_response(db, task_run) for task_run in list_task_runs(db, task.id)],
+        integrationArtifacts=integration_diagnostics(db, task),
         createdAt=task.created_at,
         updatedAt=task.updated_at,
     )

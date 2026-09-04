@@ -506,6 +506,7 @@ class TaskResponse(ApiModel):
     assigned_agent_id: Optional[str] = Field(alias="assignedAgentId")
     assigned_agent_role: Optional[str] = Field(alias="assignedAgentRole")
     task_runs: list["TaskRunResponse"] = Field(default_factory=list, alias="taskRuns")
+    integration_artifacts: list[dict[str, Any]] = Field(default_factory=list, alias="integrationArtifacts")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
 

@@ -452,6 +452,111 @@ def test_plan_draft_boundary_captures_task_graph_contract() -> None:
     assert metadata["acceptanceCriteria"] == []
 
 
+def test_plan_draft_supports_explicit_fork_join_without_changing_serial_default() -> None:
+    specs = [
+        TaskGraphTaskSpec(
+            title="Plan contract",
+            intent_type="planning",
+            role="orchestrator",
+            priority=0,
+            plan={"dependsOn": []},
+            expected_artifact_types=["plan"],
+        ),
+        TaskGraphTaskSpec(
+            title="Build backend",
+            intent_type="backend_change",
+            role="backend",
+            priority=1,
+            plan={
+                "dependsOn": ["1-orchestrator-planning"],
+                "parallelGroup": "contract-implementation",
+            },
+            expected_artifact_types=["diff"],
+        ),
+        TaskGraphTaskSpec(
+            title="Build frontend",
+            intent_type="frontend_change",
+            role="frontend",
+            priority=2,
+            plan={
+                "dependsOn": ["1-orchestrator-planning"],
+                "parallelGroup": "contract-implementation",
+            },
+            expected_artifact_types=["diff"],
+        ),
+        TaskGraphTaskSpec(
+            title="Review integration",
+            intent_type="review",
+            role="qa",
+            priority=3,
+            plan={
+                "dependsOn": [
+                    "2-backend-backend_change",
+                    "3-frontend-frontend_change",
+                ]
+            },
+            expected_artifact_types=["review"],
+        ),
+    ]
+
+    validate_task_graph(specs)
+    metadata = build_plan_draft(
+        goal="Build a contract-first app",
+        intent="contract_app",
+        planner="contract_first_v1",
+        task_specs=specs,
+    ).to_metadata()
+
+    graph_tasks = metadata["taskGraph"]["tasks"]
+    assert graph_tasks[1]["dependsOn"] == ["1-orchestrator-planning"]
+    assert graph_tasks[2]["dependsOn"] == ["1-orchestrator-planning"]
+    assert graph_tasks[1]["parallelGroup"] == "contract-implementation"
+    assert graph_tasks[2]["parallelGroup"] == "contract-implementation"
+    assert graph_tasks[3]["dependsOn"] == [
+        "2-backend-backend_change",
+        "3-frontend-frontend_change",
+    ]
+    assert metadata["dependencyEdges"] == [
+        {"from": "1-orchestrator-planning", "to": "2-backend-backend_change"},
+        {"from": "1-orchestrator-planning", "to": "3-frontend-frontend_change"},
+        {"from": "2-backend-backend_change", "to": "4-qa-review"},
+        {"from": "3-frontend-frontend_change", "to": "4-qa-review"},
+    ]
+
+
+def test_plan_validator_rejects_unknown_forward_and_self_dependencies() -> None:
+    def specs_with_first_dependency(dependency: str) -> list[TaskGraphTaskSpec]:
+        return [
+            TaskGraphTaskSpec(
+                title="Plan contract",
+                intent_type="planning",
+                role="orchestrator",
+                priority=0,
+                plan={"dependsOn": [dependency]},
+                expected_artifact_types=["plan"],
+            ),
+            TaskGraphTaskSpec(
+                title="Build frontend",
+                intent_type="frontend_change",
+                role="frontend",
+                priority=1,
+                plan={},
+                expected_artifact_types=["diff"],
+            ),
+        ]
+
+    with pytest.raises(PlanValidationError, match="unknown dependency"):
+        validate_task_graph(specs_with_first_dependency("missing-task"))
+    with pytest.raises(PlanValidationError, match="earlier tasks"):
+        validate_task_graph(
+            specs_with_first_dependency("1-orchestrator-planning")
+        )
+    with pytest.raises(PlanValidationError, match="earlier tasks"):
+        validate_task_graph(
+            specs_with_first_dependency("2-frontend-frontend_change")
+        )
+
+
 def test_plan_validator_rejects_unsafe_task_graph_files() -> None:
     with pytest.raises(PlanValidationError, match="unsupported target files"):
         validate_task_graph(
@@ -1472,22 +1577,28 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     assert [task["status"] for task in tasks] == [
         "completed",
         "running",
-        "waiting_dependency",
+        "waiting_target_lock",
         "waiting_dependency",
     ]
     assert tasks[0]["dependsOnTaskIds"] == []
     assert tasks[1]["dependsOnTaskIds"] == [tasks[0]["id"]]
-    assert tasks[2]["dependsOnTaskIds"] == [tasks[1]["id"]]
-    assert tasks[3]["dependsOnTaskIds"] == [tasks[2]["id"]]
+    assert tasks[2]["dependsOnTaskIds"] == [tasks[0]["id"]]
+    assert tasks[3]["dependsOnTaskIds"] == [tasks[1]["id"], tasks[2]["id"]]
     assert tasks[0]["planJson"]["scheduler"]["state"] == "completed"
     assert tasks[1]["planJson"]["scheduler"]["state"] == "ready"
     assert tasks[1]["planJson"]["scheduler"]["blockingDependencyIds"] == []
     assert len(tasks[1]["taskRuns"]) == 1
     assert tasks[1]["taskRuns"][0]["state"] == "queued"
-    assert tasks[2]["planJson"]["scheduler"]["state"] == "waiting_dependency"
-    assert tasks[2]["planJson"]["scheduler"]["blockingDependencyIds"] == [tasks[1]["id"]]
+    assert tasks[2]["planJson"]["scheduler"]["state"] == "waiting_target_lock"
+    assert tasks[2]["planJson"]["scheduler"]["blockingDependencyIds"] == []
+    assert tasks[2]["planJson"]["scheduler"]["lockHolderTaskRunIds"] == [
+        tasks[1]["taskRuns"][0]["id"]
+    ]
     assert tasks[3]["planJson"]["scheduler"]["state"] == "waiting_dependency"
-    assert tasks[3]["planJson"]["scheduler"]["blockingDependencyIds"] == [tasks[2]["id"]]
+    assert tasks[3]["planJson"]["scheduler"]["blockingDependencyIds"] == [
+        tasks[1]["id"],
+        tasks[2]["id"],
+    ]
 
     contract = tasks[0]["planJson"]["appContract"]
     contract_id = contract["contractId"]
@@ -1548,6 +1659,14 @@ def test_no_mention_mini_crm_request_creates_contract_first_task_graph(
     assert review["planJson"]["appContract"]["contractId"] == contract_id
     assert frontend["planJson"]["taskGraph"]["tasks"][1]["targetId"] == DEMO_BACKEND_TARGET_ID
     assert frontend["planJson"]["taskGraph"]["tasks"][2]["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert frontend["planJson"]["parallelGroup"] == "contract-implementation"
+    assert backend["planJson"]["parallelGroup"] == "contract-implementation"
+    assert frontend["planJson"]["taskGraph"]["tasks"][1]["parallelGroup"] == (
+        "contract-implementation"
+    )
+    assert frontend["planJson"]["taskGraph"]["tasks"][2]["parallelGroup"] == (
+        "contract-implementation"
+    )
 
     with next(db_from_override()) as db:
         messages = db.exec(

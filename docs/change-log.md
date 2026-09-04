@@ -1,5 +1,203 @@
 # AgentHub 变更日志
 
+## Prepare local parallel DAG baseline snapshot
+
+**日期:** 2026-09-04
+
+- 按用户授权将并行 DAG 第 1–5 阶段实现、测试、OpenSpec 与有界证据整理为本地提交候选；
+  不包含远端推送，不启动新的功能任务。
+- 提交前复跑 `pnpm check`、Web 全量 109 项及 OpenSpec strict validation；API 与
+  demo-api 沿用本次会话刚完成的 1,242 passed / 1 POSIX-only skipped 和 5 passed 结果。
+- 明确冻结报告中的“未提交”描述是验收时点事实；保留真实 provider 尚未并行验收的边界。
+
+## Expose DAG execution evidence and run bounded phase-5 rehearsal
+
+**日期:** 2026-09-04
+
+- 第 5 阶段增加依赖图摘要：串行链、Root/Fork/Join、并行组提示、隔离分支/回退和安全
+  门禁原因。完整 UTC 时间区间只表述为 TaskRun 生命周期重叠，不当作 provider 加速证明。
+- Task API 新增只读 integrationArtifacts 投影；真实复验后才标记 verified，历史 ready、
+  prepared 和 conflict 分开显示，不暴露候选宿主目录。复用现有 SSE 刷新机制。
+- 自动满足的 Review/QA join 明确标为服务端评审门禁，不冒充独立 provider 执行。
+- 新增有界真实 Git/SQLite 预演，覆盖并行 join、失败分支单独 retry、冲突恢复和串行
+  依赖链对照；证据在 `docs/evidence/parallel-dag-phase5/`，明确未调用真实 provider。
+- 全量回归发现 AnyIO 默认 Trio 参数化与项目原生 asyncio 实现不兼容；通过已有 Conda
+  agent 环境中的 Trio 复验确认，统一测试后端为 asyncio，不新增依赖或更改运行时。
+- 验证完成：API 全量 **1,242 passed / 1 skipped**（Windows 跳过 POSIX 精确大小写语义
+  用例，0 failures/errors，683.79 秒）；Web **109 passed**；demo-api **5 passed**。
+  `pnpm check`、最终 Web eslint/tsc、OpenSpec strict validation、`git diff --check` 通过。
+- 第 5 阶段冻结完成，见 [冻结审查](parallel-dag-freeze-review.md)。证据只覆盖本地测试
+  适配器、真实文件/Diff/Git 集成，不声明真实 provider 并行、真实浏览器视觉验收或性能
+  加速。既有 `datetime.utcnow()` 弃用警告未在本任务扩展修复。
+- 本轮保留 5 个临时目录（`agenthub-phase5-20260904-` 下的 `full`、`rehearsal`、
+  `serial`、`trio`、`verified`）及 verified XML 报告；未绕过此前删除策略。
+  未提交、未推送开发工作区。
+
+## Integrate isolated DAG branches with recoverable join coordination
+
+**日期:** 2026-09-04
+
+- 实现 `agenthub-parallel-dag-execution` 第 4 阶段的服务端 join coordinator。全部依赖
+  完成后按固定任务顺序选择各分支最新成功 Run，在独立候选工作树中三方应用 scope/
+  target 校验通过的 Diff patch；默认串行、adapter、provider、审批和 scope 路径保留。
+- 使用现有 Artifact 保存 integration/conflict 来源、输入哈希、候选工作树、commit 和
+  冲突路径，不新增 schema。候选 commit 由服务端生成，禁用 hooks 和签名；不提交
+  AgentHub 开发工作区，不推送远端，不允许 adapter 自行修改 Git 控制目录。
+- 推广前持久化 prepared journal，再通过 SQLite 写事务重新核对输入、目录、空闲状态
+  和 clean canonical HEAD，以 `merge --ff-only` 更新 Session；TaskRun 基线创建也获得
+  同一写边界，避免集成并发改变新运行的 checkpoint 归属。冲突不写入 canonical。
+- Git/SQLite 不声称跨资源原子事务；恢复识别“Git 已推广但 ready 尚未写入”的 prepared
+  记录并确认原结果。Dispatcher 会扫描恢复，不仅依赖最后一个 adapter 的完成回调。
+- 新增 `POST /tasks/{joinTaskId}/integration/retry`；同输入同 HEAD 不忙重试。失败分支
+  重试沿用现有 TaskRun 生命周期，join 选择其最新 Run，成功 sibling 和旧失败证据保留。
+- Preview/Deployment 只从经过验证的 clean canonical 集成结果读取，并记录 integration
+  commit；拒绝 merged 自报、漂移候选/输入、dirty canonical 及不匹配当前集成的 Preview。
+- Windows patch 输入使用原始 UTF-8 bytes，避免 subprocess text 模式的 CRLF 转换破坏
+  Git blob 三方比对。测试中的 adapter 确实写文件，但 Preview 进程和健康检查使用替身，
+  deployment 为既有 mock；不声称真实 provider 或真实 Vite/部署演练成功。
+- 验证：相关组合回归 **522 passed**；最终补充同仓库 Session 路径漂移拒绝用例后，
+  集成交付/输入漂移/崩溃恢复定向复验 **6 passed**。本阶段集成测试共 16 个不同用例，
+  加上既有相关 507 项，共覆盖 **523 个不同用例**；不是全仓全量测试声明。
+- `pnpm check`、OpenSpec strict validate 和 `git diff --check` 通过。第 4 阶段勾选完成，
+  第 5 阶段未开始；未安装依赖，未提交或推送开发工作区。
+- 本轮 Windows Temp 下 `agenthub-phase4-20260904-` 前缀的 `a`、`b`、`c`、`boundary`、
+  `regression`、`final`、`proof` 共 7 个 test-only 目录仍保留：对已核实目录执行清理时，
+  环境删除策略拒绝命令；未更换执行方式绕过该限制。
+
+## Isolate opt-in same-Session write executions
+
+**日期:** 2026-09-04
+
+- 实现 `agenthub-parallel-dag-execution` 第 3 阶段：默认仍使用 canonical Session
+  worktree 串行写；API 启动前设置 `AGENTHUB_ISOLATED_WRITES=1` 后，新建 Contract-first
+  Backend/Frontend 任务显式选择 `executionMode=isolated_write`。没有启用第 4 阶段合并。
+- 内置 demo 写任务从干净 Session HEAD 分配每个 TaskRun 独立的 execution worktree
+  与 `codex/agenthub-execution/<session>/<run>` 分支，Session 主路径不变，不安装依赖。
+  不支持的 target 或无法证明安全的预检保留串行路径并记录原因；原有 conflict gate
+  仍可阻止运行，已分配分支的归属漂移则拒绝执行，不能回退后冒用共享目录。
+- Queue 只允许经实际 Git 校验、同基线、不同 target 的独立分支重叠；shared/shared、
+  shared/isolated、同 target 写任务继续串行，保留 target lock、provider 容量和 scope gates。
+- 独立记录执行 owner、branch、baseCommit 与 Diff Artifact 的真实 patch；重试新建同基线
+  分支并保留旧 TaskRun、工作树和产物，明确记录 `fresh_branch_from_base` 策略。失败输出
+  留在其分支中，但未通过 scope 的内容不冒充已验证 Diff；不由 adapter 修改 Git 提交。
+- 阻塞型测试适配器的实际写入验证发现并修复一个并发生命周期问题：sibling 完成后的
+  Session 调度刷新不能把仍在执行/收尾的 queue entry 从 running 降为 ready，否则租约
+  fencing 会拒绝后续收尾。修复后两个写分支都能完成 scope 校验和独立 Diff 采集。
+- 第 4 阶段尚未实现；所有 isolated outputs 均视为 unmerged，下游 join 等待，禁止基于
+  未集成分支自动或手动 preview/deployment。真实 provider 并发仍受已有容量限制，本次
+  仅证明测试适配器真实文件写入重叠，不声称真实 Codex 并发成功或完整并行交付闭环。
+- 同步根 `AGENTS.md` 的 canonical/TaskRun 工作树例外、当前项目状态和 OpenSpec 设计/场景。
+
+### 验证
+
+- 隔离测试 **18 passed**，覆盖真实 Git 分支/patch、重试、队列门禁、归属篡改、显式开关、join/preview/
+  deploy 边界，以及两个真实写入区间重叠后的完整终态。
+- TaskRun、dispatcher、Session Queue、scheduler、Target Lock、provider gateway、Planner、
+  preview 和 deployment 既有回归合计 **489 passed**，未使用 `-k` 排除用例。
+- `pnpm check`、`openspec validate agenthub-parallel-dag-execution --strict` 与
+  `git diff --check` 通过。最后对 scheduler + 隔离执行再次定向回归 **43 passed**；
+  本阶段相关验证共覆盖 **507 个不同用例**（489 + 18），不是全仓全量测试声明。
+- 未安装依赖，未提交或推送；执行分支生命周期仍采用保留证据策略，不自动删除用户运行。
+- 清理本轮外部测试目录时环境删除策略拒绝了命令，因此 9 个 test-only 目录仍保留在
+  Windows Temp 下：`agenthub-phase3-20260904-` 前缀加
+  `a`、`b`、`c`、`d`、`e`、`regression2`、`final`、`verified`、`closeout`；
+  它们不是项目实际 Session 的执行分支，未将清理失败表述为已清理。
+
+## Clarify TaskRun asyncio test backend after Trio verification
+
+**日期:** 2026-09-04
+
+- 按用户授权，仅向 Conda `agent` 环境安装 Trio 0.34.0，以及其缺失依赖
+  outcome 1.3.0.post0 和 sortedcontainers 2.4.0；未修改项目依赖清单。
+- `agent` 环境缺少 AgentHub 的 sqlmodel，因此无法直接收集项目测试。诊断时使用已有
+  项目 Python，临时加载 agent 环境中的 Trio 后移除额外搜索路径，避免发现其他环境
+  的 pytest 插件；没有将混合环境设置持久化。
+- Trio 实际运行复现 `RuntimeError: no running event loop`，触发点为执行租约控制器
+  的 `asyncio.create_task()`。先前的缺包只是第一层阻塞，不代表安装 Trio 就能支持该
+  后端。当前 TaskRun 引擎和 supervisor 是 asyncio 专用。
+- 为 `test_task_runs.py` 添加文件级 `anyio_backend` fixture，明确使用 asyncio；不改动
+  测试断言、不通过 `-k` 隐藏失败，也不扩展生产引擎为 Trio 双运行时。仍属任务 2 的
+  验证收尾，任务 3 未开始。
+- 验证：Trio 可导入时，不带 `-k` 的完整 `test_task_runs.py` 与
+  `test_parallel_dispatcher.py` 合计 **295 passed**（291 + 4）；没有 deselected 用例。
+  这一结果证明 asyncio 测试配置闭环，不代表实现了 Trio 运行时支持。
+- `pnpm check` 和 `git diff --check` 通过；本次验证的三个外部临时目录已清理。
+
+## Add bounded concurrent TaskRun dispatcher
+
+**日期:** 2026-09-03
+
+### 变更
+
+- 完成 `agenthub-parallel-dag-execution` 任务 2：后台调度入口从一次只消费一个 queued
+  TaskRun 的 worker，改为默认并发上限 2 的本地 dispatcher；每个获胜运行使用独立
+  SQLModel Session，避免在异步任务间共享数据库 Session。
+- TaskRun claim 改为基于 `state + runner_id` 的持久化条件更新；并发 worker 竞争同一
+  TaskRun 时只有一个获胜。未跨过二次执行门禁的 claim 会安全释放并记录
+  `run.claim_released`，同一次 drain 不会忙循环重试该运行。
+- dispatcher 在 claim 前运行 scheduler 与 Session Queue gate，进入 adapter 前继续沿用
+  既有 dependency、approval、queue、Target Lock、conflict、provider health/capacity 和
+  scope fencing 路径，没有使用 `parallelGroup` 绕过授权。
+- 修正已有 queue-head 判定：Task 已有持久 TaskRun/queue entry 后，以该 entry 的 FIFO
+  gate 为准，避免后加入的 write entry 反向阻塞队首。
+- 新增阻塞型测试执行器，证明两个安全只读运行区间真实重叠、同 Session 写运行保持
+  不重叠，并验证并发 claim 只有一个持久化获胜者。
+- 本轮仍未实现同 Session 写 worktree 隔离，因此 Contract-first 的 Backend/Frontend
+  写任务继续安全串行；任务 3 尚未开始。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| dispatcher 聚焦测试 | 4 passed |
+| scheduler / Session Queue / Target Lock / provider gates 回归 | 91 passed |
+| TaskRun asyncio 生命周期回归 | 291 passed；84 个 trio 参数化用例因环境未安装 trio 被明确排除 |
+| `pnpm check` | 通过；Web ESLint/TypeScript、API compileall、Demo TypeScript、demo-api compileall 均通过 |
+| `openspec validate agenthub-parallel-dag-execution --strict` | 固定 Node PATH 后通过 |
+| `git diff --check` | 通过；仅既有 Windows LF/CRLF 提示 |
+
+完整 `test_task_runs.py` 首次运行结果为 291 passed / 84 failed；84 项失败均为相同的
+`ModuleNotFoundError: No module named 'trio'` 环境缺口，没有静默安装依赖。随后使用
+`-k "not trio"` 验证当前可用 asyncio 后端，291 项全部通过。
+
+首次直接调用全局 OpenSpec PowerShell shim 因 PATH 中缺少 `node.exe` 而错误返回 exit 0，
+该次未计为通过；固定项目验证使用的 Node PATH 后严格校验明确输出 change valid。
+
+## Add serial-compatible explicit fork/join DAG semantics
+
+**日期:** 2026-09-03
+
+### 变更
+
+- 新建 `agenthub-parallel-dag-execution` OpenSpec，把真正并行执行拆分为显式 DAG、
+  有界 dispatcher、隔离写分支、join/冲突恢复和 UI/冻结五个顺序任务；本轮仅完成
+  任务 1，不启动后续 dispatcher 或写隔离实现。
+- `TaskGraphTaskSpec` 的依赖语义现在区分三种情况：缺省 `dependsOn` 保留既有线性
+  默认值，显式 `dependsOn: []` 创建 root，显式依赖列表创建 fork/join；任务图元数据、
+  PlanDraft dependency edges 和持久 Task ID 使用同一依赖解析边界。
+- Contract-first 计划改为 `Planning -> {Backend, Frontend} -> Review/QA`。Backend 与
+  Frontend 记录同一 `contract-implementation` 并行组，但该字段只用于展示/诊断，
+  不绕过 Session Queue、Target Lock、审批或冲突检查。当前共享 Session worktree 下，
+  两个写 TaskRun 仍按 V2.3 规则安全串行。
+- PlanValidator 现在拒绝 malformed、duplicate、unknown、自引用和前向依赖，避免持久化
+  时静默丢弃依赖后 fail-open。
+- LLM Planner contract 保留“缺失依赖”和“显式空依赖”的区别；既有未声明依赖的
+  legacy/fallback 计划继续串行，显式空数组才表示独立 root。
+
+### 验证
+
+| 检查 | 结果 |
+|---|---|
+| 首轮 DAG/Planner 聚焦 pytest | 发现 1 项缺省依赖被 Pydantic 归一化为空数组；修复后 27 passed |
+| Planner / LLM Planner / contract / validator / scheduler 回归 | 115 passed |
+| `pnpm check` | 通过；Web ESLint/TypeScript、API compileall、Demo TypeScript、demo-api compileall 均通过 |
+| `openspec validate agenthub-parallel-dag-execution --strict` | 通过 |
+| `git diff --check` | 通过；仅既有 Windows LF/CRLF 提示 |
+
+首次无 PATH 的全局 pnpm PowerShell shim 未找到 Node 且错误返回 0，未计为通过；固定
+Node 后的第一次重跑完成 Web 检查但因找不到 Git Bash 停止。最终使用 pnpm 10.33.4、
+固定 Node 路径和 `E:\Git\Git\bin` 后完整 `pnpm check` 通过。
+
 ## Refresh final Browserslist security snapshot and Vite peer boundary
 
 **日期:** 2026-09-03

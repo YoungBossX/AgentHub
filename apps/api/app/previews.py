@@ -221,7 +221,14 @@ class PreviewService:
 
         preview_target = _preview_target_for_task_run(db, task_run)
         _ensure_previewable_target(preview_target)
-        preview_root = _target_root_for_preview(preview_target, task_run)
+        from app.dag_integration import IntegrationError, delivery_evidence, delivery_worktree_path
+
+        try:
+            integration_evidence = delivery_evidence(db, task_run)
+            delivery_run = task_run.model_copy(update={"worktree_path": delivery_worktree_path(db, task_run)})
+        except IntegrationError as exc:
+            raise PreviewError(str(exc)) from exc
+        preview_root = _target_root_for_preview(preview_target, delivery_run)
         if not preview_root.exists():
             raise PreviewError(f"Vite React preview root does not exist: {preview_root}")
 
@@ -263,6 +270,7 @@ class PreviewService:
                     "statusReason": status_reason,
                     "processDiagnostics": _diagnostics_metadata(diagnostics),
                     "providerEvidence": provider_evidence,
+                    **({"integration": integration_evidence} if integration_evidence else {}),
                 },
                 separators=(",", ":"),
             ),
@@ -295,7 +303,7 @@ class PreviewService:
             artifact,
             source_task_run_id=task_run.id,
             git_base_ref=task_run.base_ref,
-            git_head_ref=task_run.head_ref,
+            git_head_ref=integration_evidence.get("mergeCommit", task_run.head_ref),
             summary=f"Preview became {health_status} at {url}.",
         )
 
@@ -728,6 +736,12 @@ def _target_root_for_preview(target: TargetProject, task_run: TaskRun) -> Path:
 
 
 def _ensure_preview_prerequisites(db: DbSession, task_run: TaskRun) -> None:
+    from app.dag_integration import IntegrationError, delivery_worktree_path
+
+    try:
+        delivery_worktree_path(db, task_run)
+    except IntegrationError as exc:
+        raise PreviewError("Preview requires integration of isolated execution outputs.") from exc
     if task_run.state != "completed":
         raise PreviewError("Preview requires a completed TaskRun.")
 

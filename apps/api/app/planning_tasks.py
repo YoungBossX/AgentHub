@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from typing import Any, Optional
 
@@ -20,7 +21,12 @@ from app.target_registry import (
     get_related_backend_target,
     get_target,
 )
-from app.task_graph_builder import TaskGraphTaskSpec, task_graph_metadata
+from app.task_graph_builder import (
+    TaskGraphTaskSpec,
+    dependency_keys_for_task,
+    task_graph_metadata,
+    task_key,
+)
 from app.planning_intents import (
     AppContractIntent,
     FrontendIntent,
@@ -202,6 +208,7 @@ def _create_contract_first_plan(
                 "frontendTargetId": frontend_target.target_id,
                 "backendTargetId": backend_target.target_id,
                 "summary": intent.summary,
+                "dependsOn": [],
                 "parallelGroup": None,
             },
             expected_artifact_types=["plan"],
@@ -221,7 +228,9 @@ def _create_contract_first_plan(
                     f"{backend_target.root}/app/main.py",
                     f"{backend_target.root}/tests/test_contacts.py",
                 ],
-                "parallelGroup": None,
+                "dependsOn": ["1-orchestrator-planning"],
+                "parallelGroup": "contract-implementation",
+                **({"executionMode": "isolated_write"} if os.getenv("AGENTHUB_ISOLATED_WRITES") == "1" else {}),
             },
             expected_artifact_types=["diff", "review"],
         ),
@@ -241,7 +250,9 @@ def _create_contract_first_plan(
                     f"{frontend_allowed_path}/App.tsx",
                     f"{frontend_allowed_path}/styles.css",
                 ],
-                "parallelGroup": None,
+                "dependsOn": ["1-orchestrator-planning"],
+                "parallelGroup": "contract-implementation",
+                **({"executionMode": "isolated_write"} if os.getenv("AGENTHUB_ISOLATED_WRITES") == "1" else {}),
             },
             expected_artifact_types=["diff", "review"],
         ),
@@ -259,6 +270,10 @@ def _create_contract_first_plan(
                     "backend and frontend reference the same contract",
                     "apps/api remains untouched",
                     "preview remains eligible",
+                ],
+                "dependsOn": [
+                    "2-backend-backend_change",
+                    "3-frontend-frontend_change",
                 ],
                 "parallelGroup": None,
             },
@@ -281,8 +296,12 @@ def _create_contract_first_plan(
     contract["taskGraph"] = graph
 
     tasks: list[Task] = []
+    task_ids_by_key: dict[str, str] = {}
     for index, spec in enumerate(task_specs):
-        depends_on = [tasks[index - 1].id] if index > 0 else []
+        depends_on = [
+            task_ids_by_key[dependency_key]
+            for dependency_key in dependency_keys_for_task(index, task_specs)
+        ]
         plan = {
             **spec.plan,
             "planner": "contract_first_v1",
@@ -312,6 +331,7 @@ def _create_contract_first_plan(
         db.commit()
         db.refresh(task)
         tasks.append(task)
+        task_ids_by_key[task_key(index, spec)] = task.id
 
     summary = Message(
         session_id=message.session_id,

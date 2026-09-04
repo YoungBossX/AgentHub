@@ -30,6 +30,11 @@ from app.context_pack import build_session_context_pack
 from app.deployments import DeployError, DeployService
 from app.diffs import DiffCollectionError, collect_task_run_diff, record_diff_collection_failure
 from app.events import append_task_run_event
+from app.execution_worktrees import (
+    ExecutionWorktreeError,
+    requires_integration,
+    validate_execution_worktree,
+)
 from app.instruction_builder import build_role_instruction
 from app.ledger import refresh_session_ledger_for_task_run
 from app.models import Agent, ExternalProjectTarget, SessionQueueEntry, TargetLock, Task, TaskRun
@@ -93,6 +98,7 @@ from app.task_runs import (
     metrics_for_run,
     persist_scope_decision,
     persist_task_run_execution_access_binding,
+    release_task_run_claim,
     refresh_task_run_heartbeat,
     require_task_run_artifact_scope_passed,
     require_task_run_execution_access_mode,
@@ -108,6 +114,7 @@ _provider_resolver = ProviderResolver()
 _provider_health_probe = ProviderHealthProbe()
 _provider_capacity_limiter = ProviderConcurrencyLimiter()
 DEFAULT_RUN_WORKER_ID_PREFIX = "worker"
+DEFAULT_DISPATCH_CONCURRENCY = 2
 AUTO_PIPELINE_PLANNERS = {"contract_first_v1", "orchestrator_external_target_v1"}
 EXECUTION_LEASE_RENEWAL_INTERVAL_SECONDS = DEFAULT_LEASE_SECONDS / 3
 
@@ -1117,7 +1124,124 @@ def get_deploy_service() -> DeployService:
 def schedule_task_run_execution(
     background_tasks: BackgroundTasks,
 ) -> None:
-    background_tasks.add_task(_background_run_worker_once)
+    background_tasks.add_task(_background_dispatch_queued_task_runs)
+
+
+@dataclass(frozen=True)
+class DispatchClaim:
+    task_run_id: str
+    adapter_type: str
+    worker_id: str
+
+
+DispatchExecutor = Callable[[Any, DispatchClaim], Awaitable[bool]]
+
+
+class BoundedRunDispatcher:
+    def __init__(
+        self,
+        *,
+        dispatcher_id: Optional[str] = None,
+        max_concurrency: int = DEFAULT_DISPATCH_CONCURRENCY,
+        executor: Optional[DispatchExecutor] = None,
+    ) -> None:
+        if max_concurrency < 1:
+            raise ValueError("Dispatcher concurrency must be at least one.")
+        self.dispatcher_id = dispatcher_id or f"dispatcher:{uuid4()}"
+        self.max_concurrency = max_concurrency
+        self._executor = executor or _execute_dispatch_claim
+
+    async def run_once(
+        self,
+        db: DbSession,
+        *,
+        recover_stale: bool = True,
+        excluded_task_run_ids: Optional[set[str]] = None,
+    ) -> list[str]:
+        if recover_stale:
+            RunWorker(worker_id=self.dispatcher_id).recover_stale_runs(db)
+        _advance_ready_integrations(db)
+        claims = self._claim_ready_task_runs(
+            db,
+            excluded_task_run_ids=excluded_task_run_ids or set(),
+        )
+        if not claims:
+            return []
+        results = await asyncio.gather(
+            *(self._executor(db.get_bind(), claim) for claim in claims),
+            return_exceptions=True,
+        )
+        for claim, result in zip(claims, results):
+            if result is True:
+                continue
+            with DbSession(db.get_bind()) as release_db:
+                release_task_run_claim(
+                    release_db,
+                    claim.task_run_id,
+                    worker_id=claim.worker_id,
+                    reason=(
+                        "Dispatcher execution gate did not start the TaskRun."
+                        if result is False
+                        else "Dispatcher executor raised before the TaskRun started."
+                    ),
+                )
+        db.expire_all()
+        return [claim.task_run_id for claim in claims]
+
+    async def run_until_idle(self, db: DbSession) -> list[str]:
+        RunWorker(worker_id=self.dispatcher_id).recover_stale_runs(db)
+        dispatched: list[str] = []
+        while True:
+            batch = await self.run_once(
+                db,
+                recover_stale=False,
+                excluded_task_run_ids=set(dispatched),
+            )
+            if not batch:
+                return dispatched
+            dispatched.extend(batch)
+
+    def _claim_ready_task_runs(
+        self,
+        db: DbSession,
+        *,
+        excluded_task_run_ids: set[str],
+    ) -> list[DispatchClaim]:
+        claims: list[DispatchClaim] = []
+        db.expire_all()
+        for task_run in queued_task_runs(db):
+            if task_run.id in excluded_task_run_ids:
+                continue
+            if len(claims) >= self.max_concurrency:
+                break
+            task = db.get(Task, task_run.task_id)
+            if task is None:
+                continue
+            decision = evaluate_and_apply_scheduler_readiness(db, task)
+            if not decision.runnable:
+                continue
+            queue_decision = queue_gate_for_task_run(db, task_run.id)
+            if not queue_decision.runnable:
+                continue
+            worker_id = f"{self.dispatcher_id}:slot:{len(claims) + 1}"
+            try:
+                claimed = claim_task_run_for_worker(
+                    db,
+                    task_run.id,
+                    worker_id=worker_id,
+                )
+            except TaskRunLifecycleError:
+                db.rollback()
+                db.expire_all()
+                continue
+            claims.append(
+                DispatchClaim(
+                    task_run_id=claimed.id,
+                    adapter_type=adapter_type_for_run(db, claimed),
+                    worker_id=worker_id,
+                )
+            )
+        return claims
 
 
 class RunWorker:
@@ -1249,6 +1373,7 @@ def _capture_request_launch_snapshot(
         task,
         session,
         task_target_id,
+        task_run,
     )
     external_target_registration_fingerprint = (
         _external_target_registration_fingerprint_for(
@@ -1339,7 +1464,13 @@ def _expected_task_run_worktree_path(
     task: Task,
     session: AgentHubSession,
     task_target_id: Optional[str],
+    task_run: Optional[TaskRun] = None,
 ) -> Optional[str]:
+    if task_run is not None and requires_integration(task_run):
+        try:
+            return validate_execution_worktree(db, task_run)["worktreePath"]
+        except ExecutionWorktreeError:
+            return None
     if not task_target_id or not task_target_id.startswith("external-"):
         return session.worktree_path
     target = db.exec(
@@ -3012,8 +3143,19 @@ def _run_completed_task_run_sync_side_effects(
     task_run: TaskRun,
 ) -> None:
     refresh_session_ledger_for_task_run(db, task_run.id)
+    _advance_ready_integrations(db)
     _complete_ready_pipeline_review_tasks(db, task_run.task_id)
     _maybe_auto_preview_and_mock_deploy(db, task_run)
+
+
+def _advance_ready_integrations(db: DbSession) -> None:
+    from app.dag_integration import integrate_ready_joins
+
+    for run_id in integrate_ready_joins(db):
+        run = db.get(TaskRun, run_id)
+        if run is not None:
+            _complete_ready_pipeline_review_tasks(db, run.task_id)
+            _maybe_auto_preview_and_mock_deploy(db, run)
 
 
 async def _finish_completed_task_run_side_effects(
@@ -3089,7 +3231,7 @@ def _complete_ready_pipeline_review_tasks(
     for task in list_session_tasks(db, completed_task.session_id):
         if task.intent_type not in {"review", "qa_review"}:
             continue
-        if task.status not in {"pending", "waiting_dependency"}:
+        if task.status not in {"pending", "waiting_dependency", "blocked"}:
             continue
         plan = plan_json_for_task(task)
         if plan.get("planner") not in {"contract_first_v1", "llm_v1"}:
@@ -3140,13 +3282,19 @@ def _dependencies_have_review_artifacts(db: DbSession, task: Task) -> bool:
 
 
 def _maybe_auto_preview_and_mock_deploy(db: DbSession, task_run: TaskRun) -> None:
+    from app.dag_integration import IntegrationError, delivery_worktree_path
+
+    try:
+        delivery_path = delivery_worktree_path(db, task_run)
+    except IntegrationError:
+        return
     task = db.get(Task, task_run.task_id)
     if task is None or task.intent_type != "frontend_change":
         return
     plan = plan_json_for_task(task)
     if plan.get("planner") != "contract_first_v1":
         return
-    demo_root = Path(task_run.worktree_path) / "apps/demo"
+    demo_root = Path(delivery_path) / "apps/demo"
     if not demo_root.exists():
         return
     from app.preview_deploy_jobs import (
@@ -3201,6 +3349,23 @@ async def _background_run_worker_once() -> None:
         await RunWorker().run_once(db)
 
 
+async def _background_dispatch_queued_task_runs() -> None:
+    from app.db import engine as db_engine
+
+    with DbSession(db_engine) as db:
+        await BoundedRunDispatcher().run_until_idle(db)
+
+
+async def _execute_dispatch_claim(bind: Any, claim: DispatchClaim) -> bool:
+    with DbSession(bind) as db:
+        return await execute_task_run_background(
+            db,
+            claim.task_run_id,
+            claim.adapter_type,
+            worker_id=claim.worker_id,
+        )
+
+
 async def execute_task_run_background(
     db: DbSession,
     task_run_id: str,
@@ -3214,11 +3379,15 @@ async def execute_task_run_background(
         return False
     try:
         if task_run.state == "queued":
-            task_run = claim_task_run_for_worker(
-                db,
-                task_run.id,
-                worker_id=worker_id,
-            )
+            if task_run.runner_id != worker_id:
+                try:
+                    task_run = claim_task_run_for_worker(
+                        db,
+                        task_run.id,
+                        worker_id=worker_id,
+                    )
+                except TaskRunLifecycleError:
+                    return False
             if not _prepare_claimed_task_run_for_adapter(db, task_run, worker_id):
                 return False
         refresh_task_run_heartbeat(

@@ -11,6 +11,7 @@ from app.events import (
     stage_task_run_event,
 )
 from app.models import SessionQueueEntry, Task, TaskRun, TaskRunEvent, utc_now
+from app.execution_worktrees import can_overlap_writes
 
 QUEUE_TERMINAL_STATES = {"completed", "failed", "interrupted", "cancelled"}
 WRITE_ACCESS_MODE = "write"
@@ -102,6 +103,16 @@ def queue_gate_for_task_run(db: DbSession, task_run_id: str) -> QueueGateDecisio
             reason="TaskRun is terminal and must not be restarted.",
             blocking_task_run_ids=[],
         )
+    if entry.state == "running" and entry.started_at is not None:
+        # A sibling's completion refreshes the whole Session scheduler. That
+        # observation must not demote an active queue entry to ready and revoke
+        # its execution lease while it is collecting its own branch artifacts.
+        return QueueGateDecision(
+            runnable=True,
+            state="running",
+            reason="Queue entry is already owned by its running execution.",
+            blocking_task_run_ids=[],
+        )
     if entry.access_mode == READONLY_ACCESS_MODE:
         _mark_entry_state(
             db,
@@ -125,7 +136,11 @@ def queue_gate_for_task_run(db: DbSession, task_run_id: str) -> QueueGateDecisio
         .where(SessionQueueEntry.state.notin_(QUEUE_TERMINAL_STATES))
         .order_by(SessionQueueEntry.position, SessionQueueEntry.id)
     ).all()
-    blocking_run_ids = [item.task_run_id for item in blocking]
+    blocking_run_ids = []
+    for item in blocking:
+        earlier_run = db.get(TaskRun, item.task_run_id)
+        if earlier_run is None or not can_overlap_writes(db, task_run, earlier_run):
+            blocking_run_ids.append(item.task_run_id)
     if blocking_run_ids:
         _mark_entry_state(
             db,

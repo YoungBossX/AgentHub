@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "agenthub.parallel_rehearsal.v1",
+  "recordedAt": "2026-09-04T11:48:43.693530+00:00",
+  "scenario": "serial_control",
+  "adapter": "bounded_test_adapter_actual_file_writes",
+  "realProviderInvoked": false,
+  "livePreviewStarted": false,
+  "productionDeployed": false,
+  "runIds": [
+    "d9772efb-af65-409f-8c9e-a939dabe2dc7",
+    "e9300615-dd2c-486b-8316-9c8131885828"
+  ],
+  "adapterIntervalsMonotonicSeconds": {
+    "d9772efb-af65-409f-8c9e-a939dabe2dc7": [
+      37326.359,
+      37326.359
+    ],
+    "e9300615-dd2c-486b-8316-9c8131885828": [
+      37335.625,
+      37335.625
+    ]
+  },
+  "overlap": false,
+  "sharedWorktree": true
+}

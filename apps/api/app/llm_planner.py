@@ -33,7 +33,12 @@ from app.planner_providers import (
 )
 from app.repositories import create_session_message
 from app.target_registry import TargetProject, list_targets_for_workspace
-from app.task_graph_builder import TaskGraphTaskSpec, task_graph_metadata
+from app.task_graph_builder import (
+    TaskGraphTaskSpec,
+    dependency_keys_for_task,
+    task_graph_metadata,
+    task_key,
+)
 
 LLM_PLANNER_MODE = "llm_v1"
 LLM_PLANNER_VERSION = 1
@@ -429,26 +434,28 @@ def task_specs_from_llm_plan(payload: dict[str, Any]) -> list[TaskGraphTaskSpec]
         intent_type = _string_value(item.get("intentType")) or _intent_type_for_role(role)
         if not role or not target_id or not expected:
             raise LLMPlannerError("LLM planner tasks must include role, target, and artifacts.")
+        task_plan = {
+            "planner": LLM_PLANNER_MODE,
+            "plannerMode": LLM_PLANNER_MODE,
+            "targetId": target_id,
+            "target": _string_value(item.get("target")) or "real_coding_request",
+            "files": files,
+            "plannedFiles": files,
+            "acceptanceCriteria": _string_list(item.get("acceptanceCriteria")),
+            "validationExpectations": _string_list(item.get("validationExpectations")),
+            "riskLevel": _string_value(item.get("riskLevel")),
+            "requiresApproval": bool(item.get("requiresApproval")),
+            "rationale": _string_value(item.get("rationale")),
+        }
+        if item.get("dependsOn") is not None:
+            task_plan["dependsOn"] = _string_list(item.get("dependsOn"))
         specs.append(
             TaskGraphTaskSpec(
                 title=_string_value(item.get("title")) or f"LLM task {index + 1}",
                 intent_type=intent_type,
                 role=role,
                 priority=int(item.get("priority") or index),
-                plan={
-                    "planner": LLM_PLANNER_MODE,
-                    "plannerMode": LLM_PLANNER_MODE,
-                    "targetId": target_id,
-                    "target": _string_value(item.get("target")) or "real_coding_request",
-                    "files": files,
-                    "plannedFiles": files,
-                    "dependsOn": _string_list(item.get("dependsOn")),
-                    "acceptanceCriteria": _string_list(item.get("acceptanceCriteria")),
-                    "validationExpectations": _string_list(item.get("validationExpectations")),
-                    "riskLevel": _string_value(item.get("riskLevel")),
-                    "requiresApproval": bool(item.get("requiresApproval")),
-                    "rationale": _string_value(item.get("rationale")),
-                },
+                plan=task_plan,
                 expected_artifact_types=expected,
             )
         )
@@ -503,15 +510,10 @@ def _persist_llm_plan_tasks(
     task_ids_by_key: dict[str, str] = {}
     tasks: list[Task] = []
     for index, spec in enumerate(task_specs):
-        key = f"{index + 1}-{spec.role}-{spec.intent_type}"
-        depends_on_keys = _string_list(spec.plan.get("dependsOn"))
         depends_on = [
             task_ids_by_key[dependency_key]
-            for dependency_key in depends_on_keys
-            if dependency_key in task_ids_by_key
+            for dependency_key in dependency_keys_for_task(index, task_specs)
         ]
-        if not depends_on and index > 0 and not depends_on_keys:
-            depends_on = [tasks[index - 1].id]
         plan = {
             **spec.plan,
             "planner": LLM_PLANNER_MODE,
@@ -549,7 +551,7 @@ def _persist_llm_plan_tasks(
         db.commit()
         db.refresh(task)
         tasks.append(task)
-        task_ids_by_key[key] = task.id
+        task_ids_by_key[task_key(index, spec)] = task.id
 
     orchestrator = db.exec(select(Agent).where(Agent.role == "orchestrator")).first()
     summary = Message(

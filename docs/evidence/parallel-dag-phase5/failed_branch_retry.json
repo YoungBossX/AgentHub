@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "agenthub.parallel_rehearsal.v1",
+  "recordedAt": "2026-09-04T11:46:46.600452+00:00",
+  "scenario": "failed_branch_retry",
+  "adapter": "bounded_test_adapter_actual_file_writes",
+  "realProviderInvoked": false,
+  "livePreviewStarted": false,
+  "productionDeployed": false,
+  "baseCommit": "62f84e15756b4997304a96a7da782491e07947c9",
+  "adapterIntervalsMonotonicSeconds": {
+    "f100f37f-62a4-4328-9666-5e51a790694c": [
+      37213.671,
+      37214.687
+    ],
+    "29d9afc2-a567-4db8-8b89-1a209a8c4e9a": [
+      37214.593,
+      37214.703
+    ]
+  },
+  "overlapSeconds": 0.09399999999732245,
+  "canonicalUnchangedWhileBranchesRunning": true,
+  "recovery": {
+    "failedRunId": "29d9afc2-a567-4db8-8b89-1a209a8c4e9a",
+    "retryRunId": "d109fd2b-fe9d-46f8-ad0b-2b38fc3ba9f8",
+    "preservedSuccessfulRunId": "f100f37f-62a4-4328-9666-5e51a790694c",
+    "preservedDiffId": "791097ad-5bd7-447f-81f0-c9add0512769",
+    "preservedPatchSha256": "c525e1e688a26a2bd091076e7c5211c1a3a54663c82e61a36969e9175f1948e8",
+    "onlyFailedBranchRerun": true
+  },
+  "branches": [
+    {
+      "runId": "f100f37f-62a4-4328-9666-5e51a790694c",
+      "diffId": "791097ad-5bd7-447f-81f0-c9add0512769",
+      "file": "apps/demo-api/app/main.py",
+      "patchSha256": "c525e1e688a26a2bd091076e7c5211c1a3a54663c82e61a36969e9175f1948e8",
+      "worktree": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa1\\.executions-7b70b3da-f7ee-4734-8a2e-a0dd75bc7a4d\\f100f37f-62a4-4328-9666-5e51a790694c"
+    },
+    {
+      "runId": "d109fd2b-fe9d-46f8-ad0b-2b38fc3ba9f8",
+      "diffId": "ab44b8b4-dabb-4eaf-b502-d057566fbf45",
+      "file": "apps/demo/src/App.tsx",
+      "patchSha256": "058f911d24e2a713e912e0c431833b57463e1e25729e24c0748f54aff845600f",
+      "worktree": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa1\\.executions-7b70b3da-f7ee-4734-8a2e-a0dd75bc7a4d\\d109fd2b-fe9d-46f8-ad0b-2b38fc3ba9f8"
+    }
+  ],
+  "joinTaskId": "f1614a4d-8012-4529-9844-26706348a46a",
+  "joinStatus": "completed",
+  "integrationArtifactId": "9dab491e-0798-47d7-b1ce-e526413046a6",
+  "integration": {
+    "schemaVersion": "agenthub.dag_integration.v1",
+    "joinTaskId": "f1614a4d-8012-4529-9844-26706348a46a",
+    "sessionId": "7b70b3da-f7ee-4734-8a2e-a0dd75bc7a4d",
+    "sourceRunIds": [
+      "d109fd2b-fe9d-46f8-ad0b-2b38fc3ba9f8",
+      "f100f37f-62a4-4328-9666-5e51a790694c"
+    ],
+    "inputs": [
+      {
+        "taskRunId": "d109fd2b-fe9d-46f8-ad0b-2b38fc3ba9f8",
+        "taskId": "0acd378c-6dd2-4914-880d-0a247456f2ea",
+        "diffId": "ab44b8b4-dabb-4eaf-b502-d057566fbf45",
+        "baseCommit": "62f84e15756b4997304a96a7da782491e07947c9",
+        "targetId": "demo-frontend",
+        "patchSha256": "058f911d24e2a713e912e0c431833b57463e1e25729e24c0748f54aff845600f"
+      },
+      {
+        "taskRunId": "f100f37f-62a4-4328-9666-5e51a790694c",
+        "taskId": "877495f3-b02d-4ae7-91a7-98f930c428ac",
+        "diffId": "791097ad-5bd7-447f-81f0-c9add0512769",
+        "baseCommit": "62f84e15756b4997304a96a7da782491e07947c9",
+        "targetId": "demo-backend",
+        "patchSha256": "c525e1e688a26a2bd091076e7c5211c1a3a54663c82e61a36969e9175f1948e8"
+      }
+    ],
+    "canonicalWorktreePath": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa1\\canonical",
+    "sourceHead": "62f84e15756b4997304a96a7da782491e07947c9",
+    "mergeCommit": "28cfa64dd6db1735491ea3c8eaca681266b37230",
+    "worktreePath": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa1\\.integrations-7b70b3da-f7ee-4734-8a2e-a0dd75bc7a4d\\9dab491e-0798-47d7-b1ce-e526413046a6",
+    "changedFiles": [
+      "apps/demo-api/app/main.py",
+      "apps/demo/src/App.tsx"
+    ]
+  }
+}

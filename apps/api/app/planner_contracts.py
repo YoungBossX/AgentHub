@@ -41,7 +41,7 @@ class PlannerTaskResponse(BaseModel):
     target_id: str = Field(alias="targetId")
     intent_type: str = Field(alias="intentType")
     planned_files: list[str] = Field(alias="plannedFiles")
-    depends_on: list[str] = Field(default_factory=list, alias="dependsOn")
+    depends_on: Optional[list[str]] = Field(default=None, alias="dependsOn")
     expected_artifact_types: list[str] = Field(alias="expectedArtifactTypes")
     acceptance_criteria: list[str] = Field(alias="acceptanceCriteria")
     risk_level: str = Field(alias="riskLevel")

@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "agenthub.parallel_rehearsal.v1",
+  "recordedAt": "2026-09-04T11:46:59.578917+00:00",
+  "scenario": "conflict_retry",
+  "adapter": "bounded_test_adapter_actual_file_writes",
+  "realProviderInvoked": false,
+  "livePreviewStarted": false,
+  "productionDeployed": false,
+  "baseCommit": "7a57e391936b13bc40189d7c68db59aeecc65290",
+  "adapterIntervalsMonotonicSeconds": {
+    "265c8ec2-38f7-4677-b8ba-22f126f10e5c": [
+      37228.062,
+      37229.078
+    ],
+    "3fa9f8a8-5356-41a2-b804-877062f63c46": [
+      37228.984,
+      37229.093
+    ]
+  },
+  "overlapSeconds": 0.0940000000045984,
+  "canonicalUnchangedWhileBranchesRunning": true,
+  "conflict": {
+    "artifactId": "5aa50cdd-a42e-475e-bf08-33e4346c86e0",
+    "canonicalUnchanged": true,
+    "metadata": {
+      "joinTaskId": "dfb806df-00c1-4560-a35b-79a3407a9725",
+      "sessionId": "1f09ead9-f8cd-43eb-b1ab-762b43bc6370",
+      "sourceRunIds": [
+        "3fa9f8a8-5356-41a2-b804-877062f63c46",
+        "265c8ec2-38f7-4677-b8ba-22f126f10e5c"
+      ],
+      "sourceHead": "a23c80fc6a7e5f656596803317a505be3cfa9ee0",
+      "reason": "Branch patch could not be applied without conflict.",
+      "conflictingFiles": [
+        "apps/demo/src/App.tsx"
+      ],
+      "inputs": [
+        {
+          "taskRunId": "3fa9f8a8-5356-41a2-b804-877062f63c46",
+          "taskId": "1ebcbb13-6029-4631-8b6b-d03e02f4d497",
+          "diffId": "b4ba825d-e278-4762-a29b-1a1e73f92dba",
+          "baseCommit": "7a57e391936b13bc40189d7c68db59aeecc65290",
+          "targetId": "demo-frontend",
+          "patchSha256": "9be76c9745735456f6f5ec343746456bc09440547c9506da2900072e5322549d"
+        },
+        {
+          "taskRunId": "265c8ec2-38f7-4677-b8ba-22f126f10e5c",
+          "taskId": "5f437faa-348b-4de9-bf66-d2e44f70861e",
+          "diffId": "b3dc1822-9dbe-42f0-baa1-746ffdb500a1",
+          "baseCommit": "7a57e391936b13bc40189d7c68db59aeecc65290",
+          "targetId": "demo-backend",
+          "patchSha256": "5546182bd7d8b890ec1e9feaf08489f9ddda244a4acfd19691f7c92796d1083d"
+        }
+      ],
+      "candidateArtifactId": "16e68100-5234-47d2-9fb2-40100266a18e",
+      "worktreePath": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa2\\.integrations-1f09ead9-f8cd-43eb-b1ab-762b43bc6370\\16e68100-5234-47d2-9fb2-40100266a18e",
+      "recovery": "Retry only failed branches; retry integration after resolving canonical conflicts."
+    }
+  },
+  "branches": [
+    {
+      "runId": "265c8ec2-38f7-4677-b8ba-22f126f10e5c",
+      "diffId": "b3dc1822-9dbe-42f0-baa1-746ffdb500a1",
+      "file": "apps/demo-api/app/main.py",
+      "patchSha256": "5546182bd7d8b890ec1e9feaf08489f9ddda244a4acfd19691f7c92796d1083d",
+      "worktree": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa2\\.executions-1f09ead9-f8cd-43eb-b1ab-762b43bc6370\\265c8ec2-38f7-4677-b8ba-22f126f10e5c"
+    },
+    {
+      "runId": "3fa9f8a8-5356-41a2-b804-877062f63c46",
+      "diffId": "b4ba825d-e278-4762-a29b-1a1e73f92dba",
+      "file": "apps/demo/src/App.tsx",
+      "patchSha256": "9be76c9745735456f6f5ec343746456bc09440547c9506da2900072e5322549d",
+      "worktree": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa2\\.executions-1f09ead9-f8cd-43eb-b1ab-762b43bc6370\\3fa9f8a8-5356-41a2-b804-877062f63c46"
+    }
+  ],
+  "joinTaskId": "dfb806df-00c1-4560-a35b-79a3407a9725",
+  "joinStatus": "completed",
+  "integrationArtifactId": "a6680dc1-3b3d-4b9b-ad01-8ec551f5186c",
+  "integration": {
+    "schemaVersion": "agenthub.dag_integration.v1",
+    "joinTaskId": "dfb806df-00c1-4560-a35b-79a3407a9725",
+    "sessionId": "1f09ead9-f8cd-43eb-b1ab-762b43bc6370",
+    "sourceRunIds": [
+      "3fa9f8a8-5356-41a2-b804-877062f63c46",
+      "265c8ec2-38f7-4677-b8ba-22f126f10e5c"
+    ],
+    "inputs": [
+      {
+        "taskRunId": "3fa9f8a8-5356-41a2-b804-877062f63c46",
+        "taskId": "1ebcbb13-6029-4631-8b6b-d03e02f4d497",
+        "diffId": "b4ba825d-e278-4762-a29b-1a1e73f92dba",
+        "baseCommit": "7a57e391936b13bc40189d7c68db59aeecc65290",
+        "targetId": "demo-frontend",
+        "patchSha256": "9be76c9745735456f6f5ec343746456bc09440547c9506da2900072e5322549d"
+      },
+      {
+        "taskRunId": "265c8ec2-38f7-4677-b8ba-22f126f10e5c",
+        "taskId": "5f437faa-348b-4de9-bf66-d2e44f70861e",
+        "diffId": "b3dc1822-9dbe-42f0-baa1-746ffdb500a1",
+        "baseCommit": "7a57e391936b13bc40189d7c68db59aeecc65290",
+        "targetId": "demo-backend",
+        "patchSha256": "5546182bd7d8b890ec1e9feaf08489f9ddda244a4acfd19691f7c92796d1083d"
+      }
+    ],
+    "canonicalWorktreePath": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa2\\canonical",
+    "sourceHead": "bae18703a69e52c14d1247dd10ad8c20eb2bfd6d",
+    "mergeCommit": "b89c9f65166f6aa339bba26ac20bd5bf6bd95e26",
+    "worktreePath": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa2\\.integrations-1f09ead9-f8cd-43eb-b1ab-762b43bc6370\\a6680dc1-3b3d-4b9b-ad01-8ec551f5186c",
+    "changedFiles": [
+      "apps/demo-api/app/main.py",
+      "apps/demo/src/App.tsx"
+    ]
+  }
+}

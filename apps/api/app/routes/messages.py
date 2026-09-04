@@ -98,7 +98,10 @@ def auto_start_safe_tasks(
         if not _should_auto_start_task(db, task, plan):
             continue
         decision = evaluate_and_apply_scheduler_readiness(db, task)
-        if not decision.runnable:
+        if not decision.runnable and not (
+            plan.get("executionMode") == "isolated_write"
+            and decision.state == "waiting_target_lock"
+        ):
             continue
         create_task_run(db, task.id)
         schedule_task_run_execution(background_tasks)

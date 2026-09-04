@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useState } from "react"
 
 import { ExecutionTrace } from "./execution-trace"
+import { DagSummary } from "./dag-summary"
 import type { ArtifactPanelItem } from "./preview-card"
 import { healthLabel, reviewLabel, statusClasses, statusLabel } from "./task-card"
 import { RunControls } from "./task-run-controls"
@@ -239,6 +240,8 @@ export function TaskCardList({
   }
 
   return (
+    <>
+    <DagSummary tasks={tasks} />
     <ol className="relative grid gap-3.5 pl-8 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-[var(--border-strong)]">
       {tasks.map((task, index) => {
         const latestRun = task.taskRuns[task.taskRuns.length - 1] ?? null
@@ -426,6 +429,7 @@ export function TaskCardList({
         )
       })}
     </ol>
+    </>
   )
 }
 function ArtifactMessageCards({

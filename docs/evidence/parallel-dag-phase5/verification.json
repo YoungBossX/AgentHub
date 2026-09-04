@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "agenthub.parallel_dag_verification.v1",
+  "date": "2026-09-04",
+  "platform": "Windows",
+  "python": "E:/Anaconda/python.exe",
+  "anyioBackend": "asyncio",
+  "api": {
+    "command": "python -m pytest -q --tb=short -p no:cacheprovider --basetemp=<fresh-temp> --junitxml=<temp-report>",
+    "cwd": "apps/api",
+    "collected": 1243,
+    "passed": 1242,
+    "skipped": 1,
+    "failures": 0,
+    "errors": 0,
+    "durationSeconds": 683.79,
+    "skippedTest": "tests.test_task_run_scope::test_posix_exact_case_semantics_keeps_distinct_git_spelling_ordinary",
+    "skipReason": "exact-case POSIX semantics regression",
+    "warnings": 18360,
+    "warningReason": "Existing datetime.datetime.utcnow() deprecation"
+  },
+  "web": {"command": "pnpm test:web", "filesPassed": 14, "passed": 109},
+  "demoApi": {"command": "python -m pytest -q --tb=short -p no:cacheprovider --basetemp=<fresh-temp>", "cwd": "apps/demo-api", "passed": 5},
+  "checks": {
+    "pnpmCheck": "passed",
+    "finalWebEslintAndTsc": "passed",
+    "openspecStrictValidation": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "rehearsalEvidenceSha256": {
+    "parallel_join.json": "6a648f2ea84fded01c2ef361274cab3cdd602ce668e55407a41b7df5e5cafc90",
+    "failed_branch_retry.json": "4d3feaee8fb5b6e7b6aaa48dd0178590109f3b063dbd3f5ae69324489861e67f",
+    "conflict_retry.json": "9506f328be102ca0d3ad794b171f5f80b9a575d2737884e14367de88049f83ba",
+    "serial_control.json": "faa3001b562f8d5b5141a0d4b44e723a382a91547e741b5681937b09e79e2bb3"
+  },
+  "realProviderInvokedByRehearsal": false,
+  "browserVisualAcceptancePerformed": false,
+  "performanceBenchmarkPerformed": false,
+  "developmentCheckoutCommittedOrPushedDuringRehearsal": false
+}

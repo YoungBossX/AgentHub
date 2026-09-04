@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "agenthub.parallel_rehearsal.v1",
+  "recordedAt": "2026-09-04T11:46:32.234646+00:00",
+  "scenario": "parallel_join",
+  "adapter": "bounded_test_adapter_actual_file_writes",
+  "realProviderInvoked": false,
+  "livePreviewStarted": false,
+  "productionDeployed": false,
+  "baseCommit": "7888662578fb53973739557bc4350c900a82ca84",
+  "adapterIntervalsMonotonicSeconds": {
+    "37e4e15b-5a2b-4fc8-893c-203e86b920a6": [
+      37201.562,
+      37202.593
+    ],
+    "e87d11af-753a-413d-92a2-be66bd8602fd": [
+      37202.5,
+      37202.609
+    ]
+  },
+  "overlapSeconds": 0.0930000000007567,
+  "canonicalUnchangedWhileBranchesRunning": true,
+  "branches": [
+    {
+      "runId": "37e4e15b-5a2b-4fc8-893c-203e86b920a6",
+      "diffId": "2267ffcb-7c0a-41bd-bf95-4dc976e65094",
+      "file": "apps/demo-api/app/main.py",
+      "patchSha256": "01b8be3b90e5d6ad8df28d2afeebade243ca6539486815d6bb541b406219dbbd",
+      "worktree": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa0\\.executions-cd154e10-1df1-46a7-86da-8d059ade7247\\37e4e15b-5a2b-4fc8-893c-203e86b920a6"
+    },
+    {
+      "runId": "e87d11af-753a-413d-92a2-be66bd8602fd",
+      "diffId": "f7991785-664e-4e94-8de1-63e29b35de46",
+      "file": "apps/demo/src/App.tsx",
+      "patchSha256": "4db64045235dd4cc081516199c6a5eaf36943d62deffb9744b84a550faf2f67c",
+      "worktree": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa0\\.executions-cd154e10-1df1-46a7-86da-8d059ade7247\\e87d11af-753a-413d-92a2-be66bd8602fd"
+    }
+  ],
+  "joinTaskId": "f04fd98d-f0ce-4e97-877e-90394a65e32b",
+  "joinStatus": "completed",
+  "integrationArtifactId": "81b8c6ba-f960-47fe-9388-5b1f16d349aa",
+  "integration": {
+    "schemaVersion": "agenthub.dag_integration.v1",
+    "joinTaskId": "f04fd98d-f0ce-4e97-877e-90394a65e32b",
+    "sessionId": "cd154e10-1df1-46a7-86da-8d059ade7247",
+    "sourceRunIds": [
+      "37e4e15b-5a2b-4fc8-893c-203e86b920a6",
+      "e87d11af-753a-413d-92a2-be66bd8602fd"
+    ],
+    "inputs": [
+      {
+        "taskRunId": "37e4e15b-5a2b-4fc8-893c-203e86b920a6",
+        "taskId": "0e082954-79f6-4038-a939-71bcabf5126e",
+        "diffId": "2267ffcb-7c0a-41bd-bf95-4dc976e65094",
+        "baseCommit": "7888662578fb53973739557bc4350c900a82ca84",
+        "targetId": "demo-backend",
+        "patchSha256": "01b8be3b90e5d6ad8df28d2afeebade243ca6539486815d6bb541b406219dbbd"
+      },
+      {
+        "taskRunId": "e87d11af-753a-413d-92a2-be66bd8602fd",
+        "taskId": "a17e87ac-9e17-45b2-877f-ac9fff815581",
+        "diffId": "f7991785-664e-4e94-8de1-63e29b35de46",
+        "baseCommit": "7888662578fb53973739557bc4350c900a82ca84",
+        "targetId": "demo-frontend",
+        "patchSha256": "4db64045235dd4cc081516199c6a5eaf36943d62deffb9744b84a550faf2f67c"
+      }
+    ],
+    "canonicalWorktreePath": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa0\\canonical",
+    "sourceHead": "7888662578fb53973739557bc4350c900a82ca84",
+    "mergeCommit": "3eb45e4301371d325a46a0e9706e1cc0aaa40a16",
+    "worktreePath": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-phase5-20260904-rehearsal\\test_bounded_parallel_rehearsa0\\.integrations-cd154e10-1df1-46a7-86da-8d059ade7247\\81b8c6ba-f960-47fe-9388-5b1f16d349aa",
+    "changedFiles": [
+      "apps/demo-api/app/main.py",
+      "apps/demo/src/App.tsx"
+    ]
+  }
+}

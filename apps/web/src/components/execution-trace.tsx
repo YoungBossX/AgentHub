@@ -191,6 +191,7 @@ function buildTraceNodes({
   const latestReview = reviews[reviews.length - 1] ?? null
   const latestPreview = preferredPreview(previews)
   const latestDeployment = deployments[deployments.length - 1] ?? null
+  const syntheticJoin = !latestRun && ["review", "qa_review"].includes(task.intentType)
   const codingStatus = latestRun ? traceStatusForRun(latestRun.state) : "skipped"
   const fallback = task.taskRuns.find(
     (run) =>
@@ -210,20 +211,25 @@ function buildTraceNodes({
       status: task.status === "failed" ? "failed" : "completed",
     },
     {
-      adapterType: latestRun?.adapterType ?? "not started",
+      adapterType: syntheticJoin ? "server review gate" : latestRun?.adapterType ?? "not started",
       detail: latestRun
         ? fallback
           ? `Fallback recovered from ${String(
               fallback.metricsJson.retryOfRunId ?? fallback.metricsJson.fallbackFromRunId,
             ).slice(0, 8)}.`
           : `Latest run ${latestRun.id.slice(0, 8)} is ${statusLabel(latestRun.state)}.`
-        : "Waiting for UI Start run.",
+        : syntheticJoin
+          ? task.status === "completed"
+            ? "Existing upstream review artifacts satisfied this join; no separate provider run was executed."
+            : "Waiting for all upstream outputs, integration and review gates."
+          : "Waiting for UI Start run.",
       identity: `${agentLabel(task.assignedAgentRole)} · @${
         task.assignedAgentRole ?? "unassigned"
       }`,
       key: "coding",
-      label: "Coding Agent ran",
-      status: fallback ? "warning" : codingStatus,
+      label: syntheticJoin ? "Review/QA join" : "Coding Agent ran",
+      status: syntheticJoin ? task.status === "completed" ? "completed" : "skipped"
+        : fallback ? "warning" : codingStatus,
     },
     {
       adapterType: "git diff service",

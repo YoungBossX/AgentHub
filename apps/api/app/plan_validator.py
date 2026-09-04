@@ -127,15 +127,34 @@ def _validate_command_policy(spec: TaskGraphTaskSpec, target: TargetProject) -> 
 
 
 def _validate_dependency_keys(task_specs: list[TaskGraphTaskSpec]) -> None:
-    keys = {
+    ordered_keys = [
         f"{index + 1}-{spec.role}-{spec.intent_type}"
         for index, spec in enumerate(task_specs)
-    }
-    for spec in task_specs:
-        for dependency in _string_list(spec.plan.get("dependsOn")):
-            if dependency not in keys:
+    ]
+    positions = {key: index for index, key in enumerate(ordered_keys)}
+    for index, spec in enumerate(task_specs):
+        if "dependsOn" not in spec.plan:
+            continue
+        raw_dependencies = spec.plan.get("dependsOn")
+        if not isinstance(raw_dependencies, list) or any(
+            not isinstance(dependency, str) or not dependency
+            for dependency in raw_dependencies
+        ):
+            raise PlanValidationError(
+                "Manager planner generated malformed dependencies."
+            )
+        if len(set(raw_dependencies)) != len(raw_dependencies):
+            raise PlanValidationError(
+                "Manager planner generated duplicate dependencies."
+            )
+        for dependency in raw_dependencies:
+            if dependency not in positions:
                 raise PlanValidationError(
                     f"Manager planner generated unknown dependency: {dependency}"
+                )
+            if positions[dependency] >= index:
+                raise PlanValidationError(
+                    "Manager planner dependencies must reference earlier tasks."
                 )
 
 

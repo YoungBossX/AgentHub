@@ -5,7 +5,7 @@
 
 ## 当前快照
 
-截至 2026-09-03，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
+截至 2026-09-04，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
 核心闭环为：
 
 ```text
@@ -13,13 +13,22 @@ requirement -> orchestrator plan -> agent execution -> real git diff -> real pre
 ```
 
 当前基线使用 FastAPI、SQLModel、SQLite、Next.js、Vite React、SSE 和每个 Session
-一个持久工作树。运行时保留 `CodexAdapter`、`ClaudeCodeAdapter` 与
+一个持久 canonical 工作树。并行 DAG 第 3 阶段增加显式开启的内置 demo 写 TaskRun
+独立执行分支，默认仍保留共享工作树串行路径；未合并分支不会解锁 join、preview/deploy。
+第 4 阶段提供服务端 join coordinator：在独立候选工作树合并已验证 patch，记录 prepared
+journal 后快进 canonical；冲突保留制品，失败分支可单独重试。集成交付只使用验证过的
+canonical 结果。第 5 阶段已增加 DAG/门禁/集成历史 UI，并完成测试适配器真实写文件的
+有界并行与串行对照预演、完整回归和冻结。API 1,242 passed / 1 POSIX-only skipped，
+Web 109 passed，demo-api 5 passed。详见
+[并行 DAG 冻结审查](parallel-dag-freeze-review.md)，不将测试替身声明为真实 provider 演练。
+运行时保留 `CodexAdapter`、`ClaudeCodeAdapter` 与
 `ScriptedMockAdapter`，真实 provider 不可用时必须诚实失败或显式降级，不能伪造成功。
 
 ### 已闭合的 OpenSpec
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
+| `agenthub-parallel-dag-execution` | 第 1–5 阶段 Complete | [DAG 冻结审查](parallel-dag-freeze-review.md)、四场景有界预演；不含真实 provider 并行证明 |
 | `agenthub-p18b-memory-effectiveness-rehearsal` | 19/19，Complete | [P18b 冻结审查](p18b-freeze-review.md)、[有界证据](p18b-bounded-workflow-evidence.json) |
 | `agenthub-p18c-live-memory-compliance-library-app` | 24/24，Complete | [P18c 冻结审查](p18c-freeze-review.md)、[有界证据](p18c-bounded-rehearsal-evidence.json) |
 | `agenthub-p19-planner-routing-hardening` | Complete | [P19 冻结审查](p19-freeze-review.md) |

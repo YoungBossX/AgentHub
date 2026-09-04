@@ -230,6 +230,68 @@ def test_llm_planner_normalizes_safe_dependency_aliases(db: DbSession) -> None:
     assert json.loads(outcome.tasks[1].depends_on_task_ids) == [outcome.tasks[0].id]
 
 
+@pytest.mark.parametrize(
+    ("second_task_dependencies", "expected_dependency_count"),
+    [(None, 1), ([], 0)],
+)
+def test_llm_planner_distinguishes_missing_serial_default_from_explicit_root(
+    db: DbSession,
+    second_task_dependencies: list[str] | None,
+    expected_dependency_count: int,
+) -> None:
+    message = _message(db, "Build and independently review a demo")
+    second_task = {
+        "title": "Review demo",
+        "intentType": "review",
+        "role": "qa",
+        "targetId": DEMO_FRONTEND_TARGET_ID,
+        "plannedFiles": [],
+        "expectedArtifactTypes": ["review"],
+        "acceptanceCriteria": ["Review demo"],
+        "validationExpectations": [],
+        "riskLevel": "low",
+        "requiresApproval": False,
+    }
+    if second_task_dependencies is not None:
+        second_task["dependsOn"] = second_task_dependencies
+    provider = FakePlannerProvider(
+        payload={
+            "planId": "plan-explicit-root",
+            "planner": "llm_v1",
+            "plannerMode": "llm_v1",
+            "intent": "frontend_demo",
+            "rationale": "Exercise dependency compatibility.",
+            "acceptanceCriteria": ["Demo is reviewable"],
+            "validationExpectations": [],
+            "tasks": [
+                {
+                    "title": "Implement demo",
+                    "intentType": "frontend_change",
+                    "role": "frontend",
+                    "targetId": DEMO_FRONTEND_TARGET_ID,
+                    "plannedFiles": ["apps/demo/src/App.tsx"],
+                    "expectedArtifactTypes": ["diff"],
+                    "acceptanceCriteria": ["Demo renders"],
+                    "validationExpectations": [],
+                    "riskLevel": "low",
+                    "requiresApproval": False,
+                },
+                second_task,
+            ],
+        }
+    )
+
+    outcome = create_llm_plan_tasks(db, message, provider=provider)
+
+    dependencies = json.loads(outcome.tasks[1].depends_on_task_ids)
+    assert len(dependencies) == expected_dependency_count
+    assert dependencies == ([outcome.tasks[0].id] if expected_dependency_count else [])
+    second_plan = json.loads(outcome.tasks[1].plan_json)
+    assert second_plan["taskGraph"]["tasks"][1]["dependsOn"] == (
+        ["1-frontend-frontend_change"] if expected_dependency_count else []
+    )
+
+
 def test_llm_planner_rejects_invalid_json_or_unsafe_files(db: DbSession) -> None:
     with pytest.raises(LLMPlannerError, match="invalid JSON"):
         parse_llm_plan_output("not json")

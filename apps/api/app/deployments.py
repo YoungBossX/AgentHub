@@ -297,7 +297,13 @@ class LocalStagingDeployProvider:
     ) -> DeployProviderResult:
         target = _target_for_task_run(db, task_run)
         config = resolve_deploy_config(target)
-        target_root = _target_root_for_task_run(target, task_run)
+        from app.dag_integration import IntegrationError, delivery_worktree_path
+
+        try:
+            delivery_run = task_run.model_copy(update={"worktree_path": delivery_worktree_path(db, task_run)})
+        except IntegrationError as exc:
+            raise DeployError(str(exc)) from exc
+        target_root = _target_root_for_task_run(target, delivery_run)
         logs = [
             f"Local staging deploy requested for preview {preview.id}.",
             f"Target: {target.target_id} ({target.root}).",
@@ -446,6 +452,14 @@ class DeployService:
 
         preview, preview_artifact, task_run = _load_deploy_context(db, preview_id)
         _ensure_deploy_prerequisites(db, task_run)
+        from app.dag_integration import IntegrationError, delivery_evidence
+
+        try:
+            integration_evidence = delivery_evidence(db, task_run)
+        except IntegrationError as exc:
+            raise DeployError(str(exc)) from exc
+        if integration_evidence and _metadata_for_artifact(preview_artifact).get("integration") != integration_evidence:
+            raise DeployError("Preview does not reference the current verified integration result.")
         if provider_id != "mock":
             _ensure_staging_deploy_gates(db, task_run, preview)
 
@@ -557,7 +571,7 @@ class DeployService:
             source_task_run_id=task_run.id,
             parent_artifact_id=preview_artifact.id,
             git_base_ref=task_run.base_ref,
-            git_head_ref=task_run.head_ref,
+            git_head_ref=source.get("integrationCommit") or task_run.head_ref,
             changed_files=changed_files,
             summary=f"{deployment.provider} deployment recorded with status {deployment.status}.",
         )
@@ -690,12 +704,15 @@ def _source_metadata_for_task_run(
     preview_artifact: Artifact,
     task_run: TaskRun,
 ) -> dict[str, Optional[str]]:
+    integration_evidence = _metadata_for_artifact(preview_artifact).get("integration") or {}
     return {
         "taskRunId": task_run.id,
         "previewId": preview.id,
         "previewArtifactId": preview_artifact.id,
         "diffArtifactId": _latest_artifact_id(db, task_run.id, "diff"),
         "reviewArtifactId": _latest_artifact_id(db, task_run.id, "review"),
+        **({"integrationArtifactId": integration_evidence["artifactId"],
+            "integrationCommit": integration_evidence["mergeCommit"]} if integration_evidence else {}),
     }
 
 
@@ -831,6 +848,12 @@ def _status_history_list(value: object) -> tuple[dict[str, str], ...]:
 
 
 def _ensure_deploy_prerequisites(db: DbSession, task_run: TaskRun) -> None:
+    from app.dag_integration import IntegrationError, delivery_worktree_path
+
+    try:
+        delivery_worktree_path(db, task_run)
+    except IntegrationError as exc:
+        raise DeployError("Deployment requires integration of isolated execution outputs.") from exc
     if task_run.state != "completed":
         raise DeployError("Deployment requires a completed TaskRun.")
 
