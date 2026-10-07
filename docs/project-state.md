@@ -5,7 +5,7 @@
 
 ## 当前快照
 
-截至 2026-09-04，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
+截至 2026-10-07，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
 核心闭环为：
 
 ```text
@@ -18,7 +18,7 @@ requirement -> orchestrator plan -> agent execution -> real git diff -> real pre
 第 4 阶段提供服务端 join coordinator：在独立候选工作树合并已验证 patch，记录 prepared
 journal 后快进 canonical；冲突保留制品，失败分支可单独重试。集成交付只使用验证过的
 canonical 结果。第 5 阶段已增加 DAG/门禁/集成历史 UI，并完成测试适配器真实写文件的
-有界并行与串行对照预演、完整回归和冻结。API 1,242 passed / 1 POSIX-only skipped，
+有界并行与串行对照预演、完整回归和冻结。该阶段冻结时 API 1,242 passed / 1 POSIX-only skipped，
 Web 109 passed，demo-api 5 passed。详见
 [并行 DAG 冻结审查](parallel-dag-freeze-review.md)，不将测试替身声明为真实 provider 演练。
 运行时保留 `CodexAdapter`、`ClaudeCodeAdapter` 与
@@ -28,6 +28,8 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
+| `agenthub-memory-rule-layer-budget` | 1.1 Complete | 可信规则/偏好/经验分层、16,000 序列化字符预算、作用域排除与准备请求证据；API 全量 1,324 passed / 1 skipped |
+| `agenthub-memory-snapshot-content-consistency` | 1.1 Complete | v2 内容与评分时间冻结、TaskRun 绑定校验、原始 Planner 请求证据；95 项记忆测试与完整回归，详见下方证据边界 |
 | `agenthub-parallel-dag-execution` | 第 1–5 阶段 Complete | [DAG 冻结审查](parallel-dag-freeze-review.md)、四场景有界预演；不含真实 provider 并行证明 |
 | `agenthub-p18b-memory-effectiveness-rehearsal` | 19/19，Complete | [P18b 冻结审查](p18b-freeze-review.md)、[有界证据](p18b-bounded-workflow-evidence.json) |
 | `agenthub-p18c-live-memory-compliance-library-app` | 24/24，Complete | [P18c 冻结审查](p18c-freeze-review.md)、[有界证据](p18c-bounded-rehearsal-evidence.json) |
@@ -52,6 +54,59 @@ Web 109 passed，demo-api 5 passed。详见
 [变更日志](change-log.md)。
 
 ## 当前证据边界
+
+### Memory rule layers and serialized budget
+
+当前 Planner 与 coding 请求共用 `memory_rule_budget_v1` 选择策略，继续从既有 v2
+冻结内容和评分时间读取。适用的 active、system/user-confirmed 项目规则完整保留，
+不要求关键词命中；active 已确认偏好优先作为可选指导，其他经验继续按相关性选择。
+warm 规则与 external/untrusted 条目不提升为必选规则，记忆不授予执行权限。
+
+默认预算为完整记忆数组使用 ASCII 转义、排序键与两空格缩进 JSON 序列化后的
+16,000 字符，包含内容、身份、排名与选择原因；这是记忆值的预算，不是全文 prompt
+或模型 token 上限。可选条目无法容纳时跳过整条并计数，继续考虑较小条目；必选规则
+自身超限时请求明确失败，Planner 返回 422，coding 在 adapter 启动前通过原有归属
+fencing 保存失败，不截断规则。新执行接管后，旧准备失败不覆盖其状态。
+
+选择先检查 workspace、状态、target 和 role；未知 target/role 排除带相应限制的条目。
+现有 MemoryItem 没有 Session 所属字段，因此 session 范围条目不扩大为工作区规则；
+target 范围条目必须带 target IDs。user 范围仍属于当前本地单用户的 workspace 边界。
+Planner 尚未明确 target 时只选不带 target 限制的适用记忆。
+
+`memorySelection` 与 prepared-request receipt 记录策略版本、用量、分层数量和遗漏
+计数，每条记忆保留原始内容哈希及 layer/selectionReason；receipt 另记录脱敏后的
+可见字符数与内容哈希。复现选择需要相同策略版本、冻结内容、查询、筛选条件和预算。
+历史 v1 内容仍保持 unavailable；未增加数据库迁移、依赖、adapter 或权限。
+
+2026-10-07 的 API 完整回归为 **1,324 passed / 1 POSIX-only skipped**，Web
+**109 passed**，demo-api **5 passed**；项目检查、严格 OpenSpec 与空白检查通过。
+该结果使用测试 provider 与临时 SQLite/Git，不证明真实 provider 的遵守率或加速。
+当前会话刷新 UI、语义检索、重复/冲突治理、Session 所属绑定及 Skill/MCP 尚未推进。
+具体策略见 [规则层与预算设计](../openspec/changes/agenthub-memory-rule-layer-budget/design.md)。
+
+### Memory snapshot content consistency
+
+2026-10-07 的本地工作区候选使用 `memory_snapshot_v2`，在既有 SQLite `meta_json`
+保存 eligible active/warm 记忆的内容、版本、角色/目标筛选数据及固定评分时间。相同快照、
+查询和筛选条件不会因实时记忆新增、修改、归档或时间流逝而改变结果。Planner 使用其
+请求准备时的 Session 快照；编码请求使用 TaskRun 持久绑定，并校验其版本与摘要。
+
+原始 Planner 请求的记忆证据在 fallback 和后续 runtime enrichment 中保持不变；编码
+请求通过既有执行 lease/CAS 保存过滤后的 canonical context 与 memory usage receipt。
+本轮修复无效计划分支读取不存在属性造成的异常，验证覆盖 provider 错误、格式错误、
+非任务回复、无效计划以及 provider 处理期间显式刷新 Session 的情况。
+
+v1 历史快照标记 `legacy_unavailable`，不会注入无法证明的旧记忆；既有 Session 需要
+显式刷新后使用 v2。普通删除或归档影响未来快照，历史快照仍保存历史内容。损坏、丢失
+或跨工作区的绑定会失败，API 提供有界的 409 恢复提示，不回退到实时记忆表。
+
+本轮记忆定向回归 **95 passed**；在测试进程显式设置 `CODEX_CLI_PATH=codex` 后，
+API 全量 **1,293 passed / 1 POSIX-only skipped**，Web **109 passed**，demo-api
+**5 passed**；`pnpm check`、strict OpenSpec validation 和 `git diff --check` 通过。
+首轮 API 唯一失败为未修改的 CLI health 测试固定期待 `codex` 而环境提供 `codex.exe`，
+过程和复验记录见 [变更日志](change-log.md)。测试使用真实临时 SQLite 和测试 provider；
+receipt 证明准备的请求内容，不证明真实 provider 的成功或记忆遵守率。本轮未执行独立
+Subagent 审查。该快照一致性任务未包含规则分层、长度预算、语义检索或 Skill/MCP。
 
 ### P18b
 

@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session as DbSession
 
@@ -15,6 +16,8 @@ from app.ledger import (
     changed_files_for_ledger,
     refresh_session_ledger,
 )
+from app.memory_snapshots import MemorySnapshotError
+from app.memory_retrieval import MemoryContextBudgetError
 from app.mission_trace import build_session_mission_trace
 from app.models import SessionExecutionLedger
 from app.previews import StoredPreviewArtifact
@@ -97,6 +100,31 @@ session_event_routes.session_event_heartbeat_frame = (
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+
+@app.exception_handler(MemoryContextBudgetError)
+async def memory_budget_error_handler(
+    _request: Request, error: MemoryContextBudgetError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": error.message, "code": error.error_code},
+    )
+
+
+@app.exception_handler(MemorySnapshotError)
+async def memory_snapshot_error_handler(
+    _request: Request, _error: MemorySnapshotError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "detail": "Memory snapshot is unavailable or invalid; explicitly refresh the session snapshot before retrying.",
+            "code": "MEMORY_SNAPSHOT_INVALID",
+        },
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(LOCAL_FRONTEND_ORIGINS),

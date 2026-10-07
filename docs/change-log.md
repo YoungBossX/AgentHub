@@ -1,5 +1,52 @@
 # AgentHub 变更日志
 
+## Prepare memory consistency and budget delivery
+
+**日期:** 2026-10-07
+
+- 按用户授权将已验收的快照一致性与规则预算任务整理为提交候选，推送目标为当前 `dev` 分支。
+- 提交前核对变更范围、远端分支、任务完成状态和空白检查；沿用同一源码已完成的 API 1,324 passed / 1 skipped、Web 109 passed 与项目检查证据。
+- 先完成推送并核对远端提交，再开始独立的会话快照刷新 UI 任务；远端送达以实际 Git 返回和 ref 核验为准。
+
+## Memory rule layers and serialized context budget
+
+**日期:** 2026-10-07
+
+- 按单任务 OpenSpec `agenthub-memory-rule-layer-budget` 共用 Planner/coding 记忆选择策略：适用的 active、system/user-confirmed 项目规则完整保留；已确认偏好优先，其他经验按既有词法相关性召回。
+- 默认预算为整个记忆数组经 `ensure_ascii=True / sort_keys=True / indent=2` JSON 序列化后的 16,000 字符，包含内容、身份、排名和选择原因；不是全文 prompt 或模型 token 上限。经验 limit 只限制经验，不挤占规则。
+- 可选条目超过预算时跳过整条，并继续考虑较小条目；规则自身超限返回脱敏的 `MEMORY_CONTEXT_BUDGET_EXCEEDED`，不截断规则或静默遗失。Planner API 为 422，coding 在 adapter 启动前按既有执行归属检查保存失败，旧执行不能借预算失败覆盖新归属。
+- 工作区、状态、target/role 在选择前筛选；未知 target/role 不再放入受限条目。现有表没有 Session 所属字段，因此 session 范围条目，以及没有 target IDs 的 target 范围条目不被扩大为工作区规则；user 范围仍沿用本地单用户的 workspace 边界。
+- 每条记忆增加 layer/selectionReason，canonical context 与 prepared-request receipt 保存选择策略版本、用量、分层数量和有界遗漏计数；保留原始快照内容与哈希、可见内容哈希及既有脱敏边界。
+- 未改变数据库 schema、adapter 或权限；当前会话刷新 UI、语义检索、重复/冲突治理、Session 记忆归属和 Skill/MCP 留待独立任务。receipt 仍不证明真实 provider 成功或规则遵守率。
+
+### 验证
+
+- RED：新增初始回归为 8 failed / 2 passed；复现规则遗漏、未知作用域泄漏和 63,973 字符的未限制记忆数组。
+- 分层、Unicode/转义预算边界、完整内容/哈希、超长经验跳过、HTTP 422、三种 adapter 请求 receipt，以及预算失败的归属 fencing 已完成定向验证。
+- 最终 API 全量 **1,324 passed / 1 POSIX-only skipped**（794.60 秒）；29 项新增规则/预算回归和 2 项新增执行失败参数化场景均包含在其中。Web 全量 **109 passed**；demo-api **5 passed**；`pnpm check`、strict OpenSpec validation、`git diff --check` 与新增文件 UTF-8/空白检查通过，任务 1.1 完成。
+- API 使用当前 `.venv`、新的外部临时 SQLite/Git 目录，并仅在测试进程设置 `CODEX_CLI_PATH=codex`，沿用已确认的 CLI health 测试配置边界；验证进程使用既有 Git Bash，没有安装依赖或修改系统设置。现有 `datetime.utcnow()` 弃用警告未纳入此任务修复。
+- 本轮完成主代理源码复核和自动化回归，未执行真实 provider 效果演练、独立 Subagent 审查、提交或推送；完整回归通过不等于真实模型规则遵守率或性能收益。
+
+## Memory snapshot v2 consistency and planner fallback repair
+
+**日期:** 2026-10-07
+
+- 完成当前工作区 `agenthub-memory-snapshot-content-consistency` 的有界修复与验证；新快照在既有 SQLite `meta_json` 中保存 active/warm 记忆的实际内容、版本、检索字段和固定评分时间。
+- Planner 从 Session 快照读取记忆，编码请求从 TaskRun 持久绑定读取记忆；会话后续刷新不会覆盖已经准备的 Planner 请求证据或早先的 TaskRun 绑定。
+- 修复无效 LLM 计划的 fallback 分支：从原始 `conversation.planner_input` 提取记忆证据，避免读取结果对象不存在的 `memory_evidence` 属性；回归同时检查 fallback 原因、错误码和原始请求哈希。
+- 保存过滤后请求的 memory usage receipt，明确它只证明准备的请求内容，不证明真实 provider 执行成功或遵守记忆。
+- v1 快照保留历史标识并显示 `legacy_unavailable`，不以实时记忆补造历史；损坏、丢失或跨工作区的绑定拒绝请求，API 返回有界的 409 恢复提示。
+- 明确普通删除/归档只影响后续快照，历史快照仍保留内容；旧会话需要显式刷新后使用 v2。未开始规则分层、长度预算、语义检索、Skill/MCP 等后续任务。
+
+### 验证
+
+- RED：原无效计划回归复现 `AttributeError`，1 failed。
+- GREEN：记忆存储、检索、写入、快照、指令、评估和演练定向回归 95 passed。
+- Web 全量 109 passed；demo-api 5 passed；`pnpm check` 与严格 OpenSpec 校验通过。
+- 初次 `pnpm check` / `pnpm demo:api:test` 因当前 PATH 缺少 Bash 失败；仅为验证进程加入本机既有 Git Bash 路径后通过，没有安装依赖或修改系统环境。
+- API 首轮全量为 1 failed / 1,292 passed / 1 skipped：未修改的 CLI health 测试固定期待 `codex`，当前环境配置的命令摘要为 `codex.exe`。仅在测试进程设置 `CODEX_CLI_PATH=codex` 后，该单项通过；相同测试配置下完整复跑为 **1,293 passed / 1 skipped**（Windows POSIX-only skip，513.28 秒）。没有更改项目 CLI 配置或修订该无关测试来掩盖失败。
+- 最终 `git diff --check` 与严格 OpenSpec 校验通过，任务 1.1 完成；本轮采用主代理只读源码复核与自动化回归，没有调度独立 Subagent 或执行真实 provider 演练。
+
 ## Prepare local parallel DAG baseline snapshot
 
 **日期:** 2026-09-04

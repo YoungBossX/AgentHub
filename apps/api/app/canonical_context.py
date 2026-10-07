@@ -175,6 +175,13 @@ def build_canonical_shared_context(
             trust_level="system",
         ),
     }
+    if "memorySelection" in session_context_pack:
+        fields["memorySelection"] = _field(
+            filter_protected_values(session_context_pack["memorySelection"]),
+            source="memory_selection",
+            created_at=timestamp,
+            trust_level="system",
+        )
     return {
         "version": CANONICAL_CONTEXT_VERSION,
         "createdAt": timestamp,

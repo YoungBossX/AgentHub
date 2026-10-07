@@ -12,6 +12,8 @@ from app.llm_planner import (
     create_llm_plan_tasks_from_outcome,
     llm_planner_fallback_metadata,
 )
+from app.memory_usage import planner_memory_evidence
+
 from app.memory_snapshots import (
     ensure_session_memory_snapshot,
     memory_snapshot_metadata,
@@ -102,18 +104,11 @@ def _attach_planner_runtime_evidence(
 ) -> None:
     if not tasks:
         return
-    session = db.get(AgentHubSession, tasks[0].session_id)
-    memory_snapshot = (
-        ensure_session_memory_snapshot(db, session)
-        if session is not None
-        else None
-    )
     runtime_metadata = (
         runtime_resolution.to_metadata()
         if runtime_resolution is not None
         else None
     )
-    snapshot_metadata = memory_snapshot_metadata(memory_snapshot)
     for task in tasks:
         try:
             plan = json.loads(task.plan_json)
@@ -127,9 +122,11 @@ def _attach_planner_runtime_evidence(
         if runtime_metadata is not None:
             planner_evidence["runtimeConfigResolution"] = runtime_metadata
             plan["runtimeConfigResolution"] = runtime_metadata
-        if snapshot_metadata:
-            planner_evidence["memorySnapshot"] = snapshot_metadata
-            plan["memorySnapshot"] = snapshot_metadata
+        if "memorySnapshot" not in planner_evidence:
+            session = db.get(AgentHubSession, task.session_id)
+            snapshot = ensure_session_memory_snapshot(db, session) if session is not None else None
+            planner_evidence["memorySnapshot"] = memory_snapshot_metadata(snapshot)
+        plan["memorySnapshot"] = planner_evidence["memorySnapshot"]
         context_handoff = _context_handoff_for_task(db, task)
         if context_handoff["itemCount"] > 0:
             planner_evidence["contextHandoff"] = context_handoff
@@ -190,6 +187,10 @@ def plan_for_message(
         memory_write = _maybe_handle_explicit_memory_write(db, message, content)
         if memory_write:
             return []
+    session = db.get(AgentHubSession, message.session_id)
+    if session is not None:
+        # Reject invalid memory before persisting any direct or fallback tasks.
+        ensure_session_memory_snapshot(db, session)
     llm_fallback = None
     if routed_role == "orchestrator":
         try:
@@ -247,6 +248,7 @@ def plan_for_message(
                             content,
                             conversation.outcome,
                             planner_provider,
+                            planner_memory_evidence=conversation.planner_input,
                         )
                         if fallback_tasks:
                             _attach_planner_runtime_evidence(db, fallback_tasks, planner_runtime)
@@ -298,6 +300,12 @@ def plan_for_message(
                         ),
                         provider=None if conversation is not None else planner_provider,
                     )
+                    memory_evidence = (
+                        planner_memory_evidence(conversation.planner_input)
+                        if conversation is not None
+                        else exc.memory_evidence
+                    )
+                    llm_fallback.update(memory_evidence)
                     if is_task_plan_validation_failure:
                         llm_fallback["originalOutcomeType"] = "task_plan"
                         llm_fallback["validationResult"] = "failed"

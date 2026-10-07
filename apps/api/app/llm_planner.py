@@ -15,13 +15,11 @@ from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.memory_snapshots import (
     ensure_session_memory_snapshot,
-    memory_snapshot_for_session,
     memory_snapshot_metadata,
+    read_memory_snapshot_content,
 )
-from app.memory_retrieval import (
-    retrieved_memory_context,
-    retrieve_relevant_memories,
-)
+from app.memory_usage import memory_usage_receipt, planner_memory_evidence
+from app.memory_retrieval import select_memory_context
 from app.mission_trace import build_session_mission_trace
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_contracts import ConversationOutcome, PlannerRequest, PlannerResponse
@@ -45,7 +43,9 @@ LLM_PLANNER_VERSION = 1
 
 
 class LLMPlannerError(ValueError):
-    pass
+    def __init__(self, message: str, *, memory_evidence: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.memory_evidence = memory_evidence or {}
 
 
 class LLMPlannerProvider(PlannerProvider, Protocol):
@@ -116,18 +116,19 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
     if session is None:
         raise LLMPlannerError("Session is unavailable for LLM planning.")
     memory_snapshot = ensure_session_memory_snapshot(db, session)
+    memory_content = read_memory_snapshot_content(memory_snapshot)
 
     targets = list_targets_for_workspace(db, session.workspace_id)
     recent_messages = _recent_messages(db, message.session_id)
     mission_trace = build_session_mission_trace(db, message.session_id).model_dump(by_alias=True)
-    relevant_memories = retrieved_memory_context(
-        retrieve_relevant_memories(
-            db,
-            query=message.content_md,
-            workspace_id=session.workspace_id,
-            agent_role="orchestrator",
-            limit=5,
-        )
+    memory_selection = select_memory_context(
+        db,
+        query=message.content_md,
+        workspace_id=session.workspace_id,
+        agent_role="orchestrator",
+        limit=5,
+        candidates=memory_content.items,
+        as_of=memory_content.as_of,
     )
     session_context_pack = {
         "sessionId": session.id,
@@ -146,7 +147,8 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
             },
         },
         "recentMessages": recent_messages,
-        "relevantMemories": relevant_memories,
+        "relevantMemories": memory_selection.to_context(),
+        "memorySelection": memory_selection.evidence,
         "missionTrace": mission_trace,
         "ledger": {},
         "latestDiff": None,
@@ -210,20 +212,31 @@ def create_llm_conversation_outcome(
     provider: LLMPlannerProvider,
 ) -> LLMConversationOutcomeResult:
     planner_input = build_llm_planner_input(db, message)
+    memory_evidence = planner_memory_evidence(planner_input)
     try:
         provider_result = provider.create_plan(planner_input)
     except PlannerProviderError as exc:
-        raise LLMPlannerError(f"LLM planner provider failed: {exc.summary}") from exc
+        raise LLMPlannerError(
+            f"LLM planner provider failed: {exc.summary}",
+            memory_evidence=memory_evidence,
+        ) from exc
     except Exception as exc:
-        raise LLMPlannerError(f"LLM planner provider failed: {exc}") from exc
+        raise LLMPlannerError(
+            f"LLM planner provider failed: {exc}",
+            memory_evidence=memory_evidence,
+        ) from exc
 
     if provider_result.status != "succeeded":
         raise LLMPlannerError(
             provider_result.error_summary
-            or f"LLM planner provider did not succeed: {provider_result.status}"
+            or f"LLM planner provider did not succeed: {provider_result.status}",
+            memory_evidence=memory_evidence,
         )
 
-    outcome = parse_conversation_outcome_output(provider_result.raw_output)
+    try:
+        outcome = parse_conversation_outcome_output(provider_result.raw_output)
+    except LLMPlannerError as exc:
+        raise LLMPlannerError(str(exc), memory_evidence=memory_evidence) from exc
     return LLMConversationOutcomeResult(
         outcome=outcome,
         planner_input=planner_input,
@@ -282,6 +295,7 @@ def create_llm_plan_tasks_from_outcome(
         provider_result=provider_result,
         raw_output=raw_output,
         plan_draft=plan_draft,
+        planner_input=conversation.planner_input,
     )
     return LLMPlanningOutcome(
         tasks=tasks,
@@ -573,14 +587,10 @@ def _attach_planner_evidence(
     provider_result: PlannerProviderResult,
     raw_output: dict[str, Any],
     plan_draft: dict[str, Any],
+    planner_input: dict[str, Any],
 ) -> None:
     created_task_ids = [task.id for task in tasks]
-    session = db.get(AgentHubSession, tasks[0].session_id) if tasks else None
-    memory_snapshot = (
-        memory_snapshot_for_session(db, session)
-        if session is not None
-        else None
-    )
+    canonical_context = planner_input["canonicalSharedContext"]
     evidence = {
         "providerId": provider_result.provider_id,
         "providerType": provider_result.provider_type,
@@ -591,8 +601,11 @@ def _attach_planner_evidence(
         "planRationale": _string_value(raw_output.get("rationale")),
         "planId": plan_draft.get("planId"),
         "createdTaskIds": created_task_ids,
-        "memorySnapshot": memory_snapshot_metadata(memory_snapshot),
+        "memorySnapshot": canonical_context["fields"]["memorySnapshot"]["value"],
     }
+    receipt = memory_usage_receipt(canonical_context)
+    if receipt is not None:
+        evidence["memoryUsage"] = receipt
     if provider_result.fallback_reason:
         evidence["fallbackReason"] = provider_result.fallback_reason
     if provider_result.provider_preset_id:

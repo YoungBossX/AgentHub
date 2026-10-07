@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from sqlmodel import Session as DbSession
 from sqlmodel import select
@@ -141,8 +141,7 @@ def list_memory_items(
 ) -> list[MemoryItem]:
     filters = filters or MemoryFilter()
     statement = select(MemoryItem).order_by(MemoryItem.updated_at.desc(), MemoryItem.id)
-    if filters.workspace_id is not None:
-        statement = statement.where(MemoryItem.workspace_id == filters.workspace_id)
+    statement = statement.where(MemoryItem.workspace_id == filters.workspace_id)
     if filters.scope is not None:
         statement = statement.where(MemoryItem.scope == filters.scope)
     if filters.memory_type is not None:
@@ -169,25 +168,54 @@ def memory_collection_versions(
     db: DbSession,
     workspace_id: str | None,
 ) -> MemoryCollectionVersions:
-    active_items = list_memory_items(
-        db,
-        MemoryFilter(workspace_id=workspace_id, status="active"),
+    items = list_memory_items(db, MemoryFilter(workspace_id=workspace_id))
+    return memory_collection_versions_for_items(
+        item for item in items if item.status in {"active", "warm"}
     )
+
+
+def memory_collection_versions_for_items(
+    items: Iterable[MemoryItem],
+) -> MemoryCollectionVersions:
+    frozen_items = list(items)
     project_items = [
         item
-        for item in active_items
+        for item in frozen_items
         if item.memory_type
         in {"project_rule", "decision", "pattern", "session_summary"}
     ]
     preference_items = [
         item
-        for item in active_items
+        for item in frozen_items
         if item.memory_type in {"user_preference", "feedback"}
     ]
     return MemoryCollectionVersions(
         project_memory_version=_collection_version(project_items),
         user_preference_version=_collection_version(preference_items),
     )
+
+
+def serialize_memory_item(item: MemoryItem) -> dict[str, Any]:
+    """Capture every input used for filtering and ranking, without an ORM reference."""
+    return {
+        "id": item.id,
+        "workspaceId": item.workspace_id,
+        "version": item.version,
+        "scope": item.scope,
+        "type": item.memory_type,
+        "source": item.source,
+        "status": item.status,
+        "trustLevel": item.trust_level,
+        "title": item.title,
+        "contentMd": item.content_md,
+        "contentHash": item.content_hash,
+        "importance": item.importance,
+        "targetIds": memory_target_ids(item),
+        "agentRoles": memory_agent_roles(item),
+        "lastUsedAt": item.last_used_at.isoformat() if item.last_used_at else None,
+        "updatedAt": item.updated_at.isoformat(),
+        "createdAt": item.created_at.isoformat(),
+    }
 
 
 def memory_target_ids(item: MemoryItem) -> list[str]:

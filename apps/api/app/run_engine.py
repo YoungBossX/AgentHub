@@ -27,6 +27,13 @@ from app.adapters import (
 from app.claude_code_adapter import ClaudeCodeAdapter
 from app.codex_adapter import CodexAdapter
 from app.context_pack import build_session_context_pack
+from app.memory_retrieval import MemoryContextBudgetError
+from app.memory_snapshots import (
+    MemorySnapshotError,
+    get_bound_memory_snapshot,
+    memory_snapshot_metadata,
+)
+from app.memory_usage import memory_usage_receipt
 from app.deployments import DeployError, DeployService
 from app.diffs import DiffCollectionError, collect_task_run_diff, record_diff_collection_failure
 from app.events import append_task_run_event
@@ -1322,10 +1329,17 @@ def agent_run_request_for(
     merged_plan_context = dict(task_plan)
     if plan_context:
         merged_plan_context.update(plan_context)
+    memory_snapshot = get_bound_memory_snapshot(
+        db,
+        internal_metrics_for_run(task_run).get("memorySnapshot"),
+        workspace_id=session.workspace_id,
+    )
+    merged_plan_context["memorySnapshot"] = memory_snapshot_metadata(memory_snapshot)
     context_pack = build_session_context_pack(
         db,
         task,
         plan_context=merged_plan_context,
+        memory_snapshot_id=memory_snapshot.id,
     )
     merged_plan_context["sessionContext"] = context_pack
     request = AgentRunRequest(
@@ -1534,7 +1548,8 @@ def _persist_context_snapshot(
     fence_current_execution: bool = False,
     launch_snapshot: Optional[_RequestLaunchSnapshot] = None,
 ) -> Optional[_RequestLaunchSnapshot]:
-    canonical_context = context_pack.get("canonicalContext")
+    visible_context = context_pack.get("providerVisibleContext")
+    canonical_context = visible_context.get("canonicalContext") if isinstance(visible_context, dict) else None
     if not isinstance(canonical_context, dict):
         if fence_current_execution:
             raise _execution_lease_ownership_error()
@@ -1547,6 +1562,9 @@ def _persist_context_snapshot(
         raise _execution_lease_ownership_error()
     metrics = internal_metrics_for_run(task_run)
     metrics["canonicalContextSnapshot"] = canonical_context
+    receipt = memory_usage_receipt(canonical_context)
+    if receipt is not None:
+        metrics["memoryUsage"] = receipt
     metrics_json = json.dumps(metrics, separators=(",", ":"))
     updated_at = utc_now()
     persisted_launch_snapshot: Optional[_RequestLaunchSnapshot] = None
@@ -2180,7 +2198,7 @@ def _claim_scope_execution_attempt(
 def _persist_active_task_run_scope_failure(
     db: DbSession,
     task_run_id: str,
-    exc: TaskRunScopeError,
+    exc: TaskRunScopeError | MemoryContextBudgetError,
     ownership: Optional[_PrepareFailureOwnershipSnapshot],
 ) -> Optional[TaskRun]:
     if ownership is None or ownership.task_run_id != task_run_id:
@@ -2514,7 +2532,7 @@ async def execute_task_run(
                 supervised_run,
                 prepare_request,
             )
-        except TaskRunScopeError as exc:
+        except (TaskRunScopeError, MemoryContextBudgetError) as exc:
             if isinstance(exc, _RequestPersistenceOwnershipError):
                 db.rollback()
                 raise
@@ -3427,6 +3445,10 @@ async def execute_task_run_background(
             adapter_type=adapter_type,
             adapter=adapter,
         )
+        return True
+    except MemoryContextBudgetError:
+        # Owned preparation failures are persisted inside execute_task_run.
+        # An escaped budget error means that fence rejected this old owner.
         return True
     except TaskRunScopeError as exc:
         db.refresh(task_run)

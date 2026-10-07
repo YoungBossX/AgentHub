@@ -355,7 +355,7 @@ def test_context_snapshot_keeps_internal_scope_evidence_out_of_public_metrics(
         run_engine_module._persist_context_snapshot(
             db,
             stored,
-            {"canonicalContext": {"requestId": "context-1"}},
+            {"providerVisibleContext": {"canonicalContext": {"requestId": "context-1"}}},
         )
         db.refresh(stored)
         raw_metrics = json.loads(stored.metrics_json)
@@ -13092,9 +13092,11 @@ async def test_replaced_generation_after_prepare_cannot_bind_or_launch(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("failure", ["scope", "memory_budget"])
 async def test_prepare_scope_failure_cannot_fail_replacement_generation(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
+    failure: str,
 ) -> None:
     db = db_from_override()
     _, task_run, queue_entry, _ = _prepare_readonly_execution_boundary(
@@ -13124,7 +13126,7 @@ async def test_prepare_scope_failure_cannot_fail_replacement_generation(
                 )
             try:
                 return super().run_if_current(expected, operation)
-            except task_run_scope.TaskRunScopeError:
+            except (task_run_scope.TaskRunScopeError, run_engine_module.MemoryContextBudgetError):
                 self.prepare_failed = True
                 raise
 
@@ -13143,7 +13145,7 @@ async def test_prepare_scope_failure_cannot_fail_replacement_generation(
 
     class MalformedCapabilitiesAdapter:
         def getCapabilities(self) -> AdapterCapabilities:
-            return malformed_capabilities
+            return valid_capabilities if failure == "memory_budget" else malformed_capabilities
 
         async def createRun(self, request):
             adapter_starts.append(request.task_run_id)
@@ -13164,9 +13166,17 @@ async def test_prepare_scope_failure_cannot_fail_replacement_generation(
         async def cleanup(self, current_adapter_run_id):
             return None
 
+    if failure == "memory_budget":
+        def over_budget_context(*args, **kwargs):
+            raise run_engine_module.MemoryContextBudgetError()
+        monkeypatch.setattr(run_engine_module, "build_session_context_pack", over_budget_context)
     supervisor = ReplaceAtFailureGateSupervisor()
     try:
-        with pytest.raises(task_run_scope.TaskRunScopeError) as exc_info:
+        expected_error = (
+            run_engine_module.MemoryContextBudgetError if failure == "memory_budget"
+            else task_run_scope.TaskRunScopeError
+        )
+        with pytest.raises(expected_error) as exc_info:
             await run_engine_module.execute_task_run(
                 db,
                 task_run,
@@ -13178,9 +13188,13 @@ async def test_prepare_scope_failure_cannot_fail_replacement_generation(
     finally:
         db.close()
 
-    assert exc_info.value.error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
+    assert exc_info.value.error_code == (
+        "MEMORY_CONTEXT_BUDGET_EXCEEDED" if failure == "memory_budget"
+        else "TASK_RUN_SCOPE_UNVERIFIABLE"
+    )
     assert exc_info.value.message == (
-        "The task run execution access binding cannot be verified."
+        run_engine_module.MemoryContextBudgetError.message if failure == "memory_budget"
+        else "The task run execution access binding cannot be verified."
     )
     assert adapter_starts == []
     assert len(replacement) == 1
@@ -13617,6 +13631,7 @@ async def test_request_snapshot_cas_rejects_terminal_durable_run_and_queue(
     assert stored.error_code == "COMPETING_REQUEST_FINALIZER"
     assert durable_queue.state == "interrupted"
     assert "canonicalContextSnapshot" not in json.loads(stored.metrics_json)
+    assert "memoryUsage" not in json.loads(stored.metrics_json)
 
 
 @pytest.mark.parametrize("initial_state", ("streaming", "collecting_diff"))
@@ -13805,22 +13820,33 @@ async def test_prepare_scope_failure_preserves_execution_identity_drift(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("failure", ["malformed_context", "memory_budget"])
 async def test_malformed_canonical_context_is_owned_prepare_failure(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
+    failure: str,
 ) -> None:
     db = db_from_override()
+    if failure == "memory_budget":
+        from app.memory_store import MemoryItemInput, create_memory_item
+        workspace = db.exec(select(Workspace)).one()
+        create_memory_item(db, MemoryItemInput(
+            workspace_id=workspace.id, scope="project", memory_type="project_rule",
+            source="user_explicit", title="Large policy", content_md="Preserve compatibility. " * 3000,
+            status="active", trust_level="user_confirmed",
+        ))
     _, task_run, _, _ = _prepare_readonly_execution_boundary(
         db,
         monkeypatch,
         worker_id="worker:malformed-canonical-context-prepare-failure",
     )
     task_run_id = task_run.id
-    monkeypatch.setattr(
-        run_engine_module,
-        "build_session_context_pack",
-        lambda *args, **kwargs: {"canonicalContext": "malformed"},
-    )
+    if failure == "malformed_context":
+        monkeypatch.setattr(
+            run_engine_module,
+            "build_session_context_pack",
+            lambda *args, **kwargs: {"canonicalContext": "malformed"},
+        )
     engine = db.get_bind()
     event.listen(engine, "before_cursor_execute", _fail_if_readonly_touches_target_lock)
     try:
@@ -13843,7 +13869,10 @@ async def test_malformed_canonical_context_is_owned_prepare_failure(
         db.close()
 
     assert result_state == "failed"
-    assert result_error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
+    assert result_error_code == (
+        "MEMORY_CONTEXT_BUDGET_EXCEEDED" if failure == "memory_budget"
+        else "TASK_RUN_SCOPE_UNVERIFIABLE"
+    )
     with db_from_override() as verification_db:
         stored = verification_db.get(TaskRun, task_run_id)
         durable_queue = entry_for_task_run(verification_db, task_run_id)
@@ -14209,6 +14238,13 @@ def test_request_snapshot_cas_runs_after_complete_request_construction(
 
     assert request.task_run_id == task_run.id
     assert construction_order == ["request", "cas"]
+    with db_from_override() as verification_db:
+        stored = verification_db.get(TaskRun, task_run.id)
+        metrics = json.loads(stored.metrics_json)
+    sent = request.plan_context["sessionContext"]["providerVisibleContext"]["canonicalContext"]
+    assert metrics["canonicalContextSnapshot"] == sent
+    assert metrics["memoryUsage"]["memorySnapshotId"] == sent["fields"]["memorySnapshot"]["value"]["memorySnapshotId"]
+    assert metrics["memoryUsage"]["evidenceType"] == "prepared_provider_request"
 
 
 def test_request_snapshot_cas_binds_fresh_external_target_policy_identity(
@@ -14767,6 +14803,9 @@ async def test_final_launch_holds_sqlite_writer_boundary_until_delegate_returns(
         {"canonicalContext": None},
         {"canonicalContext": []},
         {"canonicalContext": "malformed"},
+        {"providerVisibleContext": {"canonicalContext": None}},
+        {"providerVisibleContext": {"canonicalContext": []}},
+        {"providerVisibleContext": {"canonicalContext": "malformed"}},
     ),
 )
 def test_fenced_context_snapshot_rejects_malformed_canonical_context(

@@ -1047,6 +1047,7 @@ def _fallback_tasks_for_non_task_llm_outcome(
     content: str,
     outcome: dict[str, Any],
     planner_provider,
+    planner_memory_evidence: Optional[dict[str, Any]] = None,
 ) -> list[Task]:
     if str(outcome.get("outcomeType") or "") != "assistant_reply":
         return []
@@ -1058,6 +1059,9 @@ def _fallback_tasks_for_non_task_llm_outcome(
         "non_task_coding_outcome",
         provider=planner_provider,
     )
+    if planner_memory_evidence:
+        from app.memory_usage import planner_memory_evidence as _planner_memory_evidence
+        llm_fallback.update(_planner_memory_evidence(planner_memory_evidence))
     llm_fallback["originalOutcomeType"] = str(outcome.get("outcomeType") or "")
     llm_fallback["originalValidationResult"] = str(
         outcome.get("validationResult") or ""
@@ -1251,7 +1255,7 @@ def _planner_evidence_from_fallback(llm_fallback: dict) -> dict:
         "errorCode": llm_fallback.get("errorCode"),
         "errorSummary": llm_fallback.get("errorSummary"),
     }
-    for key in ("model", "providerPresetId", "protocol"):
+    for key in ("model", "providerPresetId", "protocol", "memorySnapshot", "memoryUsage"):
         if key in llm_fallback:
             evidence[key] = llm_fallback[key]
     return {key: value for key, value in evidence.items() if value not in (None, "")}

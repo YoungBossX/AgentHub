@@ -25,12 +25,11 @@ from app.ledger import (
 )
 from app.memory_snapshots import (
     ensure_session_memory_snapshot,
+    get_memory_snapshot,
     memory_snapshot_metadata,
+    read_memory_snapshot_content,
 )
-from app.memory_retrieval import (
-    retrieved_memory_context,
-    retrieve_relevant_memories,
-)
+from app.memory_retrieval import select_memory_context
 from app.models import (
     Artifact,
     Deployment,
@@ -60,6 +59,7 @@ def build_session_context_pack(
     task: Task,
     *,
     plan_context: Optional[dict[str, Any]] = None,
+    memory_snapshot_id: str | None = None,
     recent_message_limit: int = RECENT_MESSAGE_LIMIT,
 ) -> dict[str, Any]:
     plan = _json_dict(task.plan_json)
@@ -70,11 +70,15 @@ def build_session_context_pack(
         merged_context.update(plan_context)
 
     session = db.get(AgentHubSession, task.session_id)
-    memory_snapshot = (
-        ensure_session_memory_snapshot(db, session)
-        if session is not None
-        else None
-    )
+    workspace_id = session.workspace_id if session is not None else None
+    if memory_snapshot_id is not None:
+        memory_snapshot = get_memory_snapshot(db, memory_snapshot_id, workspace_id=workspace_id)
+    else:
+        memory_snapshot = ensure_session_memory_snapshot(db, session) if session is not None else None
+    memory_content = read_memory_snapshot_content(memory_snapshot) if memory_snapshot is not None else None
+    snapshot_metadata = memory_snapshot_metadata(memory_snapshot) or None
+    # Plan/message context is caller-controlled; the binding is supplied separately.
+    merged_context["memorySnapshot"] = snapshot_metadata
     ledger = refresh_session_ledger(db, task.session_id)
     task_runs = _task_runs_for_session(db, task.session_id)
     latest_diff = _latest_diff_context(db, task_runs)
@@ -92,22 +96,22 @@ def build_session_context_pack(
     )
     app_contract = _app_contract_context(merged_context)
     handoff_notes = handoff_context_for_task(db, task)
-    relevant_memories = retrieved_memory_context(
-        retrieve_relevant_memories(
-            db,
-            query=f"{original_request} {task.title}",
-            workspace_id=session.workspace_id if session is not None else None,
-            target_id=_string_value(merged_context.get("targetId")),
-            agent_role=_agent_role_for_task(db, task),
-            limit=5,
-        )
+    memory_selection = select_memory_context(
+        db,
+        query=f"{original_request} {task.title}",
+        workspace_id=session.workspace_id if session is not None else None,
+        target_id=_string_value(merged_context.get("targetId")),
+        agent_role=_agent_role_for_task(db, task),
+        limit=5,
+        candidates=memory_content.items if memory_content is not None else (),
+        as_of=memory_content.as_of if memory_content is not None else None,
     )
 
     context_pack = {
         "version": "session_context_pack_v1",
         "sessionId": task.session_id,
         "workspaceId": session.workspace_id if session is not None else None,
-        "memorySnapshot": memory_snapshot_metadata(memory_snapshot) or None,
+        "memorySnapshot": snapshot_metadata,
         "currentGoal": ledger.current_goal,
         "originalUserRequest": original_request,
         "currentTask": {
@@ -144,7 +148,8 @@ def build_session_context_pack(
         "artifactReferences": [artifact_reference] if artifact_reference else [],
         "appContract": app_contract,
         "handoffNotes": handoff_notes,
-        "relevantMemories": relevant_memories,
+        "relevantMemories": memory_selection.to_context(),
+        "memorySelection": memory_selection.evidence,
         "targetProject": _target_project_context(db, task, merged_context),
         "relatedTargetProjects": _related_target_project_context(
             db,
