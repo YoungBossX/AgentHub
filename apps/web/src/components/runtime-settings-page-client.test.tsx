@@ -372,6 +372,45 @@ describe("RuntimeSettingsPageClient", () => {
     })
   })
 
+  it("preserves System Prompt through provider changes, saves and cancels edits", async () => {
+    const configured = {
+      ...runtimeConfig,
+      roles: {
+        ...runtimeConfig.roles,
+        frontend: {
+          ...runtimeConfig.roles.frontend,
+          enabled: true,
+          agentProfileId: "agent-frontend",
+          adapterType: "codex",
+          providerId: "local-codex-cli",
+          systemPrompt: "Saved instruction",
+        },
+      },
+    }
+    apiMocks.getAgentRuntimeConfig.mockResolvedValue(configured)
+    apiMocks.updateAgentRuntimeConfig.mockImplementation(async (_url, _workspace, roles) => ({
+      ...configured, roles,
+    }))
+    render(<RuntimeSettingsPageClient backendUrl="http://127.0.0.1:8000" workspace={workspace} />)
+    const prompt = await screen.findByLabelText("前端 Agent System Prompt")
+    expect((prompt as HTMLTextAreaElement).value).toBe("Saved instruction")
+    fireEvent.change(prompt, { target: { value: "Chinese response\nPreserve accessibility" } })
+    fireEvent.change(screen.getAllByLabelText("提供方")[1], { target: { value: "local-claude-code-cli" } })
+    expect((prompt as HTMLTextAreaElement).value).toBe("Chinese response\nPreserve accessibility")
+    fireEvent.click(screen.getByRole("button", { name: "保存" }))
+    await waitFor(() => expect(apiMocks.updateAgentRuntimeConfig).toHaveBeenCalledWith(
+      "http://127.0.0.1:8000", "workspace-1",
+      expect.objectContaining({ frontend: expect.objectContaining({
+        systemPrompt: "Chinese response\nPreserve accessibility", adapterType: "claude_code",
+      }) }),
+    ))
+    await screen.findByText("运行设置已保存。")
+    fireEvent.change(prompt, { target: { value: "Unsaved instruction" } })
+    fireEvent.click(screen.getByRole("button", { name: "取消" }))
+    expect((prompt as HTMLTextAreaElement).value).toBe("Chinese response\nPreserve accessibility")
+    expect((screen.getByLabelText("后端 Agent System Prompt") as HTMLTextAreaElement).disabled).toBe(true)
+  })
+
   it("saves the selected session target mapping from workspace settings", async () => {
     render(
       <RuntimeSettingsPageClient

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   buildComposerMessageContext,
   contextItemFromArtifact,
+  contextItemFromCode,
   contextItemFromMessage,
   MessageComposer,
 } from "./message-composer"
@@ -98,6 +99,17 @@ const workbenchContextArtifact: ArtifactPanelItem = {
 }
 
 describe("MessageComposer", () => {
+  it("preserves quoted code and draft provenance in the outgoing context", () => {
+    const text = "  const title = '选区';\n"
+    const selected = contextItemFromCode(contextArtifact, "src/App.tsx", text)
+    const payload = buildComposerMessageContext([selected])
+    expect(payload.selectedText).toBe(text)
+    expect(payload.selectedArtifactId).toBe("artifact-diff-1")
+    expect(payload.contextItems).toEqual([expect.objectContaining({
+      kind: "selected_text", selectedText: text, artifactId: "artifact-diff-1",
+      metadata: { path: "src/App.tsx", source: "editor_draft" },
+    })])
+  })
   it("shows quoted message context before send", () => {
     const onClearContext = vi.fn()
 

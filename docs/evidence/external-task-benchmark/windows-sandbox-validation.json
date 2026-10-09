@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "agenthub.windows_codex_sandbox_validation.v1",
+  "recordedDate": "2026-10-07",
+  "task": "agenthub-windows-codex-sandbox-selection/1.1",
+  "reports": {
+    "windows-sandbox-fixed-single.json": {
+      "sha256": "886ecc21c5f77c92ea1b0696f6582a5ebf7b3ea22b511f3e4c28d1b2ec05c7bd",
+      "cases": 1,
+      "functionalTests": 3,
+      "sourceHashesMatch": true,
+      "suiteHashesMatch": true
+    },
+    "windows-sandbox-fixed-suite.json": {
+      "sha256": "2b1a5f08667e29ffb571c3a6fd8c6a29ec4163b3be2feeea1bf0985c31b8ae2c",
+      "cases": 3,
+      "functionalTests": 10,
+      "sourceHashesMatch": true,
+      "suiteHashesMatch": true
+    }
+  },
+  "historicalReportHashesUnchanged": {
+    "write-completion-final.json": "08169cdcc2467d6fe1f8b6588bb2e23242ccca3e71a800cd031d4621abc18f6a",
+    "suite-final.json": "12d13359308a376bf2fa4ba0e68c1bcebf9294ba0169c2d2b1cdee36345cb743"
+  },
+  "controlReports": {
+    "windows-sandbox-control-original.json": "e2598ea5055dfbdab5e196df220e79d3df61347545df58f21896deed19c3aefd",
+    "windows-sandbox-control-native.json": "2d8a6fda71b103204262da945e2d7726dbfbdc625666c0b1fe398c778d8bc199",
+    "windows-sandbox-native-inherited.json": "676e3345c2326eb791c571f8dd5cd4eb33e603079e898e59b0ba009d0940f5c7",
+    "windows-sandbox-native-owner-only.json": "b4b421a581fd8c1d9984c34a5cdd61ea54808306d5f4c404fcd812f0423f2c99"
+  },
+  "command": [
+    "C:\\Users\\XCC\\AppData\\Local\\OpenAI\\Codex\\bin\\979a96ce184041d1\\codex.exe",
+    "-c",
+    "windows.sandbox=\"unelevated\"",
+    "--ask-for-approval",
+    "never",
+    "exec",
+    "--json",
+    "--cd",
+    "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-sandbox-inherited-0e567c627c51428ab66bd3ccea9a60de",
+    "--skip-git-repo-check",
+    "--sandbox",
+    "workspace-write",
+    "--ephemeral",
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--",
+    "<instruction>"
+  ],
+  "cliSha256": "97c57e4eb64257bcd7a470757950886f2c59eec4aa8537908979c6475d41cc08",
+  "cliVersion": "codex-cli 0.162.0-alpha.2",
+  "regressions": {
+    "red": {
+      "failed": 2,
+      "passed": 24
+    },
+    "adapterGuardrailClaudeBenchmark": {
+      "passed": 121,
+      "seconds": 87.92
+    },
+    "engineAndScope": {
+      "passed": 456,
+      "skipped": 1,
+      "skipReason": "POSIX exact-case only",
+      "seconds": 137.11
+    },
+    "totalPassed": 577,
+    "totalSkipped": 1,
+    "fullApiSuiteRerun": false,
+    "fullWebSuiteRerun": false
+  },
+  "checks": {
+    "pnpmCheck": "passed with existing Git Bash bin added only to check process PATH",
+    "strictOpenSpec": "passed",
+    "gitDiffCheck": "passed",
+    "currentSourceAndSuiteHashes": "passed"
+  },
+  "boundaries": {
+    "mockUsedForLiveCases": false,
+    "manualHostAclChanges": false,
+    "userConfigLoaded": false,
+    "newDependenciesInstalled": false,
+    "developmentCheckoutCommitted": false,
+    "developmentCheckoutPushed": false,
+    "sandboxMode": "workspace-write",
+    "windowsNativeSandbox": "unelevated",
+    "elevatedIsolationVerified": false
+  }
+}

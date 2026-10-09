@@ -1,0 +1,16 @@
+[
+  {
+    "mode": "codex",
+    "runId": "543adcb8-629c-4e22-bce2-8ef87cd0e6e0",
+    "state": "completed",
+    "appSha256": "5f71a1fe63df6e7d1fd7f4fc2f6c2d2d450e2d2caa1fc5d9da26e2c5b44bea0d",
+    "source": "unchanged native result from message-attachments acceptance; no new inference"
+  },
+  {
+    "mode": "claude",
+    "runId": "a9d723ac-4a05-40ec-b52b-70f3a5cc429f",
+    "state": "completed",
+    "appSha256": "27a4f62eb8a3b83b3336ef23977697abc654bafb1999094686e37d67b7e879ba",
+    "source": "unchanged native result from message-attachments acceptance; no new inference"
+  }
+]

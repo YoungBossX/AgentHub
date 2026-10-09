@@ -1,0 +1,181 @@
+FF.....F.FF.........                                                     [100%]
+================================== FAILURES ===================================
+_____ test_full_file_prepare_apply_duplicate_and_agent_evidence_immutable _____
+
+edit_db = (<sqlmodel.orm.session.Session object at 0x0000024E241F6630>, 'ace18302-a149-41eb-b025-e48458f5344b', '83b771c9-08ec-4.../test_full_file_prepare_apply_d0/worktrees/f9d29ea3-8d17-4651-8d0d-6bc9ec99cc7f/ace18302-a149-41eb-b025-e48458f5344b'))
+
+    def test_full_file_prepare_apply_duplicate_and_agent_evidence_immutable(edit_db):
+        db, sid, source, root = edit_db
+        original_run = db.get(TaskRun, db.get(Artifact, source).task_run_id).model_dump()
+        original_artifact = db.get(Artifact, source).model_dump()
+        operation = prepare(edit_db)
+>       assert (root / PATH).read_bytes() == b"baseline\n"
+E       AssertionError: assert b'baseline\r\n' == b'baseline\n'
+E         
+E         At index 8 diff: b'\r' != b'\n'
+E         Use -v to get more diff
+
+tests\test_user_code_edits.py:53: AssertionError
+_____________ test_patch_add_delete_modify_preserves_exact_bytes ______________
+
+edit_db = (<sqlmodel.orm.session.Session object at 0x0000024E2479CC50>, '59a05a99-243f-4d15-b94a-5356308c4e70', 'bf292b96-e936-4.../test_patch_add_delete_modify_p0/worktrees/2e23772c-c56c-441a-819c-a1c7c8ac3923/59a05a99-243f-4d15-b94a-5356308c4e70'))
+
+    def test_patch_add_delete_modify_preserves_exact_bytes(edit_db):
+        db, sid, source, root = edit_db
+        extra = "apps/demo/src/extra.txt"
+        (root / extra).write_bytes(b"remove\r\n")
+        changes = (FileChange(PATH, b"baseline\n", "����\r\nĩ��".encode()),
+                   FileChange(extra, b"remove\r\n", None), FileChange("apps/demo/src/new.txt", None, b""))
+>       operation = edits.prepare_edit(db, sid, source, str(uuid4()), patch=render_text_patch(changes))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_user_code_edits.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\user_code_edits.py:172: in prepare_edit
+    changes = prepare_text_patch(patch, read_file=files.read, permits=target.permits_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\user_patch.py:228: in prepare_text_patch
+    change = _apply_file(item, read_file(item.path))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+patch = FilePatch(path='apps/demo/src/App.tsx', operation='modify', hunks=(Hunk(old_start=1, old_count=1, new_start=1, new_count=2, lines=(('-', 'baseline\n'), ('+', '����\r\n'), ('+', 'ĩ��'))),))
+before = b'baseline\r\n'
+
+    def _apply_file(patch: FilePatch, before: bytes | None) -> FileChange:
+        if patch.operation == "add" and before is not None:
+            raise UserPatchConflict("The file to add already exists.")
+        if patch.operation != "add" and before is None:
+            raise UserPatchConflict("A patch source file no longer exists.")
+        original = _lines(text_bytes(before)) if before is not None else []
+        output: list[str] = []
+        cursor = 0
+        for hunk in patch.hunks:
+            start = hunk.old_start - 1 if hunk.old_count else hunk.old_start
+            if start < cursor or start > len(original):
+                raise UserPatchConflict("Hunk offsets overlap or exceed current source.")
+            output.extend(original[cursor:start]); cursor = start
+            new_start = hunk.new_start - 1 if hunk.new_count else hunk.new_start
+            if new_start != len(output):
+                raise UserPatchConflict("New hunk position does not match the exact output.")
+            for tag, text in hunk.lines:
+                if tag != "+":
+                    if cursor >= len(original) or original[cursor] != text:
+>                       raise UserPatchConflict("Hunk context does not match the current source; reload instead of forcing the patch.")
+E                       app.user_patch.UserPatchConflict: Hunk context does not match the current source; reload instead of forcing the patch.
+
+app\user_patch.py:198: UserPatchConflict
+_ test_busy_session_and_unresolved_operations_block_preparation_and_application _
+
+edit_db = (<sqlmodel.orm.session.Session object at 0x0000024E20C21EB0>, '3f7ceee0-0a13-4232-bfde-e5f70d086ebf', '8cf5d00a-9e0c-4.../test_busy_session_and_unresolv0/worktrees/6fb236c6-c1ec-4fb8-abc5-65f3aed3cda7/3f7ceee0-0a13-4232-bfde-e5f70d086ebf'))
+
+    def test_busy_session_and_unresolved_operations_block_preparation_and_application(edit_db):
+        db, sid, source, root = edit_db
+        operation = prepare(edit_db)
+        run = db.get(TaskRun, db.get(Artifact, source).task_run_id)
+        run.state = "queued"; db.add(run); db.commit()
+        with pytest.raises(UserPatchConflict): edits.apply_edit(db, sid, operation["id"])
+        db.rollback()
+        run.state = "completed"; db.add(run); db.commit()
+        artifact = db.get(Artifact, operation["id"])
+        artifact.status = "unresolved"; db.add(artifact); db.commit()
+        assert pending_user_edit(db, sid).id == operation["id"]
+        with pytest.raises(UserPatchConflict): prepare(edit_db)
+        db.rollback()
+        from app.dag_integration import _assert_idle, IntegrationWaiting
+        with pytest.raises(IntegrationWaiting): _assert_idle(db, sid)
+        from app.task_runs import create_task_run, TaskRunLifecycleError
+        from app.models import Task
+        task = db.get(Task, run.task_id)
+        new_task = task_for(db, db.get(Session, sid), "frontend", isolated=False)
+        with pytest.raises(TaskRunLifecycleError, match="user code edit"): create_task_run(db, new_task.id)
+>       assert (root / PATH).read_bytes() == b"baseline\n"
+E       AssertionError: assert b'baseline\r\n' == b'baseline\n'
+E         
+E         At index 8 diff: b'\r' != b'\n'
+E         Use -v to get more diff
+
+tests\test_user_code_edits.py:121: AssertionError
+____________ test_failed_second_write_rolls_back_complete_outputs _____________
+
+edit_db = (<sqlmodel.orm.session.Session object at 0x0000024E2471CD70>, '0bca4808-9678-4abb-9d1f-02458fe19216', '5a5422c5-8377-4.../test_failed_second_write_rolls0/worktrees/06b140d2-4204-49f4-9e2d-a48559b1ff80/0bca4808-9678-4abb-9d1f-02458fe19216'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000024E24B7B500>
+
+    def test_failed_second_write_rolls_back_complete_outputs(edit_db, monkeypatch):
+        db, sid, source, root = edit_db
+        changes = (FileChange(PATH, b"baseline\n", b"new\n"), FileChange("apps/demo/src/new.txt", None, b"added\n"))
+>       op = edits.prepare_edit(db, sid, source, str(uuid4()), patch=render_text_patch(changes))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_user_code_edits.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\user_code_edits.py:172: in prepare_edit
+    changes = prepare_text_patch(patch, read_file=files.read, permits=target.permits_path)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\user_patch.py:228: in prepare_text_patch
+    change = _apply_file(item, read_file(item.path))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+patch = FilePatch(path='apps/demo/src/App.tsx', operation='modify', hunks=(Hunk(old_start=1, old_count=1, new_start=1, new_count=1, lines=(('-', 'baseline\n'), ('+', 'new\n'))),))
+before = b'baseline\r\n'
+
+    def _apply_file(patch: FilePatch, before: bytes | None) -> FileChange:
+        if patch.operation == "add" and before is not None:
+            raise UserPatchConflict("The file to add already exists.")
+        if patch.operation != "add" and before is None:
+            raise UserPatchConflict("A patch source file no longer exists.")
+        original = _lines(text_bytes(before)) if before is not None else []
+        output: list[str] = []
+        cursor = 0
+        for hunk in patch.hunks:
+            start = hunk.old_start - 1 if hunk.old_count else hunk.old_start
+            if start < cursor or start > len(original):
+                raise UserPatchConflict("Hunk offsets overlap or exceed current source.")
+            output.extend(original[cursor:start]); cursor = start
+            new_start = hunk.new_start - 1 if hunk.new_count else hunk.new_start
+            if new_start != len(output):
+                raise UserPatchConflict("New hunk position does not match the exact output.")
+            for tag, text in hunk.lines:
+                if tag != "+":
+                    if cursor >= len(original) or original[cursor] != text:
+>                       raise UserPatchConflict("Hunk context does not match the current source; reload instead of forcing the patch.")
+E                       app.user_patch.UserPatchConflict: Hunk context does not match the current source; reload instead of forcing the patch.
+
+app\user_patch.py:198: UserPatchConflict
+___ test_restart_reconciles_without_replaying_or_overwriting[before-failed] ___
+
+edit_db = (<sqlmodel.orm.session.Session object at 0x0000024E24A7FFB0>, '8f7c7837-923d-428d-942a-2693cb68b91e', 'c9a4edeb-f062-4.../test_restart_reconciles_withou0/worktrees/87f27cee-e1b9-4aa0-bb52-6baf2833e0e1/8f7c7837-923d-428d-942a-2693cb68b91e'))
+outcome = 'before', expected = 'failed'
+
+    @pytest.mark.parametrize("outcome,expected", [("before", "failed"), ("after", "applied"), ("partial", "unresolved"), ("foreign", "unresolved")])
+    def test_restart_reconciles_without_replaying_or_overwriting(edit_db, outcome, expected):
+        db, sid, source, root = edit_db
+        op = prepare(edit_db)
+        artifact = db.get(Artifact, op["id"])
+        artifact.status = "applying"; db.add(artifact); db.commit()
+        value = {"before": b"baseline\n", "after": b"user edit\n", "partial": b"user", "foreign": b"external"}[outcome]
+        (root / PATH).write_bytes(value)
+        edits.recover_user_edits(db.get_bind())
+        db.expire_all()
+>       assert db.get(Artifact, op["id"]).status == expected
+E       AssertionError: assert 'unresolved' == 'failed'
+E         
+E         - failed
+E         + unresolved
+
+tests\test_user_code_edits.py:160: AssertionError
+============================== warnings summary ===============================
+app\models.py:14: 4 warnings
+tests/test_user_code_edits.py: 336 warnings
+  X:\Git_Clone\AgentHub\apps\api\app\models.py:14: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_user_code_edits.py::test_full_file_prepare_apply_duplicate_and_agent_evidence_immutable
+FAILED tests/test_user_code_edits.py::test_patch_add_delete_modify_preserves_exact_bytes
+FAILED tests/test_user_code_edits.py::test_busy_session_and_unresolved_operations_block_preparation_and_application
+FAILED tests/test_user_code_edits.py::test_failed_second_write_rolls_back_complete_outputs
+FAILED tests/test_user_code_edits.py::test_restart_reconciles_without_replaying_or_overwriting[before-failed]
+5 failed, 15 passed, 340 warnings in 18.33s

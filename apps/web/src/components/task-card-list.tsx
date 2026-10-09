@@ -7,7 +7,7 @@ import {
   Rocket,
   SearchCheck,
 } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useState } from "react"
 
 import { ExecutionTrace } from "./execution-trace"
 import { DagSummary } from "./dag-summary"
@@ -21,6 +21,7 @@ import {
   listTaskRunDiffs,
   listTaskRunPreviews,
   listTaskRunReviews,
+  type AgentContact,
   type DeploymentArtifact,
   type DiffArtifact,
   type PlanReviewMetadata,
@@ -32,12 +33,21 @@ import {
 
 export type ArtifactContextIntent = "ask" | "revise" | "send_to_agent"
 
+function customAgentName(task: SessionTask): string | null {
+  const selection = task.taskRuns.at(-1)?.metricsJson.agentSelection as { customProfile?: { displayName?: unknown } } | undefined
+  const name = selection?.customProfile?.displayName ?? task.planJson.agentProfileDisplayName
+  return typeof name === "string" ? name : null
+}
+
 type TaskCardListProps = {
+  compact?: boolean
+  agents?: AgentContact[]
   tasks: SessionTask[]
   artifactRefreshKey?: number
   backendUrl?: string
   busy?: boolean
   fetcher?: typeof fetch
+  onArtifactError?: (error: unknown) => void
   onApproveRun?: (taskRunId: string) => void
   onArtifactsChange?: (artifacts: ArtifactPanelItem[]) => void
   onCreateDeploy?: (previewId: string) => void
@@ -64,11 +74,14 @@ type TaskCardListProps = {
 }
 
 export function TaskCardList({
+  compact = false,
+  agents = [],
   tasks,
   artifactRefreshKey = 0,
   backendUrl,
   busy = false,
   fetcher = fetch,
+  onArtifactError,
   onApproveRun,
   onArtifactsChange,
   onCreateDeploy,
@@ -158,12 +171,17 @@ export function TaskCardList({
       if (!cancelled) {
         setDiffsByRunId(Object.fromEntries(entries))
       }
+    }).catch((error: unknown) => {
+      if (!cancelled) {
+        setDiffsByRunId({})
+        onArtifactError?.(error)
+      }
     })
 
     return () => {
       cancelled = true
     }
-  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
+  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds, onArtifactError])
 
   useEffect(() => {
     if (!backendUrl || taskRunIds.length === 0) {
@@ -180,12 +198,17 @@ export function TaskCardList({
       if (!cancelled) {
         setReviewsByRunId(Object.fromEntries(entries))
       }
+    }).catch((error: unknown) => {
+      if (!cancelled) {
+        setReviewsByRunId({})
+        onArtifactError?.(error)
+      }
     })
 
     return () => {
       cancelled = true
     }
-  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
+  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds, onArtifactError])
 
   useEffect(() => {
     onArtifactsChange?.(artifactItems)
@@ -206,12 +229,17 @@ export function TaskCardList({
       if (!cancelled) {
         setDeploymentsByRunId(Object.fromEntries(entries))
       }
+    }).catch((error: unknown) => {
+      if (!cancelled) {
+        setDeploymentsByRunId({})
+        onArtifactError?.(error)
+      }
     })
 
     return () => {
       cancelled = true
     }
-  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
+  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds, onArtifactError])
 
   useEffect(() => {
     if (!backendUrl || taskRunIds.length === 0) {
@@ -228,12 +256,17 @@ export function TaskCardList({
       if (!cancelled) {
         setPreviewsByRunId(Object.fromEntries(entries))
       }
+    }).catch((error: unknown) => {
+      if (!cancelled) {
+        setPreviewsByRunId({})
+        onArtifactError?.(error)
+      }
     })
 
     return () => {
       cancelled = true
     }
-  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds])
+  }, [artifactRefreshKey, backendUrl, fetcher, taskRunIds, onArtifactError])
 
   if (tasks.length === 0) {
     return null
@@ -241,7 +274,7 @@ export function TaskCardList({
 
   return (
     <>
-    <DagSummary tasks={tasks} />
+    <DagSummary tasks={tasks} agents={agents} />
     <ol className="relative grid gap-3.5 pl-8 before:absolute before:bottom-5 before:left-3 before:top-5 before:w-px before:bg-[var(--border-strong)]">
       {tasks.map((task, index) => {
         const latestRun = task.taskRuns[task.taskRuns.length - 1] ?? null
@@ -265,7 +298,7 @@ export function TaskCardList({
           <li className="relative" key={task.id}>
             <span
               className={cn(
-                "absolute -left-8 top-5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-4 border-[#fbfcfc] text-[10px] font-bold shadow-sm",
+                "absolute -left-8 top-5 z-10 flex h-6 w-6 items-center justify-center rounded-full border-4 border-[var(--trace-border)] text-[10px] font-bold shadow-sm",
                 task.status === "completed" && "bg-green-600 text-white",
                 task.status === "failed" && "bg-red-600 text-white",
                 task.status === "waiting_approval" && "bg-amber-500 text-white",
@@ -297,7 +330,7 @@ export function TaskCardList({
                       任务 {index + 1}
                     </span>
                     <span className="rounded-full border border-[var(--border)] bg-white px-2.5 py-1 font-mono text-xs text-[var(--muted-foreground)]">
-                      @{task.assignedAgentRole ?? "unassigned"}
+                      {customAgentName(task) ?? (agents.find((agent) => agent.id === task.assignedAgentId) ?? agents.find((agent) => agent.role === task.assignedAgentRole))?.displayName ?? `@${task.assignedAgentRole ?? "unassigned"}`}
                     </span>
                   </div>
                   <h3 className="mt-2 text-[17px] font-semibold leading-6 text-slate-950">
@@ -318,10 +351,12 @@ export function TaskCardList({
                   依赖 {task.dependsOnTaskIds.join(", ")}
                 </p>
               ) : null}
+              <ProcessDisclosure compact={compact} label="规划依据与文件范围">
               <PlanReviewSummary
                 metadata={task.planReviewMetadata ?? planReviewMetadataFromPlan(task)}
                 plannerEvidence={plannerEvidenceFromPlan(task)}
               />
+              </ProcessDisclosure>
               <PMODecisionSummary
                 decision={pmoDecision}
                 onApprove={onApprovePlan ? () => onApprovePlan(task.id) : undefined}
@@ -347,6 +382,7 @@ export function TaskCardList({
                 selectedArtifactId={selectedArtifactId}
                 taskArtifactItems={taskArtifactItems}
               />
+              <ProcessDisclosure compact={compact} label="执行链路与制品状态">
               <ExecutionTrace
                 deployments={taskDeployments}
                 diffs={taskDiffs}
@@ -357,6 +393,7 @@ export function TaskCardList({
                 task={task}
                 taskArtifactItems={taskArtifactItems}
               />
+              </ProcessDisclosure>
               <ArtifactMessageCards
                 deployments={taskDeployments}
                 onCreateDeploy={onCreateDeploy}
@@ -386,6 +423,7 @@ export function TaskCardList({
                       key={taskRun.id}
                       run={taskRun}
                       runIndex={runIndex}
+                      scriptedReview={task.planJson.planner === "explicit_group_v1" && task.planJson.readOnly === true}
                     />
                   ))}
                   <RecoverySummary
@@ -394,7 +432,7 @@ export function TaskCardList({
                   />
                 </div>
               ) : null}
-              <RunControls
+              {!(compact && task.status === "completed" && !latestRun) ? <RunControls
                 busy={busy}
                 latestRun={latestRun}
                 onApproveRun={
@@ -423,7 +461,7 @@ export function TaskCardList({
                     ? () => onStartPreview(latestRun.id)
                     : undefined
                 }
-              />
+              /> : null}
             </article>
           </li>
         )
@@ -1137,7 +1175,7 @@ function artifactCardMeta(item: ArtifactPanelItem) {
       rows: [
         { label: "风险", value: item.artifact.riskLevel },
         { label: "文件", value: String(item.artifact.filesReviewed.length) },
-        { label: "Adapter", value: item.artifact.adapterType },
+        { label: "来源", value: item.artifact.nativeReceipt ? "模型评审 · 未运行测试" : item.artifact.adapterType },
       ],
       status: reviewLabel(item.artifact.status),
       summary: item.artifact.summary,
@@ -1257,16 +1295,21 @@ function RunSummary({
   artifactReady,
   run,
   runIndex,
+  scriptedReview,
 }: {
   artifactReady: boolean
   run: TaskRun
   runIndex: number
+  scriptedReview: boolean
 }) {
   const failed = run.state === "failed"
   const completed = run.state === "completed"
-  const fallback = run.adapterType === "scripted_mock"
+  const review = scriptedReview && run.adapterType === "scripted_mock"
+  const fallback = run.adapterType === "scripted_mock" && !review
   const label = failed
-    ? "Codex 失败"
+    ? review ? "脚本评审失败" : "Codex 失败"
+    : completed && review
+      ? "只读脚本评审完成"
     : completed && fallback
       ? "兜底已恢复"
       : completed
@@ -1472,4 +1515,8 @@ function RecoverySummary({
       ) : null}
     </div>
   )
+}
+
+function ProcessDisclosure({ compact, label, children }: { compact: boolean; label: string; children: ReactNode }) {
+  return compact ? <details className="mt-3"><summary className="cursor-pointer text-xs font-medium text-slate-500">{label}</summary>{children}</details> : children
 }

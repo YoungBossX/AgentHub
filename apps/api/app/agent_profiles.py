@@ -29,6 +29,10 @@ class AgentProfile:
     safe_for_review: bool
     description: str
     status: str
+    origin: str = "built_in"
+    system_prompt: str = ""
+    mention_alias: str | None = None
+    tool_policy: str | None = None
 
 
 BUILT_IN_AGENT_PROFILE_METADATA: dict[str, dict[str, Any]] = {
@@ -161,6 +165,7 @@ def profile_for_agent(agent: Agent) -> AgentProfile:
         safe_for_review=bool(metadata.get("safeForReview", False)),
         description=str(metadata.get("description") or agent.system_prompt),
         status=_status_for_agent(agent, metadata),
+        system_prompt=agent.system_prompt,
     )
 
 
@@ -176,10 +181,14 @@ def profile_for_draft(draft: AgentProfileDraft) -> AgentProfile:
         supported_roles=[draft.role],
         supported_targets=supported_targets_for_draft(draft),
         supported_modes=supported_modes_for_draft(draft),
-        safe_for_write=False,
+        safe_for_write=draft.safe_for_write if draft.tool_policy else False,
         safe_for_review=draft.safe_for_review,
         description=draft.description,
         status=draft.status,
+        origin="custom" if draft.tool_policy else "draft",
+        system_prompt=draft.system_prompt,
+        mention_alias=draft.mention_alias,
+        tool_policy=draft.tool_policy or None,
     )
 
 

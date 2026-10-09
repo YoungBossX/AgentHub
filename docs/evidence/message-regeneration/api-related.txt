@@ -1,0 +1,12 @@
+........................................................................ [ 88%]
+.........                                                                [100%]
+============================== warnings summary ===============================
+app\models.py:14: 4 warnings
+tests/test_chat_events.py: 182 warnings
+tests/test_message_attachments.py: 169 warnings
+tests/test_group_result_summary.py: 4878 warnings
+  X:\Git_Clone\AgentHub\apps\api\app\models.py:14: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+81 passed, 5233 warnings in 214.60s (0:03:34)

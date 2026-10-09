@@ -1,0 +1,80 @@
+{
+  "status": "verified",
+  "createdAt": "2026-10-08T11:46:24.088074+00:00",
+  "scope": "agenthub-login-fallback-target-binding 1.1",
+  "codeSha256": {
+    ".gitignore": "08245f6899a542bda1972774f322f1917fa2e2831a16ae9a0e7b93175c25186e",
+    "apps/api/app/planning.py": "e4f5ce7f27298d08814d2afe7a739057bc333d14eede8c71d3a1769a7037400b",
+    "apps/api/app/planning_intents.py": "2c74a1b1d63ae15f99b11f8db6e0a7261b2c54468264f8380ca57b971eb482d4",
+    "apps/api/app/planning_tasks.py": "918daf358e15226b4726e39453294561c9ff9300ecd1b7a10721ae74cffedadd",
+    "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28",
+    "apps/api/tests/test_planning.py": "130db86ace72483b9f7026dffc5790035536ab3264f5ff0d57d81165729c5f64",
+    "apps/api/tests/test_group_planning.py": "658049100ed7f1bfdedc907e7958e4540540ff223b8e03c6f3e587aba3f39f84",
+    "apps/api/tests/test_group_auto_execution.py": "049294c6e6d3081e19bdaa826feaebaee245df3c4efb67a4410b8d42ac462294"
+  },
+  "unchangedBaselineSha256": {
+    "apps/api/app/models.py": "4c99b5245b751618251bba9a2d3411f9462f6bd392a7db8864e15c3e29376a29",
+    "apps/api/app/db.py": "50f48ca7daffbff74d61f9471225404ac4d5ae8253f972b96f16960bafbe5e94",
+    "apps/api/app/schemas.py": "7f445a310c1211c16731faabeb47ed41e413de0e4d07b358ffdcaf820e9ee692",
+    "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+    "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+    "apps/api/app/routes/messages.py": "8b78cb64d24439303cfab3eee808ea10410aaaa81b2a9eec3fc0590fff5e92ee",
+    "apps/api/tests/test_models.py": "0e7c2341056653bde442a7f9bd344dde55fbe6b7452982b22c173789c703bd18",
+    "apps/api/tests/test_session_organization.py": "80b771e6e4175571b33b60dc83182ced6f7c4b15dd3d39834b37b8071a6ddd93",
+    "apps/api/tests/test_task_runs.py": "5b767cb2a8df0c5ba7095f9440f0d6f985f44447ea913fbf275fcd451ec23dad",
+    "apps/api/app/main.py": "f801ea4ace9c310a57428b7a838681d6a5e84d835ab5084b78b6d288d8df52f9",
+    "apps/api/app/previews.py": "279ae2b8b164ec391e17eeab0e8e5b888739f7b836b2c6afa41ccdcd78c3ba37",
+    "apps/api/tests/test_previews.py": "39c7746fce02ecf9ecfe2e79c6e48aac6502f165fe562f82c357f32120689852",
+    "apps/web/src/lib/theme.ts": "f0680aabc97408347c6874cf3690534fb74e381cc332b37b4f5cc9a0ac12092c",
+    "apps/web/src/app/globals.css": "32de297883446da773daa78ca0d8db86101a741c4780353f2339ee28ff573b42",
+    "apps/web/src/components/theme-toggle.test.tsx": "800f9795852cb350711a77d3fb3d4df682ed69b0a7824fa1028d95f549942b7f"
+  },
+  "documentationSha256": {
+    "docs/change-log.md": "d56e544f242bb8a437209e024c8c4d411a71fb67de8b84626f5f170906129f9e",
+    "docs/project-state.md": "0019460af218ab5420c17fdeff06f028e93b6443b85d29dbc6e265959a180d2e",
+    "docs/local-project-delivery.md": "ad0dfd036c050841e11f657a32f7303bf270dfa43cdfecd0c15f7b07dc8841a8",
+    "docs/local-usage.md": "df8f2a73b2b5ec23f4058fc00c426ae91ed27945af3707bb3788474f0c2d24ba",
+    "docs/login-fallback-target-binding-review.md": "b5bf60d3af00666c74d31e51a3df247c8593e04b179b4ea6bf05708695d0341d"
+  },
+  "specSha256": {
+    "openspec/changes/agenthub-login-fallback-target-binding/design.md": "cd8760cf5a083d7f17bbe402a167542e7478baf405917b05f9de3b2f51684880",
+    "openspec/changes/agenthub-login-fallback-target-binding/proposal.md": "f035ea6536c07c5dbe706f0986eea29100a3f9631c1411b0cf18ebce94688c22",
+    "openspec/changes/agenthub-login-fallback-target-binding/specs/login-fallback/spec.md": "c0e2caa8547659265fcaae9f239ec8a3838db550c1d3f6e26062b37cbcd84f51",
+    "openspec/changes/agenthub-login-fallback-target-binding/tasks.md": "b658929563a6946be4f830e1ba0f29a1ad1620ceed0e1c2c27076ca1853d4195"
+  },
+  "evidenceSha256": {
+    "4efe70ea-875d-4f1f-a0de-369239de18bf-Continue.png": "62a65a78edd485c51c93ddb5d0d8ad2b3c46b009a0df89ba3723eab6120641a2",
+    "4efe70ea-875d-4f1f-a0de-369239de18bf-Login-direct-Verified.png": "0bfc584b625f3d540b3a9eeaf3e6e03e249b8e7a5594bcbb40b9f03b8640a011",
+    "713c9ed3-d447-4270-98ce-44f10ab794bb-Continue.png": "1ebc690148a6e8d73b8f4b3e7eb58ab297789a18e3b51db30ef5796d0554cc51",
+    "713c9ed3-d447-4270-98ce-44f10ab794bb-Login-orchestrator-Verified.png": "beacbbc984faa7eb9db0d07265a6391ca10249961cf6f8e1379b9e5a849dd5c1",
+    "accept-login-fallback.mjs": "6ffe12887c89156328d5379bf0eb0b72ff3e41c8d540e3155603b93511e5e42c",
+    "acceptance.json": "4f3367e129d49c098978deeb9bdf11941c361e57f57f6c8e05ede3ea602a5be3",
+    "api-tests.txt": "a23ccc0fcfaa904e0a65a166b3e81f4b4e18e92279fd571532eed2e36f34ae04",
+    "dark-history.png": "b695e68394aa057dfa3a88d20b8a3d7a73b4e23f6ce2bb6b03edd6439ff6ddee",
+    "e4757e21-fa23-4dbd-910e-d193db6ca170-Continue.png": "6cc03c623c6ab13b49fdac0a90d6706d65e87dd60cbafa58a2f316f016fdd155",
+    "e4757e21-fa23-4dbd-910e-d193db6ca170-Login-group-Verified.png": "c63cab9fb7d389d20e5a3e0c8fd895d25826a115694683fd8e7cd34c2fa106b6",
+    "execution-lineage.json": "da972c4f8f3e93cfc01876d61e3410524f2ac3f4a7d6834e17479ca7c1e4284d",
+    "first-start.txt": "455b7266d1a04a1f6e482bf95849ff223875f72c1bc4082b4765240102d6d837",
+    "focused-tests.txt": "2a846a64a1b1b7fe31d12769958fb31bdc0d78c6b3522005b20c261c3482b8ed",
+    "historical-boundary.json": "2bbb30613d472454c4f8533d9af68f6a5a2bf23206e724cfa2a0d4117714ed74",
+    "narrow-history.png": "1b6d1bcfa0713d04d2c8c20d13e89e9a1547777e0373f2e9834a30f80bfc68a2",
+    "openspec-checks.txt": "f127d32b61f0899802c832bcc6f3f00ea976055c58b1e190219623cef9b09f6a",
+    "restart.txt": "59ead2c44694f1a5626640a1feac5b247a12395f5448a80b752212bb924875b4",
+    "restored-group-history.png": "d09b6a66291d3aa77141cb4e34dab661b6887cb9bf2b8f029e908843d5815038",
+    "restored-login-preview.png": "2278a12ab00195da161f60c8d21904872b964e1423f95e61819e5c884dd41197",
+    "static-checks.txt": "32cea9cc3e289c575aa2c1958529211f002fd648daf0c6964b5dde51a751927b"
+  },
+  "tests": {
+    "focusedApi": "192 passed",
+    "fullApi": "1723 passed / 1 POSIX-only skipped",
+    "static": "pnpm check passed",
+    "openspec": "strict passed",
+    "whitespace": "git diff --check passed"
+  },
+  "boundaries": [
+    "No real model invoked; deliberately unavailable CLI and simulated failures explicitly labelled",
+    "Unsupported compound integration rejected in three routes; no old plan/snapshot mutation",
+    "Existing accepted API8006/native source unchanged; Web3000 restored after isolated validation",
+    "No dependency install, commit, push or deployment; final whole-project audit remains separate"
+  ]
+}

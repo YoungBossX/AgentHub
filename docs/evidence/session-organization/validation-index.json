@@ -1,0 +1,77 @@
+{
+  "status": "verified",
+  "createdAt": "2026-10-08T06:00:01.172731+00:00",
+  "scope": "agenthub-session-organization 1.1",
+  "codeSha256": {
+    "apps/api/app/models.py": "4c99b5245b751618251bba9a2d3411f9462f6bd392a7db8864e15c3e29376a29",
+    "apps/api/app/db.py": "50f48ca7daffbff74d61f9471225404ac4d5ae8253f972b96f16960bafbe5e94",
+    "apps/api/app/schemas.py": "7f445a310c1211c16731faabeb47ed41e413de0e4d07b358ffdcaf820e9ee692",
+    "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+    "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+    "apps/api/app/routes/messages.py": "8b78cb64d24439303cfab3eee808ea10410aaaa81b2a9eec3fc0590fff5e92ee",
+    "apps/api/tests/test_models.py": "0e7c2341056653bde442a7f9bd344dde55fbe6b7452982b22c173789c703bd18",
+    "apps/api/tests/test_session_organization.py": "80b771e6e4175571b33b60dc83182ced6f7c4b15dd3d39834b37b8071a6ddd93",
+    "apps/api/tests/test_task_runs.py": "5b767cb2a8df0c5ba7095f9440f0d6f985f44447ea913fbf275fcd451ec23dad",
+    "apps/web/src/lib/api.ts": "72b22a285e46c44b81fe3ac121e43e2b9b85debcec8b391689949c10eba5bdd6",
+    "apps/web/src/lib/session-organization-api.test.ts": "e5b8afaf736aa9dce3d8f3bb657269116ca784aefb2f43fe9e4e0464d791520d",
+    "apps/web/src/app/page.tsx": "2f2e09de9ac33850b30c297a8e6f1d2e69ef3cc36504e60b6cd3f9b909555896",
+    "apps/web/src/components/session-sidebar.tsx": "e42fe6f48233817c08029ae4cba0398c8aefa2a8558a507f8b05f4ff02a79e32",
+    "apps/web/src/components/chat-thread.tsx": "a9efc85150f2e1c7f0aa72987159e86871a01483fee33159ee2976d3438d545c",
+    "apps/web/src/components/workspace-shell.tsx": "6bb5a97038de9d80e1d3f2626a9bde501b542739b4902702ca57939f1bafeef0",
+    "apps/web/src/components/use-session-event-refresh.ts": "6ce518ea8f42b59e160cbb5c24af33eae52bafd98d1843a75861aecf52ffe2e4",
+    "apps/web/src/components/use-session-summary-refresh.test.tsx": "3e708223c5016eb052d56fcc7756d0e896f91ce677460c1855a13f9330cca032",
+    "apps/web/src/components/session-organization.test.tsx": "313dd05bacd2c277fd23cfe1bdff36f4fb0de8e96ef4b69266a30690867554f1",
+    "apps/web/src/components/workspace-shell.test.tsx": "81f04cae0f2d831fe5606c497c62ba879fc06c0c51d7bdab5fb8b5022a2af9b6"
+  },
+  "evidenceSha256": {
+    "api-tests.txt": "f0cbce20ed8678b1ab314bc3df88a0b40a120501dfe62c7e12332f3591a11552",
+    "archive.png": "ac3c8fcef2aedfc44581bc6b8c2a0657cebd5e2be74065726bad79043f64a71b",
+    "browser.json": "9a9c6c765f2871395839cb47462a130ffbf2e317a9575135f5ca3cddad9372fd",
+    "dark.png": "0d5c158370020f416f11673b8d210d027e5e82ffad2f79728ba5151cfbb01d18",
+    "first-api-tests.txt": "c03979c314c0669e48acbdc572c9fe1d41f89845fcb596d34c1bcd9a3f29c853",
+    "focused-api-tests.txt": "e5dbca0b214c52af194f087000a0af51f7db8cb8b72f7b1d1b195e95f5674cd7",
+    "narrow.png": "5b8d3c1bd3031608a0206efbf33e86b6cdd340f9d24b9c74093a70bfbff2d5e6",
+    "restart.json": "c33641396e8b62cef4715d5fa5c767c195ae5dec5d1124a08b7a63b042e89b70",
+    "runtime.json": "f22b9aef90f32dade3655ae665080a79696487afbde981c5deef55002d08953c",
+    "stale-event-recheck.txt": "ce3691055432ac19e434b485447d814dbb14b9a0ea7b2f8cba34707ddd4fdfed",
+    "static-checks.txt": "2d6de0041eba8d5c953025835ea699eb746e2d42cd19bb3da3312f8c2c50dc2d",
+    "web-tests.txt": "08b07dbcc99f76a5dc1ab19ef5a7f2ea5bfe4552de6e77a3cd2e5f45ff385623"
+  },
+  "boundaries": [
+    "actual native process observed during organization; command lines not exported",
+    "static native review and summary run no tests",
+    "native CLI platform does not prove model vendor",
+    "no new Preview or deployment acceptance",
+    "local uncommitted checkout"
+  ],
+  "verification": {
+    "api": {
+      "passed": 1668,
+      "skipped": 1,
+      "seconds": 948.6,
+      "exitCode": 0
+    },
+    "focusedApi": {
+      "passed": 17,
+      "exitCode": 0
+    },
+    "web": {
+      "passed": 184,
+      "files": 24,
+      "exitCode": 0
+    },
+    "staticChecks": {
+      "exitCode": 0
+    },
+    "browser": "desktop/dark/narrow/reload passed",
+    "restart": "persisted organization and lineage passed",
+    "openSpec": "strict passed",
+    "gitWhitespace": "passed",
+    "firstApiRun": {
+      "failed": 1,
+      "passed": 1667,
+      "skipped": 1,
+      "reason": "one-second adapter startup wait exceeded; original fencing assertions retained with ten-second startup bound"
+    }
+  }
+}

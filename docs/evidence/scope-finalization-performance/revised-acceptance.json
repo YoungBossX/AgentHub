@@ -1,0 +1,309 @@
+{
+  "tag": "revised",
+  "runs": [
+    {
+      "runId": "2cca3464-a1c1-428b-977e-1c74892b753a",
+      "taskId": "5bfadcb9-b1ac-459d-a1c3-e0de7b5f9e70",
+      "seconds": 13.308,
+      "expected": "Timing first",
+      "completion": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "2cca3464-a1c1-428b-977e-1c74892b753a",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "341902bd-f402-475c-b0c6-8cf5719c5c22",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffId": "341902bd-f402-475c-b0c6-8cf5719c5c22"
+    },
+    {
+      "runId": "63a70520-aa35-4ca7-9b01-77ce3e0425e7",
+      "taskId": "ee7c6db0-2f96-48a2-a53b-780479de29ab",
+      "seconds": 15.066,
+      "expected": "Timing second",
+      "completion": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "63a70520-aa35-4ca7-9b01-77ce3e0425e7",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "6c22c554-9810-4663-b771-cc5b59758f79",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffId": "6c22c554-9810-4663-b771-cc5b59758f79"
+    }
+  ],
+  "health": [
+    {
+      "milliseconds": 200.1831000000002,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.198699999999008,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.253700000001118,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.069900000000416,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.295400000000882,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.644200000000637,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.298899999999776,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.23909999999887,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.984800000000178,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.09389999999985,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.924699999999575,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.210399999999936,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.279200000000856,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.40269999999873,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.995999999999185,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 1.226700000002893,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.67450000000099,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 1.3418999999994412,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.23700000000099,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.31930000000284,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 24.870100000000093,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 1.8814999999995052,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 1.5600999999987835,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 5.677500000001601,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 1.352100000000064,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 205.35319999999774,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.797099999999773,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 18.41860000000088,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.44080000000031,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.25920000000042,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 18.54869999999937,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.357700000000477,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.6791000000012,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 18.208400000003166,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.2586999999985,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.74000000000524,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 18.21070000000327,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.37829999999667,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.328099999998813,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.309699999997974,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.93529999999737,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.296000000002095,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 1.606099999997241,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 21.63420000000042,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 20.962800000001153,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 25.931700000001,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 26.0086999999985,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 25.325099999994563,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 26.06470000000263,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 18.08520000000135,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.620899999994435,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.131500000003143,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.4149000000034,
+      "status": "ok"
+    }
+  ],
+  "boundaries": [
+    "Fresh SQLite; API routes; explicit ScriptedMock fallback; deliberately simulated Codex failure; no model invocation",
+    "Timing instrumentation wraps unchanged snapshot function and records counts, not content or control keys"
+  ],
+  "sessionId": "e02616b1-0701-4227-aa54-4e5f47efab0b",
+  "snapshots": [
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\31f43e79-e19a-4581-9d81-fc3bc95353cf\\e02616b1-0701-4227-aa54-4e5f47efab0b",
+      "seconds": 5.653858100005891,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\31f43e79-e19a-4581-9d81-fc3bc95353cf\\e02616b1-0701-4227-aa54-4e5f47efab0b",
+      "seconds": 5.949190999992425,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\31f43e79-e19a-4581-9d81-fc3bc95353cf\\e02616b1-0701-4227-aa54-4e5f47efab0b",
+      "seconds": 6.202895499998704,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\31f43e79-e19a-4581-9d81-fc3bc95353cf\\e02616b1-0701-4227-aa54-4e5f47efab0b",
+      "seconds": 6.418800100000226,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\31f43e79-e19a-4581-9d81-fc3bc95353cf\\e02616b1-0701-4227-aa54-4e5f47efab0b",
+      "seconds": 6.562574499999755,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\31f43e79-e19a-4581-9d81-fc3bc95353cf\\e02616b1-0701-4227-aa54-4e5f47efab0b",
+      "seconds": 7.059682699997211,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    }
+  ],
+  "sources": {
+    "apps/api/app/task_run_scope.py": "22640722a2c13726815e92d0ae2bf294c3881fa93a14c1f22e8d711927db2a5c",
+    "apps/api/app/task_runs.py": "98dea1b9de2749195415184cf66295062b2f69b09dddcb7f40f8a180ed9cfa70",
+    "apps/api/app/run_engine.py": "e79680013541633a8ec3f26cbb42f743e7e438c31267004d16eb38cc89c52ee0",
+    "apps/api/app/scripted_mock.py": "112629dcb6d1eedbac3c8edb2e62eed52fb6be5bb0259167ec59bb99a71bd988"
+  },
+  "helperSha256": "77d7c41d90bdbfaaf96a321b1d5e0b24bdccfa8e46d8c0d39beb1f2dcaf1e232"
+}

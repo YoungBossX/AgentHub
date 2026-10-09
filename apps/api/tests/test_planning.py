@@ -1,5 +1,9 @@
 from collections.abc import Iterator
+import asyncio
 import json
+from pathlib import Path
+import shutil
+import subprocess
 from typing import Optional
 
 import pytest
@@ -14,7 +18,7 @@ from app.external_workspaces import (
 )
 from app.main import app, get_db
 import app.routes.messages as messages_module
-from app.models import Agent, Message, Session, Task, Workspace
+from app.models import Agent, Artifact, Diff, Message, Session, Task, TaskRun, Workspace
 from app.agent_runtime_config import RuntimeRoleConfig, upsert_runtime_config
 from app.config import Settings
 from app.planner_providers import FakePlannerProvider, OpenAIResponsesPlannerProvider
@@ -30,6 +34,9 @@ from app.routes.messages import _should_auto_start_task
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_service import build_plan_draft
 from app.task_graph_builder import TaskGraphTaskSpec
+from app.scheduler import target_id_for_task
+from app.run_engine import BoundedRunDispatcher, execute_task_run_background
+from app.task_runs import create_task_run
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     DEMO_BACKEND_TARGET_ID,
@@ -148,6 +155,14 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     assert "login_page" in frontend_task["planJson"]["target"]
     assert frontend_task["planJson"]["planner"] == "deterministic_login_v1"
     assert frontend_task["planJson"]["expectedArtifactTypes"] == ["diff", "review"]
+    qa_task = next(task for task in tasks if task["assignedAgentRole"] == "qa")
+    for bound_task in (frontend_task, qa_task):
+        assert bound_task["planJson"]["targetId"] == DEMO_FRONTEND_TARGET_ID
+        assert bound_task["planJson"]["safeTarget"] == "apps/demo/src"
+    assert frontend_task["planJson"]["scheduler"]["targetId"] == DEMO_FRONTEND_TARGET_ID
+    assert frontend_task["planJson"]["files"] == [
+        "apps/demo/src/App.tsx", "apps/demo/src/styles.css",
+    ]
     assert frontend_task["planJson"]["taskGraph"]["goal"] == (
         "@orchestrator build a login page for the demo app"
     )
@@ -170,6 +185,12 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
         "apps/demo/src/styles.css",
     ]
     assert plan_review["taskBreakdown"]
+    assert plan_review["assignedRole"] == "frontend"
+    assert [item["role"] for item in plan_review["taskBreakdown"]] == [
+        "orchestrator", "frontend", "qa",
+    ]
+    assert tasks[0]["planReviewMetadata"]["assignedRole"] == "orchestrator"
+    assert qa_task["planReviewMetadata"]["assignedRole"] == "qa"
     assert plan_review["readOnly"] is True
 
     with next(db_from_override()) as db:
@@ -184,6 +205,11 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     assert len(messages) == 1
     assert "I created a 3-step plan" in messages[0].content_md
     assert all(json.loads(task.plan_json) for task in stored_tasks)
+    with next(db_from_override()) as db:
+        assert all(
+            target_id_for_task(task, db) == DEMO_FRONTEND_TARGET_ID
+            for task in stored_tasks if task.intent_type in {"frontend_change", "qa_review"}
+        )
 
     ledger_response = client.get(f"/sessions/{session.id}/ledger")
     assert ledger_response.status_code == 200
@@ -192,6 +218,162 @@ def test_orchestrator_login_request_creates_visible_tasks(client: TestClient) ->
     assert ledger["activeAgents"] == ["orchestrator", "frontend", "qa"]
     assert ledger["latestTaskId"] == tasks[-1]["id"]
     assert "Current goal" in ledger["summaryMd"]
+
+
+@pytest.mark.parametrize("has_target_binding", [True, False], ids=["bound", "missing-binding"])
+@pytest.mark.parametrize("followup_timing", ["after-login", "waiting-login", "legacy-review"])
+def test_chat_login_plan_executes_scripted_mock_with_real_scope_and_diff(
+    client: TestClient, tmp_path: Path, has_target_binding: bool,
+    monkeypatch: pytest.MonkeyPatch, followup_timing: str,
+) -> None:
+    followup_while_running = followup_timing == "waiting-login"
+    dispatched: list[str] = []
+
+    async def dispatch_fixture_runs() -> None:
+        with next(db_from_override()) as db:
+            dispatched.extend(await BoundedRunDispatcher(max_concurrency=1).run_until_idle(db))
+
+    # Redirect only the background database entry point; use the real dispatcher.
+    monkeypatch.setattr(messages_module, "schedule_task_run_execution", lambda tasks: tasks.add_task(dispatch_fixture_runs))
+    worktree = tmp_path / "login-worktree"
+    repo_root = Path(__file__).resolve().parents[3]
+    shutil.copytree(
+        repo_root / "apps" / "demo", worktree / "apps" / "demo",
+        ignore=shutil.ignore_patterns("node_modules", "dist"),
+    )
+    original_app = (worktree / "apps/demo/src/App.tsx").read_bytes()
+    for command in (
+        ["git", "init"],
+        ["git", "config", "user.name", "AgentHub Test"],
+        ["git", "config", "user.email", "test@example.invalid"],
+        ["git", "add", "."],
+        ["git", "-c", "core.hooksPath=", "commit", "-m", "login test baseline"],
+    ):
+        subprocess.run(command, cwd=worktree, check=True, capture_output=True)
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session).where(Session.title == "Planning session")).one()
+        session.worktree_path = str(worktree)
+        db.add(session)
+        db.commit()
+        session_id = session.id
+
+    response = client.post(
+        f"/sessions/{session_id}/messages",
+        json={"contentMd": "@orchestrator build a login page for the demo app"},
+    )
+    assert response.status_code == 201
+    with next(db_from_override()) as db:
+        frontend = db.exec(select(Agent).where(Agent.role == "frontend")).one()
+        frontend.adapter_type = "scripted_mock"
+        db.add(frontend)
+        db.commit()
+        task = db.exec(select(Task).where(
+            Task.session_id == session_id, Task.intent_type == "frontend_change",
+        )).one()
+        if not has_target_binding:
+            plan = json.loads(task.plan_json)
+            plan.pop("targetId")
+            plan.pop("safeTarget")
+            task.plan_json = json.dumps(plan)
+            db.add(task)
+            db.commit()
+        run = create_task_run(db, task.id)
+        run_id = run.id
+        if followup_while_running and has_target_binding:
+            followup_response = client.post(
+                f"/sessions/{session_id}/messages",
+                json={"contentMd": "把按钮文案改成 Sign in"},
+            )
+            assert followup_response.status_code == 201
+            assert dispatched == []
+            db.expire_all()
+        assert asyncio.run(execute_task_run_background(
+            db, run_id, "scripted_mock", worker_id="worker:login-plan-test",
+        )) is True
+        stored = db.get(TaskRun, run_id)
+        if not has_target_binding:
+            assert stored.state == "failed"
+            assert stored.error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
+            assert not db.exec(select(Artifact).where(Artifact.task_run_id == run_id)).all()
+            assert (worktree / "apps/demo/src/App.tsx").read_bytes() == original_app
+            return
+        assert stored.state == "completed", (stored.error_code, stored.error_message)
+        metrics = json.loads(stored.metrics_json)
+        assert metrics["taskRunScopeGuard"]["status"] == "passed"
+        assert metrics["completionValidation"]["status"] == "passed"
+        diff = db.exec(select(Diff).join(Artifact).where(Artifact.task_run_id == run_id)).one()
+        assert diff.patch_text.strip()
+        assert '+            Sign in' not in diff.patch_text
+        changed_files = set(json.loads(diff.changed_files_json))
+        assert "apps/demo/src/App.tsx" in changed_files
+        assert changed_files <= {
+            "apps/demo/src/App.tsx", "apps/demo/src/styles.css",
+        }
+        app_path = worktree / "apps/demo/src/App.tsx"
+        login_source = app_path.read_text(encoding="utf-8")
+        assert '<form className="login-form"' in login_source
+        assert 'type="email"' in login_source and 'type="password"' in login_source
+        assert '<h1 id="demo-heading">Launchpad for a visible coding-agent change</h1>' in login_source
+        qa = db.exec(select(Task).where(
+            Task.session_id == session_id, Task.intent_type == "qa_review",
+        )).one()
+        assert qa.status == "completed"
+        assert json.loads(qa.plan_json)["reviewSatisfaction"]["reports"][0]["taskRunId"] == run_id
+        qa_id = qa.id
+        if followup_timing == "legacy-review":
+            # Simulate a persisted pre-fix QA task alongside its existing report.
+            qa_plan = json.loads(qa.plan_json)
+            qa_plan.pop("reviewSatisfaction")
+            qa_plan.pop("scheduler")
+            qa.plan_json = json.dumps(qa_plan)
+            qa.status = "pending"
+            db.add(qa)
+            db.commit()
+    if not followup_while_running:
+        followup_response = client.post(
+            f"/sessions/{session_id}/messages",
+            json={"contentMd": "把按钮文案改成 Sign in"},
+        )
+        assert followup_response.status_code == 201
+    with next(db_from_override()) as db:
+        followup_tasks = db.exec(select(Task).where(
+            Task.created_by_message_id == followup_response.json()["id"],
+        ).order_by(Task.priority)).all()
+        if followup_while_running:
+            assert [task.intent_type for task in followup_tasks] == ["frontend_change", "review"]
+            followup, review_task = followup_tasks
+            assert json.loads(followup.depends_on_task_ids) == [qa_id]
+        else:
+            assert [task.intent_type for task in followup_tasks] == ["planning", "frontend_change", "review"]
+            planning, followup, review_task = followup_tasks
+            assert planning.status == "completed"
+            assert json.loads(followup.depends_on_task_ids) == [planning.id]
+        followup_run = db.exec(select(TaskRun).where(TaskRun.task_id == followup.id)).one()
+        assert dispatched == ([] if followup_while_running else [followup_run.id])
+        assert followup_run.state == "completed", (followup_run.error_code, followup_run.error_message)
+        followup_metrics = json.loads(followup_run.metrics_json)
+        assert followup_metrics["taskRunScopeGuard"]["status"] == "passed"
+        assert followup_metrics["completionValidation"]["status"] == "passed"
+        final_source = app_path.read_text(encoding="utf-8")
+        assert "            Sign in\n" in final_source
+        if not followup_while_running:
+            assert final_source == login_source.replace(
+                "            Continue\n", "            Sign in\n",
+            )
+        followup_diff = db.exec(select(Diff).join(Artifact).where(
+            Artifact.task_run_id == followup_run.id,
+        )).one()
+        assert followup_diff.patch_text.strip()
+        assert '+            Sign in' in followup_diff.patch_text
+        assert review_task.status == "completed"
+        report = json.loads(review_task.plan_json)["reviewSatisfaction"]["reports"][0]
+        assert report["taskRunId"] == followup_run.id
+        review_artifact = db.get(Artifact, report["reviewArtifactId"])
+        assert review_artifact.task_run_id == followup_run.id
+        assert report["status"] == review_artifact.status
+        assert not db.exec(select(TaskRun).where(TaskRun.task_id.in_([qa_id, review_task.id]))).all()
+    api_tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert all(task["status"] == "completed" for task in api_tasks)
 
 
 def test_workspace_agent_registry_returns_im_contacts(client: TestClient) -> None:
@@ -259,6 +441,10 @@ def test_workspace_agent_profiles_return_registry_profile_contract(client: TestC
 
     frontend = profiles[1]
     assert frontend == {
+        "origin": "built_in",
+        "systemPrompt": "",
+        "mentionAlias": None,
+        "toolPolicy": None,
         "id": frontend["id"],
         "displayName": "Frontend Agent",
         "avatarInitials": "FE",
@@ -397,6 +583,81 @@ def test_parse_frontend_intent_supports_bounded_p5_dynamic_intents() -> None:
     assert status_text.target == "status_help_text"
     assert layout_copy is not None
     assert layout_copy.target == "layout_copy"
+
+
+@pytest.mark.parametrize("content", [
+    "@frontend build a login page for the demo app",
+    "@frontend @qa create a simple login form in apps/demo.",
+    "please implement a sign-in page for current demo!",
+    "为演示应用创建登录页",
+    "在当前 demo 中创建一个登录页面。",
+    "请实现登录表单用于当前 demo",
+    "@orchestrator build a login page for the demo app；请用简洁中文总结，代码改动必须更新 docs/change-log.md 并运行项目验证。",
+    "build a login page for the demo app; please run project checks",
+])
+def test_demo_login_creation_is_bounded_and_opt_in(content: str) -> None:
+    assert parse_frontend_intent(content) is None
+    intent = parse_frontend_intent(content, include_login_creation=True)
+    assert intent is not None and intent.target == "login_page"
+    assert intent.target_text == ""
+
+
+@pytest.mark.parametrize("content", [
+    "review the login page for the demo app",
+    "explain how to build a login page for the demo app",
+    "write documentation: build a login page for the demo app",
+    "do not build a login page for the demo app",
+    "build a login page for my external app",
+    "@frontend build a login page",
+    "创建登录页",
+    "为演示应用评审登录页",
+    "build a login page for the demo app with OAuth",
+    "build a login page for the demo app and implement server authentication",
+    "build a login page for the demo app using JWT and a database",
+    "build a login page for the demo app and production deploy",
+    "build a login page for the demo app and update apps/api",
+    "为演示应用创建登录页并对接第三方认证",
+    "build a login page for the demo app; run project checks; add OAuth",
+    "build a login page for the demo app；请用简洁中文总结，接入第三方认证",
+])
+def test_demo_login_creation_does_not_replace_other_requests(content: str) -> None:
+    assert parse_frontend_intent(content, include_login_creation=True) is None
+
+
+@pytest.mark.parametrize("change,target", [
+    ("change button text to Login Changed", "primary_action_button_text"),
+    ("change heading to Login Changed", "demo_heading_text"),
+    ("change accent color to #14b8a6", "theme_accent_color"),
+    ("add a phone input field", "simple_input_field"),
+    ("add help text Use work email", "status_help_text"),
+    ("adjust layout copy to Local login", "layout_copy"),
+])
+def test_login_mentions_keep_specific_frontend_intent_precedence(change: str, target: str) -> None:
+    intent = parse_frontend_intent(
+        f"@frontend for the demo app login page {change}", include_login_creation=True,
+    )
+    assert intent is not None and intent.target == target
+
+
+@pytest.mark.parametrize("content,target,count", [
+    ("@orchestrator 为演示应用创建登录页", "login_page", 3),
+    ("@orchestrator build a login page for the demo app with OAuth", "demo_frontend_request", 1),
+    ("@orchestrator review the login page for the demo app", "demo_frontend_request", 1),
+    ("@orchestrator for the demo app login page change button text to Sign in", "primary_action_button_text", 3),
+])
+def test_orchestrator_login_branch_uses_bounded_creation_intent(client, monkeypatch, content, target, count):
+    monkeypatch.setattr(messages_module, "schedule_task_run_execution", lambda tasks: None)
+    with next(db_from_override()) as db:
+        session = db.exec(select(Session)).one()
+        session_id = session.id
+    response = client.post(f"/sessions/{session_id}/messages", json={"contentMd": content})
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert len(tasks) == count
+    frontend = next(task for task in tasks if task["intentType"] == "frontend_change")
+    assert frontend["planJson"]["target"] == target
+    if target == "login_page":
+        assert frontend["planJson"]["planner"] == "deterministic_login_v1"
 
 
 def test_plan_draft_boundary_captures_task_graph_contract() -> None:

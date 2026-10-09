@@ -32,6 +32,13 @@ from app.provider_assignments import (
 )
 from app.provider_gateway import CAPABILITIES_BY_ADAPTER
 from app.agent_runtime_config import resolve_runtime_role_config
+from app.custom_agents import require_custom_agent, CustomAgentError, custom_runtime_resolution
+from app.agent_profiles import profile_for_draft
+from app.agent_instructions import (
+    AGENT_INSTRUCTION_BINDING_KEY,
+    agent_instruction_receipt,
+    capture_agent_instruction,
+)
 from app.target_registry import (
     AGENTHUB_PLATFORM_TARGET_ID,
     EFFECTIVE_WRITE_SCOPE_SCHEMA_VERSION,
@@ -119,17 +126,46 @@ def create_task_run(
     retry_of_run_id: Optional[str] = None,
     fallback_from_run_id: Optional[str] = None,
     retry_metadata: Optional[dict[str, Any]] = None,
+    automatic_group: bool = False,
 ) -> TaskRun:
     task = _task_or_raise(db, task_id)
     session = _session_or_raise(db, task.session_id)
     memory_snapshot = ensure_session_memory_snapshot(db, session)
     agent = _agent_or_raise(db, task.assigned_agent_id)
     runtime_resolution = _runtime_resolution_for_task(db, task, session, agent)
-    selected_adapter = adapter_type or (
+    plan_profile_id = _plan_json(task).get("agentProfileId")
+    selected_profile_id = plan_profile_id or (
+        runtime_resolution.role_config.agent_profile_id if runtime_resolution else None
+    )
+    custom_profile = None
+    if selected_profile_id:
+        from app.models import AgentProfileDraft
+
+        profile_row = db.get(AgentProfileDraft, selected_profile_id)
+        if plan_profile_id or profile_row is not None:
+            try:
+                custom_profile = require_custom_agent(db, session.workspace_id, selected_profile_id)
+            except CustomAgentError as exc:
+                raise TaskRunLifecycleError(str(exc)) from exc
+            runtime_role = _role_for_runtime_config(task, agent)
+            custom_role = "review" if runtime_role == "qa" else runtime_role
+            if custom_profile.role != custom_role:
+                raise TaskRunLifecycleError("Selected custom Agent role is incompatible with this task.")
+            if plan_profile_id and (runtime_resolution is None or runtime_resolution.role_config.agent_profile_id != custom_profile.id):
+                runtime_resolution = custom_runtime_resolution(custom_profile)
+        elif db.get(Agent, selected_profile_id) is None and selected_profile_id not in {"virtual-review-agent", "virtual-fallback-agent"}:
+            raise TaskRunLifecycleError("Selected Agent profile is unavailable.")
+    selected_adapter = adapter_type or (custom_profile.adapter_type if custom_profile is not None else None) or (
         runtime_resolution.role_config.adapter_type
         if runtime_resolution is not None
         else _default_adapter_for_agent(agent)
     )
+    if custom_profile is not None and adapter_type and adapter_type != custom_profile.adapter_type:
+        if not (
+            adapter_type == "scripted_mock" and custom_profile.role == "frontend"
+            and _plan_json(task).get("targetId") == "demo-frontend"
+        ):
+            raise TaskRunLifecycleError("Adapter override is incompatible with the selected custom Agent tool policy.")
     try:
         provider_assignment = resolve_provider_assignment(
             task,
@@ -137,11 +173,13 @@ def create_task_run(
             selected_adapter=selected_adapter,
             explicit_adapter_type=adapter_type,
             runtime_adapter_type=(
+                custom_profile.adapter_type if adapter_type is None and custom_profile is not None else
                 runtime_resolution.role_config.adapter_type
                 if adapter_type is None and runtime_resolution is not None
                 else None
             ),
             runtime_provider_id=(
+                custom_profile.provider_id if adapter_type is None and custom_profile is not None else
                 runtime_resolution.role_config.provider_id
                 if adapter_type is None and runtime_resolution is not None
                 else None
@@ -158,6 +196,7 @@ def create_task_run(
     execution_access_mode = _effective_execution_access_mode(
         task,
         selected_adapter,
+        tool_policy=custom_profile.tool_policy if custom_profile is not None else None,
     )
     try:
         agent_selection = validate_agent_selection(
@@ -165,10 +204,31 @@ def create_task_run(
             task,
             agent,
             explicit_adapter_type=adapter_type,
+            selected_profile=profile_for_draft(custom_profile) if custom_profile is not None else None,
         )
     except AgentSelectionError as exc:
         raise TaskRunLifecycleError(str(exc)) from exc
     _recover_terminal_target_locks_before_run_creation(db)
+    # Automatic groups can be woken by HTTP, multiple dispatchers and restart.
+    # Serialize their initial creation, including a concurrent manual start.
+    # Retry/fallback retains its explicit lifecycle and is never auto-created.
+    group = _plan_json(task).get("groupAssignment")
+    if (automatic_group or (isinstance(group, dict) and group.get("execution") == "automatic")) and not (retry_of_run_id or fallback_from_run_id):
+        db.execute(
+            update(AgentHubSession).where(AgentHubSession.id == session.id)
+            .values(updated_at=AgentHubSession.updated_at)
+            .execution_options(synchronize_session=False)
+        )
+        db.refresh(task)
+        if automatic_group:
+            from app.group_execution import automatic_group_task
+
+            if not automatic_group_task(task):
+                db.rollback()
+                raise TaskRunLifecycleError("Group automatic execution authorization changed.")
+        if db.exec(select(TaskRun).where(TaskRun.task_id == task.id)).first() is not None:
+            db.rollback()
+            raise TaskRunLifecycleError("Group task already has an attempt; use its explicit retry action.")
     _ensure_scheduler_allows_run_creation(db, task)
 
     # Freeze the canonical baseline against the join coordinator's SQLite
@@ -179,6 +239,11 @@ def create_task_run(
         .values(updated_at=AgentHubSession.updated_at)
         .execution_options(synchronize_session=False)
     )
+    from app.user_edit_fences import pending_user_edit
+
+    if pending_user_edit(db, session.id):
+        db.rollback()
+        raise TaskRunLifecycleError("Resolve the interrupted user code edit before starting another run.")
     now = utc_now()
     run_id = str(uuid4())
     worktree_path = _worktree_path_for_task(db, task, session)
@@ -210,6 +275,13 @@ def create_task_run(
         metrics["fallbackFromRunId"] = fallback_from_run_id
     if retry_metadata is not None:
         metrics.update(retry_metadata)
+    binding = capture_agent_instruction(
+        db, workspace_id=session.workspace_id, agent=agent,
+        role=_role_for_runtime_config(task, agent),
+        profile=custom_profile,
+    )
+    metrics[AGENT_INSTRUCTION_BINDING_KEY] = binding
+    metrics["agentInstruction"] = agent_instruction_receipt(binding)
     if execution_worktree is not None:
         metrics[EXECUTION_WORKTREE_KEY] = execution_worktree
         if retry_of_run_id or fallback_from_run_id:
@@ -750,6 +822,8 @@ def metrics_for_run(task_run: TaskRun) -> dict[str, Any]:
     metrics.pop("scopeControlKey", None)
     metrics.pop("scopeFinalizationClaim", None)
     metrics.pop(_EXECUTION_ACCESS_BINDING_KEY, None)
+    metrics.pop(AGENT_INSTRUCTION_BINDING_KEY, None)
+    metrics.pop("_nativeReviewBinding", None)
 
     public_decision = _public_scope_decision(
         task_run,
@@ -1066,6 +1140,18 @@ def capture_task_run_scope_baseline(
     checkpoint["scopeWorkspaceId"] = scope_workspace_id
     checkpoint["scopePolicySchemaVersion"] = EFFECTIVE_WRITE_SCOPE_SCHEMA_VERSION
     checkpoint["scopePolicyIdentity"] = scope_policy_identity
+    from app.user_edit_fences import latest_session_user_revision
+
+    user_revision = latest_session_user_revision(db, session.id) if session and snapshot.available else None
+    if user_revision is not None:
+        # Capture after acquiring execution ownership, not when a queued run was
+        # created. Later Agent Diffs must exclude pre-existing manual changes.
+        checkpoint["fileSnapshot"] = capture_file_snapshot_for_worktree(
+            task_run.worktree_path,
+            allowed_paths=list(target.allowed_paths), denied_paths=list(target.denied_paths),
+        )
+        checkpoint["userEditBaseline"] = {"operationId": user_revision.id,
+                                          "snapshotId": checkpoint["fileSnapshot"]["snapshotId"]}
     metrics["preRunCheckpoint"] = checkpoint
     metrics.pop("scopeControlKey", None)
     metrics.pop("taskRunScopeGuard", None)
@@ -1204,13 +1290,33 @@ def persist_scope_decision(
     task_run: TaskRun,
     decision: ScopeDecision,
 ) -> TaskRun:
+    stored, _ = _validate_and_persist_scope_decision(db, task_run, decision)
+    return stored
+
+
+def validate_and_persist_task_run_scope(
+    db: DbSession,
+    task_run_id: str,
+) -> ScopeDecision:
+    """Compute fresh scope evidence and persist it without accepting prior evidence."""
+    task_run = _task_run_or_raise(db, task_run_id)
+    _, decision = _validate_and_persist_scope_decision(db, task_run, None)
+    return decision
+
+
+def _validate_and_persist_scope_decision(
+    db: DbSession,
+    task_run: TaskRun,
+    decision: Optional[ScopeDecision],
+) -> tuple[TaskRun, ScopeDecision]:
     task_run = _task_run_or_raise(db, task_run.id)
+    # Pin the baseline row before collection; concurrent changes must lose CAS.
     expected_metrics_json = task_run.metrics_json
     binding = _scope_baseline_binding(task_run)
     decision_to_persist = decision
-    if decision.status in {"passed", "rejected"}:
+    if decision is None or decision.status in {"passed", "rejected"}:
         validated_decision = validate_task_run_scope(db, task_run.id)
-        if validated_decision != decision:
+        if decision is not None and validated_decision != decision:
             decision_to_persist = _unverifiable_scope_decision(
                 _target_id_for_task_run(db, task_run)
             )
@@ -1258,17 +1364,18 @@ def persist_scope_decision(
             updated_at=updated_at,
         ):
             db.refresh(task_run)
-            return task_run
+            return task_run, persisted_decision
 
         persisted_decision = _unverifiable_scope_decision(
             persisted_decision.target_id
         )
-    return _persist_unverifiable_scope_decision_with_cas(
+    stored = _persist_unverifiable_scope_decision_with_cas(
         db,
         task_run,
         persisted_decision,
         timestamp=timestamp,
     )
+    return stored, _unverifiable_scope_decision(persisted_decision.target_id)
 
 
 def _persist_unverifiable_scope_decision_with_cas(
@@ -1583,7 +1690,11 @@ def require_task_run_execution_access_mode(
         or adapter_type not in CAPABILITIES_BY_ADAPTER
     ):
         raise _execution_access_mode_error(db, task_run)
-    expected_access_mode = _effective_execution_access_mode(task, adapter_type)
+    selection = metrics.get("agentSelection")
+    custom = selection.get("customProfile") if isinstance(selection, dict) else None
+    expected_access_mode = _effective_execution_access_mode(
+        task, adapter_type, tool_policy=custom.get("toolPolicy") if isinstance(custom, dict) else None,
+    )
     if entry.access_mode != expected_access_mode:
         raise _execution_access_mode_error(db, task_run)
 
@@ -2773,9 +2884,14 @@ def _pre_run_checkpoint_for_task(
     return checkpoint
 
 
-def _effective_execution_access_mode(task: Task, adapter_type: str) -> str:
+def _effective_execution_access_mode(task: Task, adapter_type: str, *, tool_policy: Optional[str] = None) -> str:
     from app.scheduler import write_lock_required_for_task
     from app.session_queue import READONLY_ACCESS_MODE, WRITE_ACCESS_MODE
+
+    if tool_policy == "claude_read_only" and adapter_type == "claude_code" and not write_lock_required_for_task(task):
+        return READONLY_ACCESS_MODE
+    if is_scripted_group_review(task, adapter_type):
+        return READONLY_ACCESS_MODE
 
     adapter_capabilities = CAPABILITIES_BY_ADAPTER.get(adapter_type)
     adapter_requires_write = adapter_capabilities is None or bool(
@@ -2784,6 +2900,19 @@ def _effective_execution_access_mode(task: Task, adapter_type: str) -> str:
     if write_lock_required_for_task(task) or adapter_requires_write:
         return WRITE_ACCESS_MODE
     return READONLY_ACCESS_MODE
+
+
+def is_scripted_group_review(task: Task, adapter_type: str) -> bool:
+    plan = _plan_json(task)
+    return (
+        adapter_type == "scripted_mock"
+        and task.intent_type in {"qa_review", "review"}
+        and plan.get("planner") == "explicit_group_v1"
+        and plan.get("assignedRole") in {"qa", "review"}
+        and plan.get("readOnly") is True
+        and plan.get("writeMode") is not True
+        and plan.get("requiresWriteLock") is not True
+    )
 
 
 def _git_status_checkpoint(

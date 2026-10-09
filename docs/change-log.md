@@ -1,5 +1,393 @@
 # AgentHub 变更日志
 
+## 本地核心工作流终验
+
+**日期:** 2026-10-09；`agenthub-local-final-workflow-acceptance` 1.1 完成（本地未提交）。
+
+- 重新核对原始 3 页设计 PDF，SHA-256 与既有需求来源一致；保持本地单用户范围。
+- 实际 320px 测量确认输入区宽 343px、发送按钮右端位于 x=354，超出视口；390px 及桌面未复现。根因是输入组件网格的隐式最小列宽，修复并验证当前工作流。
+- UTC 弃用警告集中在公共 `utc_now`；替换取时方式并保留既有无时区 UTC 存储约定；固定时钟、微秒、SQLite/JSON 和严格弃用回归通过。
+- PDF 逐项审查发现选中代码上下文仅有后端契约，补齐完整源码编辑器的明确引用入口：保留片段、文件和草稿来源，最多 2400 字符，引用不应用或发送，切换会话与内容变化时不复用过期选择。
+- 切换验收发现重复点击当前会话会清空成果、但因会话 ID 未变化而不重新加载；同会话选择改为保留现有成果和上下文。
+- 原生续接揭示 Planner 未收到消息引用，错误地把附件标记作为新标题，虽有非空 Diff 仍未符合用户要求；保留失败记录。将受限引用传入规划 canonical context，校验制品会话归属，不扩大工具权限，并改为参考级信任。修复后真实 Claude 从引用取得目标文字，文件/Diff/Vite 一致；最终代码另有真实 Codex 续改。
+- 新增三场会话完成两种原生 CLI、原生评审/汇总、受控失败/队列中断/兜底、真实 iframe、mock 卡与重启核对；历史行和配置保留，仅旧调度任务更新时间变化明确记录。最终 API **1949 passed / 1 POSIX-only skipped**，Web **267 passed**，本地工具 **17 passed**、demo-api **5 passed**；根检查、生产构建和 strict OpenSpec 通过。
+- [终验记录](local-final-workflow-review.md)及独立冻结索引区分脚本、原生、测试驱动错误和真实失败。核心本地版本已验收；PDF P2 的 PPT 浏览、源码包导出、生产部署和原生客户端仍未实现，不宣称完整平台或任意模型语义必然正确。未提交/推送。
+
+## 受限代码编辑与应用 Diff
+
+**日期:** 2026-10-09；`agenthub-bounded-code-editing` 1.1 完成（本地未提交）。
+
+- 已核对 P23 文档编辑只保存制品版本、Diff 只读且仅包含片段；新任务独立提供完整源码编辑、差异准备和显式应用。
+- 明确用户来源、规范工作树/目标、执行互斥、精确版本、失败回滚和重启边界；不伪造 Agent 执行或把旧评审当成用户修改的验证。
+- 已接入完整源码/补丁编辑、精确差异准备和显式应用、SQLite 用户操作记录、重复请求恢复、冲突/部分失败围栏，以及 Windows 文件/父目录句柄保护；不增加依赖或数据库表。
+- 后续 Agent 取得执行锁后捕获实际文件基线，Diff 排除已存在的手工修改；原任务的 Diff 重采集和部署被拒绝，用户修改后的新预览记录真实来源。
+- 实际浏览器发现并修复窄屏网格被长补丁撑宽、textarea 归一化造成整文件 CRLF→LF，以及原生续接超过 Windows argv 限制被误报 CLI 不存在的问题。长 Planner 输入改走既有 stdin 通道，权限不变。
+- 完整编辑/差异/应用/实际 Vite、原生 Claude 续接、亮暗/390/320px，以及重启历史/源码一致性通过。全量阶段 API **1,942 passed / 1 POSIX-only skipped**；后续改动相关 **132 passed**、命名流 **1 passed**；最终 Web **263 passed**、根检查、生产构建与 strict OpenSpec 通过。未重复宣称最终代码全部重跑整套 API，验证批次明示于[验收记录](bounded-code-editing-review.md)。未提交或推送，整体交付终验继续保留。
+
+## 对话创建 Agent
+
+**日期:** 2026-10-09；`agenthub-conversational-agent-creation` 1.1 完成（本地未提交）。
+
+- 在联系人旁和 Agent 目录补齐创建对话：无工具 Planner 生成/澄清、携带手工编辑继续调整、同标签页草稿恢复、来源展示和显式保存/启用。生成不创建 Profile、消息、任务或文件修改，保留原手动配置。
+- 抽取并复用自定义档案验证；模型输出、权限/目标/别名、上下文预算与调用后规划配置均检查。Claude 创建上下文经 stdin 传输，保持原有受限策略；失败不冒充成功或使用假模型兜底。
+- 实际两轮原生生成保留手工修改，真实主题按钮、1440/390/320px、刷新与保存通过；新 Profile 经真实 Planner/Claude 执行，从自身提示词取得任务中未给出的标题，源码/Diff/Vite/工作台匹配，重启后档案/证据/健康预览一致。
+- 新增后端 **28 passed**、相关 **123 passed**，最终 API **1,872 passed / 2 环境条件 skipped**、Web **256 passed**；根检查、生产构建、strict OpenSpec、空白与冻结校验通过。保留首次验收配置遗漏 Profile ID 被拒绝的证据；短 pytest ID 修复 Windows 超长测试标识，未缩小输入断言。
+- 验收启用的 Planner 配置已恢复；原配置内容与历史行保留，仅一次正常配置更新时间和旧调度器时间戳变化明示。无新依赖/数据库列，未提交或推送；[验收记录](conversational-agent-creation-review.md)。剩余受限编辑和整体本地终验继续保留。
+
+## 消息重新生成
+
+**日期:** 2026-10-09；`agenthub-message-regeneration` 1.1 完成（本地未提交）。
+
+- 补齐 PDF 的回复/计划重新生成和只重新解释证据的汇总生成；保留原请求、引用、不可变附件与历史，明确当前代码/配置/上下文及可能产生新任务的确认说明，继续经过原有执行门禁。
+- Message 增量元数据与持久操作 ID 防止重复派发；并发准备、活动任务、跨会话来源继续校验；响应丢失按原 ID 恢复，切换会话不串消息，单 API 启动把中断准备标为失败而不自动重跑。
+- 真实 Planner/Claude 编码从同一附件取得前缀，两次执行将 Vite 标题序号 1 改为 2；源码、Diff、持久化与浏览器一致。两次原生汇总重新生成未重跑编码；实际请求后丢弃响应、会话切换、重复提交、刷新与重启验证通过。
+- 修复 320px 汇总长英文标记溢出；亮暗、来源/确认/失败展示及重启后的健康 iframe 通过。原库历史字段保留，仅旧调度器更新一个 Task 的 updated_at，差异明示。
+- 新增后端 18、前端 7 项；最终 API **1,845 passed / 1 POSIX-only skipped**、Web **249 passed**；根检查、生产构建、strict OpenSpec、空白与冻结校验通过。首轮 3 个回归失败修正为字段白名单及测试后台数据库隔离；首个真实 Planner 非法命令样本保留且继续拒绝，详见 [验收记录](message-regeneration-review.md)。整体交付尚未完成，未新增依赖或提交/推送。
+
+## Windows 连接清理与退出
+
+**日期:** 2026-10-09；`agenthub-windows-connection-cleanup` 1.1 完成（本地未提交）。
+
+- 从上轮原始日志定位 `_ProactorBasePipeTransport._call_connection_lost` 的真实 WinError 10054；本机 Python 3.12.7 在 socket.shutdown 异常后跳过 close/detach，正式入口虽有 5 秒兜底但未修复连接计数。
+- 增加 lifespan 所有的 Windows Proactor 异常恢复，仅匹配真实回调、关闭状态和 shutdown traceback；补全 socket close/Server detach，不重复协议回调。其他错误继续上报，退出恢复原处理器且不覆盖后装处理器。
+- 独立 API 普通 TCP 强制断连 200 次未复现该竞争条件；正式 API 包装入口的精确故障注入对照中，修复前等待超时、修复后正常退出，自有 Vite 端口均释放。6.285/1.126 秒只是单次观察值，不是普遍性能指标。
+- 实际 Edge、SSE 36 条回放/35 条续读、Vite DOM、当前 API 8006 重启及 Web iframe 通过；32 Session / 98 Message / 46 TaskRun / 37 Diff / 9 Attachment 行集哈希不变。复用历史原生结果，没有新的模型推理。
+- 相关 API 62 passed（新增 13 项）、全量 API 1,827 passed / 1 POSIX-only skipped、本地测试 17 passed；根检查、strict OpenSpec、空白与冻结哈希通过。保留事件循环、任务租约/取消和三个适配器；[验收记录](windows-connection-cleanup-review.md)。整体本地交付仍待后续功能和终验。
+
+## 消息文件与图片附件
+
+**日期:** 2026-10-09；`agenthub-message-attachments` 1.1 完成（本地未提交）。
+
+- 补齐 PDF 要求的文件/图片消息：会话归属、不可变消息绑定、有界校验、原文下载、图片预览与实际 Agent 输入。明确新增 Pillow/pypdf 和 MessageAttachment 表，本地诊断同步检查解析依赖。
+- 规划/执行使用同一有界选择器，保留来源、哈希、截断和省略记录；正文只作为会话参考，不扩大权限。Codex 临时图片路径严格核对，Claude stream-json stdin 保留工具策略，大文件不进入 Windows 参数。
+- 前端增加会话独立附件草稿、状态/移除/错误恢复；修复长标题挤出附件布局，以及消息已保存但规划失败时的提示与草稿恢复。真实延迟上传切换会话、无文字 PDF、1440/390/320px 亮暗和刷新通过。
+- 新鲜 Codex 从文本与图片分别取得指令中未出现的标题和按钮文案；真实 Claude Planner/编码取得文件标题；源码、Diff、Vite DOM 与工作台 iframe 匹配。当前 Claude 配置的模型真实拒绝图片，显示明确原因，不声称视觉能力。
+- 附件等定向 **45 passed**，最终全量 API **1,814 passed / 1 POSIX-only skipped**、Web **242 passed**、本地工具 **17 passed**；实际诊断、根检查、构建、strict OpenSpec 与空白检查通过。首次回归发现两处兼容错误并修复；另一轮准备超时的测试扩大 setup 等待，保留原 0.5 秒归属阻断断言。
+- 两个原生运行快照/附件哈希、旧 91 条消息/35 条 Diff/44 条 TaskRun 重启后不变。一次临时 API 关闭端口后未退出，只清理自有进程树并恢复健康预览，不把该次称为正常退出通过；详见 [验收](message-attachments-review.md)。未提交/推送，重新生成、对话创建等独立缺口仍保留。
+
+## 本地依赖安全更新与本地 Diff 编辑器
+
+**日期:** 2026-10-08—09；`agenthub-local-dependency-security-refresh` 1.1 完成（本地未提交）。
+
+- 新鲜生产审计确认 12 条既有告警；扩展到完整本地工具链后共 19 条，另涉及 brace-expansion 与尚无发布修复的 braces。
+- Next/eslint-config-next 限定到 16.3 修复系列并锁定 16.3.8；更新 DOMPurify、sharp、source-map-js、baseline-browser-mapping、brace-expansion。安装禁用生命周期脚本，冻结锁文件安装通过。
+- 生产审计 **12→0**；全树 **19→1 high**。未发布修复版的 braces 增加受版本管理的解析/AST 深度补丁：实际 9,001 字符栈溢出复现转为受控拒绝，普通匹配输出不变；原始告警不屏蔽。
+- 发现 React Monaco loader 默认下载 CDN 0.55.1、本地 0.56.0 又内嵌 DOMPurify 3.4.8；改用本地延迟加载和 worker，受控包补丁改为引用审计后的 DOMPurify 3.4.16。修复新版模型先解绑再释放的兼容问题，加载失败保留补丁并允许重试。
+- 本地工具 **17 passed**、Web **237 passed**、根检查、Next 16.3.8 构建、strict OpenSpec 通过；实际 Edge 外网阻断下 Diff/worker/净化器版本、亮暗/只读/切换、失败恢复、健康 Vite iframe 及 Markdown 窄屏通过。现有数据内容保持一致，仅一个旧任务的既有 `updated_at` 刷新；详见 [验收记录](local-dependency-security-review.md)。
+- 额外的本地生产模式浏览器启动被自动审批拦截；未把构建成功称为生产模式浏览器验收。API 本轮未改动、未重跑原生模型，也未提交/推送。附件、重新生成、对话创建等需求继续保留。
+
+## 聊天 Markdown 与代码复制
+
+**日期:** 2026-10-08；`agenthub-chat-markdown-rendering` 1.1 完成（本地未提交）。
+
+- 普通消息接入 Markdown/GFM 排版与独立代码块复制，保留原文、引用、置顶和结构化群聊汇总；宽表格/代码在气泡内滚动，支持亮暗主题与未闭合代码块。
+- 提前说明新增 react-markdown 10.1.0、remark-gfm 4.0.1，安装禁用脚本；危险链接不导航、原始 HTML 保持文字、图片点击后加载、剪贴板成功/失败反馈，以及过长消息完整原文回退。
+- 新增 18 个测试节点；定向 19、Web 全量 **233 passed**，ESLint/TypeScript、根检查、Next 生产构建、strict OpenSpec 和空白检查通过。实际 Edge 亮暗、1440/390/320px、剪贴板、图片、引用/置顶及刷新验证通过；见 [验收](chat-markdown-rendering-review.md)。
+- 当前与原始锁文件的独立生产依赖审计均为 12 条告警（1 critical / 3 high / 5 moderate / 3 low），告警 ID 完全一致，新依赖未增加告警；旧 Next.js 等依赖安全更新列为下一独立任务，不能沿用此前“零告警”的历史结果。
+
+## 置顶消息上下文
+
+**日期:** 2026-10-08；`agenthub-pinned-message-context` 1.1 完成（本地未提交）。
+
+- 复现旧置顶消息离开最近 8 条消息后未进入 Agent 上下文；规划和执行改用同一会话内置顶引用选择器。
+- 按置顶时间和插入顺序选择，最多 16 条、每条 2,000 字符、ASCII JSON（缩进 2）12,000 字符；先过滤保护内容，再截断，并报告省略、截断与过滤数量。
+- 保留原发送者和时间，标记为会话参考，不提升为系统指令、可信记忆或工具授权；最近消息去重，历史请求快照不回写。
+- 验证发现同一消息还可能经会话目标进入执行上下文，将既有 Planner 的内联凭据赋值过滤同步到共享上下文过滤器，避免引用之外的重复路径泄漏。
+- 新增 10 个测试节点；相关 56 passed，全量 API **1,780 passed / 1 POSIX-only skipped**（611.63 秒），最终 `pnpm check`、strict OpenSpec、空白检查通过。初次全量发现日志脱敏占位兼容问题，已恢复既有整段格式。
+- 实际 UI 置顶旧消息，原生 Planner 取到新请求中未出现的文案，Claude 编码、Diff、Vite DOM 匹配；取消/重新置顶和正常重启后，新请求引用变化、原计划及运行快照哈希不变。一份原生不合规计划被诚实拒绝，明确单任务后重试成功；见 [验收](pinned-message-context-review.md)。
+- 当前 API 已正常重启加载最终代码；PDF 富消息、重新生成、对话创建 Agent 等独立缺口已补入交付表，完整项目未声明完成。
+
+## 输出核验性能
+
+**日期:** 2026-10-08；`agenthub-scope-finalization-performance` 1.1 完成（本地未提交）。
+
+- 实际 517 文件会话快照采样发现约 87 万次路径状态检查；内部完成流程另有计算后持久化重复采集。
+- 增加只接收运行 ID 的新鲜计算/持久化入口，复用原有基线、策略、执行归属、锁与指标 CAS；外部传入判定仍重新核验。
+- 完成流程同时要求本次结果和持久化标记通过；采集器哈希及保护检查保持原样。新增/扩展 18 个回归节点；相关 **543 passed / 1 POSIX-only skipped**，全量 API **1,770 passed / 1 POSIX-only skipped**（744.37 秒），静态/strict OpenSpec/空白与冻结哈希通过。
+- 同机同基线 517 文件、每版两次脚本任务：平均总耗时 **20.530→14.187 秒**，核验阶段 **13.091→6.707 秒**；分别下降 30.9%/48.8%，只作为该组固定样本结果。实际 Vite 两次文案续接、重启历史四表哈希/预览恢复、既有原生会话与源码一致通过，见 [验收](scope-finalization-performance-review.md)。
+- 本项无依赖、数据库迁移、通用功能验收契约或部署扩展；未提交/推送，主 API 需正常重启加载新实现，完整项目终验仍待继续。
+
+## 脚本文案字面量渲染
+
+**日期:** 2026-10-08；`agenthub-scripted-copy-literal-rendering` 1.1 完成（本地未提交）。
+
+- 实际 ScriptedMock/Edge/Vite 复现花括号文案导致 ReferenceError/空白、标签成为子元素、实体拼写被解码；完成记录仍明确功能未验收。
+- 敏感文案生成序列化字符串，转义闭合标签字符，使用 callable 替换保留反斜杠；普通文案源格式、目标锚点、CSS 和后续定位保持兼容。
+- 新增 16 项字面量/源范围/控制字符/no-op/继续修改/反斜杠回归；定向 **220 passed**，全量 API **1,752 passed / 1 POSIX-only skipped**（741.64 秒）；静态/strict OpenSpec/空白/冻结哈希和私有值排除通过。
+- 16 份实际适配器输出通过严格 TypeScript/编译/Edge React DOM；三路界面 13 个实际渲染/续接/重启检查、5 次独立只读 QA、CSS/历史/原生 Session 一致通过；旧坏输出及源码按冻结 SHA 保留。详见 [验收](scripted-copy-literal-rendering-review.md)。
+- 无通用完成契约、目标、适配器、UI、数据库或依赖扩展，无提交/推送；主 Web 已恢复，主 API 新任务需正常重启生效。实际核验耗时及最终核心/工作流终验留作后续独立工作。
+
+## 脚本登录表单样式
+
+**日期:** 2026-10-08；`agenthub-scripted-login-form-styling` 1.1 完成（本地未提交）。
+
+- 登录模板同步写入固定样式块，保留其他 CSS，增加灵活输入宽度、间距、可见键盘焦点和语义属性；文案后续修改保持 App-only。
+- 输出写前检查样式路径/标记并准备内容，普通写入失败恢复原文件；事件报告实际变更文件，保留不支持目标、无变化、只读与 scope/完成门禁。
+- 文案规划补入 demo 样式上下文，兼容前序登录任务留下的已验证未提交 CSS；实际文案变更仍只写 App，保留脏工作树拒绝门禁。
+- 定向 API **204 passed**，全量 API **1,736 passed / 1 POSIX-only skipped**（668.72 秒）；部分写入/恢复失败、歧义块、Windows symlink/hardlink、scope 与后续工作流回归通过。
+- 三路实际 Edge/健康 Vite、20 份表单测量、1440/390/320px、真实 Tab 焦点、App-only 文案与样式哈希、独立 QA、刷新/重启/来源通过；静态/strict OpenSpec/空白/冻结哈希与私有值排除通过。详见 [验收](scripted-login-form-styling-review.md)。
+- 无依赖安装、认证后端、产品 UI 重构、迁移、历史改写、提交或推送；主 Web 已恢复，主 API 加载新模板需正常重启。特殊字符文案与整体终验留作后续独立任务。
+
+## 登录页兜底目标绑定
+
+**日期:** 2026-10-08；`agenthub-login-fallback-target-binding` 1.1 完成（本地未提交）。
+
+- 直接/确定性组新任务保存有界登录页及后续文案的具体目标；保留注册范围、原生规划、身份、依赖和适配器拒绝，不迁移历史运行快照。
+- Orchestrator 使用同一创建判定替代关键词，保留英文三步计划并支持中文；额外认证集成不误选模板。
+- 定向 API **192 passed**，全量 API **1,723 passed / 1 POSIX-only skipped**（658.24 秒）；保留旧记忆工作流的语言/检查/日志附注，原文继续传递且不扩展权限。
+- 三路实际浏览器/脚本 Diff/健康 Vite、按钮修改、独立 QA、附加认证无写入拒绝及刷新/重启通过；静态/strict OpenSpec/空白/哈希及私有 SDK 值排除通过。详见 [记录](login-fallback-target-binding-review.md)。
+- 未安装依赖、重复真实模型、提交或推送；主 API 原生演示状态保留，加载新规划需重启后端。脚本输入框样式和最终全项目终验留作下一项独立工作。
+
+## 本地启动入口和使用说明
+
+**日期:** 2026-10-08；`agenthub-local-startup-entrypoint` 1.1 完成（本地未提交）。
+
+- 新增无需 Bash 的 `dev:local`、只读 `doctor:local` 和 `test:local`，同步产品端口/BACKEND_URL/CORS，可选内置 demo API，保留旧命令与运行边界。
+- 修复新包装方式使控制 stdin 被 Git 子进程继承的等待；隔离描述符与 Windows STD_INPUT_HANDLE，真实新建 Session 201 / 383ms，子进程 EOF 回归通过。
+- 独立 SQLite、真实 Edge/三服务、脚本按钮 Diff/健康 Vite、端口冲突、Next 实例冲突回滚、正常/EOF/Ctrl+C/自有 API 异常清理和历史/既有来源一致通过。
+- 启动器 **12 passed**、Web **215 passed / 26 files**、静态/AST/strict OpenSpec/空白/冻结哈希与私有 SDK 值排除通过。未修改 API 业务或 UI、安装依赖、重复全量 API/真实模型、提交或推送。
+- README、个人项目使用说明和演示脚本同步；独立发现登录页泛化目标使兜底失败，留作下一项修复。最终全工作流交付仍待完成。详见 [验收](local-startup-entrypoint-review.md)。
+
+## 主题切换颜色一致性
+
+**日期:** 2026-10-08；`agenthub-theme-transition-consistency` 1.1 完成（本地未提交）。
+
+- 浏览器核查纠正此前“持久白底卡片”判断：稳定暗色颜色正常，问题是切换期间标题立即变色而背景/按钮仍渐变，短暂混合两套颜色。
+- 显式/跨标签切换保留两帧的 transition 暂停并以 generation 防止旧回调提前解除；颜色同步后恢复原悬停过渡，保留已有配色和 iframe 文档。
+- 真实 Edge 三次切换、快速三连和实际跨标签同步共 42 个逐帧样式采样/252 组前景背景对，无混合配色；刷新暗色、亮暗窄屏、悬停与真实 Preview/源码/运行记录一致通过。
+- Web **215 passed / 26 files**，静态/strict OpenSpec/空白/哈希/私有 SDK 值排除通过；未修改后端、重复全量 API/模型、安装依赖、提交或推送。详见 [记录](theme-transition-consistency-review.md)。本地启动入口/文档和最终全工作流交付仍待独立完成。
+
+## 预览重启恢复
+
+**日期:** 2026-10-08；`agenthub-preview-restart-recovery` 1.1 完成（本地未提交）。
+
+- 区分失去进程归属和实际退出；正常 API 退出清理当前 Runner 的进程树/日志，包含 worker 异常、启动竞争和清理失败重试，不接管或终止未知 PID。
+- 刷新以最新后端健康状态判定恢复，保留新预览选择及历史；修复成果分批读取使面板跳转，以及 Windows 分配 Chromium 受限端口的问题，直接有界尝试高端口。
+- 实际健康 Vite、受控异常 API 重启/旧进程未误停、一次 POST 恢复、正常退出进程/端口清理、冷启动门禁与真实按钮/源码/运行记录一致通过。暗色交互通过但已发现成果卡片对比度缺口，留作下一项独立修复。
+- 定向 API **60 passed**，最终 API **1,676 passed / 1 skipped**（923.15 秒）、Web **212 passed / 26 files**；静态、strict OpenSpec、空白、哈希和私有配置值排除通过。详见 [记录](preview-restart-recovery-review.md)。未安装依赖、提交、推送或部署；个人项目启动文档与最终全工作流交付仍待独立验收。
+
+## 本地时间显示
+
+**日期:** 2026-10-08；`agenthub-local-time-display` 1.1 完成（本地未提交）。
+
+- 统一严格 UTC/偏移解析与本地展示；会话、预览检查和事件保留原始值及 UTC，展示时区、排序/搜索和重叠计算使用一致的 instant。
+- SSR 首次快照固定 UTC，hydration 后采用浏览器时区；修复 Node/浏览器零偏移 title 差异，预览检查时间独立一行避免截断。
+- 实际上海/纽约/UTC、60 条 SSE 时间匹配、刷新/亮暗/窄屏及存储记录不变通过；Web **209 passed / 25 files**、静态/strict OpenSpec/空白/哈希通过。未修改后端或重复全量 API、模型执行；已有 unhealthy Preview 如实保留，不声明本轮健康预览通过。详见 [记录](local-time-display-review.md)。未安装依赖、提交或推送。
+
+## 会话与关键消息整理
+
+**日期:** 2026-10-08；`agenthub-session-organization` 1.1 完成（本地未提交）。
+
+- 补齐会话置顶/归档/恢复和关键消息置顶；复用 Session/Message 的独立展示字段及 SQLite 增量升级。
+- 归档保留历史和工作树；整理操作不改执行状态、作用域、记忆快照或执行时间字段。严格请求及跨会话边界、幂等与并发列更新通过。
+- UI 增加最近/归档视图及恢复、置顶排序、关键消息跳回原文；防止较早 SSE 读取覆盖置顶，也防止旧会话的延迟置顶响应阻断新会话加载。
+- 真实 Claude CLI 运行中置顶/归档后，编码、独立原生评审和原生汇总正常完成；桌面/亮暗/窄屏/刷新/API 重启通过，源文件与评审哈希相同，无重复执行。
+- 新增 API **17 passed**；最终全量 API **1,668 passed / 1 skipped**（948.60 秒），Web **184 passed / 24 files**；静态、strict OpenSpec、空白及证据哈希通过。首次全量的既有测试一秒启动超时如实保留，调整测试启动上限但保留所有围栏断言，最终复验全绿。详见 [记录](session-organization-review.md)。未安装依赖、提交或推送。
+
+## 任务组结果汇总
+
+**日期:** 2026-10-08；`agenthub-group-result-summary` 1.1 完成（本地未提交）。
+
+- 新任务组冻结协调 Agent 的提示词、身份和 provider 配置；依据最新运行及对应 Diff/Review 生成持久化汇总。
+- 配置模型时实际调用无工具协调模型；未配置时明确显示确定性执行记录，模型失败不改写任务状态。
+- 补齐汇总 owner/lease、最新证据和权限复核、失败重试与历史展示，pending 状态轮询补充无 TaskRun 时的刷新。发布不改 Session.updated_at，不使其它运行的冻结快照失效。
+- 修复 Review 制品状态误判，区分评审判定、运行完成和测试验证。真实原生 Planner → Claude 编码 → 原生只读评审 → 原生汇总、提示词标记、浏览器/亮暗/刷新/重启/SSE 通过。
+- 新增 API **31 passed**，最终全量 API **1,651 passed / 1 skipped**（722.26 秒），Web **174 passed / 22 files**；静态、strict OpenSpec、空白和证据哈希通过。开发失败历史单独保留，详见 [记录](group-result-summary-review.md)。未安装依赖、提交或推送。
+
+## Bounded group automatic execution
+
+**日期:** 2026-10-08；`agenthub-group-auto-execution` 1.1 完成（本地未提交）。
+
+- 新多 @ 任务组默认自动执行，显式 `context.groupExecution=manual` 和历史手动计划保持原路径。
+- 复用现有队列、依赖、锁、冻结配置与执行围栏；指定评审独立运行。通过 dispatcher 续接，避免递归执行占住上游 provider 容量。
+- 重启及锁释放后唤醒持久化的自动组，已有失败/中断需显式重试；准备拒绝保留诊断并停用该任务自动启动。
+- 修复竞争 dispatcher 改写已领取 queued 任务快照的启动围栏失败；原生评审兼容整段单一 JSON 代码块并补强必填绑定标识，仍不容忍无效/错绑/无 Read 结果。
+- 新真实 Claude CLI Planner → Claude 编码 → 原生只读评审自动组、启动后续接 Claude → 独立脚本 QA、浏览器/刷新/重启/SSE 通过；定向 API **106 passed**，全量 API **1,620 passed / 1 skipped**（933.83 秒）、Web **168 passed / 20 files**，静态/strict OpenSpec/空白和证据哈希通过。失败和停止的早期演练不计为通过，详见 [记录](group-auto-execution-review.md)。本项不包含最终聚合回复；未安装依赖、提交或推送。
+
+## Native review artifacts
+
+**日期:** 2026-10-08；`agenthub-native-review-artifacts` 1.1 完成（本地未提交）。
+
+- 原生 Claude Read-only 评审绑定注册目标和文件版本，校验真实最终 JSON、完整 Read 及退出状态；新单 @ 原生评审保存目标。越界、无效/错绑、过期输入明确失败，原生成果不由脚本代替。
+- 原生 Review/版本/ready 事件与完成状态一起提交；成果卡片显示实际摘要、发现/行号、建议、来源、文件/输出摘要和未运行测试边界，修复评审面板暗色对比度。旧历史与编码任务的脚本报告继续保留。
+- 按仓库已有文档白名单，仅开放本项验收记录及证据目录的 JSON、PNG、TXT，保证运行与门禁证据可随源码保存。
+- 真实原生运行、文件哈希、浏览器/刷新/暗色、API 重启和 SSE 通过；定向 API **103 passed**，最终全量 API **1,603 passed / 1 POSIX-only skipped**（906.09 秒）、Web **168 passed / 20 files**，静态/strict OpenSpec/空白及证据哈希通过。旧测试的虚拟工作树/空成功事件更新为真实临时源文件和结构化 Read；此前失败/停止的测试不计为最终通过。详见 [验收记录](native-review-artifacts-review.md)。未安装依赖、提交或推送。
+
+## Claude native execution reliability
+
+**日期:** 2026-10-08；`agenthub-claude-native-execution` 1.1 完成（本地未提交）。
+
+- 统一 Windows 原生 Claude 定位、编码/Planner/两种健康检查路径，保持无 shell 启动；restricted 执行仅桥接用户设置中的 SDK 凭据/模型 allowlist，显式环境优先，其他设置和控制面密钥不导入。
+- UTF-8 读取，合并增量与重复快照；导入凭据和跨增量前缀脱敏。成功等待进程退出，非零退出、晚到错误、缺失结果及非对象 JSON 正确失败，保留既有工具/权限/文件/完成围栏。
+- 最终定向 **235 passed**，全量 API **1,564 passed / 1 POSIX-only skipped**（741.79 秒），`pnpm check`、strict OpenSpec、空白和源码/证据哈希通过；新会话真实 Claude 编码、匹配 Diff、原生只读回复、三个源文件哈希相等、标记各一次、浏览器刷新和 SSE 重放通过。初轮脚本读取错误的数据源，初轮全量在完成围栏补充时停止，均不计入最终通过。详见 [验收记录](claude-native-execution-review.md)。未重复 Web/demo-api 测试，未安装依赖、提交或推送；脚本 Review artifact 与模型回复分开标注。
+
+## Native group Planner coordination
+
+**日期:** 2026-10-08；`agenthub-native-group-planner` 1.1 完成（本地未提交）。
+
+- 群聊接通实际自定义/配置 Planner；使用其真实任务内容并冻结提供方、提示词摘要和记忆证据。服务端锁定完整参与者、角色/目标、串行写入和独立只读评审，未配置 Planner 时保留确定性路径。
+- 工厂暂不加入 DB，整组和协调消息一次提交；校验原生输出的权限/文件/命令/风险/依赖，调用后刷新身份、启用状态及目标；失败不静默降级或创建部分任务。
+- Windows 识别已安装的原生 Claude exe，UTF-8 无 shell 传输；无工具规划隔离环境指令/hooks/plugins；有界整组 CLI 使用 low effort 并记录来源。
+- 最终源码新会话的真实 Planner 13.703 秒，提示词标记、Codex 修改与匹配 Diff、自己的只读脚本评审及重启/历史读取通过。原生路径越界输出先被拒绝且无部分任务，澄清该验收档案的路径说明后再次实际规划通过；保留这项限制。浏览器链路脚本后段隐藏消息定位失败，独立只读浏览器检查补齐 UI 证据。
+- 最终全量 API **1,544 passed / 1 POSIX-only skipped**（917.89 秒）、定向 **165 passed**、Web **167 passed / 20 files**、demo-api **5 passed**；`pnpm check`、strict OpenSpec、空白和证据哈希通过。详见 [记录](native-group-planner-review.md)。本项没有真实模型 QA、Claude 编码或新部署验收；未安装依赖、提交或推送。
+
+## Explicit multi-Agent mention routing
+
+**日期:** 2026-10-08；`agenthub-multi-agent-mention-routing` 1.1 完成（本地未提交）。
+
+- 修复多 @ 只路由第一个角色；确定性协调为每个显式编码角色建任务，写入保留顺序，评审等待全部写入并分别绑定目标。任务与协调消息完整校验后一次提交；未知/禁用/歧义/越界/平台请求没有部分任务。
+- 自定义执行别名保留实际档案和现有原生工具/权限/完成围栏；群聊联系人累加并去重，单聊替换开头角色列表。内置 Orchestrator 可位于任意 mention 位置；自定义 Planner-led group 暂明确拒绝，不静默替换。
+- ScriptedMock 增加受限只读评审分支，显式 QA 不能被编码自动报告代替。自己的运行与脚本报告保留来源，UI 显示“只读脚本评审完成”，不误称兜底恢复。普通 Mock 构造保留，既有并行测试夹具补齐父类初始化。
+- 实际浏览器群聊选择、两任务依赖、真实 Codex 按钮修改/匹配 Diff、随后独立只读脚本评审、文件字节不变、刷新与平台拒绝通过。不是原生 Planner、模型评审或新 Preview/部署验收；详见 [记录](multi-agent-mention-routing-review.md)。
+- 最终 API **1,511 passed / 1 skipped**（465.11 秒）、Web **167 passed / 20 files**、demo-api **5 passed**；`pnpm check`、strict OpenSpec、空白检查和证据哈希通过。新增整组测试 20 项；DAG/执行工作树/整组定向 55 项通过。初轮回归发现构造兼容与测试子类初始化问题后中止并修复，最终全量没有复用初轮结果。未安装依赖、提交或推送。
+
+## Executable custom Agent profiles
+
+**日期:** 2026-10-08；`agenthub-custom-agent-execution` 1.1 完成（本地未提交）。
+
+- 复用 AgentProfileDraft，补充提示词、工作区唯一 @ 别名及原生工具策略，兼容旧 SQLite 与不可执行草稿；目录支持创建/编辑/启停/取消，联系人插入实际别名，运行设置选择实际档案。
+- TaskRun 校验目标、模式、角色能力、提供方和工具策略，冻结身份、名字与提示词；显式指派不继承其他档案的角色配置，准备请求与最终启动围栏检查禁用状态和身份一致性，公开运行不泄露提示词原文。
+- Claude 只读评审使用原生 Read 工具及只读执行变体；修复 Review 的 Provider 网关角色匹配。自定义 Planner 的空工具 CLI 路径与声明目标校验接通；Codex 保留当前原生编码工具与沙箱，不宣称精细移除 shell。现有文件/完成/锁/租约围栏和 demo 兜底保留。
+- 浏览器保存、编辑、取消、刷新、运行配置选择、联系人指派和禁用拒绝通过；新真实 Codex Run `7d091c25-63c5-452b-a84f-50315ec5e0a5` completed，按钮改动生成匹配 Diff，原生最终消息含仅来自配置的标记。重启后档案状态和历史结果保持。
+- 最终全量 API **1,491 passed / 1 POSIX-only skipped**；Web **163 passed / 19 files**，静态检查、strict OpenSpec、空白检查及证据哈希核对通过。API 定向迁移/身份/只读/最终禁用围栏通过。初轮全量的旧模型字段断言已更新；补充后台只读测试发现的网关角色问题已修复。详见 [验收记录](custom-agent-execution-review.md)。没有新真实 Claude、LLM Planner 或健康 Preview 验收；未安装依赖、提交或推送。
+
+## Persistent Agent System Prompt execution
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-agent-system-prompt` 1.1：修复内置 Agent.system_prompt 未进入编码指令的问题；既有四个运行角色支持工作区多行 System Prompt 保存/取消、空值继承和 8000 字符/NUL 校验，复用现有 roles_json。
+- TaskRun 冻结有效文本、身份和摘要；配置变化不影响已创建运行，重试使用新配置，旧 queued 运行在请求准备时通过原有 CAS 冻结，绑定损坏失败。公开 metrics 仅显示 receipt。四条既有 LLM Planner transport 应用脱敏后的有效提示词，保留强制 JSON/规划边界与全部文件/工具权限门禁。
+- 实际浏览器保存、刷新恢复、取消通过；新真实 Codex Run `55ec6ecc-52db-4528-a408-cb0153b6096f` 完成按钮修改和真实 Diff，精确持久 agent_message 含中文摘要及仅来自设置的提示词标记。脚本 Review/Mock 不作为模型提示词遵循证明。
+- 修改后全量 API **1,465 passed / 1 POSIX-only skipped**；Web **160 passed / 18 files**，`pnpm check`、strict OpenSpec 与空白检查通过。详见 [验收记录](agent-system-prompt-review.md)。可执行自定义 Profile/工具集仍待下一项；没有新真实 Claude/LLM Planner 或健康 Preview 验收，未安装依赖、提交或推送。
+
+## Fresh local runtime acceptance and responsive scope checks
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-local-runtime-acceptance` 1.1：独立 SQLite/API/真实 Session 工作树及实际 Edge 浏览器，登录页和普通按钮后续修改使用真实 Codex，匹配 Diff、脚本 Review 和健康 Vite Preview；验证刷新、历史、主题、栏宽、窄屏、多 Session、显式兜底和 mock 部署卡。
+- 修复兜底完成时同步 scope 检查阻塞 API：原始 30 秒请求超时可复现；保留现有安全和提交围栏，后台线程串行执行同步步骤并在取消时等待线程结束。修复后完整兜底的 41 次任务读取最慢 483ms（仅本次本机记录）。补齐规划/分解角色，并隔离 Codex launcher 探针测试环境。
+- 修改前完整 API **1,438 passed / 1 skipped / 1 failed**（探针环境假设）；修改后相关回归 **527 passed**，覆盖完整 TaskRun、取消/租约/围栏、调度/恢复、Planner、DAG/Preview 与记忆；Web 基线 **159 passed / 18 files**，`pnpm check`、strict OpenSpec、空白检查通过。没有把局部复验宣称为修改后 API 全量。
+- 阻塞修复后再次通过普通聊天完成真实 Codex 第三次按钮修改（Enter project）、实际 Diff/脚本 Review 和对应健康 Preview；70 次任务读取最慢 320ms，新增独立证据和截图。
+- 详见 [验收记录](local-runtime-acceptance-review.md) 与 [本地交付核对](local-project-delivery.md)。保留脚本 Review、模拟失败/mock 部署及尚缺真实 Claude/Planner 验证的边界；未安装依赖或上线部署。
+
+## Generated review dependency handoff
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-review-dependency-handoff` 1.1：登录/动态计划的 QA/Review 使用依赖最新完成运行的同 Session、匹配 Diff 的 Review 报告闭合，持久化来源及原始 verdict；保留显式评审执行与建议性质，未伪造 QA TaskRun。
+- 动态 autoStart 任务在依赖解除后续接；新用户消息规划前恢复已有有效报告但仍 pending 的旧 QA，未改写完成运行的历史。实际 Dispatcher 发现的 ORM 提前 flush 误拒绝，以完成围栏验证期间 no_autoflush 修复，保留所有代次、租约、队列、锁与状态检查。
+- 真实 HTTP/Git/SQLite/ScriptedMock 验证完成后发送、排队时提前发送、旧 QA 恢复三种后续消息路径，表单/按钮/真实 Diff/作用域/完成门禁及报告来源通过；最终 Planning **60 passed**、TaskRun **81 passed**、其余相关回归 **64 passed**，合计 **205 项**（复跑不重复累计）。其中包含 30 项完成围栏负向回归及 DAG 集成门禁。
+- `pnpm check`、最终 `pnpm check:api`、strict OpenSpec 与空白检查通过。详见 [验收记录](review-dependency-handoff-review.md)。未调用真实 Provider，健康 Preview/build/部署和新的浏览器闭环仍待独立验收；未安装依赖、提交或推送。
+
+## ScriptedMock structured task intent routing
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-scripted-mock-intent-routing` 1.1：以既有 `planContext.target` 选择登录表单、按钮文案或标题脚本，结构化文案要求有效 `targetText`；冲突 prose/script 不覆盖目标，未知或无效结构化请求写入前失败。无 target 的旧请求保留兼容，源文件按 UTF-8 读写。
+- 临时真实 Git/SQLite 验收 HTTP 登录计划生成邮箱/密码表单；同 Session 显式依赖前端任务仅改按钮，scope/completion 和真实非空 Diff 通过。保留缺失绑定失败、路径/网络/审批/中断/完成门禁，没有修改 Planner/QA 调度。
+- Adapter/Planning/Guardrails **136 passed**，TaskRun 相关 **13 passed**，合计 **149 项**；`pnpm check`、strict OpenSpec、空白检查通过。详见 [修复记录](scripted-mock-intent-routing-review.md)。
+- 普通第二条聊天消息的 QA 依赖、健康 Preview 与浏览器完整闭环仍待独立验收；没有新真实 Provider、build、部署、依赖安装、提交或推送。
+
+## Session worktree dependency ignore rules
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-worktree-dependency-ignore` 1.1：修正目录限定的 `node_modules/` Git 规则；服务端核对源仓库/Session 的 Git common directory 后，向仓库局部 `info/exclude` 幂等追加两个固定依赖路径，兼容旧 HEAD 和已有链接。保留原始内容、链接和 Session 路径。
+- 不同仓库、重定向/硬链接的 exclude 拒绝写入；Git 使用既有净化进程环境。没有修改调度脏文件过滤或受保护路径门禁，无关脏文件仍阻塞，受保护链接变化仍反映在完整 scope 的 protected digest。
+- 基础相关回归 **230 passed / 1 POSIX-only skipped**；收尾 Session/环境验证 **18 passed**（含 11 项复验）。`pnpm check`、最终 `pnpm check:api`、strict OpenSpec 与空白检查通过。详见 [验收记录](worktree-dependency-ignore-review.md)。
+- 实际写入验收位于独立 Git/SQLite 测试夹具；开发仓库旧演示链接只读核对、未删除。没有真实 Provider、表单、Preview/build/部署或新浏览器闭环验收。ScriptedMock 意图路由仍待独立修复；未安装依赖、提交或推送。
+
+## Deterministic login-plan target binding
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-login-plan-target-binding` 1.1：从注册表解析 Demo Frontend，为确定性登录页的 frontend/QA 任务持久化 `targetId`/`safeTarget`，从允许路径生成文件列表；保留三步依赖和执行权限门禁。
+- 修复前两项回归复现缺失目标/`TASK_RUN_SCOPE_UNVERIFIABLE`；修复后规划/调度/Mock/P18b **90 passed**，TaskRun scope/completion/target_lock **96 passed**，合计 **186 passed**。HTTP 规划至实际 ScriptedMock 执行产生非空 Diff；移除绑定负例仍失败且无制品/文件变化。
+- `pnpm check`、strict OpenSpec、空白检查通过。详见 [修复记录](login-plan-target-binding-review.md)。没有新真实 Provider 或健康 Preview 验收，未安装依赖、提交或推送。
+- Windows 依赖链接阻塞仍待修复；本次发现 ScriptedMock 对完整指令的 `title` 关键词误选标题变更，未生成登录表单，记录为后续独立功能缺口，不将非空 Diff 当作登录页功能通过。
+
+## Resizable workbench columns
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-resizable-workbench-columns` 1.1：桌面两处分界线支持指针拖动、方向键微调、Home/End 与双击复位；左栏 180–360px、成果栏 280–720px，中间保留至少 400px。
+- 本地保存宽度，刷新恢复、异常存储回退；指针捕获/透明遮罩及取消清理避免成果 iframe 截获拖动。保留窄屏抽屉、面板展开/收起与主题，不重新挂载执行列表。
+- Web **159 passed / 18 files**，`pnpm check`、strict OpenSpec 与空白检查通过；浏览器实际左右拖动、刷新、重置、面板模式与窄屏验收见 [记录](resizable-workbench-review.md)。未安装依赖、修改后端代码、提交或推送。
+
+## Persistent workbench light/dark theme
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-workbench-theme-toggle` 1.1：顶部新增月亮/太阳主题按钮，保留亮色默认；显式选择持久化、刷新前初始化、跨标签同步及存储失败回退。
+- 适配聊天/侧栏/任务与成果卡片/事件/设置配色、依赖图和只读 Monaco Diff；不修改 Preview iframe 内容或权限，没有新增依赖或后端代码。
+- Web **151 passed / 17 files**，`pnpm check`、strict OpenSpec 与空白检查通过；实际亮/暗双向切换及刷新恢复、390px 窄屏验收见 [主题记录](workbench-theme-review.md)。未提交或推送。
+
+## Conversation workbench UI
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-conversation-workbench-ui` 1.1：按已认可的浅色设计及用户 PDF 第 1–3 页映射，实现对话/执行过程/成果视图、Agent 联系人、实际任务依赖 SVG、完成进度、SSE 时间线、内联成果与可展开检查面板；保留既有安全 iframe、审批、重试、中断及上下文操作。
+- 最新运行状态与历史成果分开；非空 Diff、健康 Preview 分别验收，不从 completed 推导交付成功。事件白名单脱敏、按 ID 去重、每会话最多 60 条；消息/任务/制品/引用按 Session 隔离，切换视图保留单个任务列表。
+- Diff 默认可直接查看彩色补丁，显式打开只读并排比较；移动宽度使用会话抽屉与成果覆盖面板，390px 实测无页面整体横向溢出。
+- Web 全量 **143 passed / 16 files**，`pnpm check`、strict OpenSpec 与空白检查通过；桌面/窄屏浏览器截图及来源哈希见 [UI 验收记录](conversation-workbench-ui-review.md)。没有安装依赖、修改后端实现、提交或推送。
+- 新聊天验收暴露确定性计划缺少 target 绑定、Windows 依赖符号链接导致脏工作树两处现有缺口，正确显示失败/中断；成果验收复用既有真实基准 Diff，脚本 Review 明确标注。**没有取得本轮新健康 Preview 或完整闭环成功**，后续需独立修复。自动审批拒绝移除测试依赖链接，已保留；默认数据库曾短暂被初始化，具体边界见验收记录。
+
+## Windows Codex native sandbox selection
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-windows-codex-sandbox-selection` 1.1：Windows Codex 命令显式增加固定 `windows.sandbox="unelevated"`，保留 workspace-write、工作树绑定与用户配置隔离；Linux/macOS 命令不变。
+- 命令白名单只接受规定位置的精确原生沙箱前缀，继续拒绝任意配置、扩大目录权限、网络放行、重复覆盖和缺失的执行边界参数。
+- 收窄此前文件权限结论：OWNER RIGHTS 临时夹具被拒绝不代表所有工作区不可访问；不更改旧夹具或宿主 ACL。
+- 当前正式适配器在新目录先通过单项，再完成真实三项基准 **3/3**、独立功能测试 **10/10**；各项 scope、规则 receipt、完成门禁、非空匹配 Diff 与不可变验收输入全部通过。历史 0/3 证据原字节保留。
+- 相关 API 回归 **577 passed / 1 POSIX-only skipped**，`pnpm check`、strict OpenSpec、空白与源码/输入/报告哈希检查通过；没有重复全量 API/Web 测试。范围与隔离限制见 [修复记录](windows-codex-sandbox-review.md)。本地未提交或推送。
+
+## Write completion validation and Codex file access diagnosis
+
+**日期:** 2026-10-07
+
+- 单任务 `agenthub-write-completion-validation` 1.1：用真实 CLI 夹具记录启动前策略拒绝、原生 Windows 沙箱工具启动后 ACL 拒绝及实际未修改的文件；未将模型自报只读或 shell exit 0 当作文件成功。
+- Codex 等待进程结束后发出完成事件，非零退出不能被 turn.completed 覆盖；保存有界 stderr，stdin 固定为 DEVNULL。
+- 写任务必须有 scope baseline 确认的新增修改及与其相交的非空 Diff。无修改、空输出和 Diff 收集错误分别失败，保存完成证据后停止成功 Review/后续交付；保留只读路径与既有代次提交围栏。
+- 基准报告增加完成判定与 Provider 诊断；保留全部旧失败记录。当前源码的真实三项仍为 0/3，但 TaskRun 均正确失败为 `TASK_RUN_NO_CHANGES`，没有成功交付副作用。定位与验证边界见 [本轮记录](write-completion-validation-review.md)。
+- 最终 API 全量 **1,352 passed / 1 POSIX-only skipped**；加强后的 Codex 退出时序回归独立 **21 passed**；Web **128 passed**、Demo API **5 passed**、静态/strict OpenSpec/空白/哈希检查通过。开发工作区未提交或推送。
+
+
+## Reproducible external coding task benchmark
+
+**日期:** 2026-10-07
+
+- 按单任务 OpenSpec `agenthub-external-task-benchmark` 1.1 新增三项固定外部 Vite React 任务与 CLI runner：标题规范化、整分折扣计算、图书搜索，分别有 3/4/3 项独立功能测试。
+- 每轮新建独立 SQLite/Git 夹具，拒绝已有目录、开发仓库内部目录及系统根路径；只允许修改 `src/domain.mjs`。既有注册、快照、TaskRun、Worker、Codex、scope、Diff/Review 链路保持原样，没有新增适配器或自动 Mock fallback。
+- 冻结源码、提示、基线和验收器哈希；验收模块在目标之外，通过 Node 权限模型限制意外写入/子进程，执行后再检查不可变文件与实际 Diff，并要求完整测试数量通过。不把此模型当作敌对代码沙箱。
+- 准备模式不调用 Provider，真实模式保存所有失败、事件、规则 receipt、快照、Diff、功能检查与完整分母；不会仅凭 `completed` 或回答中的代码标记成功。
+- 当前真实 Codex `0.162.0-alpha.2` 的最终三项运行均有 turn 事件、有效规则 receipt 与 scope，但未改变文件，功能通过为 0/10，基准为 **0/3**；自报只读/读取限制的回复作为线索保留，尚未确认系统策略根因。没有用人工应用建议代码或 Mock 替代真实失败。
+- 最终准备/真实报告及先前失败尝试保存在 `docs/evidence/external-task-benchmark/`，来源源码与 suite 哈希已核对；边界与后续工作见 [基准交付记录](external-task-benchmark-review.md)。开发工作区仍未提交或推送。
+
+### 验证
+
+- 最终 API 相关回归 **88 passed**，含 **21 项**新基准回归；Web 全量 **128 passed**；`pnpm check`、strict OpenSpec 和空白检查通过。没有重复未变更核心的 1,324 项 API 全量，也没有安装依赖、build、Preview、部署或使用真实模型通过率收益主张。
+- 验收进程加固期间复现 Node 22 CLI test discovery 的根目录读取需求和标志差异；改为直接执行固定 `node:test` 模块，保留读取范围和子进程禁令，相关负向检查最终通过。
+- 最终准备模式三项均记录完整失败基线，CLI exit 0；真实模式三项未验收通过，CLI 如实 exit 1。真实执行失败与基准工具回归通过是不同结果。
+
+## Explicit session memory snapshot refresh UI
+
+**日期:** 2026-10-07
+
+- 已按授权将前述快照一致性与规则预算实现提交为 `78e90f4` 并正常推送至 `origin/dev`；远端 `refs/heads/dev` 与本地 HEAD 完整 SHA 相同。该推送也包含此前本地的并行 DAG 提交 `b6988b1`。
+- 推送确认后，仅推进 OpenSpec `agenthub-session-memory-snapshot-refresh-ui` 的任务 1.1：聊天侧栏携带当前 Session 到记忆设置，页面验证工作区成员身份，只显示所选会话的快照；未选择或选择无效时不自动代入其他会话。
+- 分开“重新加载列表”和“刷新会话快照”。后者调用既有 POST API，仅在返回的 Session、Workspace 与快照绑定有效时更新显示；归档等记忆操作不会自动刷新快照，并提示用户显式采用变更。
+- 操作中禁用选择、筛选和其他变更操作，阻止重复刷新；409 提示等待任务结束后重试。失败保留旧绑定，页面卸载或后端改变后丢弃过期响应；返回聊天链接指向所选会话。
+- 保留服务端活动 TaskRun 刷新禁令和历史绑定；未改后端、数据库、适配器或依赖，也未开始下一项功能。
+
+### 验证
+
+- 初始组件回归 RED 为 **8 failed / 2 passed**，复现任意会话快照展示、缺少真实刷新入口等问题。
+- 最终 Web 全量 **128 passed / 15 files**，较原基线增加 19 项：组件增加 12 项、API 增加 4 项、服务端页面查询参数增加 3 项；既有侧栏导航断言同步更新。
+- 现有后端快照/刷新相关回归 **74 passed / 270 deselected**（14.45 秒），使用新外部临时 SQLite/Git 目录；覆盖显式刷新、活动任务阻止、历史 TaskRun 绑定和写入边界。
+- `pnpm check`、strict OpenSpec validation、`git diff --check` 通过，任务 1.1 完成。验证进程使用既有 Git Bash，未安装依赖或修改系统设置。
+- 本次 UI 改动仍在本地工作区，未提交或推送；未执行浏览器人工视觉验收或真实 provider 演练。本次未改后端实现，因此未重复运行前一任务已完成的 1,324 项 API 全量测试。
+
 ## Prepare memory consistency and budget delivery
 
 **日期:** 2026-10-07

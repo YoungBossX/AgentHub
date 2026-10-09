@@ -18,7 +18,11 @@ from app.adapters import (
     AgentRunRequest,
 )
 from app.guardrails import evaluate_command
-from app.process_environment import adapter_process_env
+from app.attachment_inputs import claude_input
+from app.process_input import private_stdin
+from app.claude_executable import resolve_claude_executable
+from app.native_reviews import NativeReadEvidence, NativeReviewError, validate_native_assessment
+from app.process_environment import ProcessTextRedactor, adapter_process_env, redact_process_evidence
 
 DEFAULT_CLAUDE_BINARY = "claude"
 STDERR_LIMIT = 1200
@@ -41,13 +45,14 @@ class ClaudeCodeProcess(Protocol):
 
 
 class ClaudeCodeProcessRunner(Protocol):
-    def start(self, command: list[str], cwd: Path) -> ClaudeCodeProcess:
+    def start(self, command: list[str], cwd: Path, *, input_text: str | None = None) -> ClaudeCodeProcess:
         ...
 
 
 class SubprocessClaudeCodeProcess:
-    def __init__(self, process: subprocess.Popen[str]) -> None:
+    def __init__(self, process: subprocess.Popen[str], evidence_environment: dict[str, str]) -> None:
         self._process = process
+        self.evidence_environment = evidence_environment
 
     @property
     def returncode(self) -> int:
@@ -69,23 +74,30 @@ class SubprocessClaudeCodeProcess:
     async def stderr_text(self) -> str:
         if self._process.stderr is None:
             return ""
-        return await asyncio.to_thread(self._process.stderr.read)
+        return redact_process_evidence(
+            await asyncio.to_thread(self._process.stderr.read), self.evidence_environment,
+        )
 
     def terminate(self) -> None:
         self._process.terminate()
 
 
 class SubprocessClaudeCodeRunner:
-    def start(self, command: list[str], cwd: Path) -> ClaudeCodeProcess:
-        process = subprocess.Popen(
-            command,
-            cwd=str(cwd),
-            env=adapter_process_env("claude_code"),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        return SubprocessClaudeCodeProcess(process)
+    def start(self, command: list[str], cwd: Path, *, input_text: str | None = None) -> ClaudeCodeProcess:
+        environment = adapter_process_env("claude_code")
+        with private_stdin(input_text) as stdin:
+            process = subprocess.Popen(
+                command,
+                stdin=stdin,
+                cwd=str(cwd),
+                env=environment,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+        return SubprocessClaudeCodeProcess(process, environment)
 
 
 @dataclass
@@ -104,13 +116,15 @@ class ClaudeCodeAdapter(AgentAdapter):
         process_runner: Optional[ClaudeCodeProcessRunner] = None,
         claude_binary: Optional[str] = None,
         max_budget_usd: str = "1.00",
+        read_only: bool = False,
     ) -> None:
         self._process_runner = process_runner or SubprocessClaudeCodeRunner()
-        self._claude_binary = claude_binary or os.environ.get(
+        self._claude_binary = resolve_claude_executable(claude_binary or os.environ.get(
             "CLAUDE_CODE_CLI_PATH",
             DEFAULT_CLAUDE_BINARY,
-        )
+        ))
         self._max_budget_usd = max_budget_usd
+        self._read_only = read_only
         self._runs: dict[str, ClaudeCodeRunState] = {}
 
     def getCapabilities(self) -> AdapterCapabilities:
@@ -118,7 +132,7 @@ class ClaudeCodeAdapter(AgentAdapter):
             supportsStreaming=True,
             supportsInterrupt=True,
             supportsApproval=False,
-            supportsFileEdit=True,
+            supportsFileEdit=not self._read_only,
             supportsShellCommand=False,
             supportsDiffArtifact=False,
             supportsPreviewArtifact=False,
@@ -127,6 +141,8 @@ class ClaudeCodeAdapter(AgentAdapter):
         )
 
     async def createRun(self, request: AgentRunRequest) -> AdapterRun:
+        if self._read_only and request.permission_profile.get("toolPolicy") != "claude_read_only":
+            raise ValueError("Read-only Claude execution requires its frozen tool policy.")
         run_id = f"claude-code-{uuid4()}"
         cwd = Path(request.worktree_path).expanduser().resolve(strict=False)
         command = self._build_command(request)
@@ -143,7 +159,10 @@ class ClaudeCodeAdapter(AgentAdapter):
             return AdapterRun(adapterRunId=run_id)
 
         try:
-            state.process = self._process_runner.start(command, cwd)
+            state.process = (
+                self._process_runner.start(command, cwd, input_text=claude_input(request.instruction, request.images))
+                if request.has_attachments else self._process_runner.start(command, cwd)
+            )
         except Exception as exc:
             state.start_error = exc
 
@@ -175,6 +194,12 @@ class ClaudeCodeAdapter(AgentAdapter):
         stderr_task = asyncio.create_task(state.process.stderr_text())
         stderr_excerpt = ""
         terminal_event_seen = False
+        pending_completion: Optional[AgentEvent] = None
+        error_event_seen = False
+        text_reconciler = _ClaudeTextReconciler()
+        text_redactor = ProcessTextRedactor(getattr(state.process, "evidence_environment", None))
+        native_binding = request.plan_context.get("nativeReviewContract") if self._read_only else None
+        native_evidence = NativeReadEvidence(native_binding) if isinstance(native_binding, dict) else None
 
         index = 0
         async for line in state.process.stdout_lines():
@@ -184,7 +209,9 @@ class ClaudeCodeAdapter(AgentAdapter):
             index += 1
             try:
                 raw_event = json.loads(line)
-            except json.JSONDecodeError:
+                if not isinstance(raw_event, dict):
+                    raise ValueError("Claude stream event must be an object.")
+            except (json.JSONDecodeError, ValueError):
                 state.process.terminate()
                 stderr_excerpt = await _finish_process(state.process, stderr_task)
                 terminal_event_seen = True
@@ -194,10 +221,24 @@ class ClaudeCodeAdapter(AgentAdapter):
                     f"Could not parse Claude Code stream-json stdout line {index}.",
                     command=state.command,
                     stderr=stderr_excerpt,
-                    rawLine=line,
+                    rawLine=redact_process_evidence(
+                        line, getattr(state.process, "evidence_environment", None),
+                    ),
                 )
                 return
 
+            if native_evidence is not None:
+                native_evidence.observe(raw_event)
+                if native_evidence.scope_violation:
+                    state.process.terminate()
+                    await _finish_process(state.process, stderr_task)
+                    yield _error_event(request.task_run_id, "NATIVE_REVIEW_SCOPE_VIOLATION",
+                                       "Native review requested a tool or file outside its bound Read scope.")
+                    return
+                # Read diagnostics contain source text and absolute host paths.
+                # Keep only validated hashes in the final native receipt.
+                if raw_event.get("type") == "user":
+                    continue
             event = _map_claude_json_event(
                 raw_event,
                 request.task_run_id,
@@ -206,11 +247,35 @@ class ClaudeCodeAdapter(AgentAdapter):
             )
             if event is None:
                 continue
+            if event.type == "message.delta":
+                event.payload["text"] = text_redactor.append(
+                    text_reconciler.reconcile(raw_event, event.payload.get("text", "")),
+                )
+                if not event.payload["text"]:
+                    continue
+            else:
+                text_reconciler.observe(raw_event)
+            event.payload = redact_process_evidence(
+                event.payload, getattr(state.process, "evidence_environment", None),
+            )
             if event.type in {"completed", "error"}:
+                remaining = text_redactor.finish()
+                if remaining:
+                    yield _event("message.delta", request.task_run_id, {"text": remaining, "adapter": "claude_code"})
                 terminal_event_seen = True
+            if event.type == "error":
+                error_event_seen = True
+                pending_completion = None
+            if event.type == "completed":
+                if not error_event_seen:
+                    pending_completion = event
+                continue
             yield event
 
         stderr_excerpt = await _finish_process(state.process, stderr_task)
+        remaining = text_redactor.finish()
+        if remaining:
+            yield _event("message.delta", request.task_run_id, {"text": remaining, "adapter": "claude_code"})
 
         if state.interrupted:
             yield _error_event(
@@ -223,7 +288,7 @@ class ClaudeCodeAdapter(AgentAdapter):
             )
             return
 
-        if state.process.returncode != 0 and not terminal_event_seen:
+        if state.process.returncode != 0 and (pending_completion is not None or not terminal_event_seen):
             code = _error_code_for_text(stderr_excerpt)
             yield _error_event(
                 request.task_run_id,
@@ -235,15 +300,45 @@ class ClaudeCodeAdapter(AgentAdapter):
             )
             return
 
-        if state.process.returncode == 0 and not terminal_event_seen:
+        if state.process.returncode == 0 and pending_completion is not None:
+            native_payload = {}
+            if native_evidence is not None:
+                try:
+                    assessment = validate_native_assessment(
+                        native_evidence.result, native_binding, native_evidence.reads,
+                    )
+                except NativeReviewError as exc:
+                    yield _error_event(request.task_run_id, exc.error_code, exc.message, exitCode=0)
+                    return
+                import hashlib
+
+                native_payload = {"nativeReview": {
+                    "assessment": assessment,
+                    "readEvidence": native_evidence.reads,
+                    "outputSha256": hashlib.sha256(native_evidence.result.encode("utf-8")).hexdigest(),
+                    "adapterRunId": run_id,
+                }}
+            safe_native_payload = redact_process_evidence(
+                native_payload, getattr(state.process, "evidence_environment", None),
+            )
             yield _event(
                 "completed",
                 request.task_run_id,
                 {
+                    **pending_completion.payload,
                     "adapter": "claude_code",
                     "exitCode": 0,
                     "stderr": stderr_excerpt,
+                    **safe_native_payload,
                 },
+            )
+            return
+
+        if state.process.returncode == 0 and not terminal_event_seen:
+            yield _error_event(
+                request.task_run_id, "CLAUDE_CODE_MISSING_RESULT",
+                "Claude Code exited without a successful result event.",
+                command=state.command, exitCode=0, stderr=stderr_excerpt,
             )
 
     async def interrupt(self, run_id: str) -> None:
@@ -262,6 +357,10 @@ class ClaudeCodeAdapter(AgentAdapter):
         self._runs.pop(run_id, None)
 
     def _build_command(self, request: AgentRunRequest) -> list[str]:
+        policy = request.permission_profile.get("toolPolicy")
+        if policy not in {None, "claude_file_edit", "claude_read_only"}:
+            raise ValueError("Unsupported Claude native tool policy.")
+        tools = "Read" if policy == "claude_read_only" else "Read,Write,Edit,MultiEdit"
         return [
             self._claude_binary,
             "--print",
@@ -272,17 +371,16 @@ class ClaudeCodeAdapter(AgentAdapter):
             "--permission-mode",
             "dontAsk",
             "--allowedTools",
-            "Read,Write,Edit,MultiEdit",
+            tools,
             "--tools",
-            "Read,Write,Edit,MultiEdit",
+            tools,
             "--restricted",
             "--safe-mode",
             "--strict-mcp-config",
             "--no-session-persistence",
             "--max-budget-usd",
             self._max_budget_usd,
-            "--",
-            request.instruction,
+            *(["--input-format", "stream-json"] if request.has_attachments else ["--", request.instruction]),
         ]
 
     def _state_for(self, run_id: str) -> ClaudeCodeRunState:
@@ -299,6 +397,49 @@ async def _finish_process(
     await process.wait()
     stderr = await stderr_task
     return _stderr_excerpt(stderr)
+
+
+class _ClaudeTextReconciler:
+    """Snapshots repeat already streamed blocks; retain only their missing suffix."""
+    def __init__(self) -> None:
+        self.message_id: Any = None
+        self.blocks: dict[int, str] = {}
+        self.snapshots: set[int] = set()
+
+    def observe(self, raw: dict[str, Any]) -> None:
+        nested = raw.get("event")
+        if raw.get("type") == "stream_event" and isinstance(nested, dict) and nested.get("type") == "message_start":
+            self.message_id = (nested.get("message") or {}).get("id")
+            self.blocks.clear()
+            self.snapshots.clear()
+
+    def reconcile(self, raw: dict[str, Any], text: str) -> str:
+        nested = raw.get("event")
+        if raw.get("type") == "stream_event" and isinstance(nested, dict):
+            index = nested.get("index")
+            if isinstance(index, int):
+                self.blocks[index] = self.blocks.get(index, "") + text
+            return text
+        message = raw.get("message")
+        if raw.get("type") != "assistant" or not isinstance(message, dict) or message.get("id") != self.message_id:
+            return text
+        content = message.get("content")
+        if not isinstance(content, list):
+            return text
+        missing = []
+        for block in content:
+            value = block.get("text") if isinstance(block, dict) else None
+            if not isinstance(value, str) or not value:
+                continue
+            candidates = [index for index, streamed in self.blocks.items() if streamed and value.startswith(streamed)]
+            if not candidates:
+                missing.append(value)
+                continue
+            index = next((item for item in candidates if item not in self.snapshots), candidates[0])
+            missing.append(value[len(self.blocks[index]):])
+            self.blocks[index] = value
+            self.snapshots.add(index)
+        return "".join(missing)
 
 
 def _map_claude_json_event(
@@ -369,6 +510,11 @@ def _map_claude_json_event(
             stderr=stderr_excerpt,
             claudeEventType=event_type,
         )
+
+    # Input acknowledgements can contain original binary image blocks. They
+    # are not model output and must never enter messages or persisted events.
+    if event_type == "user":
+        return None
 
     if event_type == "stream_event":
         return _map_claude_stream_event(raw_event, task_run_id)

@@ -2,11 +2,13 @@
 
 import { ChevronDown, ChevronUp, FileCode2 } from "lucide-react"
 import { useMemo, useState } from "react"
-import { DiffEditor } from "@monaco-editor/react"
+import { LocalDiffEditor } from "./local-diff-editor"
+import { UserCodeEditor } from "./user-code-editor"
 
 import { Button } from "./ui/button"
 import type { DiffArtifact } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { useTheme } from "./theme-toggle"
 
 type DiffCardProps = {
   diff: DiffArtifact
@@ -20,7 +22,9 @@ type ParsedFileDiff = {
 }
 
 export function DiffCard({ diff }: DiffCardProps) {
+  const theme = useTheme()
   const [expanded, setExpanded] = useState(false)
+  const [sideBySide, setSideBySide] = useState(false)
   const parsedFiles = useMemo(() => parseUnifiedDiff(diff.patchText), [diff.patchText])
   const [selectedPath, setSelectedPath] = useState(diff.changedFiles[0] ?? "")
   const selectedFile =
@@ -28,7 +32,7 @@ export function DiffCard({ diff }: DiffCardProps) {
   const filesChanged = diff.stats.filesChanged || diff.changedFiles.length
 
   return (
-    <article className="rounded-md border border-[var(--border)] bg-white p-3">
+    <article className="min-w-0 rounded-md border border-[var(--border)] bg-white p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1 text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
@@ -100,8 +104,14 @@ export function DiffCard({ diff }: DiffCardProps) {
             <div className="overflow-hidden rounded-md border border-[var(--border)]">
               <div className="border-b border-[var(--border)] bg-slate-50 px-3 py-2 text-xs font-medium">
                 {selectedFile.path}
+                <div className="mt-2 flex gap-2">
+                  <button aria-pressed={!sideBySide} className="rounded border border-slate-200 bg-white px-2 py-1" onClick={() => setSideBySide(false)}>补丁</button>
+                  <button aria-pressed={sideBySide} className="rounded border border-slate-200 bg-white px-2 py-1" onClick={() => setSideBySide(true)}>并排对比</button>
+                </div>
               </div>
-              <DiffEditor
+              {sideBySide ? <>
+              <p className="px-3 py-2 text-[10px] text-slate-400">并排内容为 Diff 片段，不是完整源文件。</p>
+              <LocalDiffEditor
                 height="320px"
                 language={languageForPath(selectedFile.path)}
                 modified={selectedFile.modified}
@@ -112,8 +122,10 @@ export function DiffCard({ diff }: DiffCardProps) {
                   renderSideBySide: true,
                   scrollBeyondLastLine: false,
                 }}
-                theme="vs"
+                theme={theme === "dark" ? "vs-dark" : "vs"}
+                loading={<PatchView patch={selectedFile.patch} />}
               />
+              </> : <PatchView patch={selectedFile.patch} />}
             </div>
           ) : (
             <pre className="max-h-80 overflow-auto rounded-md bg-slate-950 p-3 text-xs leading-5 text-slate-50">
@@ -122,8 +134,15 @@ export function DiffCard({ diff }: DiffCardProps) {
           )}
         </div>
       ) : null}
+      <UserCodeEditor artifactId={diff.artifactId} paths={diff.changedFiles} />
     </article>
   )
+}
+
+function PatchView({ patch }: { patch: string }) {
+  return <pre aria-label="代码补丁" className="max-h-96 overflow-auto bg-white py-2 text-[11px] leading-5">
+    {patch.split("\n").map((line, index) => <div key={index} className={cn("min-w-max px-3", line.startsWith("+") && !line.startsWith("+++") ? "bg-emerald-50 text-emerald-800" : line.startsWith("-") && !line.startsWith("---") ? "bg-red-50 text-red-800" : line.startsWith("@@") ? "bg-blue-50 text-blue-600" : "text-slate-500")}><span className="mr-3 inline-block w-5 select-none text-right text-slate-300" aria-hidden="true">{index + 1}</span>{line || " "}</div>)}
+  </pre>
 }
 
 export function parseUnifiedDiff(patchText: string): ParsedFileDiff[] {

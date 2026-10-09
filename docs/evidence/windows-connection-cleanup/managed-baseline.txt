@@ -1,0 +1,26 @@
+INFO:     Started server process [71292]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8011 (Press CTRL+C to quit)
+[agenthub-ready:shutdown-acceptance]
+INFO:     127.0.0.1:4991 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4991 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:4991 - "GET /sessions/02f9f276-bce4-4ba9-be2a-31cc87043aeb/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4991 - "GET /sessions/02f9f276-bce4-4ba9-be2a-31cc87043aeb/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4991 - "GET /sessions/02f9f276-bce4-4ba9-be2a-31cc87043aeb/events?stream=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10877 - "POST /task-runs/543adcb8-629c-4e22-bce2-8ef87cd0e6e0/preview HTTP/1.1" 201 Created
+Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+Traceback (most recent call last):
+  File "E:\Anaconda\Lib\asyncio\events.py", line 88, in _run
+    self._context.run(self._callback, *self._args)
+  File "E:\Anaconda\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+  File "C:\Users\XCC\AppData\Local\Temp\agenthub-shutdown-managed.py", line 40, in shutdown
+    raise error
+ConnectionResetError: controlled cleanup failure matching historical 10054
+INFO:     Shutting down
+ERROR:    Cancel 0 running task(s), timeout graceful shutdown exceeded
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [71292]

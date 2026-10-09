@@ -1,0 +1,22 @@
+...............F.....................                                    [100%]
+================================== FAILURES ===================================
+________ test_unsafe_paths_rejected_before_read[apps/demo/src/nul.txt] ________
+
+path = 'apps/demo/src/nul.txt'
+
+    @pytest.mark.parametrize("path", [
+        "../outside", "apps/demo/src/../outside", "apps/demo/.env", "apps/demo/.ENV.local",
+        "apps/demo/src/a:stream", "apps/demo/src/nul.txt", "apps/demo/node_modules/pkg/a.js",
+        "apps/demo/src/a\tfile", "C:/host", ".git/config", "apps/demo/src/secrets/key.txt",
+    ])
+    def test_unsafe_paths_rejected_before_read(path):
+        patch = f"--- a/{path}\n+++ b/{path}\n@@ -1 +1 @@\n-old\n+new\n"
+        reads = []
+        with pytest.raises(UserPatchError): prepare_text_patch(patch, read_file=lambda p: reads.append(p), permits=lambda p: True)
+>       assert not reads
+E       AssertionError: assert not ['apps/demo/src/nul.txt']
+
+tests\test_user_patch.py:57: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_user_patch.py::test_unsafe_paths_rejected_before_read[apps/demo/src/nul.txt]
+1 failed, 36 passed in 0.41s

@@ -26,9 +26,69 @@ from app.previews import (
     _resolve_preview_launch_command,
     _stop_preview_process,
 )
+import app.previews as previews_module
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+@pytest.mark.parametrize("exhausted", [False, True])
+def test_default_preview_allocator_avoids_browser_blocked_low_ports(monkeypatch, exhausted) -> None:
+    candidates = iter([0, 65535 - 16384, 50000 - 16384])
+    allocations = []
+
+    class CandidateSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+        def bind(self, address):
+            assert address[0] == "127.0.0.1"
+            assert 16384 <= address[1] <= 65535
+            allocations.append(address[1])
+            if exhausted or address[1] != 50000:
+                raise OSError("candidate occupied")
+
+    monkeypatch.setattr(previews_module.socket, "socket", lambda *_: CandidateSocket())
+    monkeypatch.setattr(previews_module.secrets, "randbelow", lambda bound: 0 if exhausted else next(candidates))
+    if exhausted:
+        with pytest.raises(PreviewError, match="browser-compatible"):
+            previews_module.reserve_preview_port()
+        assert len(allocations) == 64
+    else:
+        assert previews_module.reserve_preview_port() == 50000
+        assert allocations == [16384, 65535, 50000]
+
+
+def test_lifespan_cleans_owned_previews_even_if_group_worker_failed(monkeypatch) -> None:
+    import asyncio
+    import app.group_execution as group_execution
+
+    calls = []
+
+    class LifecycleService:
+        def startup(self):
+            calls.append("startup")
+
+        def shutdown(self):
+            calls.append("shutdown")
+
+    async def failing_worker():
+        raise RuntimeError("worker failed")
+
+    monkeypatch.setattr(main_module, "init_database", lambda **kwargs: None)
+    monkeypatch.setattr(main_module, "get_preview_service", lambda: LifecycleService())
+    monkeypatch.setattr(group_execution, "group_execution_loop", failing_worker)
+
+    async def exercise_lifespan():
+        with pytest.raises(RuntimeError, match="worker failed"):
+            async with main_module.lifespan(app):
+                await asyncio.sleep(0)
+
+    asyncio.run(exercise_lifespan())
+    assert calls == ["startup", "shutdown"]
 
 
 @pytest.fixture
@@ -89,6 +149,94 @@ class StaticHealthChecker:
     def is_healthy(self, url: str) -> bool:
         self.checked_urls.append(url)
         return self.healthy
+
+
+def test_untracked_preview_is_not_stopped_or_trusted_and_keeps_history(db, demo_worktree):
+    run_id = create_task_run_fixture(db, demo_worktree)
+    runner = RecordingRunner()
+    health = StaticHealthChecker()
+    service = PreviewService(process_runner=runner, health_checker=health, port_allocator=lambda: 4330, health_attempts=1)
+    original = service.start_task_run_preview(db, run_id)
+    health.checked_urls.clear()
+    runner._diagnostics = PreviewProcessDiagnostics(running=False, tracked=False)
+    unavailable = service.list_task_run_previews(db, run_id)[0]
+    assert unavailable.id == original.id and unavailable.health_status == "unhealthy"
+    assert "ownership is unavailable" in unavailable.status_reason
+    assert "exited" not in unavailable.status_reason
+    assert runner.stopped == [] and health.checked_urls == []
+    events = db.exec(select(TaskRunEvent).where(TaskRunEvent.task_run_id == run_id, TaskRunEvent.event_type == "artifact.preview.failed")).all()
+    assert len(events) == 1 and json.loads(events[0].payload_json)["processDiagnostics"]["tracked"] is False
+    service.list_task_run_previews(db, run_id)
+    assert len(db.exec(select(TaskRunEvent).where(TaskRunEvent.task_run_id == run_id, TaskRunEvent.event_type == "artifact.preview.failed")).all()) == 1
+    runner._diagnostics = PreviewProcessDiagnostics(running=True)
+    recovered = service.start_task_run_preview(db, run_id)
+    assert recovered.id != original.id and recovered.health_status == "healthy"
+    assert len(service.list_task_run_previews(db, run_id)) == 2
+
+
+def test_runtime_exit_does_not_claim_startup_failure():
+    reason = previews_module._preview_failure_reason(PreviewProcessDiagnostics(running=False, exit_code=7), startup=False)
+    assert "exit code 7" in reason and "before becoming healthy" not in reason
+
+
+def test_runner_close_is_owned_idempotent_and_startup_can_reopen(monkeypatch):
+    from types import SimpleNamespace
+    runner = SubprocessPreviewRunner()
+    runner._processes = {12: SimpleNamespace(pid=12), 34: SimpleNamespace(pid=34)}
+    stopped = []
+    monkeypatch.setattr(previews_module, "_stop_preview_process", lambda process: stopped.append(process.pid))
+    assert runner.diagnostics(999).tracked is False
+    runner.stop(999)
+    runner.close(); runner.close()
+    assert stopped == [12, 34] and runner.closed and not runner.has_owned_processes
+    with pytest.raises(PreviewError, match="shutting down"):
+        runner.start(["pnpm", "dev"], Path("."))
+    service = PreviewService(process_runner=runner)
+    service.startup()
+    assert service.process_runner is not runner and not service.process_runner.closed
+
+
+def test_runner_cleanup_failure_retains_owned_process_for_retry(monkeypatch):
+    from types import SimpleNamespace
+    runner = SubprocessPreviewRunner()
+    runner._processes = {12: SimpleNamespace(pid=12)}
+    def denied(process): raise OSError("Denied")
+    monkeypatch.setattr(previews_module, "_stop_preview_process", denied)
+    with pytest.raises(PreviewError, match="Could not stop"):
+        runner.close()
+    assert runner.has_owned_processes
+    service = PreviewService(process_runner=runner)
+    with pytest.raises(PreviewError, match="cleanup is incomplete"):
+        service.startup()
+    monkeypatch.setattr(previews_module, "_stop_preview_process", lambda process: None)
+    runner.close()
+    assert not runner.has_owned_processes
+
+
+def test_start_racing_close_is_registered_then_cleaned(monkeypatch, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+    from types import SimpleNamespace
+    entered, release, closing = Event(), Event(), Event()
+    stopped = []
+    def popen(*args, **kwargs):
+        entered.set()
+        assert release.wait(10)
+        return SimpleNamespace(pid=123, poll=lambda: None)
+    monkeypatch.setattr(previews_module.subprocess, "Popen", popen)
+    monkeypatch.setattr(previews_module, "_stop_preview_process", lambda process: stopped.append(process.pid))
+    runner = SubprocessPreviewRunner()
+    def close(): closing.set(); runner.close()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        start = pool.submit(runner.start, ["pnpm", "dev"], tmp_path)
+        assert entered.wait(10)
+        shutdown = pool.submit(close)
+        assert closing.wait(10)
+        release.set()
+        process = start.result(timeout=10)
+        shutdown.result(timeout=10)
+    assert process.pid == 123 and stopped == [123] and runner.closed
+    assert not process.log_path.exists()
 
 
 def test_preview_process_env_prefers_system_node_over_codex_bundled_node() -> None:

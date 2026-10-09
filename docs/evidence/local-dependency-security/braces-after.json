@@ -1,0 +1,155 @@
+{
+  "version": "3.0.3",
+  "entry": "X:\\Git_Clone\\AgentHub\\node_modules\\.pnpm\\braces@3.0.3_patch_hash=8bb_78d06b60b7d292e44d71c4aabb03d9c8\\node_modules\\braces\\index.js",
+  "results": [
+    {
+      "method": "compile",
+      "index": 0,
+      "result": "error",
+      "name": "RangeError",
+      "message": "braces AST depth exceeds local limit (128)",
+      "ms": 0.4175000000000004
+    },
+    {
+      "method": "compile",
+      "index": 1,
+      "result": "error",
+      "name": "RangeError",
+      "message": "braces AST depth exceeds local limit (128)",
+      "ms": 0.06579999999999941
+    },
+    {
+      "method": "stringify",
+      "index": 0,
+      "result": "error",
+      "name": "RangeError",
+      "message": "braces AST depth exceeds local limit (128)",
+      "ms": 0.07039999999999935
+    },
+    {
+      "method": "stringify",
+      "index": 1,
+      "result": "error",
+      "name": "RangeError",
+      "message": "braces AST depth exceeds local limit (128)",
+      "ms": 0.3626000000000005
+    },
+    {
+      "method": "expand",
+      "index": 0,
+      "result": "error",
+      "name": "RangeError",
+      "message": "braces AST depth exceeds local limit (128)",
+      "ms": 0.09789999999999921
+    },
+    {
+      "method": "expand",
+      "index": 1,
+      "result": "error",
+      "name": "RangeError",
+      "message": "braces AST depth exceeds local limit (128)",
+      "ms": 0.037299999999998334
+    }
+  ],
+  "ordinary": [
+    {
+      "input": "{a,b}",
+      "compile": "(a|b)",
+      "expand": [
+        "a",
+        "b"
+      ],
+      "stringify": "{a,b}"
+    },
+    {
+      "input": "src/**/*.{ts,tsx}",
+      "compile": "src/**/*.(ts|tsx)",
+      "expand": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+      ],
+      "stringify": "src/**/*.{ts,tsx}"
+    },
+    {
+      "input": "a/{b,{c,d}}/e",
+      "compile": "a/(b|(c|d))/e",
+      "expand": [
+        "a/b/e",
+        "a/c/e",
+        "a/d/e"
+      ],
+      "stringify": "a/{b,{c,d}}/e"
+    },
+    {
+      "input": "{1..5}",
+      "compile": "([1-5])",
+      "expand": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "stringify": "{1..5}"
+    },
+    {
+      "input": "file\\{name\\}",
+      "compile": "file{name}",
+      "expand": [
+        "file{name}"
+      ],
+      "stringify": "file{name}"
+    },
+    {
+      "input": "{foo,bar}/(x)",
+      "compile": "(foo|bar)/(x)",
+      "expand": [
+        "foo/(x)",
+        "bar/(x)"
+      ],
+      "stringify": "{foo,bar}/(x)"
+    },
+    {
+      "input": "{broken",
+      "compile": "{broken",
+      "expand": [
+        "{broken"
+      ],
+      "stringify": "{broken"
+    },
+    {
+      "input": "\"{quoted}\"",
+      "compile": "{quoted}",
+      "expand": [
+        "{quoted}"
+      ],
+      "stringify": "{quoted}"
+    },
+    {
+      "input": "a/{01..03}",
+      "compile": "a/(0[1-3])",
+      "expand": [
+        "a/01",
+        "a/02",
+        "a/03"
+      ],
+      "stringify": "a/{01..03}"
+    },
+    {
+      "input": "a,b",
+      "compile": "a,b",
+      "expand": [
+        "a,b"
+      ],
+      "stringify": "a,b"
+    },
+    {
+      "input": "[{}]",
+      "compile": "[{}]",
+      "expand": [
+        "[{}]"
+      ],
+      "stringify": "[{}]"
+    }
+  ]
+}

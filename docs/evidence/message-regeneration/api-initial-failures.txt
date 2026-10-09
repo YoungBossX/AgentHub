@@ -1,0 +1,1003 @@
+........................................................................ [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 15%]
+........................................................................ [ 19%]
+.............................................................F.....F.... [ 23%]
+........................................................................ [ 27%]
+........................................................................ [ 31%]
+........................................................................ [ 35%]
+..............................................................F......... [ 39%]
+........................................................................ [ 42%]
+........................................................................ [ 46%]
+........................................................................ [ 50%]
+........................................................................ [ 54%]
+........................................................................ [ 58%]
+........................................................................ [ 62%]
+........................................................................ [ 66%]
+........................................................................ [ 70%]
+..........................................................s............. [ 74%]
+....s................................................................... [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 85%]
+........................................................................ [ 89%]
+........................................................................ [ 93%]
+........................................................................ [ 97%]
+..............................................                           [100%]
+================================== FAILURES ===================================
+__________ test_native_group_http_history_and_validation_provenance ___________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000002043B4E2180>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204364202F0>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000002043B4E1C40>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000002043B4E3A70>
+parameters = [('plan',)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204364202F0>
+cursor = <sqlite3.Cursor object at 0x000002043F2A6C40>
+statement = 'SELECT message.id, message.session_id, message.sender_type, message.sender_id, message.content_md, message.message_ki...json, message.regeneration_json, message.pinned_at, message.created_at \nFROM message \nWHERE message.message_kind = ?'
+parameters = ('plan',)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000002043B4E1C40>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: no such column: message.regeneration_json
+
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+db = <sqlmodel.orm.session.Session object at 0x000002043BAFE3F0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002043BAC9880>
+
+    def test_native_group_http_history_and_validation_provenance(db, monkeypatch):
+        custom_planner(db)
+        native_provider(db, monkeypatch)
+        app.dependency_overrides[get_db] = lambda: db
+        try:
+            client = TestClient(app)
+            session = db.exec(select(Session)).one()
+>           response = client.post(f"/sessions/{session.id}/messages", json={"contentMd": "@team-planner @frontend @qa update demo app button", "context": {"groupExecution": "manual"}})
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_group_planning.py:322: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\.venv\Lib\site-packages\starlette\testclient.py:546: in post
+    return super().post(
+..\..\.venv\Lib\site-packages\httpx\_client.py:1144: in post
+    return self.request(
+..\..\.venv\Lib\site-packages\starlette\testclient.py:445: in request
+    return super().request(
+..\..\.venv\Lib\site-packages\httpx\_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\httpx\_client.py:914: in send
+    response = self._send_handling_auth(
+..\..\.venv\Lib\site-packages\httpx\_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+..\..\.venv\Lib\site-packages\httpx\_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\httpx\_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\testclient.py:348: in handle_request
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\testclient.py:345: in handle_request
+    portal.call(self.app, scope, receive, send)
+..\..\.venv\Lib\site-packages\anyio\from_thread.py:338: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E:\Anaconda\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+E:\Anaconda\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+..\..\.venv\Lib\site-packages\anyio\from_thread.py:263: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\fastapi\applications.py:1134: in __call__
+    await super().__call__(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\applications.py:107: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\middleware\errors.py:186: in __call__
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\middleware\errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+..\..\.venv\Lib\site-packages\starlette\middleware\cors.py:85: in __call__
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\middleware\exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:716: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:736: in app
+    await route.handle(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:290: in handle
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\fastapi\routing.py:125: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\.venv\Lib\site-packages\fastapi\routing.py:112: in app
+    await response(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\responses.py:167: in __call__
+    await self.background()
+..\..\.venv\Lib\site-packages\starlette\background.py:36: in __call__
+    await task()
+..\..\.venv\Lib\site-packages\starlette\background.py:21: in __call__
+    await self.func(*self.args, **self.kwargs)
+app\run_engine.py:3670: in _background_dispatch_queued_task_runs
+    await BoundedRunDispatcher().run_until_idle(db)
+app\run_engine.py:1261: in run_until_idle
+    await reconcile_group_summaries(db.get_bind())
+app\group_summaries.py:319: in reconcile_group_summaries
+    group_ids = [m.parent_message_id for m in db.exec(select(Message).where(Message.message_kind == "plan")).all() if STATE_KEY in _json(m.context_json)]
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\sqlmodel\orm\session.py:83: in exec
+    results = super().execute(
+..\..\.venv\Lib\site-packages\sqlalchemy\orm\session.py:2373: in execute
+    return self._execute_internal(
+..\..\.venv\Lib\site-packages\sqlalchemy\orm\session.py:2271: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+..\..\.venv\Lib\site-packages\sqlalchemy\orm\context.py:306: in orm_execute_statement
+    result = conn.execute(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+..\..\.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204364202F0>
+cursor = <sqlite3.Cursor object at 0x000002043F2A6C40>
+statement = 'SELECT message.id, message.session_id, message.sender_type, message.sender_id, message.content_md, message.message_ki...json, message.regeneration_json, message.pinned_at, message.created_at \nFROM message \nWHERE message.message_kind = ?'
+parameters = ('plan',)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000002043B4E1C40>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: message.regeneration_json
+E       [SQL: SELECT message.id, message.session_id, message.sender_type, message.sender_id, message.content_md, message.message_kind, message.parent_message_id, message.stream_state, message.context_json, message.regeneration_json, message.pinned_at, message.created_at 
+E       FROM message 
+E       WHERE message.message_kind = ?]
+E       [parameters: ('plan',)]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: OperationalError
+__ test_http_group_round_trip_and_rejected_message_retains_no_partial_tasks ___
+
+self = <sqlalchemy.engine.base.Connection object at 0x000002043E266990>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204364202F0>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000002043E282D50>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000002043B4E3A70>
+parameters = [('plan',)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204364202F0>
+cursor = <sqlite3.Cursor object at 0x00000204409ED9C0>
+statement = 'SELECT message.id, message.session_id, message.sender_type, message.sender_id, message.content_md, message.message_ki...json, message.regeneration_json, message.pinned_at, message.created_at \nFROM message \nWHERE message.message_kind = ?'
+parameters = ('plan',)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000002043E282D50>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.OperationalError: no such column: message.regeneration_json
+
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+db = <sqlmodel.orm.session.Session object at 0x000002043F8007A0>
+
+    def test_http_group_round_trip_and_rejected_message_retains_no_partial_tasks(db):
+        app.dependency_overrides[get_db] = lambda: db
+        try:
+            client = TestClient(app)
+            session = db.exec(select(Session)).one()
+>           response = client.post(f"/sessions/{session.id}/messages", json={"contentMd": "@qa @frontend update demo app button", "context": {"groupExecution": "manual"}})
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_group_planning.py:396: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\.venv\Lib\site-packages\starlette\testclient.py:546: in post
+    return super().post(
+..\..\.venv\Lib\site-packages\httpx\_client.py:1144: in post
+    return self.request(
+..\..\.venv\Lib\site-packages\starlette\testclient.py:445: in request
+    return super().request(
+..\..\.venv\Lib\site-packages\httpx\_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\httpx\_client.py:914: in send
+    response = self._send_handling_auth(
+..\..\.venv\Lib\site-packages\httpx\_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+..\..\.venv\Lib\site-packages\httpx\_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\httpx\_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\testclient.py:348: in handle_request
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\testclient.py:345: in handle_request
+    portal.call(self.app, scope, receive, send)
+..\..\.venv\Lib\site-packages\anyio\from_thread.py:338: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E:\Anaconda\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+E:\Anaconda\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+..\..\.venv\Lib\site-packages\anyio\from_thread.py:263: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\fastapi\applications.py:1134: in __call__
+    await super().__call__(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\applications.py:107: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\middleware\errors.py:186: in __call__
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\middleware\errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+..\..\.venv\Lib\site-packages\starlette\middleware\cors.py:85: in __call__
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\middleware\exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:716: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:736: in app
+    await route.handle(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:290: in handle
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\fastapi\routing.py:125: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\.venv\Lib\site-packages\fastapi\routing.py:112: in app
+    await response(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\responses.py:167: in __call__
+    await self.background()
+..\..\.venv\Lib\site-packages\starlette\background.py:36: in __call__
+    await task()
+..\..\.venv\Lib\site-packages\starlette\background.py:21: in __call__
+    await self.func(*self.args, **self.kwargs)
+app\run_engine.py:3670: in _background_dispatch_queued_task_runs
+    await BoundedRunDispatcher().run_until_idle(db)
+app\run_engine.py:1261: in run_until_idle
+    await reconcile_group_summaries(db.get_bind())
+app\group_summaries.py:319: in reconcile_group_summaries
+    group_ids = [m.parent_message_id for m in db.exec(select(Message).where(Message.message_kind == "plan")).all() if STATE_KEY in _json(m.context_json)]
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\sqlmodel\orm\session.py:83: in exec
+    results = super().execute(
+..\..\.venv\Lib\site-packages\sqlalchemy\orm\session.py:2373: in execute
+    return self._execute_internal(
+..\..\.venv\Lib\site-packages\sqlalchemy\orm\session.py:2271: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+..\..\.venv\Lib\site-packages\sqlalchemy\orm\context.py:306: in orm_execute_statement
+    result = conn.execute(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1421: in execute
+    return meth(
+..\..\.venv\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1643: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1848: in _execute_context
+    return self._exec_single_context(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1988: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:2365: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\base.py:1969: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x00000204364202F0>
+cursor = <sqlite3.Cursor object at 0x00000204409ED9C0>
+statement = 'SELECT message.id, message.session_id, message.sender_type, message.sender_id, message.content_md, message.message_ki...json, message.regeneration_json, message.pinned_at, message.created_at \nFROM message \nWHERE message.message_kind = ?'
+parameters = ('plan',)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x000002043E282D50>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: message.regeneration_json
+E       [SQL: SELECT message.id, message.session_id, message.sender_type, message.sender_id, message.content_md, message.message_kind, message.parent_message_id, message.stream_state, message.context_json, message.regeneration_json, message.pinned_at, message.created_at 
+E       FROM message 
+E       WHERE message.message_kind = ?]
+E       [parameters: ('plan',)]
+E       (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+..\..\.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: OperationalError
+_________________ test_p0_model_boundary_and_required_fields __________________
+
+    def test_p0_model_boundary_and_required_fields() -> None:
+        assert set(SQLModel.metadata.tables) == EXPECTED_TABLES
+    
+        expected_fields = {
+            User: {"id", "email", "name", "avatar_url", "created_at"},
+            Workspace: {"id", "name", "repo_url", "root_path", "default_branch", "created_at"},
+            ExternalProjectTarget: {
+                "id",
+                "workspace_id",
+                "target_id",
+                "name",
+                "root_path",
+                "project_type",
+                "allowed_paths_json",
+                "denied_paths_json",
+                "dev_command",
+                "test_command",
+                "check_command",
+                "build_command",
+                "preview_command",
+                "staging_output_dir",
+                "staging_serve_command",
+                "deploy_provider_ids_json",
+                "package_manager",
+                "detected_framework",
+                "analysis_status",
+                "created_at",
+                "updated_at",
+            },
+            Session: {
+                "id",
+                "workspace_id",
+                "title",
+                "session_type",
+                "bound_branch",
+                "worktree_path",
+                "active_frontend_target_id",
+                "active_backend_target_id",
+                "memory_snapshot_id",
+                "status",
+                "pinned_at",
+                "archived_at",
+                "last_message_at",
+                "created_at",
+                "updated_at",
+            },
+            MemorySnapshot: {
+                "id",
+                "workspace_id",
+                "schema_version",
+                "agents_md_hash",
+                "claude_md_hash",
+                "project_memory_version",
+                "user_preference_version",
+                "target_registry_version",
+                "runtime_config_version",
+                "context_pack_hash",
+                "meta_json",
+                "created_at",
+            },
+            MemoryItem: {
+                "id",
+                "workspace_id",
+                "scope",
+                "memory_type",
+                "source",
+                "status",
+                "trust_level",
+                "title",
+                "content_md",
+                "content_hash",
+                "version",
+                "importance",
+                "target_ids_json",
+                "agent_roles_json",
+                "last_used_at",
+                "superseded_by",
+                "created_at",
+                "updated_at",
+            },
+            Message: {
+                "id",
+                "session_id",
+                "sender_type",
+                "sender_id",
+                "content_md",
+                "message_kind",
+                "parent_message_id",
+                "stream_state",
+                "context_json",
+                "pinned_at",
+                "created_at",
+            },
+            Agent: {
+                "id",
+                "name",
+                "role",
+                "adapter_type",
+                "provider",
+                "default_model",
+                "system_prompt",
+                "capabilities_json",
+                "permission_profile_json",
+                "enabled",
+                "created_at",
+                "updated_at",
+            },
+            AgentProfileDraft: {
+                "system_prompt",
+                "mention_alias",
+                "tool_policy",
+                "id",
+                "workspace_id",
+                "display_name",
+                "avatar_initials",
+                "role",
+                "adapter_type",
+                "provider_id",
+                "capability_tags_json",
+                "supported_targets_json",
+                "supported_modes_json",
+                "safe_for_write",
+                "safe_for_review",
+                "description",
+                "status",
+                "created_at",
+                "updated_at",
+            },
+            AgentRuntimeConfig: {
+                "id",
+                "workspace_id",
+                "scope",
+                "roles_json",
+                "created_at",
+                "updated_at",
+            },
+            Task: {
+                "id",
+                "session_id",
+                "created_by_message_id",
+                "title",
+                "intent_type",
+                "status",
+                "priority",
+                "plan_json",
+                "depends_on_task_ids",
+                "assigned_agent_id",
+                "created_at",
+                "updated_at",
+            },
+            TaskRun: {
+                "id",
+                "task_id",
+                "agent_id",
+                "adapter_run_id",
+                "state",
+                "started_at",
+                "ended_at",
+                "runner_id",
+                "last_heartbeat_at",
+                "lease_expires_at",
+                "stale_detected_at",
+                "stale_reason",
+                "worktree_path",
+                "base_ref",
+                "head_ref",
+                "error_code",
+                "error_message",
+                "metrics_json",
+                "created_at",
+                "updated_at",
+            },
+            TaskRunEvent: {
+                "id",
+                "task_run_id",
+                "event_type",
+                "payload_json",
+                "sequence",
+                "created_at",
+            },
+            SessionQueueEntry: {
+                "id",
+                "session_id",
+                "task_id",
+                "task_run_id",
+                "queue_kind",
+                "access_mode",
+                "target_id",
+                "target_lock_key",
+                "position",
+                "state",
+                "blocked_reason",
+                "created_at",
+                "started_at",
+                "finished_at",
+                "updated_at",
+            },
+            TargetLock: {
+                "id",
+                "lock_key",
+                "target_id",
+                "session_id",
+                "task_run_id",
+                "worker_id",
+                "mode",
+                "state",
+                "lease_expires_at",
+                "acquired_at",
+                "released_at",
+                "release_reason",
+                "created_at",
+                "updated_at",
+            },
+            PreviewDeployJob: {
+                "id",
+                "session_id",
+                "source_task_run_id",
+                "job_type",
+                "state",
+                "attempt",
+                "port",
+                "error_code",
+                "evidence_json",
+                "created_at",
+                "started_at",
+                "finished_at",
+                "updated_at",
+            },
+            Artifact: {
+                "id",
+                "task_run_id",
+                "artifact_type",
+                "title",
+                "status",
+                "version",
+                "storage_uri",
+                "meta_json",
+                "created_at",
+                "updated_at",
+            },
+            ArtifactVersion: {
+                "id",
+                "artifact_id",
+                "version",
+                "parent_version_id",
+                "source_task_run_id",
+                "parent_artifact_id",
+                "git_base_ref",
+                "git_head_ref",
+                "changed_files_json",
+                "summary",
+                "content_md",
+                "content_hash",
+                "editor_source",
+                "created_at",
+            },
+            Diff: {
+                "id",
+                "artifact_id",
+                "base_ref",
+                "head_ref",
+                "patch_text",
+                "changed_files_json",
+                "stats_json",
+                "created_at",
+            },
+            Preview: {
+                "id",
+                "artifact_id",
+                "port",
+                "url",
+                "command",
+                "process_id",
+                "health_status",
+                "status_reason",
+                "expires_at",
+                "last_checked_at",
+                "created_at",
+                "updated_at",
+            },
+            Review: {
+                "id",
+                "artifact_id",
+                "reviewed_diff_artifact_id",
+                "reviewer_agent_id",
+                "adapter_type",
+                "status",
+                "risk_level",
+                "summary",
+                "files_reviewed_json",
+                "findings_json",
+                "suggested_changes_json",
+                "created_at",
+                "updated_at",
+            },
+            Deployment: {
+                "id",
+                "artifact_id",
+                "provider",
+                "environment",
+                "commit_sha",
+                "url",
+                "status",
+                "deploy_log_uri",
+                "created_at",
+                "updated_at",
+            },
+            SessionExecutionLedger: {
+                "id",
+                "session_id",
+                "current_goal",
+                "active_agents_json",
+                "latest_task_id",
+                "latest_task_run_id",
+                "latest_diff_artifact_id",
+                "latest_changed_files_json",
+                "latest_preview_id",
+                "latest_preview_url",
+                "latest_preview_health",
+                "latest_deployment_id",
+                "latest_deployment_provider",
+                "latest_deployment_status",
+                "last_successful_adapter",
+                "summary_md",
+                "created_at",
+                "updated_at",
+            },
+        }
+    
+        for model, fields in expected_fields.items():
+>           assert set(model.model_fields) == fields
+E           AssertionError: assert {'content_md'...sage_id', ...} == {'content_md'...sage_id', ...}
+E             
+E             Extra items in the left set:
+E             'regeneration_json'
+E             Use -v to get more diff
+
+tests\test_models.py:401: AssertionError
+============================== warnings summary ===============================
+app\models.py:14: 4 warnings
+tests/test_adapters.py: 308 warnings
+tests/test_agent_directory.py: 30 warnings
+tests/test_agent_profile_drafts.py: 24 warnings
+tests/test_agent_runtime_config.py: 211 warnings
+tests/test_agent_selection_policy.py: 54 warnings
+tests/test_agent_system_prompt.py: 20 warnings
+tests/test_artifact_scope_guards.py: 288 warnings
+tests/test_artifact_workbench.py: 5 warnings
+tests/test_artifact_workbench_api.py: 48 warnings
+tests/test_artifact_workbench_edit_api.py: 52 warnings
+tests/test_attachment_transports.py: 1 warning
+tests/test_chat_events.py: 182 warnings
+tests/test_claude_code_adapter.py: 159 warnings
+tests/test_claude_native_execution.py: 4 warnings
+tests/test_codex_adapter.py: 178 warnings
+tests/test_cross_provider_rehearsal.py: 43 warnings
+tests/test_custom_agents.py: 313 warnings
+tests/test_dag_integration.py: 3529 warnings
+tests/test_deployments.py: 305 warnings
+tests/test_diffs.py: 107 warnings
+tests/test_events.py: 4 warnings
+tests/test_execution_worktrees.py: 518 warnings
+tests/test_external_benchmark.py: 748 warnings
+tests/test_external_evidence.py: 59 warnings
+tests/test_external_memory_scan.py: 14 warnings
+tests/test_external_reviews.py: 50 warnings
+tests/test_external_workspaces.py: 35 warnings
+tests/test_failure_recovery.py: 154 warnings
+tests/test_group_auto_execution.py: 1890 warnings
+tests/test_group_planning.py: 2309 warnings
+tests/test_group_result_summary.py: 4878 warnings
+tests/test_guardrails.py: 32 warnings
+tests/test_live_memory_compliance.py: 45 warnings
+tests/test_llm_planner.py: 239 warnings
+tests/test_memory_evals.py: 33 warnings
+tests/test_memory_rehearsal.py: 81 warnings
+tests/test_memory_retrieval.py: 39 warnings
+tests/test_memory_rule_budget.py: 329 warnings
+tests/test_memory_snapshot_consistency.py: 909 warnings
+tests/test_memory_store.py: 13 warnings
+tests/test_memory_write_policy.py: 75 warnings
+tests/test_message_attachments.py: 169 warnings
+tests/test_message_regeneration.py: 172 warnings
+tests/test_message_regeneration_summary.py: 204 warnings
+tests/test_models.py: 10 warnings
+tests/test_native_review_artifacts.py: 843 warnings
+tests/test_p18b_workflow_rehearsal.py: 44 warnings
+tests/test_parallel_dispatcher.py: 74 warnings
+tests/test_parallel_rehearsal.py: 911 warnings
+tests/test_pinned_message_context.py: 211 warnings
+tests/test_planner_contracts.py: 30 warnings
+tests/test_planning.py: 2105 warnings
+tests/test_pmo_decisions.py: 71 warnings
+tests/test_previews.py: 168 warnings
+tests/test_project_analyzer.py: 1 warning
+tests/test_project_provisioning.py: 31 warnings
+tests/test_provider_gateway_contract.py: 29 warnings
+tests/test_recovery.py: 91 warnings
+tests/test_run_diagnostics.py: 202 warnings
+tests/test_scheduler.py: 435 warnings
+tests/test_scripted_mock_adapter.py: 867 warnings
+tests/test_session_organization.py: 78 warnings
+tests/test_session_queue.py: 115 warnings
+tests/test_sessions.py: 42 warnings
+tests/test_target_locks.py: 659 warnings
+tests/test_target_registry.py: 4 warnings
+tests/test_task_runs.py: 9328 warnings
+tests/test_transactional_delivery.py: 26 warnings
+  X:\Git_Clone\AgentHub\apps\api\app\models.py:14: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_group_planning.py::test_native_group_http_history_and_validation_provenance
+FAILED tests/test_group_planning.py::test_http_group_round_trip_and_rejected_message_retains_no_partial_tasks
+FAILED tests/test_models.py::test_p0_model_boundary_and_required_fields - Ass...
+3 failed, 1841 passed, 2 skipped, 35239 warnings in 1112.43s (0:18:32)

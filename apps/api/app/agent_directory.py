@@ -32,6 +32,9 @@ class AgentDirectoryEntry:
     runtime_selected_for_roles: list[str]
     compatibility: "AgentCompatibility"
     description: str
+    system_prompt: str = ""
+    mention_alias: str | None = None
+    tool_policy: str | None = None
 
 
 @dataclass(frozen=True)
@@ -88,7 +91,7 @@ def _entry_for_profile(
     provider: ProviderConfig | None,
     selected_roles: list[str],
 ) -> AgentDirectoryEntry:
-    entry_type = "draft" if profile.status == "draft_only" else "built_in"
+    entry_type = profile.origin
     provider_available = provider.available if provider is not None else False
     auth_status = provider.auth_status if provider is not None else "unavailable"
     available = (
@@ -123,6 +126,9 @@ def _entry_for_profile(
         runtime_selected_for_roles=sorted(selected_roles),
         compatibility=compatibility,
         description=profile.description,
+        system_prompt=profile.system_prompt,
+        mention_alias=profile.mention_alias,
+        tool_policy=profile.tool_policy,
     )
 
 
@@ -171,6 +177,8 @@ def check_agent_compatibility(
         warnings.append("profile is not review-safe")
     if profile.status == "draft_only":
         reasons.append("draft profile is disabled until validated")
+    if profile.status in {"disabled", "rejected", "archived"}:
+        reasons.append("profile is disabled or unavailable")
 
     return AgentCompatibility(
         compatible=not reasons,

@@ -1,0 +1,38 @@
+         18129443 function calls (18128070 primitive calls) in 13.919 seconds
+
+   Ordered by: cumulative time
+   List reduced from 313 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.001    0.001   13.924   13.924 task_run_scope.py:588(capture_worktree_scope_snapshot)
+        3    0.013    0.004   10.949    3.650 task_run_scope.py:1219(_capture_scope_entries)
+    97938    0.505    0.000   10.411    0.000 task_run_scope.py:2655(_require_path_observations)
+   869531    0.647    0.000   10.348    0.000 task_run_scope.py:2733(_path_observation)
+   869531    0.222    0.000    7.016    0.000 pathlib.py:842(lstat)
+   869531    0.219    0.000    6.794    0.000 pathlib.py:835(stat)
+   869531    5.828    0.000    6.575    0.000 {built-in method nt.stat}
+     1551    0.020    0.000    6.501    0.004 task_run_scope.py:2466(_fingerprint_worktree_path)
+     1599    0.004    0.000    4.328    0.003 task_run_scope.py:2509(_stable_regular_file_fingerprint)
+     1603    0.044    0.000    4.321    0.003 task_run_scope.py:2543(_stable_regular_file_read)
+    11541    0.017    0.000    4.053    0.000 task_run_scope.py:2408(_extend_path_observations)
+     4940    0.013    0.000    3.050    0.001 task_run_scope.py:2450(_stable_dir_entry_observations)
+        4    0.000    0.000    2.972    0.743 task_run_scope.py:876(_capture_protected_control_footprint)
+        4    0.000    0.000    2.820    0.705 task_run_scope.py:2084(_collect_worktree_protected_records)
+    736/4    0.017    0.000    2.817    0.704 task_run_scope.py:2108(visit)
+        3    0.000    0.000    2.408    0.803 task_run_scope.py:1722(_collect_regular_files)
+    552/3    0.016    0.000    2.406    0.802 task_run_scope.py:1746(visit)
+   884089    0.745    0.000    1.674    0.000 task_run_scope.py:2761(_path_kind_from_stat)
+     3102    0.008    0.000    1.514    0.000 task_run_scope.py:1535(_is_protected_or_excluded_path)
+     6204    0.004    0.000    1.368    0.000 task_run_scope.py:1543(<genexpr>)
+     6218    0.016    0.000    1.367    0.000 task_run_scope.py:2308(_relative_to_root)
+   869531    0.350    0.000    1.036    0.000 task_run_scope.py:2717(_path_filesystem_identity)
+        3    0.009    0.003    0.901    0.300 task_run_scope.py:1473(_parse_tree_entries)
+     1300    0.035    0.000    0.857    0.001 task_run_scope.py:1809(_stable_scandir)
+    10978    0.011    0.000    0.793    0.000 task_run_scope.py:2399(_require_root_observations)
+   872443    0.389    0.000    0.749    0.000 pathlib.py:447(__fspath__)
+        3    0.009    0.003    0.746    0.249 task_run_scope.py:1426(_parse_index_entries)
+   879149    0.612    0.000    0.694    0.000 task_run_scope.py:2708(_filesystem_identity)
+     6250    0.033    0.000    0.678    0.000 task_run_scope.py:2819(_filesystem_path_equal_or_descendant_at)
+    13821    0.009    0.000    0.675    0.000 task_run_scope.py:399(_require_no_named_streams)
+
+

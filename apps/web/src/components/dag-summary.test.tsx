@@ -84,6 +84,18 @@ describe("DAG summary", () => {
     expect(overlappingRuns([a, b])).toHaveLength(0)
   })
 
+  it("compares offset-equivalent intervals and rejects impossible calendar dates", () => {
+    const a = task("a"), b = task("b")
+    a.taskRuns = [run("a", "2026-10-08T00:00:00", "2026-10-08T00:00:02")]
+    b.taskRuns = [run("b", "2026-10-08T08:00:01+08:00", "2026-10-08T08:00:03+08:00")]
+    expect(overlappingRuns([a, b])).toHaveLength(1)
+    a.taskRuns[0].startedAt = "2026-02-30T00:00:00Z"
+    a.taskRuns[0].endedAt = "2026-03-03T00:00:00Z"
+    b.taskRuns[0].startedAt = "2026-03-02T00:00:00Z"
+    b.taskRuns[0].endedAt = "2026-03-02T00:00:03Z"
+    expect(overlappingRuns([a, b])).toHaveLength(0)
+  })
+
   it("does not trust plan integration flags or merged run flags", () => {
     const node = task("a")
     node.planJson = { integration: { status: "ready", mergeCommit: "fake" } }

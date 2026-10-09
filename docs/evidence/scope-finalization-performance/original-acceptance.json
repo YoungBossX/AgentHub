@@ -1,0 +1,419 @@
+{
+  "tag": "original",
+  "runs": [
+    {
+      "runId": "18bc51e5-2f7d-43c9-aa32-b023e29be805",
+      "taskId": "a0970cb8-108e-4053-8a4f-29d752916175",
+      "seconds": 19.64,
+      "expected": "Timing first",
+      "completion": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "18bc51e5-2f7d-43c9-aa32-b023e29be805",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "770f26c4-b5e5-448e-a328-fd7128f372b4",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffId": "770f26c4-b5e5-448e-a328-fd7128f372b4"
+    },
+    {
+      "runId": "46f0969c-ae81-4978-8bcf-0aa0d0635fd7",
+      "taskId": "4e638ca0-6097-4cd4-ad28-4d7f47e658e2",
+      "seconds": 21.42,
+      "expected": "Timing second",
+      "completion": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "46f0969c-ae81-4978-8bcf-0aa0d0635fd7",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "a3abe742-973b-4765-a7f8-f27b1495ca71",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffId": "a3abe742-973b-4765-a7f8-f27b1495ca71"
+    }
+  ],
+  "health": [
+    {
+      "milliseconds": 226.47220000000016,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.205599999999322,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.3054000000011,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.26389999999992,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 1.621000000001004,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.1859000000004,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.302200000000084,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.888700000001336,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.709799999998722,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.007900000000518,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.70510000000104,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.07419999999911,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 25.070700000000215,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 7.302700000000186,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.19670000000042,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.083700000002864,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.195299999999406,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.235000000000582,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.167999999997846,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.303899999998976,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.626099999997678,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.201600000000326,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.831899999997404,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.207099999999627,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.603100000000268,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 24.769799999998213,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 1.4144000000014785,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 8.894000000000233,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.234299999996438,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.075300000000425,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.496399999999994,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.220799999999144,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.936699999998382,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.088599999999133,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.031699999999546,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.14730000000054,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.49499999999898,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 224.31940000000031,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 18.29320000000007,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 18.13590000000113,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 24.73790000000008,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 24.838000000003376,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 34.62590000000637,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 25.03320000000531,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.355600000002596,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.37619999999879,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.479299999999057,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.271499999995285,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.661000000000058,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.247199999997974,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.087200000001758,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.539700000001176,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.386099999996077,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.782200000001467,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.44640000000072,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.29490000000078,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.19170000000304,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.105999999999767,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.80789999999979,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 3.790099999998347,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 33.27850000000035,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 29.75959999999759,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 30.52719999999681,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 17.13430000000517,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 30.71140000000014,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 32.25359999999637,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 30.96349999999802,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 31.210100000003877,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 21.13130000000092,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 25.18739999999525,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 24.75470000000496,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 25.265499999994063,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 21.622300000002724,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 19.453300000001036,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 25.38470000000234,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 2.169500000003609,
+      "status": "ok"
+    },
+    {
+      "milliseconds": 16.165099999998347,
+      "status": "ok"
+    }
+  ],
+  "boundaries": [
+    "Fresh SQLite; API routes; explicit ScriptedMock fallback; deliberately simulated Codex failure; no model invocation",
+    "Timing instrumentation wraps unchanged snapshot function and records counts, not content or control keys"
+  ],
+  "sessionId": "bc6cdd57-76aa-4557-abd3-383d46d361ad",
+  "snapshots": [
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\d6009f78-6ef0-4478-8c91-af5dbc8794f4\\bc6cdd57-76aa-4557-abd3-383d46d361ad",
+      "seconds": 5.583916799994768,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\d6009f78-6ef0-4478-8c91-af5dbc8794f4\\bc6cdd57-76aa-4557-abd3-383d46d361ad",
+      "seconds": 5.87073650000093,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\d6009f78-6ef0-4478-8c91-af5dbc8794f4\\bc6cdd57-76aa-4557-abd3-383d46d361ad",
+      "seconds": 6.117375899993931,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\d6009f78-6ef0-4478-8c91-af5dbc8794f4\\bc6cdd57-76aa-4557-abd3-383d46d361ad",
+      "seconds": 6.149289499997394,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\d6009f78-6ef0-4478-8c91-af5dbc8794f4\\bc6cdd57-76aa-4557-abd3-383d46d361ad",
+      "seconds": 6.219311699998798,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\d6009f78-6ef0-4478-8c91-af5dbc8794f4\\bc6cdd57-76aa-4557-abd3-383d46d361ad",
+      "seconds": 6.526881600002525,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\d6009f78-6ef0-4478-8c91-af5dbc8794f4\\bc6cdd57-76aa-4557-abd3-383d46d361ad",
+      "seconds": 6.850321000005351,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    },
+    {
+      "root": "X:\\Git_Clone\\AgentHub\\.worktrees\\d6009f78-6ef0-4478-8c91-af5dbc8794f4\\bc6cdd57-76aa-4557-abd3-383d46d361ad",
+      "seconds": 6.846952199994121,
+      "available": true,
+      "entries": 517,
+      "protected": 12
+    }
+  ],
+  "sources": {
+    "apps/api/app/task_run_scope.py": "22640722a2c13726815e92d0ae2bf294c3881fa93a14c1f22e8d711927db2a5c",
+    "apps/api/app/task_runs.py": "4de400569677022f2b1ffd6d81079c978d590b70b778c39920a7acabb5ff7777",
+    "apps/api/app/run_engine.py": "fe49b27e16583c8d168ccc3caa91ecfbe01e67a131b58fce760ed63a14a094a9",
+    "apps/api/app/scripted_mock.py": "112629dcb6d1eedbac3c8edb2e62eed52fb6be5bb0259167ec59bb99a71bd988"
+  },
+  "helperSha256": "77d7c41d90bdbfaaf96a321b1d5e0b24bdccfa8e46d8c0d39beb1f2dcaf1e232"
+}

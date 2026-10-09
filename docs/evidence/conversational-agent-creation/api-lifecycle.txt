@@ -1,0 +1,13 @@
+agenthub-creation-api.log
+SHA256 773bf6492fc874c5c411bf7318d5f7288af2a6ea1bfb3e0742a70a973f47e7e5
+INFO:     Started server process [79424]
+INFO:     Application startup complete.
+[agenthub-ready:creation-current]
+INFO:     Shutting down
+INFO:     Application shutdown complete.
+INFO:     Finished server process [79424]
+agenthub-creation-api-restarted.log
+SHA256 ef83693664ab3ee1791dadfd165ebf0270fc60ec2bf0fe72b0fc6b8bebcffd4e
+INFO:     Started server process [75584]
+INFO:     Application startup complete.
+[agenthub-ready:creation-restarted]

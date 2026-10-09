@@ -1,7 +1,9 @@
 "use client"
 
-import { type FormEvent } from "react"
-import { ArrowDown, ArrowUp, FileText, MessageSquare, Send, X } from "lucide-react"
+import { useRef, useState, type Ref, type FormEvent } from "react"
+import { ArrowDown, ArrowUp, FileText, MessageSquare, Paperclip, Send, X } from "lucide-react"
+import type { DraftAttachment } from "./use-message-attachments"
+import { attachmentReadLabel } from "./message-attachments"
 
 import { Button } from "@/components/ui/button"
 import type { ArtifactPanelItem } from "@/components/preview-card"
@@ -12,11 +14,18 @@ export type ComposerContextItem = {
   id: string
   kind: "artifact" | "deployment" | "message" | "note" | "selected_text"
   message?: ChatMessage
+  selectedText?: string
+  metadata?: { path: string; source: "editor_draft" }
   summary?: string
   title: string
 }
 
 type MessageComposerProps = {
+  attachments?: DraftAttachment[]
+  attachmentsBlocked?: boolean
+  onAttach?: (files: File[]) => void
+  onRemoveAttachment?: (key: string) => void
+  inputRef?: Ref<HTMLTextAreaElement>
   contextItems: ComposerContextItem[]
   draft: string
   isPending: boolean
@@ -28,6 +37,11 @@ type MessageComposerProps = {
 }
 
 export function MessageComposer({
+  attachments = [],
+  attachmentsBlocked = false,
+  onAttach,
+  onRemoveAttachment,
+  inputRef,
   contextItems,
   draft,
   isPending,
@@ -38,9 +52,18 @@ export function MessageComposer({
   onSubmit,
 }: MessageComposerProps) {
   const hasContext = contextItems.length > 0
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [attachmentNotice, setAttachmentNotice] = useState("")
 
   return (
-    <div className="mx-auto grid w-full max-w-4xl shrink-0 gap-2">
+    <div className="mx-auto grid min-w-0 w-full max-w-3xl shrink-0 grid-cols-1 gap-2">
+      {attachments.length ? <ul className="grid max-h-44 gap-1 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2" aria-label="待发送附件">
+        {attachments.map((item) => <li key={item.key} className="flex min-w-0 items-start gap-2 rounded bg-[var(--surface-muted)] p-2 text-xs">
+          <FileText size={15} className="shrink-0 text-[var(--primary)]" />
+          <div className="min-w-0 flex-1"><p className="truncate font-medium">{item.filename}</p><p role={item.state === "error" ? "alert" : "status"} className="mt-1 text-[10px] text-[var(--muted-foreground)]">{item.state === "uploading" ? "正在上传并校验…" : item.state === "removing" ? "正在移除…" : item.error ?? (item.attachment ? attachmentReadLabel(item.attachment) : "上传失败")}</p></div>
+          <button type="button" aria-label={`移除附件 ${item.filename}`} disabled={isPending || item.state === "uploading" || item.state === "removing"} onClick={() => onRemoveAttachment?.(item.key)} className="rounded p-1 disabled:opacity-30"><X size={14} /></button>
+        </li>)}
+      </ul> : null}
       {hasContext ? (
         <div className="grid gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-xs shadow-sm">
           <div className="flex items-center justify-between gap-2">
@@ -118,29 +141,37 @@ export function MessageComposer({
         </div>
       ) : null}
       <form
-        className="flex gap-2 rounded-lg border border-[var(--border)] bg-white p-2 shadow-sm"
+        className="flex items-end gap-2 rounded-xl border border-[var(--border)] bg-white p-2 shadow-sm"
         data-region="composer"
         onSubmit={onSubmit}
       >
+        {onAttach ? <>
+          <input ref={fileInput} aria-label="选择附件" type="file" multiple hidden disabled={isPending} accept=".txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.yaml,.yml,.xml,.py,.js,.jsx,.ts,.tsx,.css,.html,.sql,.java,.go,.rs,.c,.cpp,.h,.log,.pdf,.png,.jpg,.jpeg,.webp" onChange={(event) => { const files = Array.from(event.target.files ?? []); const available = Math.max(0, 4 - attachments.length); setAttachmentNotice(files.length > available ? `每条消息最多 4 个附件，本次仅添加前 ${available} 个。` : ""); onAttach(files); event.target.value = "" }} />
+          <button type="button" aria-label="添加附件" title="最多 4 个附件，每个不超过 8 MiB；文本不超过 512 KiB" disabled={isPending || attachments.length >= 4} onClick={() => fileInput.current?.click()} className="mb-1 shrink-0 rounded-md p-2 text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-30"><Paperclip size={18} /></button>
+        </> : null}
         <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md bg-[var(--surface-muted)] px-3">
           <MessageSquare
             aria-hidden="true"
             className="shrink-0 text-[var(--muted-foreground)]"
             size={16}
           />
-          <input
-            className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none"
+          <textarea
+            ref={inputRef}
+            aria-label="消息"
+            rows={2}
+            className="min-w-0 flex-1 resize-none bg-transparent py-3 text-sm outline-none"
+            onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isPending && !attachmentsBlocked && draft.trim()) event.currentTarget.form?.requestSubmit() } }}
             onChange={(event) => onDraftChange(event.target.value)}
             placeholder="@orchestrator 为演示应用构建登录页"
-            type="text"
             value={draft}
           />
         </div>
-        <Button disabled={isPending || draft.trim().length === 0} type="submit">
+        <Button className="mb-1" disabled={isPending || attachmentsBlocked || draft.trim().length === 0} type="submit">
           <Send aria-hidden="true" size={16} />
           发送
         </Button>
       </form>
+      {attachmentNotice ? <p role="status" className="text-xs text-[var(--muted-foreground)]">{attachmentNotice}</p> : null}
     </div>
   )
 }
@@ -177,6 +208,18 @@ export function contextItemFromMessage(message: ChatMessage): ComposerContextIte
   }
 }
 
+export function contextItemFromCode(artifact: ArtifactPanelItem, path: string, text: string): ComposerContextItem {
+  return {
+    artifact,
+    id: `code:${crypto.randomUUID()}`,
+    kind: "selected_text",
+    selectedText: text,
+    metadata: { path, source: "editor_draft" },
+    title: `选中代码 · ${path}`,
+    summary: `编辑器草稿片段（未自动应用）\n${text}`,
+  }
+}
+
 export function buildComposerMessageContext(
   contextItems: ComposerContextItem[],
 ): Record<string, unknown> {
@@ -184,11 +227,13 @@ export function buildComposerMessageContext(
   if (contextItems.length > 0) {
     context.contextItems = contextItems.map((item) => contextPayloadItem(item))
   }
-  const firstArtifact = contextItems.find((item) => item.artifact)?.artifact ?? null
+  const firstArtifactItem = contextItems.find((item) => item.artifact)
+  const firstArtifact = firstArtifactItem?.artifact ?? null
   if (firstArtifact) {
     const latestVersion = latestArtifactVersion(firstArtifact)
     context.selectedArtifactId = firstArtifact.artifact.artifactId
     context.selectedArtifactVersionId = latestVersion?.id ?? null
+    if (firstArtifactItem?.selectedText) context.selectedText = firstArtifactItem.selectedText
     context.selectedArtifact = {
       artifactId: firstArtifact.artifact.artifactId,
       kind: firstArtifact.kind,
@@ -218,7 +263,8 @@ function contextPayloadItem(item: ComposerContextItem) {
       artifactVersionId: latestVersion?.id ?? null,
       id: item.id,
       kind: item.kind,
-      selectedText: null,
+      selectedText: item.selectedText ?? null,
+      ...(item.metadata ? { metadata: item.metadata } : {}),
       summary: item.summary,
       title: item.title,
       type: item.artifact.artifact.artifactType,
@@ -253,6 +299,7 @@ function latestArtifactVersion(item: ArtifactPanelItem) {
 }
 
 function contextItemLabel(item: ComposerContextItem) {
+  if (item.kind === "selected_text") return item.title
   if (item.kind === "message" && item.message) {
     return `引用消息 · ${senderLabel(item.message.senderType)}`
   }

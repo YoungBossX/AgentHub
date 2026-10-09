@@ -1,0 +1,86 @@
+{
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "sessionId": "d30788d8-2434-435e-a2ed-4c590a34e9f6",
+  "source": "explicit_group_v1",
+  "taskIds": [
+    "45bebce6-953c-4cf2-9763-46609ed6aede",
+    "629c32f2-62f5-4fbc-903a-e90843325924"
+  ],
+  "writeRunId": "a44eaf3a-b58d-48ff-9d8b-ed5c2d977f1a",
+  "reviewRunId": "b1af7b2a-9f1a-404d-b49a-c8e4ab6b8a7c",
+  "writeAdapter": "codex",
+  "reviewAdapter": "scripted_mock",
+  "writeState": "completed",
+  "reviewState": "completed",
+  "group": {
+    "id": "e597df62-f64a-46d9-a62b-0e70013a5bbf",
+    "participants": [
+      {
+        "role": "frontend",
+        "profileId": null,
+        "mentionAlias": "frontend",
+        "displayName": "Frontend Agent"
+      },
+      {
+        "role": "qa",
+        "profileId": null,
+        "mentionAlias": "qa",
+        "displayName": "QA Agent"
+      }
+    ],
+    "coordinationSource": "deterministic",
+    "execution": "manual"
+  },
+  "dependencies": [
+    "45bebce6-953c-4cf2-9763-46609ed6aede"
+  ],
+  "diffIds": [
+    "cc9664b1-8607-420d-b4c7-20615a6f0a53"
+  ],
+  "reviewIds": [
+    "84017326-68b9-4cb2-a685-9270b21130be"
+  ],
+  "fileHashBeforeReview": "1b61ef659f4d3e40293a4d69edb351109f3a619a555bc8b5bb934c913e110446",
+  "fileHashAfterReview": "1b61ef659f4d3e40293a4d69edb351109f3a619a555bc8b5bb934c913e110446",
+  "checks": [
+    "group contact selection preserves all aliases and request",
+    "duplicate selection deduplicates",
+    "no execution before send/start",
+    "two tasks persisted and review dependency visible",
+    "fresh real Codex changed button and generated matching Diff",
+    "generated coding report does not complete selected QA",
+    "separate scripted read-only review run and own report",
+    "review preserves file bytes",
+    "reload preserves completed roles and results",
+    "platform group rejected without partial tasks",
+    "final API restart preserves completed group roles, dependencies, script-source report and read-only label without a new run"
+  ],
+  "limitations": [
+    "deterministic coordination, no native Planner call",
+    "review is scripted, no model review or test command execution",
+    "no fresh Preview/deployment acceptance in this task",
+    "custom Planner-led group decomposition rejects explicitly"
+  ],
+  "persistedQueue": [
+    {
+      "task_run_id": "a44eaf3a-b58d-48ff-9d8b-ed5c2d977f1a",
+      "task_id": "45bebce6-953c-4cf2-9763-46609ed6aede",
+      "session_id": "d30788d8-2434-435e-a2ed-4c590a34e9f6",
+      "access_mode": "write",
+      "target_id": "demo-frontend",
+      "target_lock_key": "target:demo-frontend:write",
+      "state": "completed"
+    },
+    {
+      "task_run_id": "b1af7b2a-9f1a-404d-b49a-c8e4ab6b8a7c",
+      "task_id": "629c32f2-62f5-4fbc-903a-e90843325924",
+      "session_id": "d30788d8-2434-435e-a2ed-4c590a34e9f6",
+      "access_mode": "readonly",
+      "target_id": "demo-frontend",
+      "target_lock_key": null,
+      "state": "completed"
+    }
+  ],
+  "reviewDiffSemantics": "Current target Git snapshot; QA made no new file changes.",
+  "validationSource": "Fresh browser/API run and read-only SQLite verification"
+}

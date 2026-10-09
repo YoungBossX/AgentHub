@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from app.models import Workspace
+from app.process_environment import project_process_env
 
 
 class WorktreeError(RuntimeError):
@@ -54,6 +55,7 @@ class WorktreeService:
                 str(path),
                 "HEAD",
             ],
+            env=project_process_env(),
             capture_output=True,
             text=True,
         )
@@ -63,6 +65,7 @@ class WorktreeService:
         return path.resolve()
 
     def _link_setup_dependency_dirs(self, path: Path) -> None:
+        self._ensure_setup_dependency_ignores(path)
         for relative_path in ("node_modules", "apps/demo/node_modules"):
             source = self.repo_root / relative_path
             target = path / relative_path
@@ -76,9 +79,50 @@ class WorktreeService:
                     f"Could not link setup dependency directory {relative_path}: {exc}"
                 ) from exc
 
+    def _git_common_dir(self, path: Path) -> Path:
+        result = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+            env=project_process_env(),
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise WorktreeError("Could not verify setup dependency repository ownership.")
+        common = Path(result.stdout.strip()).absolute()
+        if common.resolve() != common:
+            raise WorktreeError("Setup dependency repository metadata must not traverse links.")
+        return common
+
+    def _ensure_setup_dependency_ignores(self, path: Path) -> None:
+        common = self._git_common_dir(self.repo_root)
+        if self._git_common_dir(path) != common:
+            raise WorktreeError("Session worktree belongs to a different repository.")
+        # Git uses the common repository's exclude file for linked worktrees.
+        # These fixed rules also support HEADs with directory-only ignores.
+        info = common / "info"
+        excludes = info / "exclude"
+        if info.resolve() != info or excludes.resolve() != excludes:
+            raise WorktreeError("Setup dependency repository metadata must not traverse links.")
+        try:
+            info.mkdir(exist_ok=True)
+            if excludes.exists() and (not excludes.is_file() or excludes.stat().st_nlink != 1):
+                raise WorktreeError("Setup dependency repository metadata must be a single regular file.")
+            original = excludes.read_bytes() if excludes.exists() else b""
+            existing = set(original.splitlines())
+            missing = [
+                rule for rule in (b"/node_modules", b"/apps/demo/node_modules")
+                if rule not in existing
+            ]
+            if missing:
+                with excludes.open("ab") as stream:
+                    stream.write(b"\n# AgentHub setup dependency links\n" + b"\n".join(missing) + b"\n")
+        except OSError as exc:
+            raise WorktreeError("Could not establish setup dependency ignore rules.") from exc
+
     def _is_git_worktree(self, path: Path) -> bool:
         result = subprocess.run(
             ["git", "-C", str(path), "rev-parse", "--is-inside-work-tree"],
+            env=project_process_env(),
             capture_output=True,
             text=True,
         )

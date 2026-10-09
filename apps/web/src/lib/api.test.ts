@@ -35,6 +35,7 @@ import {
   listSessionTasks,
   listWorkspaceSessions,
   retryTaskRun,
+  refreshSessionMemorySnapshot,
   retryTaskRunWithFallback,
   saveArtifactWorkbenchEdit,
   sessionEventsUrl,
@@ -72,6 +73,30 @@ describe("getBackendHealth", () => {
 })
 
 describe("workspace and session API", () => {
+  it("explicitly refreshes one session snapshot", async () => {
+    const result = { id: "session/2", workspaceId: "workspace-1", memorySnapshotId: "new-snapshot" }
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(result), { status: 200 }))
+    expect(await refreshSessionMemorySnapshot("http://127.0.0.1:8000/", "session/2", fetchMock)).toEqual(result)
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+      "http://127.0.0.1:8000/sessions/session%2F2/memory-snapshot/refresh",
+      { method: "POST" },
+    )
+  })
+
+  it("reports refresh conflicts with retry guidance", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ detail: "Cannot refresh memory snapshot while TaskRuns are active: run-1" }), { status: 409 }))
+    await expect(refreshSessionMemorySnapshot("http://127.0.0.1:8000", "session-1", fetchMock)).rejects.toThrow("等待结束后重试")
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    [404, JSON.stringify({ detail: "Session not found" }), "Session not found"],
+    [500, "not-json", "检查后端连接后重试"],
+  ])("propagates refresh failure %s without fabricating a snapshot", async (status, body, message) => {
+    const fetchMock = vi.fn(async () => new Response(body, { status }))
+    await expect(refreshSessionMemorySnapshot("http://127.0.0.1:8000", "session-1", fetchMock)).rejects.toThrow(message)
+  })
+
   it("fetches the demo workspace", async () => {
     const fetchMock = vi.fn(async () => {
       return new Response(

@@ -1,0 +1,17 @@
+{
+  "cases": [
+    {
+      "runId": "8af5d661-1f38-4038-a995-82fa8594798e",
+      "state": "failed",
+      "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+      "target": "demo_frontend_request"
+    },
+    {
+      "runId": "0e904287-eae3-4f41-a83b-d5b8702a624a",
+      "state": "failed",
+      "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+      "target": "demo_frontend_request"
+    }
+  ],
+  "boundary": "New planning fix does not rewrite historical generic plans or mark failed runs successful"
+}

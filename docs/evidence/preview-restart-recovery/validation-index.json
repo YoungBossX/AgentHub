@@ -1,0 +1,76 @@
+{
+  "status": "verified",
+  "createdAt": "2026-10-08T08:52:46.556071+00:00",
+  "scope": "agenthub-preview-restart-recovery 1.1",
+  "codeSha256": {
+    ".gitignore": "f9c00444f9ae654f1490ccec3e0f03d78f403c30719f2af90ca73612b84f5398",
+    "apps/api/app/main.py": "f801ea4ace9c310a57428b7a838681d6a5e84d835ab5084b78b6d288d8df52f9",
+    "apps/api/app/previews.py": "279ae2b8b164ec391e17eeab0e8e5b888739f7b836b2c6afa41ccdcd78c3ba37",
+    "apps/api/tests/test_previews.py": "39c7746fce02ecf9ecfe2e79c6e48aac6502f165fe562f82c357f32120689852",
+    "apps/web/src/components/use-task-artifact-actions.ts": "110c6a9fe7d264cf85268d867c2b7ba358b86ee8cff6145600e499c2108c2a7b",
+    "apps/web/src/components/preview-card.tsx": "3010ef68564ec8ba1fb3ec1b492bcb2b94b2f31cb6cd8bd70ad75910c5cf8de6",
+    "apps/web/src/components/workspace-shell.tsx": "3f20f975c8f0b307cf09e8756832751478d192094fa4410e3bd8301600eddf63",
+    "apps/web/src/components/workspace-shell-state.ts": "0d60670ace309a04f58ecbbecef9af94718c5fa370c4dd2be8ce8ddffed60103",
+    "apps/web/src/components/preview-recovery.test.tsx": "b8597aeca91d51a81f4b0ec4ef9c238fb2909c23eec766aa573d7f024223eaff"
+  },
+  "unchangedBackendSha256": {
+    "apps/api/app/models.py": "4c99b5245b751618251bba9a2d3411f9462f6bd392a7db8864e15c3e29376a29",
+    "apps/api/app/db.py": "50f48ca7daffbff74d61f9471225404ac4d5ae8253f972b96f16960bafbe5e94",
+    "apps/api/app/schemas.py": "7f445a310c1211c16731faabeb47ed41e413de0e4d07b358ffdcaf820e9ee692",
+    "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+    "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+    "apps/api/app/routes/messages.py": "8b78cb64d24439303cfab3eee808ea10410aaaa81b2a9eec3fc0590fff5e92ee",
+    "apps/api/tests/test_models.py": "0e7c2341056653bde442a7f9bd344dde55fbe6b7452982b22c173789c703bd18",
+    "apps/api/tests/test_session_organization.py": "80b771e6e4175571b33b60dc83182ced6f7c4b15dd3d39834b37b8071a6ddd93",
+    "apps/api/tests/test_task_runs.py": "5b767cb2a8df0c5ba7095f9440f0d6f985f44447ea913fbf275fcd451ec23dad"
+  },
+  "specSha256": {
+    "openspec/changes/agenthub-preview-restart-recovery/design.md": "fc24caa8cb59d7240710bcc31acd7727a9a69fdaf7badb1fd83d961dd77a7dbb",
+    "openspec/changes/agenthub-preview-restart-recovery/proposal.md": "8f11b3a28b2459adab068e800ace30526f2fa98d40ec047e3121bdac652ff285",
+    "openspec/changes/agenthub-preview-restart-recovery/specs/preview-recovery/spec.md": "23659e50294ce3ce4729c714be086631ecc2cde018f179c722b104c6cddac5f3",
+    "openspec/changes/agenthub-preview-restart-recovery/tasks.md": "241d33d9a2ef0828bff2f923410550b63c44afcb8327aac7849e5a0e3a4d1513"
+  },
+  "evidenceSha256": {
+    "browser-checks.txt": "231e90699326bf17636b55196d1475d80fa4cd8cf0e28c30b21bb7044f69c407",
+    "browser.json": "3497ee4e2a7239207f43f7c6819b9d74dea9707c6634ca3c4fc1dc423aec6240",
+    "cached-healthy.png": "9dce628216c82045950e9d5dd5fa8275964aa11cca845df35f669860512b598f",
+    "cold-checks.txt": "f20480fca0fbc301cc909239ce7cba69a8c9e77452338262e7d57fdd8790d2ea",
+    "cold-recovered.png": "139749a8968a06191d501abfb847403c238877541dd3e32432ec969f0e8946dc",
+    "cold-recovery.json": "21f5037f822f6899474a505a677ca4c2f8e196532c9794eb86b4360b60312c4e",
+    "dark-interaction.png": "ec1d6b0c4025ca3f439ad4ce21505c8054ffc3003063ccc2e4a64f9a9132ac42",
+    "execution-lineage.json": "07bf5ead5e48159021c0cd2d6926afe5e4ac8b881de140e4cc087016477cc5c9",
+    "focused-api-tests.txt": "720badec5536bb068fe2c8fcbc49de1b754de2d6baa1153e66658a4161fd56e3",
+    "full-api-tests.txt": "4f743d067de6311420ca50e8bbf39c8a8b0f3d713ae108b95d48ee240df56366",
+    "graceful-shutdown.json": "c12f03bac241a3a5fdc557395bb65ef0f1517db523b3f9429fc4e02eac914d63",
+    "narrow.png": "6919725acf0aa5a967a30c498d2e432952ec62098cc11078b41c5ab127dae7b8",
+    "openspec-checks.txt": "635b296deb97217bdeb3a1898015e894f967e7b8fc6821ab226aecb7c328e902",
+    "ownership-lost.png": "df3444a74e0ba601b4730b315b4144a158ad7353d92be129bac6e597a56fa0a0",
+    "recovered.png": "3e9736af6502dafaf746e84ac0843dbc5e4868f26e49c10f5d7a0af93afff34b",
+    "restart-ownership.json": "5c9705bf7460c1fe7602c991862e9eb9ca2d5ef79da385f7febf09bd943b3e62",
+    "static-checks.txt": "53986c3449ecca442f4620b5846f0b6f06044f162caee43ebba2709789d43428",
+    "visible-source.json": "2ca7116a247859d46af72b83e353770b4f223b11b8070831d48c7269cfab1f26",
+    "visible-source.png": "d54252124c6ed9a3dc0818bb8b1bbbbc0344e5e551e96a116e4412d847de7416",
+    "web-tests.txt": "8929a7b1bb6d8429e2ee91c8dc5747e71b6e55c83e1981e34f2175fd6e5e6824"
+  },
+  "documentationSha256": {
+    "docs/preview-restart-recovery-review.md": "7c8c778d71b66a411f3e2b93fa8afefb89484bf9b3d4af8be76595331aa679c7",
+    "docs/project-state.md": "3bfd4bbbdba318f4e6f27e22155f888822c4ed51f2158d32d590cf9a5a8035b3",
+    "docs/change-log.md": "675231ecdb1d67e987767d33ec0d8ca0f59747d5dc81dec50e7c35fc40338b4c",
+    "docs/local-project-delivery.md": "51ac8f36db11f5091bb2fe99c4241eb722163501e571d13de6e9a088304817bd"
+  },
+  "tests": {
+    "focusedApi": "60 passed",
+    "fullApi": "1676 passed, 1 POSIX-only skipped",
+    "fullApiSeconds": 923.15,
+    "web": "212 passed / 26 files",
+    "static": "pnpm check passed",
+    "openspec": "strict passed",
+    "whitespace": "git diff --check passed"
+  },
+  "boundaries": [
+    "local single-user Vite React Preview; no new model execution",
+    "unknown PIDs are never adopted or signaled by the server; only test-owned orphans were separately cleaned after verifying PID creation time",
+    "dark interaction works but result-card contrast remains a separately identified UI issue",
+    "no dependency installation, commit, push or production deployment"
+  ]
+}

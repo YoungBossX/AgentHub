@@ -1,0 +1,225 @@
+{
+  "sessionId": "1bedf9bb-da50-4653-bad4-b3d96ae8d715",
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "profileId": "0adf48ff-6952-4b95-93f1-0d564391a315",
+  "marker": "NATIVE_GROUP_PROMPT_20261008",
+  "plannerEvidence": {
+    "providerId": "claude-cli-planner",
+    "providerType": "claude_cli",
+    "plannerSource": "real_llm",
+    "status": "succeeded",
+    "durationMs": 13703,
+    "validationResult": "passed",
+    "planId": "plan-demo-button-copy-native-planned-workspace",
+    "rationale": "NATIVE_GROUP_PROMPT_20261008：请求是一个范围明确、限于 demo-frontend 目标的小型文案修改。按显式群组分派保持 frontend 与 qa 两个角色及其目标不变：frontend 负责在允许路径内修改按钮文案，qa 仅做只读评审且不产生写操作。plannedFiles 限定在 apps/demo/src 内，避开所有 deniedPaths，验证使用项目分析器提供的构建命令。",
+    "createdTaskIds": [
+      "5f4d2fc5-21fc-48c1-98bd-15d826ff47a1",
+      "6252d5cd-bf5c-4247-a792-3149451f0b60"
+    ],
+    "runtimeConfig": {
+      "role": "planner",
+      "agentProfileId": "0adf48ff-6952-4b95-93f1-0d564391a315",
+      "providerId": "claude-cli-planner",
+      "adapterType": "claude_cli",
+      "mode": "read_only",
+      "enabled": true,
+      "fallbackPolicy": "environment_default",
+      "providerPresetId": null,
+      "protocol": null,
+      "model": null,
+      "baseUrl": null,
+      "timeoutSeconds": null,
+      "apiKeyEnv": null,
+      "configSource": "explicit_profile"
+    },
+    "agentProfileSelection": {
+      "id": "0adf48ff-6952-4b95-93f1-0d564391a315",
+      "displayName": "原生群聊规划师",
+      "mentionAlias": "native-group-20261008",
+      "providerId": "claude-cli-planner",
+      "toolPolicy": "planner_no_tools",
+      "supportedTargets": [
+        "demo-frontend"
+      ]
+    },
+    "agentInstruction": {
+      "sha256": "5b06bfe2e468f04f9c7f7594c9859d1e279621be62f8c20cadc4226e177af791",
+      "characters": 241,
+      "profileId": "0adf48ff-6952-4b95-93f1-0d564391a315"
+    },
+    "outputSha256": "2223f38dc897160cd69a8d38dcb539f799c3f5e9ae2ccd11028b2671a34e2576",
+    "cliEffort": "low",
+    "memorySnapshot": {
+      "memorySnapshotId": "3c451e97-d2e9-4e68-85a1-2a1c05756182",
+      "schemaVersion": "memory_snapshot_v2",
+      "contentStatus": "frozen",
+      "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retrievalAsOf": "2026-10-08T00:14:06.215241",
+      "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+      "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+      "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+      "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+      "contextPackHash": "35f83ca2bcfe2399f7fff437b35820472e57b4148e33424b40604644bc22a7d0",
+      "createdAt": "2026-10-08T00:14:06.215241"
+    },
+    "memoryUsage": {
+      "schemaVersion": "memory_usage_v1",
+      "evidenceType": "prepared_provider_request",
+      "memorySnapshotId": "3c451e97-d2e9-4e68-85a1-2a1c05756182",
+      "snapshotContentStatus": "frozen",
+      "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "items": [],
+      "selection": {
+        "policyVersion": "memory_rule_budget_v1",
+        "budgetUnit": "serialized_json_characters",
+        "maxChars": 16000,
+        "usedChars": 2,
+        "experienceLimit": 5,
+        "selectedCounts": {
+          "rule": 0,
+          "preference": 0,
+          "experience": 0
+        },
+        "omittedByBudget": {
+          "preference": 0,
+          "experience": 0
+        },
+        "omittedByExperienceLimit": 0
+      },
+      "visibleChars": 2
+    }
+  },
+  "taskIds": [
+    "5f4d2fc5-21fc-48c1-98bd-15d826ff47a1",
+    "6252d5cd-bf5c-4247-a792-3149451f0b60"
+  ],
+  "taskTitles": [
+    "修改演示应用按钮文案为 Native planned workspace",
+    "QA 只读评审按钮文案修改"
+  ],
+  "assignmentRoles": [
+    "frontend",
+    "qa"
+  ],
+  "writeRunId": "874cb6e6-b1d2-4664-8649-5314cab8c28c",
+  "reviewRunId": "5cfe11fe-b946-4cd7-842d-01223b1cd0ae",
+  "diffIds": [
+    "846175fa-1edb-412c-9208-d127e1004b09"
+  ],
+  "reviewIds": [
+    "c2a3a63d-1d61-4389-ad2d-fe0622a73697"
+  ],
+  "fileSha256AfterReview": "68ecff7e2f61f7e34536500875230b4718084cf209fd2657b8071f1f9e419374",
+  "readonlyBytesEqualityAssertionPassedBeforeUiLocatorFailure": true,
+  "beforeReviewHashRetained": false,
+  "checks": [
+    "browser contact selection preserves all aliases",
+    "actual custom no-tool Claude CLI Planner returned prompt-only marker and native task content",
+    "no execution before manual start",
+    "real Codex button change and matching Diff",
+    "coding advisory report did not complete explicit QA",
+    "own scripted read-only QA completed",
+    "browser before.equals(after) assertion passed before later hidden-text locator timeout",
+    "independent final browser check validates native receipt, own QA report and history without another run",
+    "dedicated API restart, independent browser receipt/report capture, refresh and read-only SQLite checks preserve exactly two completed runs"
+  ],
+  "boundaries": [
+    "QA is a scripted report, not a native model review",
+    "QA Diff is a cumulative target snapshot, not a new QA patch",
+    "no new Preview/deployment or native Claude coding acceptance",
+    "final acceptance profile prompt explicitly clarifies demo planned-file path coordinates",
+    "full end-to-end script reached UI locator failure; independent corrected read-only capture supplies UI verification"
+  ],
+  "persistedQueue": [
+    {
+      "task_run_id": "874cb6e6-b1d2-4664-8649-5314cab8c28c",
+      "session_id": "1bedf9bb-da50-4653-bad4-b3d96ae8d715",
+      "access_mode": "write",
+      "target_id": "demo-frontend",
+      "target_lock_key": "target:demo-frontend:write",
+      "state": "completed"
+    },
+    {
+      "task_run_id": "5cfe11fe-b946-4cd7-842d-01223b1cd0ae",
+      "session_id": "1bedf9bb-da50-4653-bad4-b3d96ae8d715",
+      "access_mode": "readonly",
+      "target_id": "demo-frontend",
+      "target_lock_key": null,
+      "state": "completed"
+    }
+  ],
+  "persistedRuns": [
+    {
+      "id": "874cb6e6-b1d2-4664-8649-5314cab8c28c",
+      "state": "completed",
+      "adapterType": "codex",
+      "scopeGuard": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "874cb6e6-b1d2-4664-8649-5314cab8c28c",
+        "targetId": "demo-frontend",
+        "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+        "scopePolicySchemaVersion": "agenthub.effective_write_scope.v1",
+        "scopePolicyIdentity": "3cd06ae5b87d57b858378442b6c4360e8ec81f4e38555e33a2afbfc6c4e71611",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "baselineIdentity": "b0b7d31b-e813-4db1-8705-ea59b654839f",
+        "baselineCapturedAt": "2026-10-08T00:17:32.440787+00:00",
+        "executionAttemptId": "7a8725e0-5793-43c2-83ad-4bba1b0b421b",
+        "status": "passed",
+        "changedPathCount": 1,
+        "timestamp": "2026-10-08T00:18:28.840735+00:00"
+      },
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "874cb6e6-b1d2-4664-8649-5314cab8c28c",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "846175fa-1edb-412c-9208-d127e1004b09",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "accessBinding": {
+        "taskRunId": "874cb6e6-b1d2-4664-8649-5314cab8c28c",
+        "taskId": "5f4d2fc5-21fc-48c1-98bd-15d826ff47a1",
+        "sessionId": "1bedf9bb-da50-4653-bad4-b3d96ae8d715",
+        "queueEntryId": "e39a455a-6441-4b15-b1f9-e1e7dad9a1b7",
+        "accessMode": "write",
+        "runnerId": "dispatcher:b3ce2c47-f9d2-4e9a-898a-f0e7e2eb93f5:slot:1",
+        "executionAttemptId": "7a8725e0-5793-43c2-83ad-4bba1b0b421b"
+      }
+    },
+    {
+      "id": "5cfe11fe-b946-4cd7-842d-01223b1cd0ae",
+      "state": "completed",
+      "adapterType": "scripted_mock",
+      "scopeGuard": null,
+      "completionValidation": null,
+      "accessBinding": {
+        "taskRunId": "5cfe11fe-b946-4cd7-842d-01223b1cd0ae",
+        "taskId": "6252d5cd-bf5c-4247-a792-3149451f0b60",
+        "sessionId": "1bedf9bb-da50-4653-bad4-b3d96ae8d715",
+        "queueEntryId": "7ed8ad4a-ff19-4089-9f6c-1db579f1d12c",
+        "accessMode": "readonly",
+        "runnerId": "dispatcher:a975799b-a033-47d4-beef-1946a620c0e9:slot:1",
+        "executionAttemptId": "1446fdc3-3ace-4ffe-b0d8-77a68f54eaaf"
+      }
+    }
+  ],
+  "failedPlanningMessages": [
+    {
+      "messageId": "074c39df-9ab9-498d-b678-47028659cf94",
+      "tasks": 0,
+      "coordinatorReplies": 0
+    }
+  ],
+  "reviewDiffSemantics": "Current target Git snapshot; QA did not create a new patch.",
+  "attempts": {
+    "earlierSessionNativePlannerDurationMs": 8828,
+    "earlierUnboundedEffortTimeouts": 2,
+    "finalSessionUnsafePlannedFileRejection": true,
+    "customPromptClarifiedPathCoordinatesBeforeFinalSuccess": true
+  }
+}

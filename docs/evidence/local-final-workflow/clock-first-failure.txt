@@ -1,0 +1,67 @@
+F....................................................................... [ 70%]
+..............................                                           [100%]
+================================== FAILURES ===================================
+_____ test_utc_clock_preserves_naive_utc_microseconds_and_sqlite_contract _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001201ACED370>
+
+    def test_utc_clock_preserves_naive_utc_microseconds_and_sqlite_contract(monkeypatch):
+        import app.models as models
+        instant = datetime(2026, 10, 9, 8, 42, 31, 123456, tzinfo=timezone.utc)
+        class Clock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                assert tz is timezone.utc, "Clock acquisition must not depend on the machine timezone"
+                return instant
+            @classmethod
+            def utcnow(cls):
+                raise AssertionError("Deprecated clock API must not be used")
+        monkeypatch.setattr(models, "datetime", Clock)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            value = models.utc_now()
+            record = Workspace(name="UTC contract", repo_url="local://clock", root_path=".", default_branch="main")
+        assert value == instant.replace(tzinfo=None) and value.tzinfo is None
+>       assert record.created_at == record.updated_at == value
+                                    ^^^^^^^^^^^^^^^^^
+
+tests\test_models.py:62: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Workspace(name='UTC contract', repo_url='local://clock', root_path='.', default_branch='main', id='527519cb-cd90-4215-9d3d-fd6ddb46bc28', created_at=datetime.datetime(2026, 10, 9, 8, 42, 31, 123456))
+item = 'updated_at'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'Workspace' object has no attribute 'updated_at'. Did you mean: 'created_at'?
+
+..\..\.venv\Lib\site-packages\pydantic\main.py:1042: AttributeError
+=========================== short test summary info ===========================
+FAILED tests/test_models.py::test_utc_clock_preserves_naive_utc_microseconds_and_sqlite_contract
+1 failed, 101 passed in 39.84s

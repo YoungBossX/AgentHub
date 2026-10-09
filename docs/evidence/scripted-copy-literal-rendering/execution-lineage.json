@@ -1,0 +1,383 @@
+{
+  "cases": [
+    {
+      "phase": "before",
+      "route": "direct",
+      "sessionId": "bae91bca-a8d0-4514-acda-a2ec33f3fd26",
+      "runs": [
+        {
+          "target": "button",
+          "value": "{agenthubCopyProbe}",
+          "taskId": "e378cdb9-017e-4850-9141-45e98818bc3d",
+          "failedRunId": "34846227-f16e-4352-aa3d-e67ac2ab72ee",
+          "scriptedRunId": "21ee5772-f576-4d4c-aa95-afee0ed5273a",
+          "diffId": "a3ed8d5c-d857-4a0c-9bfd-d4a31801b07e",
+          "previewId": "e9f3db10-2ca4-49d0-b709-f1be644af28f",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "7598cce68ed219884b60aae953811ef3a7b40df4328f66cddda3ff49de7ddb36"
+        },
+        {
+          "target": "button",
+          "value": "Plain after expression",
+          "taskId": "abf3459f-0bad-433f-a090-8b8ce3a13c4d",
+          "failedRunId": "46ac6333-fc6d-489a-80a6-751a42b4e8fa",
+          "scriptedRunId": "e93f7055-1a86-47a2-8b52-e408ef853d40",
+          "diffId": "0d9ec4f0-bb53-4c08-a166-d206d3973254",
+          "previewId": "bc5e678d-3937-4d9c-9220-e50046767c5f",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "891fdd6a72d01afcb5bdb589e8974ec30d1be5b2483ed72285dc87840f9cf00b"
+        },
+        {
+          "target": "heading",
+          "value": "A &amp; B <strong>text</strong>",
+          "taskId": "f31fb24e-1342-48c5-a4ba-e0c45fc0f1d9",
+          "failedRunId": "416f9c51-67f0-4564-b54a-0f0c452cd00e",
+          "scriptedRunId": "0426fc80-c402-465e-919f-8360eac49aaa",
+          "diffId": "284dcf3e-d678-460c-bda7-2aad647e4804",
+          "previewId": "92ba9e17-a2c2-46bd-bbe2-b793392b11f8",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "8a3277c9b91347310a444b8a0b1cb2b6c263a16281b467fe5789f829626ac022"
+        }
+      ],
+      "independentReviews": []
+    },
+    {
+      "phase": "fixed",
+      "route": "direct",
+      "sessionId": "53bff155-bca0-4783-ab70-7cdb0e59b342",
+      "runs": [
+        {
+          "target": "button",
+          "value": "登入 </button><b>{name}</b> &amp; \\1 $&",
+          "taskId": "3e0b7777-fb6b-4fc4-bd98-dc75e4fccb2a",
+          "failedRunId": "1afb1c07-e04f-42b8-a903-9bafffdfdd13",
+          "scriptedRunId": "8c1740a4-c753-4adc-9c54-736bf21fad3b",
+          "diffId": "45ae2630-4555-456f-aa1d-31a0a9beba11",
+          "previewId": "e40c2179-272f-4e02-b0f8-ae7752ea05c0",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "2e1c10db8428eb5bdf9fdbaba3b4a4384fceac44ae4852bbd9c251ffb7a1abda"
+        },
+        {
+          "target": "button",
+          "value": "Plain after literal",
+          "taskId": "f4e2dcd0-b483-4636-ae51-494c80b36888",
+          "failedRunId": "1755e5ae-4e84-476f-bbc8-a5918f132e8b",
+          "scriptedRunId": "7d89d9cc-91f8-430a-aa9b-6df215910b17",
+          "diffId": "3568cc82-e459-4142-9248-1f96ada8fc42",
+          "previewId": "0d196854-227a-4281-99f0-f1530148586b",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "28c0d6418881573e292a8821f74a0d5397b15a67593960856b1750386de5f0d9"
+        },
+        {
+          "target": "heading",
+          "value": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+          "taskId": "2e6cd302-a312-484e-8791-102697466684",
+          "failedRunId": "fc03d428-f7aa-463e-af72-9d99164d6c8a",
+          "scriptedRunId": "5f31f2d6-aa1c-492c-ad0d-99cefae93346",
+          "diffId": "f2435d9d-b25a-4b3a-89b6-c8b66da73139",
+          "previewId": "9b160429-8752-4532-88a6-2ee02faad827",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "5bd5b133a1900896da68ff8e639aac350b4c206d9c0d5cd43d8ffc329eecd6b3"
+        },
+        {
+          "target": "heading",
+          "value": "Plain heading after literal",
+          "taskId": "80875d0c-f263-4932-b4f8-5b91ff66a48d",
+          "failedRunId": "044e8988-be93-4dad-8797-fe20f212c0bd",
+          "scriptedRunId": "aea6a7c8-f23b-44e6-97ff-d119c251e8ab",
+          "diffId": "9781205a-7c62-4d37-8e8c-1f423d981782",
+          "previewId": "21e78e2a-709a-4e39-9f84-2154589a586a",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "60d4f6f9f58b077be5ec4060218e7c37c1cdeef6b28b6bb87ae3cde3a13fefb1"
+        }
+      ],
+      "independentReviews": []
+    },
+    {
+      "phase": "fixed",
+      "route": "group",
+      "sessionId": "48f42f8f-ad93-4b1a-a828-e84b5c071d3b",
+      "runs": [
+        {
+          "target": "button",
+          "value": "登入 </button><b>{name}</b> &amp; \\1 $&",
+          "taskId": "24862d4c-9511-4816-8ed0-e440257cd107",
+          "failedRunId": "c29e38cb-2832-48bf-a845-f97ff9dada42",
+          "scriptedRunId": "a770d74c-f3d0-434f-899a-2cda418f0099",
+          "diffId": "c98a8870-005f-4515-8ac7-1c66163fd6a1",
+          "previewId": "3f48025b-1db8-43b8-b415-de8d31608b4a",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "2e1c10db8428eb5bdf9fdbaba3b4a4384fceac44ae4852bbd9c251ffb7a1abda"
+        },
+        {
+          "target": "button",
+          "value": "Plain after literal",
+          "taskId": "d5443844-80ee-472a-9a12-d46ef8bf093c",
+          "failedRunId": "ae3edb04-2cef-4633-8def-9d3572b380dd",
+          "scriptedRunId": "a84dab64-2d81-4895-aced-844406db3067",
+          "diffId": "789057d1-6986-45b0-b85a-46c43fb0b360",
+          "previewId": "559b8faf-5345-4adb-8a90-872022bc8b11",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "28c0d6418881573e292a8821f74a0d5397b15a67593960856b1750386de5f0d9"
+        },
+        {
+          "target": "heading",
+          "value": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+          "taskId": "37fcbea5-4aba-485a-b0c2-a7275a80a0fd",
+          "failedRunId": "a51b4876-68f7-4e72-924b-8668e4e7dc3f",
+          "scriptedRunId": "ca630c1b-ba36-4144-9edd-373363736db5",
+          "diffId": "b57810ea-64ad-4ac7-a349-02ab086a7121",
+          "previewId": "2d1b3ed0-d84b-4a84-a0d4-f9697567ba10",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "5bd5b133a1900896da68ff8e639aac350b4c206d9c0d5cd43d8ffc329eecd6b3"
+        },
+        {
+          "target": "heading",
+          "value": "Plain heading after literal",
+          "taskId": "56d7a4b2-b288-45f8-99cc-48e6cbc564a0",
+          "failedRunId": "3dd8eb5b-9823-41aa-87fa-5364ab564bb6",
+          "scriptedRunId": "0b66517e-8b1d-4bf3-975d-b80387d2ea82",
+          "diffId": "99eef151-c543-439f-90c0-2aaf136bedc8",
+          "previewId": "2003d699-faf5-4413-aa9d-64c4f7bf5195",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "60d4f6f9f58b077be5ec4060218e7c37c1cdeef6b28b6bb87ae3cde3a13fefb1"
+        }
+      ],
+      "independentReviews": [
+        {
+          "runId": "f223fb28-9f6d-4c77-a78d-66e6a185a371",
+          "state": "completed",
+          "accessMode": "readonly",
+          "source": "scripted_mock"
+        },
+        {
+          "runId": "abaae0f7-fe1d-4569-aeea-08cb3c9c7950",
+          "state": "completed",
+          "accessMode": "readonly",
+          "source": "scripted_mock"
+        },
+        {
+          "runId": "76be9c36-8646-429c-884a-6aee3db6fbe3",
+          "state": "completed",
+          "accessMode": "readonly",
+          "source": "scripted_mock"
+        },
+        {
+          "runId": "25ceb2a4-13aa-47ea-8b91-3a2656380c36",
+          "state": "completed",
+          "accessMode": "readonly",
+          "source": "scripted_mock"
+        },
+        {
+          "runId": "f36307c2-d8f9-4b91-8e5e-6c0037b5a845",
+          "state": "completed",
+          "accessMode": "readonly",
+          "source": "scripted_mock"
+        }
+      ]
+    },
+    {
+      "phase": "fixed",
+      "route": "orchestrator",
+      "sessionId": "8b81a0a5-33cc-41db-ae28-9ce0b5efc982",
+      "runs": [
+        {
+          "target": "button",
+          "value": "登入 </button><b>{name}</b> &amp; \\1 $&",
+          "taskId": "71baccff-d8f6-4ce6-be52-a504ffc612f5",
+          "failedRunId": "acd0563a-29ec-4d75-b123-aab3fc09e651",
+          "scriptedRunId": "65e78650-56be-43f1-ab63-e7d8bc6b0e5d",
+          "diffId": "c0cc22d1-965c-4f19-ae36-52d165b7f941",
+          "previewId": "cee8d42b-ea2a-4554-a188-1eeb6921179f",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "2e1c10db8428eb5bdf9fdbaba3b4a4384fceac44ae4852bbd9c251ffb7a1abda"
+        },
+        {
+          "target": "button",
+          "value": "Plain after literal",
+          "taskId": "743d0cf9-34fe-48e5-b2d6-966eef0487d3",
+          "failedRunId": "a34fd32a-317b-4ef6-9899-7ba16938844c",
+          "scriptedRunId": "7d15e980-5eea-4c7f-8a61-162be931917a",
+          "diffId": "11818854-def5-4edc-bccc-4051489febbf",
+          "previewId": "6039e40b-cb18-4116-a3a4-707bfcc3878d",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "28c0d6418881573e292a8821f74a0d5397b15a67593960856b1750386de5f0d9"
+        },
+        {
+          "target": "heading",
+          "value": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+          "taskId": "d89db748-23d4-4f7b-a6b2-7d5133952384",
+          "failedRunId": "42c8736b-d250-4bf2-ac9d-e8771f8c26a5",
+          "scriptedRunId": "dda9decd-b3bc-497d-9946-371360c17fb3",
+          "diffId": "47602f06-2f50-4239-9ae5-bf508a6b1123",
+          "previewId": "7ad21786-92a4-4c0e-85e5-ec2794d60de3",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "5bd5b133a1900896da68ff8e639aac350b4c206d9c0d5cd43d8ffc329eecd6b3"
+        },
+        {
+          "target": "heading",
+          "value": "Plain heading after literal",
+          "taskId": "f977da10-a9c2-4f8c-99f7-6b2dec889e74",
+          "failedRunId": "c9bfd86c-9cf6-465c-bec1-2e16c03683aa",
+          "scriptedRunId": "b0876cac-26b0-4d26-a43d-cdf193632c31",
+          "diffId": "3fb1a834-8ae0-4a46-9161-5ac7fe82337d",
+          "previewId": "fb7b934a-c0e9-4ec1-b867-12b4d81c9219",
+          "state": "completed",
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "scopeStatus": "passed",
+          "outputCompletionStatus": "passed",
+          "functionalAcceptance": "not_evaluated",
+          "cumulativeDiffFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "diffSha256": "60d4f6f9f58b077be5ec4060218e7c37c1cdeef6b28b6bb87ae3cde3a13fefb1"
+        }
+      ],
+      "independentReviews": []
+    }
+  ],
+  "boundary": "Actual ScriptedMock only; cumulative Diff is not per-run copy scope; historical bad rendering retained without rewriting"
+}

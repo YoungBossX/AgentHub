@@ -1,0 +1,97 @@
+{
+  "mode": "reproduction",
+  "cases": [
+    {
+      "route": "direct",
+      "runId": "21ee5772-f576-4d4c-aa95-afee0ed5273a",
+      "target": "button",
+      "expected": "{agenthubCopyProbe}",
+      "errors": [
+        "agenthubCopyProbe is not defined"
+      ],
+      "rendered": false,
+      "healthStatus": "healthy",
+      "completionFunctionalAcceptance": "not_evaluated"
+    },
+    {
+      "route": "direct",
+      "runId": "e93f7055-1a86-47a2-8b52-e408ef853d40",
+      "target": "button",
+      "expected": "Plain after expression",
+      "actualText": "Plain after expression",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "direct",
+      "runId": "0426fc80-c402-465e-919f-8360eac49aaa",
+      "target": "heading",
+      "expected": "A &amp; B <strong>text</strong>",
+      "actualText": "A & B text",
+      "childElements": 1,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    }
+  ],
+  "checks": [
+    "direct: actual bound copy events/Diff/Preview; unchanged styles; structured task target text preserved"
+  ],
+  "routes": [
+    {
+      "route": "direct",
+      "sessionId": "bae91bca-a8d0-4514-acda-a2ec33f3fd26",
+      "loginRunId": "5b2fa15c-3a4f-4aea-a965-25e1634d49a2",
+      "runs": [
+        {
+          "target": "button",
+          "value": "{agenthubCopyProbe}",
+          "taskId": "e378cdb9-017e-4850-9141-45e98818bc3d",
+          "failedRunId": "34846227-f16e-4352-aa3d-e67ac2ab72ee",
+          "scriptedRunId": "21ee5772-f576-4d4c-aa95-afee0ed5273a",
+          "diffId": "a3ed8d5c-d857-4a0c-9bfd-d4a31801b07e",
+          "previewId": "e9f3db10-2ca4-49d0-b709-f1be644af28f"
+        },
+        {
+          "target": "button",
+          "value": "Plain after expression",
+          "taskId": "abf3459f-0bad-433f-a090-8b8ce3a13c4d",
+          "failedRunId": "46ac6333-fc6d-489a-80a6-751a42b4e8fa",
+          "scriptedRunId": "e93f7055-1a86-47a2-8b52-e408ef853d40",
+          "diffId": "0d9ec4f0-bb53-4c08-a166-d206d3973254",
+          "previewId": "bc5e678d-3937-4d9c-9220-e50046767c5f"
+        },
+        {
+          "target": "heading",
+          "value": "A &amp; B <strong>text</strong>",
+          "taskId": "f31fb24e-1342-48c5-a4ba-e0c45fc0f1d9",
+          "failedRunId": "416f9c51-67f0-4564-b54a-0f0c452cd00e",
+          "scriptedRunId": "0426fc80-c402-465e-919f-8360eac49aaa",
+          "diffId": "284dcf3e-d678-460c-bda7-2aad647e4804",
+          "previewId": "92ba9e17-a2c2-46bd-bbe2-b793392b11f8"
+        }
+      ],
+      "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb",
+      "sourceSha256": "278794b132cbea224edd0b158d8743d5264bd47b21a97829291dd2b048f06e9c"
+    }
+  ],
+  "boundaries": [
+    "Fresh isolated SQLite; deterministic planner; no model invocation",
+    "Direct/Orchestrator initial failures deliberately simulated; automatic group and follow-up CLI deliberately unavailable",
+    "All recovered writes are explicitly ScriptedMock; independent group review is scripted"
+  ],
+  "executedSourceSha256": {
+    "apps/api/app/scripted_mock.py": "809c70701632d1b23c327f805e52794be37e7b2264a2c39cec56aa19fdf141df",
+    "apps/api/app/planning.py": "e4f5ce7f27298d08814d2afe7a739057bc333d14eede8c71d3a1769a7037400b",
+    "apps/api/app/planning_intents.py": "a1c2d45ee0d4fb5e1381cf40c0d56cab923728d2e8f369614d4dd95283d4ffb4",
+    "apps/api/app/planning_tasks.py": "918daf358e15226b4726e39453294561c9ff9300ecd1b7a10721ae74cffedadd",
+    "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28"
+  },
+  "acceptanceScriptSha256": "14da17891938846cf76ede3772aca834a21af96baa87f7d2bcf206f27b8c02f2",
+  "historySha256Before": "dc3bb56ef28749ae79e0e7c58acbafbc4467900778036ac2b2bc16bf40d38909",
+  "historySha256After": "dc3bb56ef28749ae79e0e7c58acbafbc4467900778036ac2b2bc16bf40d38909",
+  "existingSessionSha256": "c8ecf6b8257c68b2c2d6162c50a3a6d0abfdde852f72bf436687a1292b735201",
+  "existingSourceSha256": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5"
+}

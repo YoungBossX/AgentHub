@@ -17,6 +17,7 @@ from app.canonical_context import (
     provider_visible_context,
 )
 from app.context_items import normalize_context_items
+from app.pinned_context import select_pinned_message_context, without_pinned_duplicates
 from app.handoffs import handoff_context_for_task
 from app.ledger import (
     active_agents_for_ledger,
@@ -107,6 +108,7 @@ def build_session_context_pack(
         as_of=memory_content.as_of if memory_content is not None else None,
     )
 
+    pinned_context = select_pinned_message_context(db, task.session_id)
     context_pack = {
         "version": "session_context_pack_v1",
         "sessionId": task.session_id,
@@ -121,7 +123,10 @@ def build_session_context_pack(
             "description": _task_description(task, merged_context),
             "plan": merged_context,
         },
-        "recentMessages": _recent_messages(db, task.session_id, recent_message_limit),
+        "recentMessages": without_pinned_duplicates(
+            _recent_messages(db, task.session_id, recent_message_limit), pinned_context,
+        ),
+        "pinnedMessageContext": pinned_context,
         "ledger": {
             "summaryMd": ledger.summary_md,
             "activeAgents": active_agents_for_ledger(ledger),
@@ -159,6 +164,12 @@ def build_session_context_pack(
         "safeTargetPaths": _safe_target_paths(db, task, merged_context),
         "validationExpectations": _validation_expectations(task, merged_context),
     }
+    from app.attachment_context import select_attachment_context
+
+    context_pack["attachmentContext"] = select_attachment_context(
+        db, task.session_id, task.created_by_message_id, pinned=pinned_context,
+        recent=context_pack["recentMessages"],
+    )
     canonical_context = build_canonical_shared_context(context_pack)
     context_pack["canonicalContext"] = canonical_context
     context_pack["providerVisibleContext"] = provider_visible_context(

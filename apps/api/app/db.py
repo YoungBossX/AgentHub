@@ -37,15 +37,20 @@ def ensure_demo_schema_indexes() -> None:
 def _ensure_sqlite_demo_schema_indexes(db_engine: Engine) -> None:
     if not str(db_engine.url).startswith("sqlite"):
         return
-    if "taskrunevent" not in inspect(db_engine).get_table_names():
-        return
+    tables = set(inspect(db_engine).get_table_names())
     with db_engine.begin() as connection:
-        connection.execute(
-            text(
-                "CREATE INDEX IF NOT EXISTS ix_taskrunevent_created_at "
-                "ON taskrunevent (created_at)"
+        if "taskrunevent" in tables:
+            connection.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_taskrunevent_created_at "
+                    "ON taskrunevent (created_at)"
+                )
             )
-        )
+        if "agentprofiledraft" in tables:
+            connection.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_custom_agent_workspace_alias "
+                "ON agentprofiledraft (workspace_id, mention_alias)"
+            ))
 
 
 def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
@@ -62,6 +67,8 @@ def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
         "message",
         {
             "context_json": "TEXT NOT NULL DEFAULT '{}'",
+            "regeneration_json": "TEXT NOT NULL DEFAULT '{}'",
+            "pinned_at": "DATETIME",
         },
     )
     _ensure_table_columns(
@@ -73,6 +80,8 @@ def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
             "active_frontend_target_id": "TEXT",
             "active_backend_target_id": "TEXT",
             "memory_snapshot_id": "TEXT",
+            "pinned_at": "DATETIME",
+            "archived_at": "DATETIME",
         },
     )
     _ensure_table_columns(
@@ -109,6 +118,14 @@ def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
             "lease_expires_at": "DATETIME",
             "stale_detected_at": "DATETIME",
             "stale_reason": "TEXT",
+        },
+    )
+    _ensure_table_columns(
+        db_engine, inspector, table_names, "agentprofiledraft",
+        {
+            "system_prompt": "TEXT NOT NULL DEFAULT ''",
+            "mention_alias": "TEXT",
+            "tool_policy": "TEXT NOT NULL DEFAULT ''",
         },
     )
 

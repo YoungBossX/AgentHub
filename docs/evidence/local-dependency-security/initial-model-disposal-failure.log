@@ -1,0 +1,34 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   'TextModel got disposed before DiffEditorWidget model got reset\n' +
++     '\n' +
++     'Error: TextModel got disposed before DiffEditorWidget model got reset',
++   'TextModel got disposed before DiffEditorWidget model got reset\n' +
++     '\n' +
++     'Error: TextModel got disposed before DiffEditorWidget model got reset'
++ ]
+- []
+
+    at file:///C:/Users/XCC/AppData/Local/Temp/agenthub-local-completion-20261007/security-browser.mjs:64:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'TextModel got disposed before DiffEditorWidget model got reset\n' +
+      '\n' +
+      'Error: TextModel got disposed before DiffEditorWidget model got reset',
+    'TextModel got disposed before DiffEditorWidget model got reset\n' +
+      '\n' +
+      'Error: TextModel got disposed before DiffEditorWidget model got reset'
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.19.0

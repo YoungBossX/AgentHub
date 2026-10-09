@@ -1,0 +1,153 @@
+{
+  "version": "3.0.3",
+  "entry": "X:\\Git_Clone\\AgentHub\\node_modules\\.pnpm\\braces@3.0.3\\node_modules\\braces\\index.js",
+  "results": [
+    {
+      "method": "compile",
+      "index": 0,
+      "result": "error",
+      "name": "RangeError",
+      "message": "Maximum call stack size exceeded",
+      "ms": 13.528099999999998
+    },
+    {
+      "method": "compile",
+      "index": 1,
+      "result": "error",
+      "name": "RangeError",
+      "message": "Maximum call stack size exceeded",
+      "ms": 10.704700000000003
+    },
+    {
+      "method": "stringify",
+      "index": 0,
+      "result": "error",
+      "name": "RangeError",
+      "message": "Maximum call stack size exceeded",
+      "ms": 5.575899999999997
+    },
+    {
+      "method": "stringify",
+      "index": 1,
+      "result": "error",
+      "name": "RangeError",
+      "message": "Maximum call stack size exceeded",
+      "ms": 4.749200000000002
+    },
+    {
+      "method": "expand",
+      "index": 0,
+      "result": "error",
+      "name": "RangeError",
+      "message": "Maximum call stack size exceeded",
+      "ms": 6.3033
+    },
+    {
+      "method": "expand",
+      "index": 1,
+      "result": "returned",
+      "ms": 106.11769999999999
+    }
+  ],
+  "ordinary": [
+    {
+      "input": "{a,b}",
+      "compile": "(a|b)",
+      "expand": [
+        "a",
+        "b"
+      ],
+      "stringify": "{a,b}"
+    },
+    {
+      "input": "src/**/*.{ts,tsx}",
+      "compile": "src/**/*.(ts|tsx)",
+      "expand": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+      ],
+      "stringify": "src/**/*.{ts,tsx}"
+    },
+    {
+      "input": "a/{b,{c,d}}/e",
+      "compile": "a/(b|(c|d))/e",
+      "expand": [
+        "a/b/e",
+        "a/c/e",
+        "a/d/e"
+      ],
+      "stringify": "a/{b,{c,d}}/e"
+    },
+    {
+      "input": "{1..5}",
+      "compile": "([1-5])",
+      "expand": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "stringify": "{1..5}"
+    },
+    {
+      "input": "file\\{name\\}",
+      "compile": "file{name}",
+      "expand": [
+        "file{name}"
+      ],
+      "stringify": "file{name}"
+    },
+    {
+      "input": "{foo,bar}/(x)",
+      "compile": "(foo|bar)/(x)",
+      "expand": [
+        "foo/(x)",
+        "bar/(x)"
+      ],
+      "stringify": "{foo,bar}/(x)"
+    },
+    {
+      "input": "{broken",
+      "compile": "{broken",
+      "expand": [
+        "{broken"
+      ],
+      "stringify": "{broken"
+    },
+    {
+      "input": "\"{quoted}\"",
+      "compile": "{quoted}",
+      "expand": [
+        "{quoted}"
+      ],
+      "stringify": "{quoted}"
+    },
+    {
+      "input": "a/{01..03}",
+      "compile": "a/(0[1-3])",
+      "expand": [
+        "a/01",
+        "a/02",
+        "a/03"
+      ],
+      "stringify": "a/{01..03}"
+    },
+    {
+      "input": "a,b",
+      "compile": "a,b",
+      "expand": [
+        "a,b"
+      ],
+      "stringify": "a,b"
+    },
+    {
+      "input": "[{}]",
+      "compile": "[{}]",
+      "expand": [
+        "[{}]"
+      ],
+      "stringify": "[{}]"
+    }
+  ]
+}

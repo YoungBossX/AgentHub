@@ -1,0 +1,175 @@
+{
+  "scope": "styled login template and unchanged copy CSS; actual ScriptedMock only",
+  "routes": [
+    {
+      "route": "direct",
+      "sessionId": "02c40c30-ab0e-4eec-b714-b684061fe83f",
+      "taskId": "da0b0889-24f4-43d6-9655-24307e3055eb",
+      "target": "login_page",
+      "targetId": "demo-frontend",
+      "safeTarget": "apps/demo/src",
+      "originalRequest": "@frontend build a login page for the demo app; please run project checks",
+      "sourceSha256": "3671e26c2ff7720c0838cf033bdd27c2d582f9f3f8069a80b1125404fdede940",
+      "failedRunId": "7b90bd37-2d61-4cc4-8665-2a554966f8ee",
+      "failedErrorCode": "CODEX_DEMO_FORCED_FAILURE",
+      "runs": [
+        {
+          "runId": "f40d1f7d-fc6a-47af-ae8e-bdba033f494c",
+          "state": "completed",
+          "fallbackFromRunId": "7b90bd37-2d61-4cc4-8665-2a554966f8ee",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "b04ed9e4-b625-4b21-a509-fd34f461b76a",
+          "diffSha256": "6f117c80c7cc8fd18ce8c6ff50317aeb23f17668c9421a9aaa5fb4059f3810cc",
+          "changedFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb"
+        },
+        {
+          "runId": "75afc94f-a455-499f-9056-164454ab27ce",
+          "state": "completed",
+          "fallbackFromRunId": "bbe049e1-6daf-4916-b4f4-59481949f012",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "0ff61acb-bb73-48d4-9127-340c5065795a",
+          "diffSha256": "8e71fe736ab009af73046c05a983bec6adad051e7c74bdaf1a527edc8e2b3056",
+          "changedFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb"
+        }
+      ],
+      "independentReviews": []
+    },
+    {
+      "route": "group",
+      "sessionId": "9a668eb0-71d9-4c81-92d8-6fe505a99d51",
+      "taskId": "97098c4c-493f-4d9d-ae63-533e6b532fe0",
+      "target": "login_page",
+      "targetId": "demo-frontend",
+      "safeTarget": "apps/demo/src",
+      "originalRequest": "@frontend @qa build a login page for the demo app",
+      "sourceSha256": "d0a916ecab0a2211ddd64ef782f05a27e8317765d853e078a0f78f6d550011fd",
+      "failedRunId": "51780060-ca49-4cee-920d-8f66f1f9c831",
+      "failedErrorCode": "PROVIDER_UNAVAILABLE",
+      "runs": [
+        {
+          "runId": "6f9b4b5d-2a7e-42a5-aa2c-edc84879fc1c",
+          "state": "completed",
+          "fallbackFromRunId": "51780060-ca49-4cee-920d-8f66f1f9c831",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "8807ed0f-e026-4586-b0dc-d2f78f962574",
+          "diffSha256": "6f117c80c7cc8fd18ce8c6ff50317aeb23f17668c9421a9aaa5fb4059f3810cc",
+          "changedFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb"
+        },
+        {
+          "runId": "6f75f33e-1c74-4742-a160-d2828c776635",
+          "state": "completed",
+          "fallbackFromRunId": "6ad0bd6b-9605-40b5-a7a8-de9c0f397064",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "e56eeff5-6500-4402-9c65-11ce10394310",
+          "diffSha256": "cc7c712239b618bb83d7e5f0c7dc896d8d5e971d2a89ce74511709cd3aee56a8",
+          "changedFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb"
+        }
+      ],
+      "independentReviews": [
+        {
+          "runId": "0dac6135-6aa7-4826-8051-afdaf77644ff",
+          "state": "completed",
+          "accessMode": "readonly",
+          "targetLockKey": null,
+          "artifactId": "057a40fe-539d-43d6-bed1-3fb421971a19",
+          "artifactStatus": "passed",
+          "source": "scripted_mock"
+        },
+        {
+          "runId": "a1a6e81b-93ea-405c-b2fd-5c7b80451150",
+          "state": "completed",
+          "accessMode": "readonly",
+          "targetLockKey": null,
+          "artifactId": "5a46cc49-2de5-4453-9940-d8dd4e005109",
+          "artifactStatus": "passed",
+          "source": "scripted_mock"
+        }
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "sessionId": "5e69d337-3fda-4a5c-bae1-fb99a5da73f2",
+      "taskId": "722319ac-9396-4e88-9bda-21aaef5669fc",
+      "target": "login_page",
+      "targetId": "demo-frontend",
+      "safeTarget": "apps/demo/src",
+      "originalRequest": "@orchestrator 为演示应用创建登录页",
+      "sourceSha256": "88d395830998493b6ad444f18e5ca5ef752ee76434bb596ccf2374dac0ba1812",
+      "failedRunId": "10c5918a-8fdb-4ce1-abde-5917ae5a5f5c",
+      "failedErrorCode": "CODEX_DEMO_FORCED_FAILURE",
+      "runs": [
+        {
+          "runId": "e0b40a0d-406b-4f32-80b5-c5a23931134b",
+          "state": "completed",
+          "fallbackFromRunId": "10c5918a-8fdb-4ce1-abde-5917ae5a5f5c",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "b8b5e7cc-7471-4902-961f-a214ba76aace",
+          "diffSha256": "6f117c80c7cc8fd18ce8c6ff50317aeb23f17668c9421a9aaa5fb4059f3810cc",
+          "changedFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb"
+        },
+        {
+          "runId": "9af8999c-bbfb-4516-b45e-80689adaf50d",
+          "state": "completed",
+          "fallbackFromRunId": "33b3704f-7e45-4793-8ed4-b2a21bb606de",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "113fe63b-48fc-4621-a3b2-a3ab3f1ed137",
+          "diffSha256": "24937d5a6a514827bf65f00dcb537883f3f40a6fd6e32285f6dbd37bbd76085e",
+          "changedFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "actualAdapterFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb"
+        }
+      ],
+      "independentReviews": []
+    }
+  ],
+  "boundary": "Diff artifacts are cumulative Session changes; exact button-only behavior is checked against source before/after in acceptance"
+}

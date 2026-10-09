@@ -1,0 +1,31 @@
+import {createRequire} from 'node:module';
+import {readFile,writeFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const require=createRequire(import.meta.url);const {chromium}=require('C:/Users/XCC/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const root='C:/Users/XCC/AppData/Local/Temp/agenthub-regeneration-20261009';
+const proof=JSON.parse(await readFile(root+'/native.json','utf8'));const restart=JSON.parse(await readFile(root+'/restart-after.json','utf8'));
+const browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});
+const api='http://127.0.0.1:8006';const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const report={errors};
+try{
+ const messages=await (await page.request.get(api+`/sessions/${proof.session.id}/messages`)).json();
+ const resumed=await page.request.post(api+`/sessions/${proof.session.id}/messages/${restart.sourceMessageId}/regenerate`,{data:{requestId:restart.operationId}});
+ assert(resumed.ok(),await resumed.text());assert.equal((await resumed.json()).regeneration.errorCode,'REGENERATION_PREPARATION_INTERRUPTED');
+ assert.equal((await (await page.request.get(api+`/sessions/${proof.session.id}/messages`)).json()).length,messages.length);
+ await page.goto('http://127.0.0.1:3000/?session='+proof.session.id);
+ const bubble=page.locator('#message-'+restart.operationId);await bubble.getByText(/未自动重发/).waitFor();
+ await bubble.getByRole('link',{name:'查看原消息'}).scrollIntoViewIfNeeded();
+ await page.screenshot({path:root+'/restart-history-light.png'});
+ await page.getByRole('button',{name:'切换到暗色模式'}).click();
+ await page.setViewportSize({width:390,height:844});await bubble.getByRole('link',{name:'查看原消息'}).scrollIntoViewIfNeeded();
+ await page.screenshot({path:root+'/restart-history-390-dark.png'});
+ const preview=await page.request.post(api+`/task-runs/${proof.stages[1].runId}/preview`,{data:{},timeout:90000});
+ assert(preview.ok(),await preview.text());const value=await preview.json();assert.equal(value.healthStatus,'healthy');
+ await page.setViewportSize({width:1440,height:1000});await page.getByRole('button',{name:/^成果/}).click();
+ await page.getByRole('button',{name:/网页预览/}).filter({hasText:'ready · healthy'}).last().click();
+ await page.frameLocator('iframe[title="Vite React 预览"]').getByRole('heading',{name:'Regeneration Atlas 928 2',exact:true}).waitFor();
+ await page.screenshot({path:root+'/restarted-preview.png'});
+ assert.deepEqual(errors,[]);
+ Object.assign(report,{passed:true,operationId:restart.operationId,replayReturnedInterruptedWithoutNewMessage:true,previewId:value.id,health:value.healthStatus,iframeHeading:'Regeneration Atlas 928 2'});
+ console.log(JSON.stringify(report));
+}catch(error){report.failure=String(error);throw error}finally{await writeFile(root+'/restart-browser.json',JSON.stringify(report,null,2));await browser.close()}

@@ -848,6 +848,10 @@ def _status_history_list(value: object) -> tuple[dict[str, str], ...]:
 
 
 def _ensure_deploy_prerequisites(db: DbSession, task_run: TaskRun) -> None:
+    from app.user_edit_fences import user_revision_after_run
+
+    if user_revision_after_run(db, task_run):
+        raise DeployError("Current files include later user edits; run and validate the current revision before deployment.")
     from app.dag_integration import IntegrationError, delivery_worktree_path
 
     try:

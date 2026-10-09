@@ -10,7 +10,12 @@ from sqlmodel import select
 
 from app.agent_capabilities import SUPPORTED_AGENT_MODES, SUPPORTED_CAPABILITY_TAGS
 from app.agent_profiles import profile_for_agent
+from app.agent_instructions import capture_agent_instruction
+from app.custom_agents import selected_custom_planner, require_custom_agent
 from app.canonical_context import build_canonical_shared_context, filter_protected_values
+from app.context_items import normalize_context_items
+from app.artifact_references import artifact_reference_for_id
+from app.pinned_context import select_pinned_message_context, without_pinned_duplicates
 from app.models import Agent, Message, Task
 from app.models import Session as AgentHubSession
 from app.memory_snapshots import (
@@ -111,7 +116,8 @@ def build_llm_planner_input(db: DbSession, message: Message) -> dict[str, Any]:
     return build_llm_planner_request(db, message).to_provider_payload()
 
 
-def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest:
+def build_llm_planner_request(db: DbSession, message: Message, *, target_ids: set[str] | None = None) -> PlannerRequest:
+    from app.attachment_context import select_attachment_context, resolve_image_inputs
     session = db.get(AgentHubSession, message.session_id)
     if session is None:
         raise LLMPlannerError("Session is unavailable for LLM planning.")
@@ -119,7 +125,17 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
     memory_content = read_memory_snapshot_content(memory_snapshot)
 
     targets = list_targets_for_workspace(db, session.workspace_id)
-    recent_messages = _recent_messages(db, message.session_id)
+    custom_planner = selected_custom_planner(db, session.workspace_id, message.content_md)
+    if custom_planner:
+        allowed_ids = json.loads(custom_planner.supported_targets_json)
+        targets = [target for target in targets if target.target_id in allowed_ids]
+    if target_ids is not None:
+        if not target_ids.issubset({target.target_id for target in targets}):
+            raise LLMPlannerError("Selected Planner does not support every group target.")
+        targets = [target for target in targets if target.target_id in target_ids]
+    pinned_context = select_pinned_message_context(db, message.session_id)
+    recent_messages = without_pinned_duplicates(_recent_messages(db, message.session_id), pinned_context)
+    context_items, artifact_references = _planner_message_references(db, message)
     mission_trace = build_session_mission_trace(db, message.session_id).model_dump(by_alias=True)
     memory_selection = select_memory_context(
         db,
@@ -147,6 +163,9 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
             },
         },
         "recentMessages": recent_messages,
+        "pinnedMessageContext": pinned_context,
+        "contextItems": context_items,
+        "artifactReferences": artifact_references,
         "relevantMemories": memory_selection.to_context(),
         "memorySelection": memory_selection.evidence,
         "missionTrace": mission_trace,
@@ -165,8 +184,27 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
         ],
         "validationExpectations": _validation_expectations(targets),
     }
+    attachment_context = select_attachment_context(db, message.session_id, message.id, pinned=pinned_context, recent=recent_messages)
+    session_context_pack["attachmentContext"] = attachment_context
     canonical_context = build_canonical_shared_context(session_context_pack)
+    orchestrator = db.exec(select(Agent).where(Agent.role == "orchestrator")).first()
+    planner_binding = (
+        capture_agent_instruction(
+            db, workspace_id=session.workspace_id, agent=orchestrator, role="planner",
+            profile=custom_planner,
+        )
+        if orchestrator is not None else None
+    )
     return PlannerRequest(
+        images=resolve_image_inputs(db, message.session_id, attachment_context),
+        agentSystemPrompt=planner_binding["text"] if planner_binding else None,
+        agentProfileSelection={
+            "id": custom_planner.id, "displayName": custom_planner.display_name,
+            "mentionAlias": custom_planner.mention_alias, "providerId": custom_planner.provider_id,
+            "toolPolicy": custom_planner.tool_policy,
+            "supportedTargets": [target.target_id for target in targets],
+        } if custom_planner else None,
+        agentToolPolicy=custom_planner.tool_policy if custom_planner else None,
         plannerMode=LLM_PLANNER_MODE,
         version=LLM_PLANNER_VERSION,
         originalUserRequest=message.content_md,
@@ -174,7 +212,7 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
         targetRegistry=[_target_summary(target) for target in targets],
         projectAnalyzer=[_project_analyzer_summary(target) for target in targets],
         recentMessages=filter_protected_values(recent_messages),
-        artifactReferences=[],
+        artifactReferences=filter_protected_values(artifact_references),
         supportedRoles=sorted({"orchestrator", "frontend", "backend", "qa", "review"}),
         supportedModes=sorted(SUPPORTED_AGENT_MODES),
         supportedCapabilities=sorted(SUPPORTED_CAPABILITY_TAGS),
@@ -185,6 +223,38 @@ def build_llm_planner_request(db: DbSession, message: Message) -> PlannerRequest
             "platformMaintenanceRequiresExplicitMode": True,
         },
     )
+
+
+def _planner_message_references(db: DbSession, message: Message) -> tuple[list[dict], list[dict]]:
+    """Carry the same bounded user references into planning, before task creation."""
+    try:
+        context = json.loads(message.context_json)
+    except (TypeError, json.JSONDecodeError):
+        context = {}
+    items = normalize_context_items(context if isinstance(context, dict) else {})
+    references = []
+    for item in items:
+        artifact_id = item.get("artifactId")
+        if not artifact_id:
+            continue
+        reference = artifact_reference_for_id(
+            db, session_id=message.session_id, artifact_id=artifact_id,
+            version_id=item.get("artifactVersionId"), selected_text=item.get("selectedText"),
+        )
+        if not reference.valid:
+            # Do not present an invalid artifact as a source for the user's text.
+            item.clear()
+            item.update({"kind": "artifact", "artifactId": artifact_id, "valid": False, "reason": reference.reason})
+            continue
+        # Planning needs identity/provenance and the bounded selection, not a
+        # potentially large artifact payload or arbitrary persisted metadata.
+        references.append({
+            "artifactId": reference.artifact_id, "type": reference.artifact_type,
+            "taskRunId": reference.task_run_id, "title": reference.title[:160],
+            "status": reference.status, "versionId": reference.version_id,
+            "selectedText": reference.selected_text,
+        })
+    return items, references
 
 
 def create_llm_plan_tasks(
@@ -210,9 +280,27 @@ def create_llm_conversation_outcome(
     message: Message,
     *,
     provider: LLMPlannerProvider,
+    group_assignments: list[dict[str, Any]] | None = None,
 ) -> LLMConversationOutcomeResult:
-    planner_input = build_llm_planner_input(db, message)
+    planner_input = (
+        build_llm_planner_request(db, message, target_ids={item["targetId"] for item in group_assignments}).to_provider_payload()
+        if group_assignments is not None else build_llm_planner_input(db, message)
+    )
+    if group_assignments is not None:
+        target_ids = {item["targetId"] for item in group_assignments}
+        available = {item["targetId"] for item in planner_input["targetRegistry"]}
+        if not target_ids.issubset(available):
+            raise LLMPlannerError("Selected Planner does not support every group target.")
+        planner_input["explicitGroupAssignments"] = group_assignments
+        planner_input["agentToolPolicy"] = "planner_no_tools"
+        planner_input["supportedRoles"] = list(dict.fromkeys(item["role"] for item in group_assignments))
+        for field in ("targetRegistry", "projectAnalyzer"):
+            planner_input[field] = [item for item in planner_input[field] if item["targetId"] in target_ids]
     memory_evidence = planner_memory_evidence(planner_input)
+    selection = planner_input.get("agentProfileSelection")
+    if isinstance(selection, dict):
+        session = db.get(AgentHubSession, message.session_id)
+        require_custom_agent(db, session.workspace_id, selection["id"])
     try:
         provider_result = provider.create_plan(planner_input)
     except PlannerProviderError as exc:
@@ -264,6 +352,10 @@ def create_llm_plan_tasks_from_outcome(
             _workspace_id_for_message(db, message),
         )
     }
+    selection = conversation.planner_input.get("agentProfileSelection")
+    if isinstance(selection, dict):
+        allowed_ids = selection.get("supportedTargets", [])
+        targets = {key: target for key, target in targets.items() if key in allowed_ids}
     task_specs = task_specs_from_llm_plan(raw_output)
     try:
         validate_task_graph(

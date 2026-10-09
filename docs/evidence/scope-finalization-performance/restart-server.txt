@@ -1,0 +1,11 @@
+INFO:     Started server process [33412]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8007 (Press CTRL+C to quit)
+INFO:     127.0.0.1:7299 - "GET /sessions/47bcb9f8-3fcd-410f-9078-cc7b671da95b/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7300 - "POST /task-runs/3a8d9152-469b-4918-afd3-06bc4f70bf14/preview HTTP/1.1" 201 Created
+INFO:     127.0.0.1:7299 - "GET /task-runs/3a8d9152-469b-4918-afd3-06bc4f70bf14/previews HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [33412]

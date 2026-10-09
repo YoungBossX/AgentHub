@@ -1,0 +1,53 @@
+{
+  "reports": [
+    {
+      "mode": "baseline",
+      "shutdownMs": 6285,
+      "exitCode": 0,
+      "sse": {
+        "replayed": 36,
+        "resumed": 35,
+        "firstExcluded": true
+      },
+      "fault": {
+        "mode": "baseline",
+        "controlledInjection": true,
+        "before": 0,
+        "after": 1,
+        "socketCloses": 0,
+        "protocolCallbacks": 1,
+        "cleaned": false
+      },
+      "previewId": "622961f3-0261-4f2a-8119-c40315d1e397",
+      "previewPort": 53876,
+      "previewHealth": "healthy",
+      "apiAndPreviewPortsClosed": true,
+      "errors": []
+    },
+    {
+      "mode": "fixed",
+      "shutdownMs": 1126,
+      "exitCode": 0,
+      "sse": {
+        "replayed": 36,
+        "resumed": 35,
+        "firstExcluded": true
+      },
+      "fault": {
+        "mode": "fixed",
+        "controlledInjection": true,
+        "before": 1,
+        "after": 1,
+        "socketCloses": 1,
+        "protocolCallbacks": 1,
+        "cleaned": true
+      },
+      "previewId": "0f381ee5-0391-4e12-87e1-0903f53fa946",
+      "previewPort": 22711,
+      "previewHealth": "healthy",
+      "apiAndPreviewPortsClosed": true,
+      "errors": []
+    }
+  ],
+  "source": "controlled socket-shutdown injection through actual local-api entrypoint; real Edge SSE/preview, no new model inference"
+}

@@ -21,12 +21,15 @@ def get_workspace(db: DbSession, workspace_id: str) -> Optional[Workspace]:
     return db.get(Workspace, workspace_id)
 
 
-def list_workspace_sessions(db: DbSession, workspace_id: str) -> list[Session]:
-    return db.exec(
-        select(Session)
-        .where(Session.workspace_id == workspace_id)
-        .order_by(Session.last_message_at.desc(), Session.created_at.desc())
-    ).all()
+def list_workspace_sessions(db: DbSession, workspace_id: str, *, view: str = "all") -> list[Session]:
+    query = select(Session).where(Session.workspace_id == workspace_id)
+    if view == "active":
+        query = query.where(Session.archived_at.is_(None))
+    elif view == "archived":
+        query = query.where(Session.archived_at.is_not(None))
+    elif view != "all":
+        raise ValueError("Invalid session list view.")
+    return db.exec(query.order_by(Session.archived_at.is_not(None), Session.pinned_at.desc(), Session.last_message_at.desc(), Session.created_at.desc(), Session.id)).all()
 
 
 def get_session(db: DbSession, session_id: str) -> Optional[Session]:

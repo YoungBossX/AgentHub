@@ -3,6 +3,8 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine, select
 from uuid import uuid4
+from datetime import datetime, timezone
+import warnings
 
 from app.db import (
     _ensure_sqlite_demo_schema_columns,
@@ -40,6 +42,38 @@ from app.repositories import get_demo_workspace, get_enabled_agents
 from app.seed import seed_demo_data
 
 
+def test_utc_clock_preserves_naive_utc_microseconds_and_sqlite_contract(monkeypatch):
+    import app.models as models
+    instant = datetime(2026, 10, 9, 8, 42, 31, 123456, tzinfo=timezone.utc)
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            assert tz is timezone.utc, "Clock acquisition must not depend on the machine timezone"
+            return instant
+        @classmethod
+        def utcnow(cls):
+            raise AssertionError("Deprecated clock API must not be used")
+    monkeypatch.setattr(models, "datetime", Clock)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        value = models.utc_now()
+        record = Workspace(name="UTC contract", repo_url="local://clock", root_path=".", default_branch="main")
+    assert value == instant.replace(tzinfo=None) and value.tzinfo is None
+    assert record.created_at == value
+    clock_engine = create_engine("sqlite://", poolclass=StaticPool)
+    SQLModel.metadata.create_all(clock_engine)
+    try:
+        with DbSession(clock_engine) as db:
+            db.add(record); db.commit(); db.expire_all()
+            loaded = db.get(Workspace, record.id)
+            assert loaded.created_at == value and loaded.created_at.tzinfo is None
+            assert loaded.model_dump(mode="json")["created_at"] == "2026-10-09T08:42:31.123456"
+            stored = db.execute(text("SELECT created_at FROM workspace WHERE id=:id"), {"id": record.id}).scalar_one()
+            assert stored == "2026-10-09 08:42:31.123456"
+    finally:
+        clock_engine.dispose()
+
+
 EXPECTED_TABLES = {
     "agent",
     "agentprofiledraft",
@@ -52,6 +86,7 @@ EXPECTED_TABLES = {
     "memoryitem",
     "memorysnapshot",
     "message",
+    "messageattachment",
     "preview",
     "previewdeployjob",
     "review",
@@ -107,6 +142,8 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "active_backend_target_id",
             "memory_snapshot_id",
             "status",
+            "pinned_at",
+            "archived_at",
             "last_message_at",
             "created_at",
             "updated_at",
@@ -155,6 +192,8 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "parent_message_id",
             "stream_state",
             "context_json",
+            "regeneration_json",
+            "pinned_at",
             "created_at",
         },
         Agent: {
@@ -172,6 +211,9 @@ def test_p0_model_boundary_and_required_fields() -> None:
             "updated_at",
         },
         AgentProfileDraft: {
+            "system_prompt",
+            "mention_alias",
+            "tool_policy",
             "id",
             "workspace_id",
             "display_name",

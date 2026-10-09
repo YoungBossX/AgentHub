@@ -9,8 +9,8 @@ import { samplePreviewArtifact } from "./__fixtures__/sample-preview"
 import { sampleReviewArtifact } from "./__fixtures__/sample-review"
 import type { SessionTask } from "@/lib/api"
 
-vi.mock("@monaco-editor/react", () => ({
-  DiffEditor: () => <div data-testid="monaco-diff-editor" />,
+vi.mock("./local-diff-editor", () => ({
+  LocalDiffEditor: () => <div data-testid="monaco-diff-editor" />,
 }))
 
 afterEach(() => cleanup())
@@ -33,6 +33,17 @@ const baseTask: SessionTask = {
 }
 
 describe("TaskCardList", () => {
+  it("labels explicit scripted review as read-only review rather than fallback recovery", () => {
+    const task: SessionTask = { ...baseTask, intentType: "qa_review", status: "completed", assignedAgentRole: "qa",
+      planJson: { planner: "explicit_group_v1", readOnly: true, assignedRole: "qa" },
+      taskRuns: [{ id: "review-run", taskId: baseTask.id, sessionId: baseTask.sessionId, agentId: "qa", adapterType: "scripted_mock",
+        adapterRunId: null, state: "completed", startedAt: null, endedAt: null, worktreePath: "/repo/worktree",
+        baseRef: null, headRef: null, errorCode: null, errorMessage: null, metricsJson: {}, createdAt: baseTask.createdAt, updatedAt: baseTask.updatedAt }],
+    }
+    render(<TaskCardList tasks={[task]} />)
+    expect(screen.getByText(/只读脚本评审完成/)).toBeTruthy()
+    expect(screen.queryByText(/兜底已恢复/)).toBeNull()
+  })
   it("does not present a synthetic Review join as a provider execution", () => {
     render(<TaskCardList tasks={[{ ...baseTask, intentType: "review", status: "completed", taskRuns: [] }]} />)
     expect(screen.getByText("Review/QA join")).toBeTruthy()
@@ -46,7 +57,7 @@ describe("TaskCardList", () => {
     expect(screen.getByText("Build the Vite React login page")).toBeTruthy()
     expect(screen.getByText("任务 1")).toBeTruthy()
     expect(screen.getByText("@frontend")).toBeTruthy()
-    expect(screen.getByText("待处理")).toBeTruthy()
+    expect(screen.getAllByText("待处理").length).toBeGreaterThan(0)
     expect(screen.getByText("依赖 task-0")).toBeTruthy()
   })
 
@@ -989,4 +1000,14 @@ describe("TaskCardList", () => {
     expect(onCreateReview).toHaveBeenCalledWith("run-1")
     expect(onCreateDeploy).toHaveBeenCalledWith(samplePreviewArtifact.id)
   })
+  it("reports artifact load failures without publishing fabricated results", async () => {
+    const onArtifactError = vi.fn(), onArtifactsChange = vi.fn()
+    const failedFetcher = vi.fn(async () => { throw new TypeError("Artifact service unavailable") })
+    const task: SessionTask = { ...baseTask, taskRuns: [{ id: "run-1", taskId: baseTask.id, sessionId: baseTask.sessionId, agentId: "agent-frontend", adapterType: "codex", adapterRunId: null, state: "failed", startedAt: null, endedAt: null, worktreePath: "/assigned", baseRef: null, headRef: null, errorCode: "TASK_RUN_SCOPE_UNVERIFIABLE", errorMessage: "Scope denied", metricsJson: {}, createdAt: baseTask.createdAt, updatedAt: baseTask.updatedAt }] }
+    render(<TaskCardList tasks={[task]} backendUrl="http://127.0.0.1:8000" fetcher={failedFetcher} onArtifactError={onArtifactError} onArtifactsChange={onArtifactsChange} />)
+    await waitFor(() => expect(onArtifactError).toHaveBeenCalled())
+    expect(onArtifactsChange).toHaveBeenLastCalledWith([])
+    expect(screen.queryByText("证据卡片")).toBeNull()
+  })
+
 })

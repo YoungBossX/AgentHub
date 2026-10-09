@@ -1,0 +1,1383 @@
+{
+  "schemaVersion": "agenthub.external_task_benchmark.v1",
+  "recordedAt": "2026-10-07T10:12:30.006293+00:00",
+  "mode": "live_codex",
+  "developmentHead": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+  "sourceHashes": {
+    "apps/api/app/__init__.py": "4032d434a3866ac373e2f61e184f0d833fd5208fa81c877d41ec01d7d521b1b5",
+    "apps/api/app/adapters.py": "480eeddec77bf3b4178c84bb4ab2aa1e2ec2466f3a49cf25378bcc932fd4b2ad",
+    "apps/api/app/agent_capabilities.py": "7063ecacfb8e8a79a2d858a2226c9a36a85b7190e1fddb7b74ea02ca69628268",
+    "apps/api/app/agent_directory.py": "a9705524e37c01a47c8a7bdb18d58f6e2e015fbabf5668a1618c39e026526e1e",
+    "apps/api/app/agent_profile_drafts.py": "6f5add5145c275f0f5c39450593d1496720fc4129b74166b34dfda4a6729a585",
+    "apps/api/app/agent_profiles.py": "c3aefe9e772d5eec986af8e66dd16caded762643a186510fd746c32acb43f810",
+    "apps/api/app/agent_runtime_config.py": "5bd830f6e6114117e9206b989808d86c7164e2454f0e95e573da2974b2eb133f",
+    "apps/api/app/agent_selection_policy.py": "5a8fc3f145196b0f0a75cd739cf1ab0e5a891f08a1a51c94ed727e59fc3665d0",
+    "apps/api/app/agent_target_compatibility.py": "5e243f4d1f3acca5c718fd29b13f72707e2b8d3fbdf834114601a3a11cae7432",
+    "apps/api/app/artifact_references.py": "b9824e6dff82d5189483b4d3625ef635b01622a5d9f97a6da8ac33dc5dca66f7",
+    "apps/api/app/artifact_versions.py": "db9930cce0f9876e92a07a7199422b849d5647a8e58c5de34a181d5174c3a279",
+    "apps/api/app/artifact_workbench.py": "ee1fb815b2125cb7d99ee3f42f764cb5370d1b836a230c8435b1f36569d05552",
+    "apps/api/app/canonical_context.py": "da6202e65d3534d47aca9069f7f6037bea9759a52c43a339e52a36f441711805",
+    "apps/api/app/claude_code_adapter.py": "1c3b862a3cd5c4513f13d82b1267a0f171b04a538bde31e8e48a839fc2bf344d",
+    "apps/api/app/codex_adapter.py": "504f577ea0a41540e23c10792509e9e2c5d1bbccb17531f310073511673d6bdb",
+    "apps/api/app/config.py": "e24a808616d6ee1f4945aeff63cb1018a975bd014f922b96cebb1f6592cdbce2",
+    "apps/api/app/context_items.py": "690540944f29a0a2fdb30bf74be2149b9dd99ca9c1a0fc684cdf167291486e0d",
+    "apps/api/app/context_pack.py": "161217b8d92d03f0b92d0c39e1bbc4ce010184a2e4658503c22c6a711f2834cc",
+    "apps/api/app/dag_integration.py": "d0325de18ce6166d04b490f847f55637a7c15541876cc335d28470576923f173",
+    "apps/api/app/db.py": "56b479c81f814904ed8bcbd8583ed5181885460fd5b26826cd04fe55da84d5e4",
+    "apps/api/app/demo_planner.py": "d9a603c0b86bb804344e41fa1d9bd50d477fd2e38f9fef9a43cf611af25dd8ed",
+    "apps/api/app/dependencies.py": "447ba2c75bbd7c67ba2872931df493f5f149ce11bd9b4066870e489e88037612",
+    "apps/api/app/deployment_providers.py": "d0895e60602a98760114855c2420e4376ab693f5e064980daa70c22aef08e6a2",
+    "apps/api/app/deployments.py": "4b9712034b98fcf29d6fbccdf3b41185686c619b3921f1037802b753439d7252",
+    "apps/api/app/diffs.py": "8ed0750d9ba4ec2beec01bb37bfa54f74257eaa4038ba0cdca7f561ec90c78fd",
+    "apps/api/app/events.py": "99bc736d0cc6ab45740787510fc189eb69d8955f66bf2d5534cf8cd72993f016",
+    "apps/api/app/execution_worktrees.py": "3477347dae171b4b3cf5ac5ad594ea73cf4a9835804e32a9b4d87253c3f3e0e6",
+    "apps/api/app/external_benchmark.py": "43a471fb0850bef8e17426fef5763bbb3d4e807c3b291f444759460b78a3443a",
+    "apps/api/app/external_evidence.py": "7ab53df7bd32823c202b457c5cf05915d73186cbe1d5d87b533f3dee4617fb9f",
+    "apps/api/app/external_memory_scan.py": "5136e89bb0845b9720c6ed9592bd42eaa11a7dbe9abd9773f25ca1db082394e7",
+    "apps/api/app/external_workspaces.py": "104c8423e38046aef2c32fe868175e28514b44426b3be681f5e2188f1fbc167f",
+    "apps/api/app/guardrails.py": "f927b410052bf24adcdf62b0a2dd7e35042569f3fadd2fa3d5209a003ca2fc46",
+    "apps/api/app/handoffs.py": "48ed68f007931045d7199be1472b5dd07d02f89b59fba47f7d2086b9e17c38d0",
+    "apps/api/app/instruction_adapters/__init__.py": "255abc6a7f52074c673f80c0d9b3968f5cc0be49a456a1709a7664fa5508d3b9",
+    "apps/api/app/instruction_adapters/base.py": "1dd62dabba89b8a3abe448afedd8d5dd44c2b19cb93b2832197bda512c5965f9",
+    "apps/api/app/instruction_adapters/claude_code.py": "9ef3988644bf4cd5a73037cfa1f9f29e950a2cd991a8fc782c5a9e30d9d54b9d",
+    "apps/api/app/instruction_adapters/codex.py": "6e2c13c7ea9d4a3efd68c646375f372856f424d7a2dd8507031e8565f187d865",
+    "apps/api/app/instruction_adapters/scripted_mock.py": "672f10f7b4b4a321665711bf0e54cf2dce36a08c1abc5a561301f857718b243b",
+    "apps/api/app/instruction_adapters/shared_sections.py": "166de527ce5265dbd9fa5038e4a426d63c4157aa3a49f352e7d1bc3633110bea",
+    "apps/api/app/instruction_builder.py": "b45169c750241ffb1ca9ff9f02105374ee6cbb28d026cd64ea87515b715a9c57",
+    "apps/api/app/ledger.py": "3624d9eea2af7467883b004be9dce33db58566c41ea306b8237e362e863eaa77",
+    "apps/api/app/live_memory_compliance.py": "b3ee3a425b5ac251ba93fe88d8886ada26caa61b5468729b0c27ecf0905642ae",
+    "apps/api/app/llm_planner.py": "92b4fe6eb75580109b7128c872216a674459d3761f4bc06c6e494b16ce6c2896",
+    "apps/api/app/local_folders.py": "79684e7a6fff0ad71fa9b9c65a4a313934f93056ab67b6ffe7908fae79dbcde1",
+    "apps/api/app/main.py": "0e3ea65520c1e19f924b0c38af69fc469a65e34917e8ff7f4389edc85bbd3bdc",
+    "apps/api/app/memory_evals.py": "02f64bfe9612345e12d2942595b27f46a8f766926fb873a99f6222facf1af8be",
+    "apps/api/app/memory_instructions.py": "26c2dde8583b96daeff528332c85b972d716e8d9efe82083b761a834b55180fe",
+    "apps/api/app/memory_rehearsal.py": "0d7a8be40a2d52f7c710abd5f0c739b88cb58d55f02d421e588dc4421794b92d",
+    "apps/api/app/memory_retrieval.py": "514cfc9dbedeec7f29e38580cbe39b5b7c5c3a12851ea6b649735592cd43ece5",
+    "apps/api/app/memory_snapshots.py": "c392f7ac60f82dff487608089611041f23237b823fee4d52c296dbc412092d3b",
+    "apps/api/app/memory_store.py": "5661d94972ccde7ed6211d0c5e74242a6307b451115c9234b089af7f9701ebbe",
+    "apps/api/app/memory_usage.py": "7c2f2082d6c64960a7107e4a64f1ca88a1f17cffc977e1d63abe212389dc0235",
+    "apps/api/app/memory_write_policy.py": "12f83685069ec34b52e0e418dd9c3cd2bc77a43150f80f14bbda9f549f4e7b9f",
+    "apps/api/app/mission_trace.py": "108949ef22d917aa319b42a36dd9e61865cbf85b76244c82e21e980da7b8f06a",
+    "apps/api/app/models.py": "b470777e4305d8e02b852ceaa9114a9c16f1ade57139451588c85dea8d6869b1",
+    "apps/api/app/p18b_workflow_rehearsal.py": "c6600517de751f644cb70666fe844abbc6e8893104ee0a15c99f8b9c6de06252",
+    "apps/api/app/plan_validator.py": "c857102a693df631bf05877599ee5aafec19da62f55ce2d3d8e0b6cdf2741d9a",
+    "apps/api/app/planner_contracts.py": "668ae51b10a1f726dbd1d1c3ea2e2cb0da78f42036dd12e6c2adea605284ed6c",
+    "apps/api/app/planner_providers.py": "1d6933d3a732d448f70ca0d9a01696e6682605fabce70bdb136c98b3b5589e11",
+    "apps/api/app/planner_service.py": "87c358cefafd33f6d6fb7f7f80df319eaeea0fb9c00282abd9bddc1cce496d56",
+    "apps/api/app/planning.py": "80ed4f9bc87b380c238b594fb9ce32ad2e0e8e130cede970c0b24667c9a8f3fe",
+    "apps/api/app/planning_intents.py": "17bce64b0fc51648793ad0aec094be2cc78ddd2e5739c2a27d4b93ecdb9329b7",
+    "apps/api/app/planning_tasks.py": "6b8819eb09faf6465cc390d942d28207cd7a3caf2a2a1de2855ead2361602b4a",
+    "apps/api/app/pmo_decisions.py": "38e6c57d6e01a73c949a3f74cee866eb785c4645a40f6700f2f5c280efb51656",
+    "apps/api/app/policy_engine.py": "cea26c6b0e51e5325a4ad3d4446f8f274b17a585bdcb980907c35eb1354be239",
+    "apps/api/app/preview_deploy_jobs.py": "3a5bc8244ebef6de74a27a51ce2f5d392b8bbb3b691a252a2815de95a414e041",
+    "apps/api/app/previews.py": "4701dc0a02452afebb47a4e58e178a38f7e42ccbddb84c4541a9149f0f03a4fe",
+    "apps/api/app/process_environment.py": "8ce26c687c43db736470af8311898d4d3c461569a4f568e3393d406f677fabfe",
+    "apps/api/app/project_analyzer.py": "26aa9d58fa989810453b38f69aa17d22c5924eb54d02e7991612e0c4e6649897",
+    "apps/api/app/project_command_policy.py": "165d9c18980ddde63fb46efe04c20653d70e1eaaeed0101a06680ee8f07e15a3",
+    "apps/api/app/project_profiles.py": "6640c534f9f3eec8b7f685b932e8fc2716c97930405ba14c55c33af78bf83288",
+    "apps/api/app/project_provisioning.py": "a2661afdf2e00dbeb698f0d8954201b4335f12391caf512281abe5c730f05474",
+    "apps/api/app/provider_assignments.py": "40ed3c0fc50c5ddd9dd1d47dd9ba2847ce29d3679400f8063f258de44c90ea76",
+    "apps/api/app/provider_configs.py": "c16c8fe130066d0993d1519efb69bf36f0ff2cfda3ab5727cb4f5ae56047f992",
+    "apps/api/app/provider_evidence.py": "b447e45622f079f271c005d6cbbe890554ea323e65e15ab4ad97bdd100fba93d",
+    "apps/api/app/provider_gateway.py": "287b43b348e7dbf23fef1bf472dffc0a6cfe6bf7efa85fc59e7a2ab17d082ca3",
+    "apps/api/app/provider_health.py": "bd67f18029dc28696d433c8428b09682f05997adc72b741c51cea43eb69b8964",
+    "apps/api/app/recovery.py": "5cfb3229ac02290e6182d49590586e966bbfa127616a4551539b4bfa7fa3e8aa",
+    "apps/api/app/repositories.py": "21f7653182e56960fc3a90bb51b0d75688614872fcf1a3c7f5f7b12401700852",
+    "apps/api/app/reviews.py": "5eade578360b6b571d1f244148048676e1d3ff3e9ffabadc5ff528c7597e83c2",
+    "apps/api/app/routes/__init__.py": "cee0da60c1e3aef4654b95fa07ab0c97c7f64af2d061e636106a40f03470a1df",
+    "apps/api/app/routes/agent_settings.py": "1f0c2403c2ae74f68d4abf7c6d549f441e6ce035289cf6814c4ede76f77838c8",
+    "apps/api/app/routes/health.py": "7d6d02b448bf0dfdfa471fb47424d839b01971f40a076d3f295e74414caaa9fc",
+    "apps/api/app/routes/messages.py": "686264616fa514b565eca229a4014e50417ce993d62716cb3515c69c1189e244",
+    "apps/api/app/routes/registries.py": "bd6ca38e10d30f3f11f93b5b6284cdf9374b0b5b46c097986a205c971ee0c4d9",
+    "apps/api/app/routes/session_events.py": "403e3ad2575a33a16950700c3771fddc0300c4eb3944221b5dca1a1f0b5f20cc",
+    "apps/api/app/routes/sessions.py": "0932990a6cd067fc6ba9f08ce4c5fa509a302c21a4e4e2c8b1c08390a26ed3d1",
+    "apps/api/app/routes/targets.py": "768bf33c4ebc813c0f94af21a42498fd6cce50eeafcc4a54d47568ca0cd0ce09",
+    "apps/api/app/routes/task_artifacts.py": "ad3018f1900ee3ab411c5660ebbcaee0f65c7d4680ef861ebba310b130d64d0c",
+    "apps/api/app/routes/task_runs.py": "197a1581a75b4b943d5b0e47c9fadc7254230878ded7464c74338287dedf21d9",
+    "apps/api/app/routes/workspaces.py": "0e1516a81818e5e4d3231d57bf1b5595e3452da3d69af24d6fe353f2f47c5db0",
+    "apps/api/app/run_diagnostics.py": "60cf992dadc74e4a1b388e2f437b626ec084025b3f1a21e595732cd4f362b8fc",
+    "apps/api/app/run_engine.py": "ec9e78146562f154a47c7e24d97fb51799161c97a127d37603c2979dde5251c2",
+    "apps/api/app/run_supervisor.py": "5314508a98d0d198667d2a1b41d19a072bc3a0f14145d5bd0fab4ca8f78ff558",
+    "apps/api/app/scheduler.py": "a24ab203bf54485b83b8199fac00a574bb45f618d75d8c51ea9239c583f08677",
+    "apps/api/app/schemas.py": "27345b886cc58c7bd6e520f56c245d11347495dddd85d92aa450f0f6c49d6fcc",
+    "apps/api/app/scripted_mock.py": "32fa8bc9ba8bae3d1d3c37f6bd04f8357e55edbac806d1f1dd150af320c84b32",
+    "apps/api/app/seed.py": "8980c417eb8dca27834f14ac10ea32be012450c0af7ef8ee8df3a0976e0517ef",
+    "apps/api/app/session_queue.py": "eb5be430c0549cf98590b89cc49b7c2ddaeccbc34b5a4d01583fe97a731f2638",
+    "apps/api/app/target_locks.py": "45b2a037d29d4c77bad8737090dbf6e782dac9ba81c905780944e97faabb1fb0",
+    "apps/api/app/target_registry.py": "c1d71cd0e6ab408083e7e9636e3e227bdf5eed5e256dafe08ae19c599c0fe3da",
+    "apps/api/app/task_graph_builder.py": "ea8df977b018ab76fc5ed1b368840dd5aae3a68f98b6abfe0de03e03630e2ffb",
+    "apps/api/app/task_run_scope.py": "22640722a2c13726815e92d0ae2bf294c3881fa93a14c1f22e8d711927db2a5c",
+    "apps/api/app/task_runs.py": "8430d3aecca8921d69d184c69f6e5125a7ca7eef702553cf807bb187d699c620",
+    "apps/api/app/transactional_delivery.py": "aea6d809711547fe8b12329cd86edce3ee2fa6b5e616edd43e47f3ab28fe5195",
+    "apps/api/app/worktrees.py": "5a057baec0f25b37ab5c5c0e9e5f079e7b0f67a96571571aeaf3ed4d9c9b5e8d"
+  },
+  "suiteHashes": {
+    "catalog-search.mjs": "37c3a3e39191bca949436f64c6eaf45f4c9930c88e1b4ce56ade57f69d881cc1",
+    "catalog-search.test.mjs": "4c2f565aae8ccfc39aedcd58b7a73a2f9e15001d7e045681ee0683eeda08852c",
+    "invoice-discount.mjs": "698c250299ced9cc5a5c6aeb6f855616cf3456442f1f920023c95c0e16c220f2",
+    "invoice-discount.test.mjs": "ebe2e41c5f60028177c8e19b3dec2754e5f00a2c2d1e29ba3d33d36a286cdc43",
+    "README.md": "e3a69823a8837bd9d4f37656883dfa9b05b72e8d9e1b710b1cc1c4fcd81b00b9",
+    "suite.json": "21cfa9bdbd75b8538a8b4a15e7c5ef053ceb31eca58f5fa687c43895ef0ffc9d",
+    "title-normalization.mjs": "c45b4b937abda7f3b7f08276aec21c5f810328c739496ba66270c7951f5418aa",
+    "title-normalization.test.mjs": "1be217f911281a84052c46614ac80f395b2d0a0f267addc4968c8fdc9709ac43"
+  },
+  "livePreviewStarted": false,
+  "buildExecuted": false,
+  "productionDeployed": false,
+  "planner": "fixed_task_plan",
+  "cases": [
+    {
+      "caseId": "title-normalization",
+      "verdict": "passed",
+      "baseCommit": "e3a63103e62de2f846bd6f5e51e015a25756df1c",
+      "inputHashes": {
+        "src/domain.mjs": "d48d9dfb36b3afc781d397fcfc0b8fa9c452157d9a6823a82e89fdad3daa5f02",
+        "src/App.jsx": "f427efd9b1c7bb98660202f21d7dfbd449d71d74013364f008407a9f7e36ed66",
+        "src/main.jsx": "a26b7120ee6b82fa97b58803a3f682d199cb18aed2affbd8582212204035eb1d",
+        "index.html": "0a2edc447e41e9443e76e3be2833a1d0218287f1199d475f74f51e05b83d2c95",
+        "package.json": "63ffd652fe9035ad227745ea269baf2db903472d2a55f63758f3a43676d66fd5"
+      },
+      "evaluatorHash": "1be217f911281a84052c46614ac80f395b2d0a0f267addc4968c8fdc9709ac43",
+      "promptHash": "db9e162ecc93319d91fb24efdab7f83f2d6817dcc6a60b15b8b6e557bc7e9b8e",
+      "expectedTests": 3,
+      "baselineCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 3,
+          "pass": 0,
+          "fail": 3
+        },
+        "stdoutHash": "54c93b20c0e42a1b8b4f51fac421cb2d0c76e33171c60b91a0ee146775640d5e",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "baselineFailing": true,
+      "providerTurnObserved": true,
+      "taskId": "6c1fbfeb-ab4e-4991-8f8b-2bcef1b3607c",
+      "taskRunId": "582527fa-1112-48f1-9c51-ce76dca304e6",
+      "sessionId": "c346a0a2-fcc3-4a59-8f63-347d768f36cb",
+      "targetId": "external-bench-title-normalization",
+      "state": "completed",
+      "errorCode": null,
+      "errorMessage": null,
+      "executionErrorType": null,
+      "elapsedSeconds": 29.344,
+      "adapterRunId": "codex-751317f3-1c66-40f6-b947-486b13cc275e",
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "codex",
+        "providerId": "local-codex-cli",
+        "source": "explicit",
+        "targetId": "external-bench-title-normalization",
+        "supportedMode": "write",
+        "fallbackPolicy": "explicit_only"
+      },
+      "model": null,
+      "providerHealth": {
+        "providerId": "local-codex-cli",
+        "adapterType": "codex",
+        "status": "healthy",
+        "available": true,
+        "reason": "CLI executable and startup probe are available.",
+        "checkedAt": "2026-10-07T10:12:30.724727",
+        "safeDetails": {
+          "command": "codex.exe",
+          "probe": "version",
+          "executable": "codex.exe",
+          "exitCode": 0,
+          "output": "codex-cli 0.162.0-alpha.2",
+          "rawRedacted": true
+        }
+      },
+      "providerMessages": [
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"agent_message\",\"text\":\"I\\u2019ll inspect `src/domain.mjs` and make a minimal patch to `slugifyTitle`, preserving its named export.\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"export function slugifyTitle(title) {\\r\\n  return title.toLowerCase().replaceAll(' ', '-');\\r\\n}\\r\\n\",\"exit_code\":0,\"status\":\"completed\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_2\",\"type\":\"file_change\",\"changes\":[{\"path\":\"C:\\\\Users\\\\XCC\\\\AppData\\\\Local\\\\Temp\\\\agenthub-windows-sandbox-fixed-suite-20261007\\\\title-normalization\\\\target\\\\src\\\\domain.mjs\",\"kind\":\"update\"}],\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"file_change\",\"changes\":[{\"path\":\"C:\\\\Users\\\\XCC\\\\AppData\\\\Local\\\\Temp\\\\agenthub-windows-sandbox-fixed-suite-20261007\\\\title-normalization\\\\target\\\\src\\\\domain.mjs\",\"kind\":\"update\"}],\"status\":\"completed\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"export function slugifyTitle(title) {\\r\\n  return title.trim().toLowerCase().replace(/[^\\\\p{L}\\\\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');\\r\\n}\\r\\n\",\"exit_code\":0,\"status\":\"completed\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_4\",\"type\":\"agent_message\",\"text\":\"Updated `src/domain.mjs`: trims and lowercases titles, collapses runs of non-Unicode letters/numbers into hyphens, and removes edge hyphens. Chinese characters and the named export are preserved; empty or punctuation-only input returns `''`.\\n\\nOnly the allowed file changed. Verified by reading back the patch; no configured validation commands were run.\"}}"
+      ],
+      "providerDiagnostics": [
+        {
+          "eventId": "65e08bf5-e876-495b-911c-f5460f36becd",
+          "exitCode": 0,
+          "stderrExcerpt": "Reading additional input from stdin...\n"
+        }
+      ],
+      "events": [
+        {
+          "id": "0d10b550-d998-41e8-9178-d6263850999f",
+          "sequence": 1,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "5eea0903-f1ca-4735-96c1-767dcc806a15",
+          "sequence": 2,
+          "type": "session_queue.enqueued",
+          "codexEventType": null
+        },
+        {
+          "id": "75e9a222-0462-445f-8c5d-0fe5c57df4cf",
+          "sequence": 3,
+          "type": "task.checkpoint.created",
+          "codexEventType": null
+        },
+        {
+          "id": "201762ad-6469-4d10-b42d-dad2169fe28d",
+          "sequence": 4,
+          "type": "run.claimed",
+          "codexEventType": null
+        },
+        {
+          "id": "6278179a-d1ae-4e47-b76e-90fc43840697",
+          "sequence": 5,
+          "type": "session_queue.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "11fc0c3b-9f5f-4d51-a67e-f490e29c2501",
+          "sequence": 6,
+          "type": "target_lock.acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "7bedd5d8-02ac-4f84-abde-b06c9c41d66b",
+          "sequence": 7,
+          "type": "session_queue.running",
+          "codexEventType": null
+        },
+        {
+          "id": "6d8ccc68-8871-4680-a798-c747a6194e41",
+          "sequence": 8,
+          "type": "task.heartbeat",
+          "codexEventType": null
+        },
+        {
+          "id": "366985d3-0112-484c-98d3-32d1a0e77ed6",
+          "sequence": 9,
+          "type": "provider.resolved",
+          "codexEventType": null
+        },
+        {
+          "id": "55f2538a-59f5-4b4a-929c-050d0e6a9ed2",
+          "sequence": 10,
+          "type": "provider.health_checked",
+          "codexEventType": null
+        },
+        {
+          "id": "26ab5fbd-ac79-4a28-a526-248fe09b0ff5",
+          "sequence": 11,
+          "type": "provider.capacity_acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "bb25c263-e5f8-456a-ae66-d6b813437b84",
+          "sequence": 12,
+          "type": "task.state",
+          "codexEventType": "thread.started"
+        },
+        {
+          "id": "7b3a1bb6-3944-4946-baed-789c040f3276",
+          "sequence": 13,
+          "type": "task.state",
+          "codexEventType": "turn.started"
+        },
+        {
+          "id": "99bdeac8-f04f-4dfe-8a7d-fb7bf7c30c4c",
+          "sequence": 14,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "2f2b798d-4362-48ca-96ff-d9c220a82c3d",
+          "sequence": 15,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "f5d1bf33-030e-4fde-a45d-b28f08a291ca",
+          "sequence": 16,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "7035dd0d-a4db-4ec0-badb-6d35ca88a244",
+          "sequence": 17,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "a2b0c698-c995-4c29-93a6-1847a9993a4e",
+          "sequence": 18,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "75d88cb7-c0f7-48a4-b8d0-c38349a08e14",
+          "sequence": 19,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "02bf4f06-fa7c-42cd-9ed2-fc28000c085b",
+          "sequence": 20,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "2fdba7c1-2182-4277-ad1b-c90ac02ef707",
+          "sequence": 21,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "65e08bf5-e876-495b-911c-f5460f36becd",
+          "sequence": 22,
+          "type": "completed",
+          "codexEventType": "turn.completed"
+        },
+        {
+          "id": "26b887a4-da6d-47d1-aac1-1de1dff56de0",
+          "sequence": 23,
+          "type": "task.scope_validation.passed",
+          "codexEventType": null
+        },
+        {
+          "id": "8db06b83-44d3-4475-897c-a4cd47b0ed20",
+          "sequence": 24,
+          "type": "artifact.diff.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "17a2d4d7-45ae-4157-ae67-e047fc9a1ad0",
+          "sequence": 25,
+          "type": "task.completion_validation",
+          "codexEventType": null
+        },
+        {
+          "id": "ba97afa3-eea5-48d5-bf33-252407fd7bd9",
+          "sequence": 26,
+          "type": "artifact.review.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "e9ff0090-d6d3-4760-b1d3-dc54921b9a55",
+          "sequence": 27,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "20b12b0c-f427-46b5-b02e-53ae6b460088",
+          "sequence": 28,
+          "type": "target_lock.released",
+          "codexEventType": null
+        },
+        {
+          "id": "b0360a39-337d-4210-a914-24968bc9b5df",
+          "sequence": 29,
+          "type": "session_queue.advanced",
+          "codexEventType": null
+        },
+        {
+          "id": "932844be-eb1c-43c6-b73b-000e0b52a995",
+          "sequence": 30,
+          "type": "provider.capacity_released",
+          "codexEventType": null
+        }
+      ],
+      "memorySnapshot": {
+        "memorySnapshotId": "90685c84-87e6-47a2-9c30-a9c84371931f",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "a15e25a3694e668e5e2f0469cc9aaf411c1821f376fe8759d2cfd41125a2a150",
+        "retrievalAsOf": "2026-10-07T10:12:30.451612",
+        "agentsMdHash": "133b29e284ef6c4981e900bd1124107b18e0e5191ac5474ae0f613e83ef18d5c",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "10e9fcc4657935e2ad1fd3b8886be216ffb3671df58de424d6dbabb625558c96",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "8b468be296398c6e39ff0c27bc9e43b78be5c70b192231e5667c7054d94256b6",
+        "runtimeConfigVersion": "b72d19215a436c2923a98ffe0c6fdd38abd213ece278fe0064b1347a0c36d0be",
+        "contextPackHash": "3671a36bcfcb6abbdbb635b6dbee10bd77ae788c943ac2d8147337673cf0ba54",
+        "createdAt": "2026-10-07T10:12:30.451612"
+      },
+      "memoryUsage": {
+        "schemaVersion": "memory_usage_v1",
+        "evidenceType": "prepared_provider_request",
+        "memorySnapshotId": "90685c84-87e6-47a2-9c30-a9c84371931f",
+        "snapshotContentStatus": "frozen",
+        "snapshotItemsHash": "a15e25a3694e668e5e2f0469cc9aaf411c1821f376fe8759d2cfd41125a2a150",
+        "visibleMemoriesHash": "bfbd75f724ba07aea6275711da5d8bf6488d86fa5009bb4799ab48c913b9cf13",
+        "items": [
+          {
+            "id": "38769d56-4e5b-488a-80d8-10f2ef42a4b9",
+            "version": 1,
+            "contentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1",
+            "rank": 1,
+            "score": 27.0529,
+            "matchedTerms": [
+              "do",
+              "keep",
+              "named",
+              "not",
+              "or",
+              "the"
+            ],
+            "layer": "rule",
+            "selectionReason": "applicable_trusted_rule",
+            "visibleFields": [
+              "agentRoles",
+              "contentHash",
+              "contentMd",
+              "id",
+              "layer",
+              "matchedTerms",
+              "rank",
+              "scope",
+              "score",
+              "selectionReason",
+              "source",
+              "status",
+              "targetIds",
+              "title",
+              "trustLevel",
+              "type",
+              "version"
+            ],
+            "contentVisible": true,
+            "visibleContentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1"
+          }
+        ],
+        "selection": {
+          "policyVersion": "memory_rule_budget_v1",
+          "budgetUnit": "serialized_json_characters",
+          "maxChars": 16000,
+          "usedChars": 722,
+          "experienceLimit": 5,
+          "selectedCounts": {
+            "rule": 1,
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByBudget": {
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByExperienceLimit": 0
+        },
+        "visibleChars": 722
+      },
+      "canonicalContextHash": "bc1e49ec7cc8970565d011d037f2da3323944a75f14a1d8c048481841bbf20f6",
+      "memoryReceiptValid": true,
+      "scope": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "582527fa-1112-48f1-9c51-ce76dca304e6",
+        "targetId": "external-bench-title-normalization",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "status": "passed",
+        "changedPathCount": 1,
+        "timestamp": "2026-10-07T10:12:59.434593+00:00",
+        "errorCode": null,
+        "reason": null
+      },
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "582527fa-1112-48f1-9c51-ce76dca304e6",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "b8bf5b23-f325-4573-9ef4-ddf190cffb50",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffs": [
+        {
+          "id": "b8bf5b23-f325-4573-9ef4-ddf190cffb50",
+          "artifactId": "6127bf30-06bb-4d4f-8dae-1b3a9f469b4d",
+          "changedFiles": [
+            "src/domain.mjs"
+          ],
+          "patchHash": "88c718dbcc4c74f1a1eca17d99d1bace18acbda051df34819f6ef278b2f7e719",
+          "matchesWorkingTree": true
+        }
+      ],
+      "diffValid": true,
+      "immutableInputs": true,
+      "resultFileHash": "3b0638958ec69bd19193b322c794a0999e039adb26f6cf89c6531628733b2a7c",
+      "postCheck": {
+        "exitCode": 0,
+        "counts": {
+          "tests": 3,
+          "pass": 3,
+          "fail": 0
+        },
+        "stdoutHash": "2db7ad276252b3a4d8cdd163628d053fe06f6d1f009cfcb7eaf4a3e6c077b871",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "artifacts": [
+        {
+          "id": "6127bf30-06bb-4d4f-8dae-1b3a9f469b4d",
+          "type": "diff",
+          "status": "ready"
+        },
+        {
+          "id": "c068d027-7011-4baa-908b-7e1abaa73a9e",
+          "type": "review",
+          "status": "passed"
+        }
+      ],
+      "failureGates": []
+    },
+    {
+      "caseId": "invoice-discount",
+      "verdict": "passed",
+      "baseCommit": "ea1e241db7d3f01079f8e393825144b23ea2f407",
+      "inputHashes": {
+        "src/domain.mjs": "e0d3d953908fd5abb947764a6fe7379594524f7dc13bdfe5a2701ca2d0170071",
+        "src/App.jsx": "7c836364c2df4417d66eeb4d73062729d9dec485db44c8ea71059419e0daf319",
+        "src/main.jsx": "a26b7120ee6b82fa97b58803a3f682d199cb18aed2affbd8582212204035eb1d",
+        "index.html": "0a2edc447e41e9443e76e3be2833a1d0218287f1199d475f74f51e05b83d2c95",
+        "package.json": "7c93bd07c3547fab31ce87483b0dfa9ca103e760ff302073ab461ddf1ececa01"
+      },
+      "evaluatorHash": "ebe2e41c5f60028177c8e19b3dec2754e5f00a2c2d1e29ba3d33d36a286cdc43",
+      "promptHash": "783d0e1c98b73f4fcffa208efab22364fa24791ce346ee266c07091c08c16cde",
+      "expectedTests": 4,
+      "baselineCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 4,
+          "pass": 0,
+          "fail": 4
+        },
+        "stdoutHash": "6a1799676cd923b69212af465e4c93383bba97d73547b12bfadf6b0c44128bb8",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "baselineFailing": true,
+      "providerTurnObserved": true,
+      "taskId": "65c45797-be59-4381-ad33-678564610b9e",
+      "taskRunId": "339432d5-770e-4b85-b478-773ab403b9be",
+      "sessionId": "61ff9317-1a70-4f28-befe-62df7acdb102",
+      "targetId": "external-bench-invoice-discount",
+      "state": "completed",
+      "errorCode": null,
+      "errorMessage": null,
+      "executionErrorType": null,
+      "elapsedSeconds": 49.562,
+      "adapterRunId": "codex-0ce25167-3db0-4d62-b085-67066a6b8b0a",
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "codex",
+        "providerId": "local-codex-cli",
+        "source": "explicit",
+        "targetId": "external-bench-invoice-discount",
+        "supportedMode": "write",
+        "fallbackPolicy": "explicit_only"
+      },
+      "model": null,
+      "providerHealth": {
+        "providerId": "local-codex-cli",
+        "adapterType": "codex",
+        "status": "healthy",
+        "available": true,
+        "reason": "CLI executable and startup probe are available.",
+        "checkedAt": "2026-10-07T10:13:00.548373",
+        "safeDetails": {
+          "command": "codex.exe",
+          "probe": "version",
+          "executable": "codex.exe",
+          "exitCode": 0,
+          "output": "codex-cli 0.162.0-alpha.2",
+          "rawRedacted": true
+        }
+      },
+      "providerMessages": [
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"agent_message\",\"text\":\"I\\u2019ll inspect `src/domain.mjs` and implement the validation and discount calculation within that file only.\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"export function invoiceTotalCents(lines) {\\r\\n  return lines.reduce((total, line) => total + line.priceCents * line.quantity, 0);\\r\\n}\\r\\n\",\"exit_code\":0,\"status\":\"completed\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_2\",\"type\":\"file_change\",\"changes\":[{\"path\":\"C:\\\\Users\\\\XCC\\\\AppData\\\\Local\\\\Temp\\\\agenthub-windows-sandbox-fixed-suite-20261007\\\\invoice-discount\\\\target\\\\src\\\\domain.mjs\",\"kind\":\"update\"}],\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"file_change\",\"changes\":[{\"path\":\"C:\\\\Users\\\\XCC\\\\AppData\\\\Local\\\\Temp\\\\agenthub-windows-sandbox-fixed-suite-20261007\\\\invoice-discount\\\\target\\\\src\\\\domain.mjs\",\"kind\":\"update\"}],\"status\":\"completed\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command \\\"@'\\nimport assert from 'node:assert/strict';\\nimport { invoiceTotalCents } from './src/domain.mjs';\\nconst lines = Object.freeze([Object.freeze({ priceCents: 125, quantity: 3 }), Object.freeze({ priceCents: 50, quantity: 2 })]);\\nassert.equal(invoiceTotalCents(lines), 475);\\nassert.equal(invoiceTotalCents(lines, 1000), 428);\\nassert.equal(invoiceTotalCents([{ priceCents: 1, quantity: 1 }], 5000), 1);\\nassert.equal(invoiceTotalCents(lines, 10000), 0);\\nassert.equal(invoiceTotalCents([]), 0);\\nassert.equal(invoiceTotalCents([{ priceCents: Number.MAX_SAFE_INTEGER, quantity: 1 }]), Number.MAX_SAFE_INTEGER);\\nfor (const value of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '1', null, undefined]) {\\n  assert.throws(() => invoiceTotalCents([{ priceCents: value, quantity: 1 }]), RangeError);\\n  assert.throws(() => invoiceTotalCents([{ priceCents: 1, quantity: value }]), RangeError);\\n}\\nfor (const discount of [-1, 10001, 0.5, NaN, Infinity, '1', null]) {\\n  assert.throws(() => invoiceTotalCents(lines, discount), RangeError);\\n}\\nassert.throws(() => invoiceTotalCents([{ priceCents: Number.MAX_SAFE_INTEGER, quantity: 2 }], 10000), RangeError);\\nassert.throws(() => invoiceTotalCents([{ priceCents: Number.MAX_SAFE_INTEGER, quantity: 1 }, { priceCents: 1, quantity: 1 }]), RangeError);\\nconsole.log('Targeted invoice assertions passed.');\\n'@ | node --input-type=module\\\"\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command \\\"@'\\nimport assert from 'node:assert/strict';\\nimport { invoiceTotalCents } from './src/domain.mjs';\\nconst lines = Object.freeze([Object.freeze({ priceCents: 125, quantity: 3 }), Object.freeze({ priceCents: 50, quantity: 2 })]);\\nassert.equal(invoiceTotalCents(lines), 475);\\nassert.equal(invoiceTotalCents(lines, 1000), 428);\\nassert.equal(invoiceTotalCents([{ priceCents: 1, quantity: 1 }], 5000), 1);\\nassert.equal(invoiceTotalCents(lines, 10000), 0);\\nassert.equal(invoiceTotalCents([]), 0);\\nassert.equal(invoiceTotalCents([{ priceCents: Number.MAX_SAFE_INTEGER, quantity: 1 }]), Number.MAX_SAFE_INTEGER);\\nfor (const value of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '1', null, undefined]) {\\n  assert.throws(() => invoiceTotalCents([{ priceCents: value, quantity: 1 }]), RangeError);\\n  assert.throws(() => invoiceTotalCents([{ priceCents: 1, quantity: value }]), RangeError);\\n}\\nfor (const discount of [-1, 10001, 0.5, NaN, Infinity, '1', null]) {\\n  assert.throws(() => invoiceTotalCents(lines, discount), RangeError);\\n}\\nassert.throws(() => invoiceTotalCents([{ priceCents: Number.MAX_SAFE_INTEGER, quantity: 2 }], 10000), RangeError);\\nassert.throws(() => invoiceTotalCents([{ priceCents: Number.MAX_SAFE_INTEGER, quantity: 1 }, { priceCents: 1, quantity: 1 }]), RangeError);\\nconsole.log('Targeted invoice assertions passed.');\\n'@ | node --input-type=module\\\"\",\"aggregated_output\":\"Targeted invoice assertions passed.\\n\",\"exit_code\":0,\"status\":\"completed\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_4\",\"type\":\"agent_message\",\"text\":\"Implemented in `src/domain.mjs` only. Preserved the named export, added `RangeError` validation, and used exact integer arithmetic for discounting and final cent rounding without mutating inputs.\\n\\nTargeted assertions passed for rounding, invalid values, overflow, and frozen inputs.\"}}"
+      ],
+      "providerDiagnostics": [
+        {
+          "eventId": "47e51e89-ef85-4fed-91b9-4a85717bf6be",
+          "exitCode": 0,
+          "stderrExcerpt": "Reading additional input from stdin...\n"
+        }
+      ],
+      "events": [
+        {
+          "id": "ecef6da7-ada6-4a25-a67a-e75b3fb95fa6",
+          "sequence": 1,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "16bf3d69-ff66-4339-8a74-7d99ebb9cf23",
+          "sequence": 2,
+          "type": "session_queue.enqueued",
+          "codexEventType": null
+        },
+        {
+          "id": "bb1c10a1-6ccb-4d86-b708-089442fed602",
+          "sequence": 3,
+          "type": "task.checkpoint.created",
+          "codexEventType": null
+        },
+        {
+          "id": "1b5a97a2-a4b1-453a-9192-9dfc313b6c5f",
+          "sequence": 4,
+          "type": "run.claimed",
+          "codexEventType": null
+        },
+        {
+          "id": "a713baa3-565c-4d62-905c-b6f3bfd0a39c",
+          "sequence": 5,
+          "type": "session_queue.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "8a0b3626-921d-47cc-b3ca-208389b2ad01",
+          "sequence": 6,
+          "type": "target_lock.acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "7492958b-344d-4c9f-9eb6-0f286fc71b0c",
+          "sequence": 7,
+          "type": "session_queue.running",
+          "codexEventType": null
+        },
+        {
+          "id": "55f6651d-acb9-479f-bfde-9955a558a7f7",
+          "sequence": 8,
+          "type": "task.heartbeat",
+          "codexEventType": null
+        },
+        {
+          "id": "90f08361-dc28-4884-85ee-a5908844d791",
+          "sequence": 9,
+          "type": "provider.resolved",
+          "codexEventType": null
+        },
+        {
+          "id": "aa0eb869-25bd-47cc-8781-aa70f47c8a87",
+          "sequence": 10,
+          "type": "provider.health_checked",
+          "codexEventType": null
+        },
+        {
+          "id": "f2e6790c-7987-482c-84fb-3362087c285a",
+          "sequence": 11,
+          "type": "provider.capacity_acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "265118c4-8143-4b9b-8f23-10a6214266f7",
+          "sequence": 12,
+          "type": "task.state",
+          "codexEventType": "thread.started"
+        },
+        {
+          "id": "6a2b07cf-90e7-4b22-a39b-f76fbdd3f233",
+          "sequence": 13,
+          "type": "task.state",
+          "codexEventType": "turn.started"
+        },
+        {
+          "id": "3db0f851-a837-4459-bcaa-cd9d07becc1d",
+          "sequence": 14,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "da5fdc83-6fc9-4207-8339-cf9eb45dd0fc",
+          "sequence": 15,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "e237af3b-29be-483f-a906-e6e2d288869a",
+          "sequence": 16,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "f13d6a0c-7804-4f50-9535-b04c978a726a",
+          "sequence": 17,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "b7ebdedd-c0f1-40f6-af00-65fa3f730589",
+          "sequence": 18,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "5b64fbbe-6771-4ffe-a72c-3db5ae09e1c9",
+          "sequence": 19,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "939192de-6769-4bfb-b56b-51906ae17f3e",
+          "sequence": 20,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "61c149d2-40b3-42f0-ab6b-ce96c8c7201e",
+          "sequence": 21,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "47e51e89-ef85-4fed-91b9-4a85717bf6be",
+          "sequence": 22,
+          "type": "completed",
+          "codexEventType": "turn.completed"
+        },
+        {
+          "id": "218ec347-0272-4dfa-981a-173fc54a86fa",
+          "sequence": 23,
+          "type": "task.scope_validation.passed",
+          "codexEventType": null
+        },
+        {
+          "id": "c1a0b514-908e-49ed-8b6e-1ee7b96c8ca3",
+          "sequence": 24,
+          "type": "artifact.diff.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "bf5eba7b-c65b-440a-b6f3-fcf5b586afe6",
+          "sequence": 25,
+          "type": "task.completion_validation",
+          "codexEventType": null
+        },
+        {
+          "id": "d6dc967c-c4d2-4ea4-814f-38a63583db08",
+          "sequence": 26,
+          "type": "artifact.review.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "3f25075a-7c6c-46e2-baf2-9e3afcfbbf48",
+          "sequence": 27,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "c081c907-42fb-4444-9f1c-c7b0e8e0ab32",
+          "sequence": 28,
+          "type": "target_lock.released",
+          "codexEventType": null
+        },
+        {
+          "id": "affb49ea-f46b-45ae-99f0-8cb89e006656",
+          "sequence": 29,
+          "type": "session_queue.advanced",
+          "codexEventType": null
+        },
+        {
+          "id": "5dfc2b00-d100-4407-b32a-25a3b0700ffb",
+          "sequence": 30,
+          "type": "provider.capacity_released",
+          "codexEventType": null
+        }
+      ],
+      "memorySnapshot": {
+        "memorySnapshotId": "6a721042-8a3a-4928-9ae1-2812f7866667",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "a15e25a3694e668e5e2f0469cc9aaf411c1821f376fe8759d2cfd41125a2a150",
+        "retrievalAsOf": "2026-10-07T10:13:00.217526",
+        "agentsMdHash": "8220ae18bb8807951914f1ed053e40b1aad94ebfe789280a1588b6d3f9aef259",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "10e9fcc4657935e2ad1fd3b8886be216ffb3671df58de424d6dbabb625558c96",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "de6cd5405b11c39bb9fbd648f7802b5199fe22a4b97fa67bec5c96f1122dd4d4",
+        "runtimeConfigVersion": "b72d19215a436c2923a98ffe0c6fdd38abd213ece278fe0064b1347a0c36d0be",
+        "contextPackHash": "b26a5b899903c3ce1868062a2bf530e655d8ea8e66bc9595cfb750a76ba86e20",
+        "createdAt": "2026-10-07T10:13:00.217526"
+      },
+      "memoryUsage": {
+        "schemaVersion": "memory_usage_v1",
+        "evidenceType": "prepared_provider_request",
+        "memorySnapshotId": "6a721042-8a3a-4928-9ae1-2812f7866667",
+        "snapshotContentStatus": "frozen",
+        "snapshotItemsHash": "a15e25a3694e668e5e2f0469cc9aaf411c1821f376fe8759d2cfd41125a2a150",
+        "visibleMemoriesHash": "0ab5239ad91e44c0aa99071eff6ed5bf7817cfbe30dbbeeb118d7ef9ac796539",
+        "items": [
+          {
+            "id": "38769d56-4e5b-488a-80d8-10f2ef42a4b9",
+            "version": 1,
+            "contentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1",
+            "rank": 1,
+            "score": 26.7,
+            "matchedTerms": [
+              "do",
+              "keep",
+              "named",
+              "not",
+              "or",
+              "the"
+            ],
+            "layer": "rule",
+            "selectionReason": "applicable_trusted_rule",
+            "visibleFields": [
+              "agentRoles",
+              "contentHash",
+              "contentMd",
+              "id",
+              "layer",
+              "matchedTerms",
+              "rank",
+              "scope",
+              "score",
+              "selectionReason",
+              "source",
+              "status",
+              "targetIds",
+              "title",
+              "trustLevel",
+              "type",
+              "version"
+            ],
+            "contentVisible": true,
+            "visibleContentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1"
+          }
+        ],
+        "selection": {
+          "policyVersion": "memory_rule_budget_v1",
+          "budgetUnit": "serialized_json_characters",
+          "maxChars": 16000,
+          "usedChars": 719,
+          "experienceLimit": 5,
+          "selectedCounts": {
+            "rule": 1,
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByBudget": {
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByExperienceLimit": 0
+        },
+        "visibleChars": 719
+      },
+      "canonicalContextHash": "eb227178df39e2640cdc6b788ec41a23f812ad88f4283e9d32315c57058d8135",
+      "memoryReceiptValid": true,
+      "scope": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "339432d5-770e-4b85-b478-773ab403b9be",
+        "targetId": "external-bench-invoice-discount",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "status": "passed",
+        "changedPathCount": 1,
+        "timestamp": "2026-10-07T10:13:49.460491+00:00",
+        "errorCode": null,
+        "reason": null
+      },
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "339432d5-770e-4b85-b478-773ab403b9be",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "d6a5a483-37d3-443f-baf7-e8bcf50ba362",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffs": [
+        {
+          "id": "d6a5a483-37d3-443f-baf7-e8bcf50ba362",
+          "artifactId": "03e3ab56-6186-407e-a089-c713ce19c4e8",
+          "changedFiles": [
+            "src/domain.mjs"
+          ],
+          "patchHash": "9d8522ff21c2564ca32bf59ac9a7660812cc7f2d3529256eb25d87e55d01c165",
+          "matchesWorkingTree": true
+        }
+      ],
+      "diffValid": true,
+      "immutableInputs": true,
+      "resultFileHash": "60f2756a9e601e728a60de17cbce6776e1477250652ce5fcc8f33035e20dba85",
+      "postCheck": {
+        "exitCode": 0,
+        "counts": {
+          "tests": 4,
+          "pass": 4,
+          "fail": 0
+        },
+        "stdoutHash": "7445dcf60037d1fbf5f27350cebd1fae0ec107ad93a3be0625a5a1b68e8edf75",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.062
+      },
+      "artifacts": [
+        {
+          "id": "03e3ab56-6186-407e-a089-c713ce19c4e8",
+          "type": "diff",
+          "status": "ready"
+        },
+        {
+          "id": "a594e7e8-d955-474b-ae71-d876a0493cca",
+          "type": "review",
+          "status": "passed"
+        }
+      ],
+      "failureGates": []
+    },
+    {
+      "caseId": "catalog-search",
+      "verdict": "passed",
+      "baseCommit": "e1de4f3244753f42d8a29b2e48d3a31e053897a0",
+      "inputHashes": {
+        "src/domain.mjs": "35a182c141ff6f415d5f250ef3fc2eb468fcc1781867ed390ec311db4f31a981",
+        "src/App.jsx": "b1d8472676d6da41520073674a38e820828af369d2aa761de28e884af3fadebc",
+        "src/main.jsx": "a26b7120ee6b82fa97b58803a3f682d199cb18aed2affbd8582212204035eb1d",
+        "index.html": "0a2edc447e41e9443e76e3be2833a1d0218287f1199d475f74f51e05b83d2c95",
+        "package.json": "baab849d73ee5f804af8bddac9d8fe74a3db3fc6aca3202a1b877fea03a90f47"
+      },
+      "evaluatorHash": "4c2f565aae8ccfc39aedcd58b7a73a2f9e15001d7e045681ee0683eeda08852c",
+      "promptHash": "57ca97bfc3816a1da6506f3ab5457ce376c72fe261a01834a46c82b5cb2eb262",
+      "expectedTests": 3,
+      "baselineCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 3,
+          "pass": 0,
+          "fail": 3
+        },
+        "stdoutHash": "5afa4f59134f763e6540208f0c12538937d65022b0ed0df9467b5f908e631424",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.063
+      },
+      "baselineFailing": true,
+      "providerTurnObserved": true,
+      "taskId": "1a174bcb-73ad-4774-bc5d-eda8d10ce6e8",
+      "taskRunId": "1ae9af3f-aaa3-4a97-bd37-31f1a4b243ad",
+      "sessionId": "60c0f49e-8bf6-48c5-9151-4a27a76b069a",
+      "targetId": "external-bench-catalog-search",
+      "state": "completed",
+      "errorCode": null,
+      "errorMessage": null,
+      "executionErrorType": null,
+      "elapsedSeconds": 44.766,
+      "adapterRunId": "codex-5f2d8787-8ef2-4b15-91dd-1936838da980",
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "codex",
+        "providerId": "local-codex-cli",
+        "source": "explicit",
+        "targetId": "external-bench-catalog-search",
+        "supportedMode": "write",
+        "fallbackPolicy": "explicit_only"
+      },
+      "model": null,
+      "providerHealth": {
+        "providerId": "local-codex-cli",
+        "adapterType": "codex",
+        "status": "healthy",
+        "available": true,
+        "reason": "CLI executable and startup probe are available.",
+        "checkedAt": "2026-10-07T10:13:50.543018",
+        "safeDetails": {
+          "command": "codex.exe",
+          "probe": "version",
+          "executable": "codex.exe",
+          "exitCode": 0,
+          "output": "codex-cli 0.162.0-alpha.2",
+          "rawRedacted": true
+        }
+      },
+      "providerMessages": [
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"file_change\",\"changes\":[{\"path\":\"C:\\\\Users\\\\XCC\\\\AppData\\\\Local\\\\Temp\\\\agenthub-windows-sandbox-fixed-suite-20261007\\\\catalog-search\\\\target\\\\src\\\\domain.mjs\",\"kind\":\"update\"}],\"status\":\"completed\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"export function searchBooks(books, query) {\\r\\n  const normalizedQuery = query.trim().toLowerCase();\\r\\n\\r\\n  return books.filter((book) =>\\r\\n    book.title.toLowerCase().includes(normalizedQuery) ||\\r\\n    book.author.toLowerCase().includes(normalizedQuery)\\r\\n  );\\r\\n}\\r\\n\",\"exit_code\":0,\"status\":\"completed\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_4\",\"type\":\"file_change\",\"changes\":[{\"path\":\"C:\\\\Users\\\\XCC\\\\AppData\\\\Local\\\\Temp\\\\agenthub-windows-sandbox-fixed-suite-20261007\\\\catalog-search\\\\target\\\\src\\\\domain.mjs\",\"kind\":\"update\"}],\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_4\",\"type\":\"file_change\",\"changes\":[{\"path\":\"C:\\\\Users\\\\XCC\\\\AppData\\\\Local\\\\Temp\\\\agenthub-windows-sandbox-fixed-suite-20261007\\\\catalog-search\\\\target\\\\src\\\\domain.mjs\",\"kind\":\"update\"}],\"status\":\"completed\"}}",
+        "{\"type\":\"item.started\",\"item\":{\"id\":\"item_5\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_5\",\"type\":\"command_execution\",\"command\":\"\\\"C:\\\\\\\\Users\\\\\\\\XCC\\\\\\\\.cache\\\\\\\\codex-runtimes\\\\\\\\codex-primary-runtime\\\\\\\\dependencies\\\\\\\\native\\\\\\\\powershell\\\\\\\\pwsh.exe\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'\",\"aggregated_output\":\"export function searchBooks(books, query) {\\r\\n  const normalizedQuery = query.trim().toLowerCase();\\r\\n\\r\\n  if (normalizedQuery === '') {\\r\\n    return books.slice();\\r\\n  }\\r\\n\\r\\n  return books.filter((book) =>\\r\\n    book.title.toLowerCase().includes(normalizedQuery) ||\\r\\n    book.author.toLowerCase().includes(normalizedQuery)\\r\\n  );\\r\\n}\\r\\n\",\"exit_code\":0,\"status\":\"completed\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_6\",\"type\":\"agent_message\",\"text\":\"Updated only `src/domain.mjs`. Search now trims the query and matches title or author case-insensitively. Blank queries return a new array; results preserve order and original book identities without mutation. The named export remains intact.\\n\\nReviewed the saved code. No validation commands were configured or run.\"}}"
+      ],
+      "providerDiagnostics": [
+        {
+          "eventId": "357c5940-632d-4f2c-b1f7-e7c42616df43",
+          "exitCode": 0,
+          "stderrExcerpt": "Reading additional input from stdin...\n"
+        }
+      ],
+      "events": [
+        {
+          "id": "2769f7f9-311f-4bf3-96d8-5510affcfd3f",
+          "sequence": 1,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "5e5f9357-b25c-4feb-a5c6-b4042a1dd990",
+          "sequence": 2,
+          "type": "session_queue.enqueued",
+          "codexEventType": null
+        },
+        {
+          "id": "e497d9a6-837d-42dc-bc77-34a822f89a5a",
+          "sequence": 3,
+          "type": "task.checkpoint.created",
+          "codexEventType": null
+        },
+        {
+          "id": "1ee47b49-2f2c-40eb-8c89-a0540f77793f",
+          "sequence": 4,
+          "type": "run.claimed",
+          "codexEventType": null
+        },
+        {
+          "id": "fa29bcbc-4605-47b6-8b67-d3ed163d9d5f",
+          "sequence": 5,
+          "type": "session_queue.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "c1e99ab8-f60c-4eb8-b5c4-cce3ba567923",
+          "sequence": 6,
+          "type": "target_lock.acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "ca679be9-79b3-46fe-ada0-2a4e9cc81dd6",
+          "sequence": 7,
+          "type": "session_queue.running",
+          "codexEventType": null
+        },
+        {
+          "id": "f18515d7-4a32-4549-be9e-392d3a01c2d3",
+          "sequence": 8,
+          "type": "task.heartbeat",
+          "codexEventType": null
+        },
+        {
+          "id": "b0eacca4-51d6-4f35-b449-2e27acc24362",
+          "sequence": 9,
+          "type": "provider.resolved",
+          "codexEventType": null
+        },
+        {
+          "id": "0164529d-703b-424f-9760-99b0b976b0bb",
+          "sequence": 10,
+          "type": "provider.health_checked",
+          "codexEventType": null
+        },
+        {
+          "id": "718e5157-4d44-499a-8cce-43a7dba29737",
+          "sequence": 11,
+          "type": "provider.capacity_acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "41c299a4-c33f-4e5c-b012-df35058d5987",
+          "sequence": 12,
+          "type": "task.state",
+          "codexEventType": "thread.started"
+        },
+        {
+          "id": "6e54d942-60b0-4064-99f8-1e23e9c75832",
+          "sequence": 13,
+          "type": "task.state",
+          "codexEventType": "turn.started"
+        },
+        {
+          "id": "5b6b7cef-8ce4-4f99-a169-a219765b4cbf",
+          "sequence": 14,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "f930f5cc-d52a-41ee-bcc6-4f46dec5d073",
+          "sequence": 15,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "8271208e-3429-4d2c-bf6d-242daa5918e0",
+          "sequence": 16,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "43c0168e-0531-41f6-95ca-0a709d2573b4",
+          "sequence": 17,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "d5d6ad68-1d1e-47f6-a354-f55b288c2337",
+          "sequence": 18,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "cad40a5c-0acc-40c4-8465-d4acff9a33e1",
+          "sequence": 19,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "69064c07-219d-45ee-94b9-afb89ea437cb",
+          "sequence": 20,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "2df6eaaa-b1f3-49bf-9977-8955cd334565",
+          "sequence": 21,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "ffef96b1-8a61-4d61-a9db-938de8f46e55",
+          "sequence": 22,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "84722222-6324-40dd-b9ab-0cf1a983ea80",
+          "sequence": 23,
+          "type": "message.delta",
+          "codexEventType": "item.started"
+        },
+        {
+          "id": "ddf7ca44-8b28-4dd0-96c0-66565aefe654",
+          "sequence": 24,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "4745c613-fd83-4008-80a6-cdea909d148b",
+          "sequence": 25,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "357c5940-632d-4f2c-b1f7-e7c42616df43",
+          "sequence": 26,
+          "type": "completed",
+          "codexEventType": "turn.completed"
+        },
+        {
+          "id": "b0a7c70a-a660-4d18-b51e-dfb61396af4e",
+          "sequence": 27,
+          "type": "task.scope_validation.passed",
+          "codexEventType": null
+        },
+        {
+          "id": "706ac9f5-dd49-42ba-bcf5-f1028c5fac64",
+          "sequence": 28,
+          "type": "artifact.diff.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "029f72ac-a9df-400e-9896-5f34629f6ee8",
+          "sequence": 29,
+          "type": "task.completion_validation",
+          "codexEventType": null
+        },
+        {
+          "id": "995bc1b9-d251-417d-a5fd-a8408296a986",
+          "sequence": 30,
+          "type": "artifact.review.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "170b6409-0f4e-4e1e-91f4-14dcdf1c6f42",
+          "sequence": 31,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "3d565553-c299-4703-8770-00f5dca32e74",
+          "sequence": 32,
+          "type": "target_lock.released",
+          "codexEventType": null
+        },
+        {
+          "id": "ea09d4d2-ce55-446c-9594-a9fce9358faa",
+          "sequence": 33,
+          "type": "session_queue.advanced",
+          "codexEventType": null
+        },
+        {
+          "id": "67c35a29-d307-479d-b47a-5f015c1c9e2e",
+          "sequence": 34,
+          "type": "provider.capacity_released",
+          "codexEventType": null
+        }
+      ],
+      "memorySnapshot": {
+        "memorySnapshotId": "deb295da-e788-4271-809b-d8f07ef2e61a",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "a15e25a3694e668e5e2f0469cc9aaf411c1821f376fe8759d2cfd41125a2a150",
+        "retrievalAsOf": "2026-10-07T10:13:50.212470",
+        "agentsMdHash": "6ea7f5fa3596b6494c77b44c16e722d391c884c13c07a1ae0b23b0c01c7ae521",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "10e9fcc4657935e2ad1fd3b8886be216ffb3671df58de424d6dbabb625558c96",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "37d1b6b5b545e768b58c5b55ff33b74f78e0c1deb812d9822e7f25fbb6c4b5a5",
+        "runtimeConfigVersion": "b72d19215a436c2923a98ffe0c6fdd38abd213ece278fe0064b1347a0c36d0be",
+        "contextPackHash": "b57117e08f58f8971ae12ea6fd5456e407f9675884714187d3aacd7bde609aaa",
+        "createdAt": "2026-10-07T10:13:50.212470"
+      },
+      "memoryUsage": {
+        "schemaVersion": "memory_usage_v1",
+        "evidenceType": "prepared_provider_request",
+        "memorySnapshotId": "deb295da-e788-4271-809b-d8f07ef2e61a",
+        "snapshotContentStatus": "frozen",
+        "snapshotItemsHash": "a15e25a3694e668e5e2f0469cc9aaf411c1821f376fe8759d2cfd41125a2a150",
+        "visibleMemoriesHash": "812422787524f91c1c5349e09113c43f8675afa1b980247fc88e73ac63ecda4e",
+        "items": [
+          {
+            "id": "38769d56-4e5b-488a-80d8-10f2ef42a4b9",
+            "version": 1,
+            "contentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1",
+            "rank": 1,
+            "score": 26.8579,
+            "matchedTerms": [
+              "do",
+              "keep",
+              "named",
+              "not",
+              "or",
+              "the"
+            ],
+            "layer": "rule",
+            "selectionReason": "applicable_trusted_rule",
+            "visibleFields": [
+              "agentRoles",
+              "contentHash",
+              "contentMd",
+              "id",
+              "layer",
+              "matchedTerms",
+              "rank",
+              "scope",
+              "score",
+              "selectionReason",
+              "source",
+              "status",
+              "targetIds",
+              "title",
+              "trustLevel",
+              "type",
+              "version"
+            ],
+            "contentVisible": true,
+            "visibleContentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1"
+          }
+        ],
+        "selection": {
+          "policyVersion": "memory_rule_budget_v1",
+          "budgetUnit": "serialized_json_characters",
+          "maxChars": 16000,
+          "usedChars": 722,
+          "experienceLimit": 5,
+          "selectedCounts": {
+            "rule": 1,
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByBudget": {
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByExperienceLimit": 0
+        },
+        "visibleChars": 722
+      },
+      "canonicalContextHash": "356453192cf736791a52c9a9e223a9aba1f2806675579e86d99c49f699eaaa57",
+      "memoryReceiptValid": true,
+      "scope": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "1ae9af3f-aaa3-4a97-bd37-31f1a4b243ad",
+        "targetId": "external-bench-catalog-search",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "status": "passed",
+        "changedPathCount": 1,
+        "timestamp": "2026-10-07T10:14:34.623452+00:00",
+        "errorCode": null,
+        "reason": null
+      },
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "1ae9af3f-aaa3-4a97-bd37-31f1a4b243ad",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "75e2f1a0-d7d0-49f3-980f-6e16c50b9f1d",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffs": [
+        {
+          "id": "75e2f1a0-d7d0-49f3-980f-6e16c50b9f1d",
+          "artifactId": "c20ee6e2-44d6-400f-86cc-ebaa04be51a5",
+          "changedFiles": [
+            "src/domain.mjs"
+          ],
+          "patchHash": "c1538a886993394587d99d2bd1a9219b0ba98808b986d2ed96a7e6f607530312",
+          "matchesWorkingTree": true
+        }
+      ],
+      "diffValid": true,
+      "immutableInputs": true,
+      "resultFileHash": "0670928efff2a03cd217d7ff3091fa61669da7bae210f3e8f580e67f3bc264c1",
+      "postCheck": {
+        "exitCode": 0,
+        "counts": {
+          "tests": 3,
+          "pass": 3,
+          "fail": 0
+        },
+        "stdoutHash": "c43769fbcf35559b3282ac06233c7c0c06a7fefa11ed45c81d45cfa91019fce7",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "artifacts": [
+        {
+          "id": "c20ee6e2-44d6-400f-86cc-ebaa04be51a5",
+          "type": "diff",
+          "status": "ready"
+        },
+        {
+          "id": "12e6f268-cdf2-4415-ba85-ae4a1f2b3c3e",
+          "type": "review",
+          "status": "passed"
+        }
+      ],
+      "failureGates": []
+    }
+  ],
+  "summary": {
+    "selectedCases": 3,
+    "passedCases": 3,
+    "failedCases": 0,
+    "notAttemptedCases": 0,
+    "providerTurnsObserved": 3,
+    "successRate": 1.0
+  }
+}

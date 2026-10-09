@@ -1,0 +1,30 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+________ test_old_pinned_message_reaches_planner_and_execution_context ________
+
+    def test_old_pinned_message_reaches_planner_and_execution_context():
+        with conversation() as (db, session, frontend):
+            started = datetime(2026, 10, 8)
+            pinned = Message(session_id=session.id, sender_type="user", content_md="The button label is PINNED_CONTEXT_PROBE.", created_at=started, pinned_at=started)
+            messages = [Message(session_id=session.id, sender_type="user", content_md=f"Recent note {index}", created_at=started + timedelta(minutes=index+1)) for index in range(10)]
+            task = Task(session_id=session.id, title="Apply the pinned label", intent_type="frontend_change", assigned_agent_id=frontend.id, created_by_message_id=messages[-1].id, plan_json=json.dumps({"targetId": "demo-frontend", "originalRequest": "Apply the pinned label"}))
+            db.add_all([pinned, *messages, task])
+            db.commit()
+            planner = build_llm_planner_input(db, messages[-1])["canonicalSharedContext"]["fields"]
+            coding = build_session_context_pack(db, task)
+            assert pinned.id not in {item["id"] for item in coding["recentMessages"]}
+>           assert [item["id"] for item in coding["pinnedMessageContext"]["messages"]] == [pinned.id]
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           KeyError: 'pinnedMessageContext'
+
+tests\test_pinned_message_context.py:38: KeyError
+============================== warnings summary ===============================
+app\models.py:14: 4 warnings
+tests/test_pinned_message_context.py: 16 warnings
+  X:\Git_Clone\AgentHub\apps\api\app\models.py:14: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_pinned_message_context.py::test_old_pinned_message_reaches_planner_and_execution_context
+1 failed, 20 warnings in 0.59s

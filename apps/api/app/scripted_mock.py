@@ -1,3 +1,4 @@
+import json
 import re
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -17,10 +18,66 @@ from app.guardrails import evaluate_network_access, evaluate_path
 
 LOGIN_SLOT_TARGET = 'data-agenthub-target="login-page-slot"'
 PRIMARY_BUTTON_TARGET = 'data-agenthub-target="primary-action-button"'
+SCRIPTED_TARGET_MUTATIONS = {
+    "login_page": "login_page",
+    "primary_action_button_text": "primary_button_copy",
+    "demo_heading_text": "demo_heading_copy",
+}
+LOGIN_STYLE_START = "/* AgentHub scripted login form: start */"
+LOGIN_STYLE_END = "/* AgentHub scripted login form: end */"
+LOGIN_FORM_STYLES = """.login-form {
+  display: grid;
+  gap: 20px;
+  margin-top: 22px;
+  min-width: 0;
+}
+
+.login-form label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: #31405c;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.login-form input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #c9d5e6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  transition: border-color 120ms ease;
+}
+
+.login-form input::placeholder {
+  color: #65738b;
+  opacity: 1;
+}
+
+.login-form input:hover {
+  border-color: #93a8c4;
+}
+
+.login-form input:focus-visible {
+  border-color: #2563eb;
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+"""
 
 
 class ScriptedMockAdapter(AgentAdapter):
-    def __init__(self) -> None:
+    def __init__(self, *, read_only: bool = False) -> None:
+        self._read_only = read_only
         self._runs: dict[str, AgentRunRequest] = {}
         self._interrupted: set[str] = set()
 
@@ -29,7 +86,7 @@ class ScriptedMockAdapter(AgentAdapter):
             supportsStreaming=True,
             supportsInterrupt=True,
             supportsApproval=True,
-            supportsFileEdit=True,
+            supportsFileEdit=not self._read_only,
             supportsShellCommand=False,
             supportsDiffArtifact=False,
             supportsPreviewArtifact=False,
@@ -38,6 +95,12 @@ class ScriptedMockAdapter(AgentAdapter):
         )
 
     async def createRun(self, request: AgentRunRequest) -> AdapterRun:
+        if self._read_only and (
+            request.plan_context.get("planner") != "explicit_group_v1"
+            or request.plan_context.get("readOnly") is not True
+            or request.plan_context.get("assignedRole") not in {"qa", "review"}
+        ):
+            raise ValueError("Read-only scripted review requires an explicit group review task.")
         run_id = f"scripted-mock-{uuid4()}"
         self._runs[run_id] = request
         return AdapterRun(adapterRunId=run_id)
@@ -45,6 +108,13 @@ class ScriptedMockAdapter(AgentAdapter):
     async def streamEvents(self, run_id: str) -> AsyncIterator[AgentEvent]:
         request = self._request_for(run_id)
         task_run_id = request.task_run_id
+
+        if request.has_attachments or request.images:
+            yield _event("error", task_run_id, {
+                "code": "ATTACHMENTS_REQUIRE_NATIVE_AGENT",
+                "message": "脚本演示不支持理解附件。请选择原生 Agent，或新建无附件会话并明确描述修改。",
+            })
+            return
 
         yield _event(
             "task.state",
@@ -85,6 +155,16 @@ class ScriptedMockAdapter(AgentAdapter):
                     "message": "Forced scripted mock failure requested.",
                 },
             )
+            return
+
+        if self._read_only:
+            # The server collects the real target Diff and produces the existing
+            # bounded scripted report. This branch never performs a demo mutation.
+            yield _event("message.delta", task_run_id, {
+                "text": "只读脚本评审：由服务端收集当前目标的真实 Diff 并生成规则报告；未调用模型，也未执行测试命令。",
+                "source": "scripted_mock", "readOnly": True,
+            })
+            yield _event("completed", task_run_id, {"adapter": "scripted_mock", "readOnly": True, "changedFiles": []})
             return
 
         network_decision = evaluate_network_access()
@@ -135,7 +215,7 @@ class ScriptedMockAdapter(AgentAdapter):
         )
 
         try:
-            mutation = self._apply_mutation(app_path, request)
+            mutation, changed_files = self._apply_mutation(app_path, request)
         except ValueError as exc:
             yield _event(
                 "error",
@@ -150,7 +230,7 @@ class ScriptedMockAdapter(AgentAdapter):
             {
                 "state": "applying_changes",
                 "adapter": "scripted_mock",
-                "changedFiles": ["apps/demo/src/App.tsx"],
+                "changedFiles": changed_files,
                 "mutation": mutation,
             },
         )
@@ -159,7 +239,7 @@ class ScriptedMockAdapter(AgentAdapter):
             task_run_id,
             {
                 "adapter": "scripted_mock",
-                "changedFiles": ["apps/demo/src/App.tsx"],
+                "changedFiles": changed_files,
                 "mutation": mutation,
             },
         )
@@ -183,27 +263,98 @@ class ScriptedMockAdapter(AgentAdapter):
             raise ValueError(f"Unknown scripted mock run: {run_id}")
         return request
 
-    def _apply_mutation(self, app_path: Path, request: AgentRunRequest) -> str:
-        source = app_path.read_text()
-        instruction = request.instruction.lower()
-        script = str(request.plan_context.get("script") or "").lower()
+    def _apply_mutation(self, app_path: Path, request: AgentRunRequest) -> tuple[str, list[str]]:
+        original_app = app_path.read_bytes()
+        source = app_path.read_text(encoding="utf-8")
+        if "target" in request.plan_context:
+            target = request.plan_context["target"]
+            if not isinstance(target, str) or target not in SCRIPTED_TARGET_MUTATIONS:
+                raise ValueError("Unsupported scripted demo task target.")
+            mutation = SCRIPTED_TARGET_MUTATIONS[target]
+            target_text = request.plan_context.get("targetText")
+            if mutation != "login_page":
+                if not isinstance(target_text, str) or not target_text.strip():
+                    raise ValueError("Scripted copy changes require nonempty targetText.")
+                target_text = target_text.strip()
+        else:
+            # Compatibility for legacy demo requests without a structured plan.
+            instruction = request.instruction.lower()
+            script = str(request.plan_context.get("script") or "").lower()
+            target_text = _target_text_from(request)
+            if "heading" in instruction or "title" in instruction or "heading" in script:
+                mutation = "demo_heading_copy"
+            elif "button" in instruction or "button" in script:
+                mutation = "primary_button_copy"
+            else:
+                mutation = "login_page"
 
-        target_text = _target_text_from(request)
-        if "heading" in instruction or "title" in instruction or "heading" in script:
+        if mutation == "demo_heading_copy":
             updated = _replace_demo_heading_text(source, target_text or "Welcome back")
-            mutation = "demo_heading_copy"
-        elif "button" in instruction or "button" in script:
+        elif mutation == "primary_button_copy":
             updated = _replace_primary_button_text(source, target_text or "Let's get started")
-            mutation = "primary_button_copy"
         else:
             updated = _replace_login_slot(source)
-            mutation = "login_page"
 
-        if updated == source:
+        changes: list[tuple[Path, Optional[bytes], bytes]] = []
+        if mutation == "login_page":
+            styles_path = app_path.with_name("styles.css")
+            if not evaluate_path(styles_path, request.worktree_path).allowed or styles_path.is_symlink():
+                raise ValueError("The scripted demo stylesheet is unsafe.")
+            try:
+                if styles_path.exists() and (not styles_path.is_file() or styles_path.stat().st_nlink > 1):
+                    raise ValueError("The scripted demo stylesheet is unsafe.")
+                original_styles = styles_path.read_bytes() if styles_path.exists() else None
+            except OSError as exc:
+                raise ValueError("Could not read the scripted demo stylesheet.") from exc
+            updated_styles = _login_form_styles(original_styles or b"")
+            if updated_styles != original_styles:
+                changes.append((styles_path, original_styles, updated_styles))
+        if updated != source:
+            newline = "\r\n" if b"\r\n" in original_app else "\n"
+            changes.append((app_path, original_app, updated.replace("\n", newline).encode("utf-8")))
+        if not changes:
             raise ValueError("The scripted mutation did not change the demo app.")
 
-        app_path.write_text(updated)
-        return mutation
+        _write_demo_mutation(changes)
+        return mutation, [path.relative_to(request.worktree_path).as_posix() for path, _, _ in changes]
+
+
+def _login_form_styles(original: bytes) -> bytes:
+    source = original.decode("utf-8")
+    newline = "\r\n" if "\r\n" in source else "\n"
+    block = (LOGIN_STYLE_START + "\n" + LOGIN_FORM_STYLES + LOGIN_STYLE_END).replace("\n", newline)
+    starts, ends = source.count(LOGIN_STYLE_START), source.count(LOGIN_STYLE_END)
+    if starts or ends:
+        if starts != 1 or ends != 1 or source.index(LOGIN_STYLE_START) >= source.index(LOGIN_STYLE_END):
+            raise ValueError("The scripted login stylesheet has ambiguous managed markers.")
+        begin = source.index(LOGIN_STYLE_START)
+        end = source.index(LOGIN_STYLE_END) + len(LOGIN_STYLE_END)
+        return (source[:begin] + block + source[end:]).encode("utf-8")
+    separator = newline if not source or source.endswith("\n") else newline * 2
+    return original + (separator + block + newline).encode("utf-8")
+
+
+def _write_demo_mutation(changes: list[tuple[Path, Optional[bytes], bytes]]) -> None:
+    attempted: list[tuple[Path, Optional[bytes]]] = []
+    try:
+        for path, original, updated in changes:
+            attempted.append((path, original))
+            path.write_bytes(updated)
+    except OSError as exc:
+        restored = True
+        for path, original in reversed(attempted):
+            try:
+                if original is None:
+                    path.unlink(missing_ok=True)
+                elif not path.exists() or path.read_bytes() != original:
+                    path.write_bytes(original)
+            except OSError:
+                restored = False
+        message = (
+            "Could not write the scripted demo mutation; original files restored."
+            if restored else "Could not write the scripted demo mutation; file restoration failed."
+        )
+        raise ValueError(message) from exc
 
 
 def _replace_login_slot(source: str) -> str:
@@ -224,11 +375,11 @@ def _replace_login_slot(source: str) -> str:
         "            <form className=\"login-form\" aria-label=\"Demo login form\">\n"
         "              <label>\n"
         "                Email address\n"
-        "                <input type=\"email\" placeholder=\"you@example.com\" />\n"
+        "                <input type=\"email\" name=\"email\" autoComplete=\"username\" placeholder=\"you@example.com\" />\n"
         "              </label>\n"
         "              <label>\n"
         "                Password\n"
-        "                <input type=\"password\" placeholder=\"Enter your password\" />\n"
+        "                <input type=\"password\" name=\"password\" autoComplete=\"current-password\" placeholder=\"Enter your password\" />\n"
         "              </label>\n"
         "            </form>"
         r"\2"
@@ -252,7 +403,7 @@ def _replace_primary_button_text(source: str, target_text: str) -> str:
         re.DOTALL,
     )
     updated, count = pattern.subn(
-        rf"\1            {_escape_replacement(target_text)}\2",
+        lambda match: f"{match[1]}            {_jsx_copy_text(target_text)}{match[2]}",
         source,
         count=1,
     )
@@ -264,7 +415,7 @@ def _replace_primary_button_text(source: str, target_text: str) -> str:
 def _replace_demo_heading_text(source: str, target_text: str) -> str:
     pattern = re.compile(r'(<h1\s+id="demo-heading"\s*>).*?(</h1>)', re.DOTALL)
     updated, count = pattern.subn(
-        rf"\1{_escape_replacement(target_text)}\2",
+        lambda match: f"{match[1]}{_jsx_copy_text(target_text)}{match[2]}",
         source,
         count=1,
     )
@@ -285,8 +436,13 @@ def _target_text_from(request: AgentRunRequest) -> Optional[str]:
     return None
 
 
-def _escape_replacement(value: str) -> str:
-    return value.replace("\\", r"\\")
+def _jsx_copy_text(value: str) -> str:
+    if not any(ord(char) < 32 or char in "&<>{}\u2028\u2029" for char in value):
+        return value
+    # String data only. Escape closing-tag characters to keep future anchor
+    # replacements from matching tag spelling inside the serialized value.
+    literal = json.dumps(value, ensure_ascii=True).replace("<", r"\u003c").replace(">", r"\u003e")
+    return "{" + literal + "}"
 
 
 def _event(event_type: str, task_run_id: str, payload: dict) -> AgentEvent:

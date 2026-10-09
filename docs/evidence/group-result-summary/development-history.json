@@ -1,0 +1,20 @@
+{
+  "sessionId": "5892afce-bbc3-4717-b1bc-9012a83847a8",
+  "accepted": false,
+  "reason": "Initial Review artifact status check misclassified complete execution as awaiting_action; fixed before a fresh accepted session",
+  "summaryAttempts": [
+    {
+      "id": "363a88f6-96f3-4eb5-b27d-645b3b7d2f49",
+      "state": "completed",
+      "outcome": "awaiting_action",
+      "current": false
+    },
+    {
+      "id": "b7f78510-5d19-40bd-b9ed-4d2ed47fcf26",
+      "state": "completed",
+      "outcome": "completed",
+      "current": true
+    }
+  ],
+  "earlyTestRunsAccepted": false
+}

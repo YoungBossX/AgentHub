@@ -17,6 +17,7 @@ from app.events import append_task_run_event
 from app.models import utc_now
 from app.models import TaskRun
 from app.process_environment import adapter_process_env, redact_process_evidence
+from app.claude_executable import resolve_claude_executable
 from app.provider_configs import ProviderConfig, list_provider_configs
 
 CodingAdapterType = Literal["claude_code", "codex", "scripted_mock"]
@@ -379,6 +380,8 @@ class ProviderHealthProbe:
     ) -> ProviderHealthResult:
         command = _configured_cli_command(provider.adapter_type)
         executable = self._command_lookup(command)
+        if executable is not None and provider.adapter_type == "claude_code":
+            executable = resolve_claude_executable(executable)
         safe_command = _safe_command_summary(command)
         if executable is None:
             return ProviderHealthResult(
@@ -1232,6 +1235,8 @@ def _coding_provider_from_config(
         if role not in NON_CODING_ROLES
     )
     adapter_type = _coding_adapter_type_or_raise(provider.adapter_type)
+    if provider.adapter_type == "claude_code" and "review" in provider.supported_modes:
+        roles = (*roles, "review") if "review" not in roles else roles
     return CodingProviderMetadata(
         provider_id=provider.provider_id,
         display_name=provider.display_name,
@@ -1431,6 +1436,8 @@ def _run_version_probe(
             capture_output=True,
             check=False,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=3,
             env=adapter_process_env(adapter_type),
         )

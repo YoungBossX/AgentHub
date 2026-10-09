@@ -2,6 +2,8 @@ import json
 import subprocess
 from typing import Optional
 
+import pytest
+
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, Session as DbSession, create_engine, select
 
@@ -293,10 +295,24 @@ def test_record_provider_resolution_event_updates_task_run_metrics() -> None:
     )
 
 
-def test_provider_health_probe_reports_healthy_cli_without_leaking_path() -> None:
+@pytest.mark.parametrize(
+    ("configured_command", "safe_command"),
+    [("codex", "codex"), ("C:/private/tools/codex.exe", "codex.exe")],
+)
+def test_provider_health_probe_reports_healthy_cli_without_leaking_path(
+    monkeypatch, configured_command: str, safe_command: str,
+) -> None:
+    # The developer's configured launcher must not determine this contract test.
+    monkeypatch.setenv("CODEX_CLI_PATH", configured_command)
     provider = ProviderRegistry().get("local-codex-cli")
+    looked_up: list[str] = []
+
+    def lookup(command: str) -> str:
+        looked_up.append(command)
+        return "/Users/demo/.env/bin/codex"
+
     probe = ProviderHealthProbe(
-        command_lookup=lambda command: "/Users/demo/.env/bin/codex",
+        command_lookup=lookup,
         version_runner=lambda executable: (
             True,
             {"output": "codex 1.0 token=secret-value", "executable": executable},
@@ -308,9 +324,11 @@ def test_provider_health_probe_reports_healthy_cli_without_leaking_path() -> Non
 
     assert health.status == "healthy"
     assert health.available is True
-    assert evidence["safeDetails"]["command"] == "codex"
+    assert looked_up == [configured_command]
+    assert evidence["safeDetails"]["command"] == safe_command
     assert "secret-value" not in evidence["safeDetails"]["output"]
     assert "/Users/demo/.env/bin/codex" not in json.dumps(evidence)
+    assert "C:/private/tools" not in json.dumps(evidence)
 
 
 def test_default_provider_health_probe_uses_selected_adapter_environment(

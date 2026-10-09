@@ -1,0 +1,288 @@
+
+> agenthub@ dev:local X:\Git_Clone\AgentHub
+> node scripts/local-dev.mjs "--api-port" "8007" "--web-port" "3001"
+
+[local] Dependencies and ports OK: Node 22.19.0, Python 3.12.7.
+[local] Starting API.
+INFO:     Started server process [65680]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8007 (Press CTRL+C to quit)
+[agenthub-ready:555f995d-3233-4bfa-9c02-f723e5a940a4]
+INFO:     127.0.0.1:7841 - "GET /health HTTP/1.1" 200 OK
+[local] Starting Web.
+▲ Next.js 16.3.4 (Turbopack)
+- Local:         http://127.0.0.1:3001
+- Network:       http://127.0.0.1:3001
+✓ Ready in 333ms
+✓ Running next.config.ts took 27ms
+
+INFO:     127.0.0.1:7846 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7847 - "GET /workspaces/demo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7846 - "GET /workspaces/26959f2b-0630-46ec-b9d3-2ac255f68279/agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7847 - "GET /workspaces/26959f2b-0630-46ec-b9d3-2ac255f68279/sessions?view=all HTTP/1.1" 200 OK
+[local] Ready: http://127.0.0.1:3001/ (API http://127.0.0.1:8007)
+[local] Ctrl+C to stop. API source changes require a restart; dev:api retains reload mode.
+ GET / 200 in 575ms (next.js: 311ms, application-code: 264ms)
+INFO:     127.0.0.1:7850 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7849 - "GET /sessions/4efe70ea-875d-4f1f-a0de-369239de18bf HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7851 - "GET /sessions/713c9ed3-d447-4270-98ce-44f10ab794bb HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7850 - "GET /sessions/4efe70ea-875d-4f1f-a0de-369239de18bf/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7849 - "GET /sessions/713c9ed3-d447-4270-98ce-44f10ab794bb/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7851 - "GET /sessions/4efe70ea-875d-4f1f-a0de-369239de18bf/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7850 - "GET /sessions/713c9ed3-d447-4270-98ce-44f10ab794bb/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7852 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7849 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7846 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7847 - "GET /workspaces/demo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7846 - "GET /workspaces/26959f2b-0630-46ec-b9d3-2ac255f68279/agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7847 - "GET /workspaces/26959f2b-0630-46ec-b9d3-2ac255f68279/sessions?view=all HTTP/1.1" 200 OK
+ GET /?session=e4757e21-fa23-4dbd-910e-d193db6ca170 200 in 71ms (next.js: 3ms, application-code: 68ms)
+INFO:     127.0.0.1:6089 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6089 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/events?stream=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7849 - "POST /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/preview HTTP/1.1" 201 Created
+INFO:     127.0.0.1:9637 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /sessions/e4757e21-fa23-4dbd-910e-d193db6ca170/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7850 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/57ce4ca9-e5d6-4e02-a276-dcf927220a74/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1552 - "GET /task-runs/7a52e464-90fc-453f-b3aa-be992b69acf7/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7052 - "GET /task-runs/86071df1-ad1f-48c3-93b6-ce19dc5811fa/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:6603 - "GET /task-runs/da115b97-364f-4ae9-b72c-be5b63a930d8/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2150 - "GET /task-runs/8cb16676-6aac-482c-b857-b82a2fb0d1b3/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9637 - "GET /task-runs/588cb978-e643-4983-91b9-56563b6ebfa5/previews HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for connections to close. (CTRL+C to force quit)
+ERROR:    Cancel 1 running task(s), timeout graceful shutdown exceeded
+INFO:     Waiting for application shutdown.
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\fastapi\applications.py", line 1134, in __call__
+    await super().__call__(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\applications.py", line 107, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
+    await self.app(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\fastapi\routing.py", line 125, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\fastapi\routing.py", line 112, in app
+    await response(scope, receive, send)
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\responses.py", line 270, in __call__
+    async with anyio.create_task_group() as task_group:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
+    raise exc_val
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\responses.py", line 277, in __call__
+    await wrap(partial(self.listen_for_disconnect, receive))
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\responses.py", line 273, in wrap
+    await func()
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\starlette\responses.py", line 241, in listen_for_disconnect
+    message = await receive()
+              ^^^^^^^^^^^^^^^
+  File "X:\Git_Clone\AgentHub\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 563, in receive
+    await self.message_event.wait()
+  File "E:\Anaconda\Lib\asyncio\locks.py", line 212, in wait
+    await fut
+asyncio.exceptions.CancelledError: Task cancelled, timeout graceful shutdown exceeded
+INFO:     Application shutdown complete.
+INFO:     Finished server process [65680]
+[local] Owned services stopped. Sessions and worktrees retained.

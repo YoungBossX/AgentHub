@@ -1,0 +1,82 @@
+{
+  "recordedAt": "2026-10-07T11:55:36.060443+00:00",
+  "change": "agenthub-resizable-workbench-columns",
+  "task": "1.1",
+  "sourceHashes": {
+    "apps/web/src/components/workbench-layout.tsx": "09fcf450fb018d4f79b2a3c4722485eca1aabc9adf27fbfbe1f2362e54db1999",
+    "apps/web/src/components/workbench-layout.test.tsx": "b602517e2630f95b1d09a4a215bfccab62cdc86fca69d3fa6e29285cfb7d846d",
+    "apps/web/src/components/workspace-shell.tsx": "4099ad09c93b00c5af5e337ade8ba07c211c1c104c5d68c6f04062474d42d9da",
+    "apps/web/src/app/globals.css": "3f396c75ca7b301d7b89c79a74e77f5a978ccbca5251363a018c70613c304c8d"
+  },
+  "screenshots": [
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-columns-dark.jpg",
+      "sha256": "244faf740d32462aa6fb6cab82f4e1263820503aec5df8c3eaee8a6bcfd800a6",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-columns-resized.jpg",
+      "sha256": "c025612317b9a7ed166144c01b71c95633c0e0a3106c315c64d8d5bc39d68280",
+      "dimensions": [
+        1440,
+        900
+      ]
+    }
+  ],
+  "verification": {
+    "webTestFiles": 18,
+    "webTestsPassed": 159,
+    "pnpmCheck": "passed",
+    "strictOpenSpec": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "browser": {
+    "viewport": [
+      1440,
+      900
+    ],
+    "sidebarDrag": [
+      220,
+      300
+    ],
+    "inspectorDrag": [
+      360,
+      500
+    ],
+    "measuredResizedColumns": [
+      300,
+      640,
+      500
+    ],
+    "shieldRemovedAfterDrag": true,
+    "reloadedWidths": [
+      300,
+      500
+    ],
+    "doubleClickRestoredWidths": [
+      220,
+      360
+    ],
+    "sidebarArrowRight": 236,
+    "expandedRestoredCollapsedSeparatorCounts": [
+      0,
+      2,
+      1
+    ],
+    "darkThemeInspected": true,
+    "mobileViewport": [
+      390,
+      844
+    ],
+    "mobileDocumentWidth": 390,
+    "mobileSeparatorsDisplay": "none"
+  },
+  "boundaries": [
+    "Historical runtime data for visual acceptance only; no new agent run",
+    "Preview iframe content and security policy unchanged",
+    "No dependency installation, backend code changes, commit or push"
+  ]
+}

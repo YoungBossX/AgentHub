@@ -1,0 +1,307 @@
+{
+  "mode": "fixed",
+  "cases": [
+    {
+      "route": "direct",
+      "runId": "8c1740a4-c753-4adc-9c54-736bf21fad3b",
+      "target": "button",
+      "expected": "登入 </button><b>{name}</b> &amp; \\1 $&",
+      "actualText": "登入 </button><b>{name}</b> &amp; \\1 $&",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "direct",
+      "runId": "7d89d9cc-91f8-430a-aa9b-6df215910b17",
+      "target": "button",
+      "expected": "Plain after literal",
+      "actualText": "Plain after literal",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "direct",
+      "runId": "5f31f2d6-aa1c-492c-ad0d-99cefae93346",
+      "target": "heading",
+      "expected": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+      "actualText": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "direct",
+      "runId": "aea6a7c8-f23b-44e6-97ff-d119c251e8ab",
+      "target": "heading",
+      "expected": "Plain heading after literal",
+      "actualText": "Plain heading after literal",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "group",
+      "runId": "a770d74c-f3d0-434f-899a-2cda418f0099",
+      "target": "button",
+      "expected": "登入 </button><b>{name}</b> &amp; \\1 $&",
+      "actualText": "登入 </button><b>{name}</b> &amp; \\1 $&",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "group",
+      "runId": "a84dab64-2d81-4895-aced-844406db3067",
+      "target": "button",
+      "expected": "Plain after literal",
+      "actualText": "Plain after literal",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "group",
+      "runId": "ca630c1b-ba36-4144-9edd-373363736db5",
+      "target": "heading",
+      "expected": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+      "actualText": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "group",
+      "runId": "0b66517e-8b1d-4bf3-975d-b80387d2ea82",
+      "target": "heading",
+      "expected": "Plain heading after literal",
+      "actualText": "Plain heading after literal",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "orchestrator",
+      "runId": "65e78650-56be-43f1-ab63-e7d8bc6b0e5d",
+      "target": "button",
+      "expected": "登入 </button><b>{name}</b> &amp; \\1 $&",
+      "actualText": "登入 </button><b>{name}</b> &amp; \\1 $&",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "orchestrator",
+      "runId": "7d15e980-5eea-4c7f-8a61-162be931917a",
+      "target": "button",
+      "expected": "Plain after literal",
+      "actualText": "Plain after literal",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "orchestrator",
+      "runId": "dda9decd-b3bc-497d-9946-371360c17fb3",
+      "target": "heading",
+      "expected": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+      "actualText": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "orchestrator",
+      "runId": "b0876cac-26b0-4d26-a43d-cdf193632c31",
+      "target": "heading",
+      "expected": "Plain heading after literal",
+      "actualText": "Plain heading after literal",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    },
+    {
+      "route": "group-restored",
+      "runId": "0b66517e-8b1d-4bf3-975d-b80387d2ea82",
+      "target": "heading",
+      "expected": "Plain heading after literal",
+      "actualText": "Plain heading after literal",
+      "childElements": 0,
+      "errors": [],
+      "rendered": true,
+      "healthStatus": "healthy"
+    }
+  ],
+  "checks": [
+    "direct: actual bound copy events/Diff/Preview; unchanged styles; structured task target text preserved",
+    "group: actual bound copy events/Diff/Preview; unchanged styles; structured task target text preserved",
+    "orchestrator: actual bound copy events/Diff/Preview; unchanged styles; structured task target text preserved"
+  ],
+  "routes": [
+    {
+      "route": "direct",
+      "sessionId": "53bff155-bca0-4783-ab70-7cdb0e59b342",
+      "loginRunId": "591e4280-c62a-44a7-9e8d-90f408395772",
+      "runs": [
+        {
+          "target": "button",
+          "value": "登入 </button><b>{name}</b> &amp; \\1 $&",
+          "taskId": "3e0b7777-fb6b-4fc4-bd98-dc75e4fccb2a",
+          "failedRunId": "1afb1c07-e04f-42b8-a903-9bafffdfdd13",
+          "scriptedRunId": "8c1740a4-c753-4adc-9c54-736bf21fad3b",
+          "diffId": "45ae2630-4555-456f-aa1d-31a0a9beba11",
+          "previewId": "e40c2179-272f-4e02-b0f8-ae7752ea05c0"
+        },
+        {
+          "target": "button",
+          "value": "Plain after literal",
+          "taskId": "f4e2dcd0-b483-4636-ae51-494c80b36888",
+          "failedRunId": "1755e5ae-4e84-476f-bbc8-a5918f132e8b",
+          "scriptedRunId": "7d89d9cc-91f8-430a-aa9b-6df215910b17",
+          "diffId": "3568cc82-e459-4142-9248-1f96ada8fc42",
+          "previewId": "0d196854-227a-4281-99f0-f1530148586b"
+        },
+        {
+          "target": "heading",
+          "value": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+          "taskId": "2e6cd302-a312-484e-8791-102697466684",
+          "failedRunId": "fc03d428-f7aa-463e-af72-9d99164d6c8a",
+          "scriptedRunId": "5f31f2d6-aa1c-492c-ad0d-99cefae93346",
+          "diffId": "f2435d9d-b25a-4b3a-89b6-c8b66da73139",
+          "previewId": "9b160429-8752-4532-88a6-2ee02faad827"
+        },
+        {
+          "target": "heading",
+          "value": "Plain heading after literal",
+          "taskId": "80875d0c-f263-4932-b4f8-5b91ff66a48d",
+          "failedRunId": "044e8988-be93-4dad-8797-fe20f212c0bd",
+          "scriptedRunId": "aea6a7c8-f23b-44e6-97ff-d119c251e8ab",
+          "diffId": "9781205a-7c62-4d37-8e8c-1f423d981782",
+          "previewId": "21e78e2a-709a-4e39-9f84-2154589a586a"
+        }
+      ],
+      "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb",
+      "sourceSha256": "cd85cfb44e92c6de1126fefe93fe5499466ab44f32ee942445e1dbd68f6323be"
+    },
+    {
+      "route": "group",
+      "sessionId": "48f42f8f-ad93-4b1a-a828-e84b5c071d3b",
+      "loginRunId": "3ac4ab68-8255-4eda-975a-7d3878ebc5ff",
+      "runs": [
+        {
+          "target": "button",
+          "value": "登入 </button><b>{name}</b> &amp; \\1 $&",
+          "taskId": "24862d4c-9511-4816-8ed0-e440257cd107",
+          "failedRunId": "c29e38cb-2832-48bf-a845-f97ff9dada42",
+          "scriptedRunId": "a770d74c-f3d0-434f-899a-2cda418f0099",
+          "diffId": "c98a8870-005f-4515-8ac7-1c66163fd6a1",
+          "previewId": "3f48025b-1db8-43b8-b415-de8d31608b4a"
+        },
+        {
+          "target": "button",
+          "value": "Plain after literal",
+          "taskId": "d5443844-80ee-472a-9a12-d46ef8bf093c",
+          "failedRunId": "ae3edb04-2cef-4633-8def-9d3572b380dd",
+          "scriptedRunId": "a84dab64-2d81-4895-aced-844406db3067",
+          "diffId": "789057d1-6986-45b0-b85a-46c43fb0b360",
+          "previewId": "559b8faf-5345-4adb-8a90-872022bc8b11"
+        },
+        {
+          "target": "heading",
+          "value": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+          "taskId": "37fcbea5-4aba-485a-b0c2-a7275a80a0fd",
+          "failedRunId": "a51b4876-68f7-4e72-924b-8668e4e7dc3f",
+          "scriptedRunId": "ca630c1b-ba36-4144-9edd-373363736db5",
+          "diffId": "b57810ea-64ad-4ac7-a349-02ab086a7121",
+          "previewId": "2d1b3ed0-d84b-4a84-a0d4-f9697567ba10"
+        },
+        {
+          "target": "heading",
+          "value": "Plain heading after literal",
+          "taskId": "56d7a4b2-b288-45f8-99cc-48e6cbc564a0",
+          "failedRunId": "3dd8eb5b-9823-41aa-87fa-5364ab564bb6",
+          "scriptedRunId": "0b66517e-8b1d-4bf3-975d-b80387d2ea82",
+          "diffId": "99eef151-c543-439f-90c0-2aaf136bedc8",
+          "previewId": "2003d699-faf5-4413-aa9d-64c4f7bf5195"
+        }
+      ],
+      "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb",
+      "sourceSha256": "cd85cfb44e92c6de1126fefe93fe5499466ab44f32ee942445e1dbd68f6323be"
+    },
+    {
+      "route": "orchestrator",
+      "sessionId": "8b81a0a5-33cc-41db-ae28-9ce0b5efc982",
+      "loginRunId": "f664c53b-c618-4dd1-ab1f-fdbf206d7faa",
+      "runs": [
+        {
+          "target": "button",
+          "value": "登入 </button><b>{name}</b> &amp; \\1 $&",
+          "taskId": "71baccff-d8f6-4ce6-be52-a504ffc612f5",
+          "failedRunId": "acd0563a-29ec-4d75-b123-aab3fc09e651",
+          "scriptedRunId": "65e78650-56be-43f1-ab63-e7d8bc6b0e5d",
+          "diffId": "c0cc22d1-965c-4f19-ae36-52d165b7f941",
+          "previewId": "cee8d42b-ea2a-4554-a188-1eeb6921179f"
+        },
+        {
+          "target": "button",
+          "value": "Plain after literal",
+          "taskId": "743d0cf9-34fe-48e5-b2d6-966eef0487d3",
+          "failedRunId": "a34fd32a-317b-4ef6-9899-7ba16938844c",
+          "scriptedRunId": "7d15e980-5eea-4c7f-8a61-162be931917a",
+          "diffId": "11818854-def5-4edc-bccc-4051489febbf",
+          "previewId": "6039e40b-cb18-4116-a3a4-707bfcc3878d"
+        },
+        {
+          "target": "heading",
+          "value": "标题 </h1><b>{x}</b> &lt; \\g<1> $&",
+          "taskId": "d89db748-23d4-4f7b-a6b2-7d5133952384",
+          "failedRunId": "42c8736b-d250-4bf2-ac9d-e8771f8c26a5",
+          "scriptedRunId": "dda9decd-b3bc-497d-9946-371360c17fb3",
+          "diffId": "47602f06-2f50-4239-9ae5-bf508a6b1123",
+          "previewId": "7ad21786-92a4-4c0e-85e5-ec2794d60de3"
+        },
+        {
+          "target": "heading",
+          "value": "Plain heading after literal",
+          "taskId": "f977da10-a9c2-4f8c-99f7-6b2dec889e74",
+          "failedRunId": "c9bfd86c-9cf6-465c-bec1-2e16c03683aa",
+          "scriptedRunId": "b0876cac-26b0-4d26-a43d-cdf193632c31",
+          "diffId": "3fb1a834-8ae0-4a46-9161-5ac7fe82337d",
+          "previewId": "fb7b934a-c0e9-4ec1-b867-12b4d81c9219"
+        }
+      ],
+      "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb",
+      "sourceSha256": "cd85cfb44e92c6de1126fefe93fe5499466ab44f32ee942445e1dbd68f6323be"
+    }
+  ],
+  "boundaries": [
+    "Fresh isolated SQLite; deterministic planner; no model invocation",
+    "Direct/Orchestrator initial failures deliberately simulated; automatic group and follow-up CLI deliberately unavailable",
+    "All recovered writes are explicitly ScriptedMock; independent group review is scripted"
+  ],
+  "executedSourceSha256": {
+    "apps/api/app/scripted_mock.py": "112629dcb6d1eedbac3c8edb2e62eed52fb6be5bb0259167ec59bb99a71bd988",
+    "apps/api/app/planning.py": "e4f5ce7f27298d08814d2afe7a739057bc333d14eede8c71d3a1769a7037400b",
+    "apps/api/app/planning_intents.py": "a1c2d45ee0d4fb5e1381cf40c0d56cab923728d2e8f369614d4dd95283d4ffb4",
+    "apps/api/app/planning_tasks.py": "918daf358e15226b4726e39453294561c9ff9300ecd1b7a10721ae74cffedadd",
+    "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28"
+  },
+  "acceptanceScriptSha256": "8f91f608f38813a6f5a9642bbed118ed989012c2d8e144c85184f864ae9e7d72",
+  "historySha256Before": "d7fc4b2798c08cf905074acd32029994c1d29fd4e0de4629aaf6384c192a2247",
+  "historySha256After": "d7fc4b2798c08cf905074acd32029994c1d29fd4e0de4629aaf6384c192a2247",
+  "existingSessionSha256": "c8ecf6b8257c68b2c2d6162c50a3a6d0abfdde852f72bf436687a1292b735201",
+  "existingSourceSha256": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5"
+}

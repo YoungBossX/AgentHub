@@ -1,0 +1,197 @@
+{
+  "errors": [],
+  "generations": [
+    {
+      "status": 200,
+      "kind": "draft",
+      "reply": "好的，已根据您的需求生成前端助手草稿。要点：显示名称“对话生成的界面助手”，@ 别名 created-front-731，使用 Claude Code 的受限文件编辑工具（claude_file_edit，提供方 local-claude-code-cli），仅支持 demo-frontend 目标。System Prompt 已约定：先阅读现有代码、只完成用户指定的修改、保留其他行为；若用户要求修改主标题但未指定文案，则使用“Created Agent 731”，并以中文解释结果。该草稿尚未保存，禁用状态，需您审阅并确认启用后才会生效。",
+      "draft": {
+        "displayName": "对话生成的界面助手",
+        "mentionAlias": "created-front-731",
+        "role": "frontend",
+        "providerId": "local-claude-code-cli",
+        "toolPolicy": "claude_file_edit",
+        "supportedTargets": [
+          "demo-frontend"
+        ],
+        "capabilityTags": [
+          "code_write"
+        ],
+        "systemPrompt": "你是前端编码助手，仅负责 demo-frontend 目标的界面修改。工作流程：1) 先阅读现有代码，理解当前结构与样式；2) 只完成用户明确指定的修改，不扩大改动范围；3) 保留其他未涉及部分的行为与外观不变；4) 若用户要求修改主标题但未提供标题文案，必须使用“Created Agent 731”作为标题文本；5) 完成后用中文简要解释修改内容、涉及文件及结果。输出格式：先给出简短的修改计划，再列出改动说明，最后提示需要用户确认保存。你不负责保存配置或执行部署任务。",
+        "description": "面向 demo-frontend 的前端助手，使用 Claude Code 受限文件编辑工具，先阅读现有代码，仅完成用户指定修改并保留其他行为；主标题未指定文案时使用 Created Agent 731，并以中文解释结果。",
+        "avatarInitials": "对界",
+        "enabled": false
+      },
+      "provenance": {
+        "providerId": "claude-cli-planner",
+        "providerType": "claude_cli",
+        "plannerSource": "real_llm",
+        "status": "succeeded",
+        "durationMs": 10921,
+        "inputSha256": "e2c1890e385fef7b9d8bb6677e099556c8f280b5c1efc85f2b57426e68dae7d7",
+        "outputSha256": "a41c41cc19ea04434cbc4284d0a9fc405a3817973001588f7200c5aedeb572b7",
+        "instructionSha256": "ddf6e1cef327614e8a68d0a016bb293a13c8042d1846471a5bc1921d0756b5c2",
+        "profileId": null
+      }
+    },
+    {
+      "status": 200,
+      "kind": "draft",
+      "reply": "已按您的要求更新草稿：在系统提示词中补充“完成后说明修改范围和验证局限”的约定，同时保留主标题默认文案 Created Agent 731、名称“对话生成的界面助手”、别名 created-front-731，以及您手工编辑的职责说明 MANUAL_DESCRIPTION_731。其余配置（claude_file_edit 工具策略、local-claude-code-cli 提供方、仅支持 demo-frontend 目标）保持不变。草稿仍为禁用状态，需您审阅、选择启用并保存后才会生效。",
+      "draft": {
+        "displayName": "对话生成的界面助手",
+        "mentionAlias": "created-front-731",
+        "role": "frontend",
+        "providerId": "local-claude-code-cli",
+        "toolPolicy": "claude_file_edit",
+        "supportedTargets": [
+          "demo-frontend"
+        ],
+        "capabilityTags": [
+          "code_write"
+        ],
+        "systemPrompt": "你是前端编码助手，仅负责 demo-frontend 目标的界面修改。工作流程：1) 先阅读现有代码，理解当前结构与样式；2) 只完成用户明确指定的修改，不扩大改动范围；3) 保留其他未涉及部分的行为与外观不变；4) 若用户要求修改主标题但未提供标题文案，必须使用“Created Agent 731”作为标题文本；5) 完成后必须说明本次修改范围和验证局限（例如未覆盖的场景、需要人工确认的事项）；6) 用中文简要解释修改内容、涉及文件及结果。输出格式：先给出简短的修改计划，再列出改动说明，接着说明修改范围与验证局限，最后提示需要用户确认保存。你不负责保存配置或执行部署任务。",
+        "description": "手工编辑保留 MANUAL_DESCRIPTION_731",
+        "avatarInitials": "对界",
+        "enabled": false
+      },
+      "provenance": {
+        "providerId": "claude-cli-planner",
+        "providerType": "claude_cli",
+        "plannerSource": "real_llm",
+        "status": "succeeded",
+        "durationMs": 6157,
+        "inputSha256": "02806f80655674cf49fae875ef6baad914cd6273ed1f4147e9afce67fc3722aa",
+        "outputSha256": "15ad066b5eb8ea59d0ece5490a758c21a2974d2c0acd551ebdb7ffce721657fe",
+        "instructionSha256": "ddf6e1cef327614e8a68d0a016bb293a13c8042d1846471a5bc1921d0756b5c2",
+        "profileId": null
+      }
+    }
+  ],
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "beforeProfileIds": [
+    "26143942-7005-496b-a17f-c404a2981f23",
+    "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+    "b5c59dbc-13c4-43e3-bad5-efcc477607eb",
+    "ef29cecd-80bc-4d9e-aa11-4770773ea980",
+    "virtual-review-agent",
+    "virtual-fallback-agent",
+    "6c880742-065f-40df-9eb3-deedb2083cda",
+    "0adf48ff-6952-4b95-93f1-0d564391a315",
+    "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+    "8771ab62-6240-4ccb-8879-eee68fcb432e",
+    "034c1236-8b29-421c-ba86-d62da4d7bacf"
+  ],
+  "disabledProvider": {
+    "status": 409,
+    "detail": {
+      "detail": "规划 Agent 未启用。请先在运行设置中配置并启用 Planner，或使用手动配置。"
+    }
+  },
+  "refreshRestored": true,
+  "profile": {
+    "origin": "custom",
+    "systemPrompt": "你是前端编码助手，仅负责 demo-frontend 目标的界面修改。工作流程：1) 先阅读现有代码，理解当前结构与样式；2) 只完成用户明确指定的修改，不扩大改动范围；3) 保留其他未涉及部分的行为与外观不变；4) 若用户要求修改主标题但未提供标题文案，必须使用“Created Agent 731”作为标题文本；5) 完成后必须说明本次修改范围和验证局限（例如未覆盖的场景、需要人工确认的事项）；6) 用中文简要解释修改内容、涉及文件及结果。输出格式：先给出简短的修改计划，再列出改动说明，接着说明修改范围与验证局限，最后提示需要用户确认保存。你不负责保存配置或执行部署任务。",
+    "mentionAlias": "created-front-731",
+    "toolPolicy": "claude_file_edit",
+    "id": "faab6604-01ed-492a-9016-fb24162b0cda",
+    "displayName": "对话界面助手 · 手工确认",
+    "avatarInitials": "对界",
+    "role": "frontend",
+    "adapterType": "claude_code",
+    "providerId": "local-claude-code-cli",
+    "capabilityTags": [
+      "code_write"
+    ],
+    "supportedRoles": [
+      "frontend"
+    ],
+    "supportedTargets": [
+      "demo-frontend"
+    ],
+    "supportedModes": [
+      "frontend"
+    ],
+    "safeForWrite": true,
+    "safeForReview": false,
+    "description": "手工编辑保留 MANUAL_DESCRIPTION_731",
+    "status": "available"
+  },
+  "runtimeRestored": true,
+  "session": {
+    "id": "e0adc0ee-f427-4c98-9fc1-7c4fa40e867b",
+    "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+    "title": "对话创建 Agent · 真实执行",
+    "sessionType": "demo",
+    "boundBranch": "main",
+    "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\e0adc0ee-f427-4c98-9fc1-7c4fa40e867b",
+    "activeFrontendTargetId": null,
+    "activeBackendTargetId": null,
+    "memorySnapshotId": "e38449de-89ca-427f-981e-575ca55986a8",
+    "status": "active",
+    "pinnedAt": null,
+    "archivedAt": null,
+    "lastMessageAt": "2026-10-09T06:58:04.881544",
+    "createdAt": "2026-10-09T06:58:04.881544",
+    "updatedAt": "2026-10-09T06:58:05.240544"
+  },
+  "message": {
+    "id": "753ce06d-ead9-492e-9055-c4c22b62b279",
+    "sessionId": "e0adc0ee-f427-4c98-9fc1-7c4fa40e867b",
+    "senderType": "user",
+    "senderId": null,
+    "contentMd": "@native-group-20261008 @created-front-731 请先阅读 apps/demo/src/App.tsx，只修改页面主标题，使用该前端 Agent 系统约定的默认标题文案，保留其他代码和行为。只创建一个 frontend_change 任务并执行。",
+    "messageKind": "chat",
+    "parentMessageId": null,
+    "streamState": "complete",
+    "createdAt": "2026-10-09T06:58:06.043328",
+    "pinnedAt": null,
+    "groupSummary": null,
+    "attachments": [],
+    "regeneration": null,
+    "regenerationAction": null
+  },
+  "execution": {
+    "taskId": "ca0672ce-43f1-47ce-b340-7b64fd7c0081",
+    "runId": "620bfd10-454d-4f3c-a211-6c1bc6eb0b77",
+    "adapter": "claude_code",
+    "instruction": {
+      "version": 1,
+      "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+      "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+      "role": "frontend",
+      "source": "custom_profile",
+      "sha256": "b78b251e53676fd6508db4d412b0f5ff02ce6ad6c93bdaed60eb5028e4c93904",
+      "characters": 290,
+      "profileId": "faab6604-01ed-492a-9016-fb24162b0cda"
+    },
+    "selection": {
+      "id": "faab6604-01ed-492a-9016-fb24162b0cda",
+      "displayName": "对话界面助手 · 手工确认",
+      "mentionAlias": "created-front-731",
+      "role": "frontend",
+      "providerId": "local-claude-code-cli",
+      "adapterType": "claude_code",
+      "toolPolicy": "claude_file_edit",
+      "supportedTargets": [
+        "demo-frontend"
+      ],
+      "supportedModes": [
+        "frontend"
+      ],
+      "capabilityTags": [
+        "code_write"
+      ]
+    },
+    "sourceSha256": "659ad96c50c7dd98f9eacc37acd155cfa2dd0fd5aef2e5b3591c4061ca948a69",
+    "diffs": [
+      {
+        "id": "d8fba886-576b-495c-a611-ff333bbb0df0",
+        "sha256": "ae56e9053af140e1af1a6252638e14b1e3c0f49654a7064bda76e2c12ee52ac7"
+      }
+    ],
+    "previewId": "ede1a022-0db6-4f0a-a955-767ecccd0e34",
+    "heading": "Created Agent 731"
+  },
+  "passed": true
+}

@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #d9ddde;
+  color-scheme: light;
+  --background: #ffffff;
   --foreground: #151a23;
   --surface: #ffffff;
   --surface-muted: #f6f8f8;
   --card: #ffffff;
   --card-foreground: #151a23;
-  --primary: #111827;
-  --primary-strong: #000000;
-  --primary-soft: #edf6f4;
-  --primary-border: #c9ddda;
+  --primary: #4263eb;
+  --primary-strong: #3455d6;
+  --primary-soft: #eef2ff;
+  --primary-border: #d9e1ff;
   --primary-foreground: #ffffff;
   --muted: #e3e8e9;
   --muted-foreground: #53616f;
@@ -20,6 +21,74 @@
   --code-bg: #0f172a;
   --code-text: #e2e8f0;
   --code-muted: #94a3b8;
+  --status-success: #23815a;
+  --status-danger: #c05252;
+  --sidebar: #f7f8fa;
+  --inspector: #f7f8f8;
+  --user-bubble: #f2f4f8;
+  --trace-border: #fbfcfc;
+  --contact-gradient: linear-gradient(150deg, #f2faf8 0%, #f8fbfb 52%, #ffffff 100%);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #10151f;
+  --foreground: #e6edf7;
+  --surface: #171e2a;
+  --surface-muted: #1e2735;
+  --card: #171e2a;
+  --card-foreground: #e6edf7;
+  --primary: #8da2ff;
+  --primary-strong: #a4b4ff;
+  --primary-soft: #263252;
+  --primary-border: #3c4b72;
+  --primary-foreground: #10182e;
+  --muted: #303c4c;
+  --muted-foreground: #a7b5c9;
+  --text-muted: #899ab2;
+  --border: #2b3545;
+  --border-strong: #42516a;
+  --status-success: #6ee7b7;
+  --status-danger: #fca5a5;
+  --sidebar: #141b26;
+  --inspector: #141b26;
+  --user-bubble: #263143;
+  --trace-border: #171e2a;
+  --contact-gradient: linear-gradient(150deg, #1b3033 0%, #1a2432 52%, #171e2a 100%);
+}
+
+/* Theme text and surfaces must change together. Pause transitions only through
+   the first rendered palette; normal hover feedback resumes on the next frame.
+   This document selector cannot reach the sandboxed preview document. */
+:root[data-theme-changing] *,
+:root[data-theme-changing] *::before,
+:root[data-theme-changing] *::after {
+  transition: none;
+}
+
+/* Map the existing light utility palette without changing every artifact or
+   settings component. White text on solid action/avatar colors stays white. */
+@layer utilities {
+  html[data-theme="dark"] :is(.bg-white, .bg-white\/70, .bg-white\/80, .bg-white\/90) { background-color: var(--surface); }
+  html[data-theme="dark"] :is(.bg-slate-50, .bg-slate-50\/80, .bg-slate-100, .bg-slate-200) { background-color: var(--surface-muted); }
+  html[data-theme="dark"] :is(.hover\:bg-slate-50, .hover\:bg-slate-100, .hover\:bg-slate-200):hover { background-color: var(--muted); }
+  html[data-theme="dark"] :is(.text-slate-700, .text-slate-800, .text-slate-900, .text-slate-950, .hover\:text-slate-900:hover) { color: var(--foreground); }
+  html[data-theme="dark"] :is(.text-slate-500, .text-slate-600) { color: var(--muted-foreground); }
+  html[data-theme="dark"] :is(.text-slate-300, .text-slate-400) { color: var(--text-muted); }
+  html[data-theme="dark"] :is(.border-slate-100, .border-slate-200, .border-slate-300, .border-white) { border-color: var(--border); }
+  html[data-theme="dark"] :is(.bg-blue-50, .bg-blue-50\/50, .bg-blue-50\/80, .bg-blue-100, .bg-indigo-50, .bg-indigo-100) { background-color: #253452; }
+  html[data-theme="dark"] .hover\:bg-blue-50\/30:hover { background-color: #253452; }
+  html[data-theme="dark"] :is(.text-blue-600, .text-blue-700, .text-blue-800, .text-indigo-600, .text-indigo-700) { color: #a7b9ff; }
+  html[data-theme="dark"] :is(.border-blue-200, .border-blue-300, .border-indigo-200) { border-color: #435984; }
+  html[data-theme="dark"] :is(.bg-emerald-50, .bg-emerald-100, .bg-green-50, .bg-green-50\/50, .bg-green-100) { background-color: #1b3b34; }
+  html[data-theme="dark"] :is(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-green-700, .text-green-800) { color: #83e6bd; }
+  html[data-theme="dark"] :is(.border-emerald-200, .border-green-200) { border-color: #345d4d; }
+  html[data-theme="dark"] :is(.bg-red-50, .bg-red-50\/50, .bg-red-100, .bg-rose-50) { background-color: #44282f; }
+  html[data-theme="dark"] :is(.text-red-600, .text-red-700, .text-red-800, .text-rose-700) { color: #ffb4bf; }
+  html[data-theme="dark"] :is(.border-red-200, .border-rose-200) { border-color: #74404c; }
+  html[data-theme="dark"] :is(.bg-amber-50, .bg-amber-50\/70, .bg-amber-100) { background-color: #403421; }
+  html[data-theme="dark"] :is(.text-amber-700, .text-amber-800) { color: #f9d58b; }
+  html[data-theme="dark"] .border-amber-200 { border-color: #695537; }
 }
 
 * {
@@ -52,3 +121,35 @@ body {
   line-height: 1.5;
   text-rendering: optimizeLegibility;
 }
+
+.workbench-layout { position: relative; display: grid; grid-template-columns: var(--sidebar-width,220px) minmax(400px,1fr) var(--inspector-width,360px); }
+.workbench-sidebar > aside { height: 100%; }
+.workbench-layout.inspector-expanded { grid-template-columns: minmax(0,1fr); }
+.workbench-layout [hidden] { display: none !important; }
+@media (min-width: 1600px) { .workbench-layout:not(.inspector-expanded) { grid-template-columns: var(--sidebar-width,240px) minmax(400px,1fr) var(--inspector-width,420px); } }
+@media (max-width: 1199px) {
+  .workbench-layout { grid-template-columns: 200px minmax(0,1fr); }
+  .workbench-inspector { display: none; }
+  .inspector-open .workbench-inspector { display: flex; position: absolute; right: 0; top: 0; bottom: 0; width: min(520px,100%); z-index: 30; box-shadow: -12px 0 40px #1e293b15; }
+  .inspector-expanded .workbench-inspector { position: static; width: 100%; }
+}
+@media (max-width: 1023px) {
+  .workbench-layout { grid-template-columns: minmax(0,1fr); }
+  .workbench-sidebar { display: none; }
+  .sidebar-open .workbench-sidebar { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 240px; z-index: 40; box-shadow: 12px 0 40px #1e293b20; }
+}
+
+@media (min-width: 1200px) {
+  .workbench-layout.inspector-collapsed { grid-template-columns: var(--sidebar-width,220px) minmax(400px,1fr); }
+  .inspector-collapsed .workbench-inspector { display: none; }
+}
+
+.workbench-resizer { position: absolute; top: 0; bottom: 0; width: 9px; z-index: 45; cursor: col-resize; touch-action: none; }
+.workbench-resizer-sidebar { left: calc(var(--sidebar-width,220px) - 4px); }
+.workbench-resizer-inspector { right: calc(var(--inspector-width,360px) - 4px); }
+.workbench-resizer > span { position: absolute; left: 4px; top: 0; bottom: 0; width: 1px; background: var(--border); }
+.workbench-resizer:hover > span, .workbench-resizer:focus-visible > span, .is-resizing .workbench-resizer > span { left: 3px; width: 3px; background: var(--primary); }
+.workbench-resizer:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.workbench-layout.is-resizing { user-select: none; }
+.workbench-drag-shield { position: fixed; inset: 0; z-index: 50; cursor: col-resize; }
+@media (max-width: 1199px) { .workbench-resizer { display: none; } }

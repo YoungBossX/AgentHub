@@ -1,5 +1,6 @@
 import json
 import shlex
+import sys
 from pathlib import Path
 from typing import Literal, Optional, Sequence, Union
 
@@ -63,6 +64,7 @@ def evaluate_command(
     command: CommandInput,
     *,
     expected_cwd: Optional[Union[str, Path]] = None,
+    expected_image_paths: Sequence[str] = (),
 ) -> GuardrailDecision:
     parts = _command_parts(command)
     display = shlex.join(parts)
@@ -76,6 +78,7 @@ def evaluate_command(
     if _is_allowed_project_command(parts) or _is_allowed_runtime_command(
         parts,
         expected_cwd=expected_cwd,
+        expected_image_paths=expected_image_paths,
     ):
         return GuardrailDecision(allowed=True)
 
@@ -219,6 +222,7 @@ def _is_allowed_runtime_command(
     parts: list[str],
     *,
     expected_cwd: Optional[Union[str, Path]],
+    expected_image_paths: Sequence[str] = (),
 ) -> bool:
     git_subcommand = _git_subcommand(parts)
     if git_subcommand is not None:
@@ -229,7 +233,7 @@ def _is_allowed_runtime_command(
     if _is_vite_preview_command(parts):
         return True
 
-    if _is_codex_command(parts, expected_cwd=expected_cwd):
+    if _is_codex_command(parts, expected_cwd=expected_cwd, expected_image_paths=expected_image_paths):
         return True
 
     if _is_claude_code_command(parts):
@@ -242,7 +246,23 @@ def _is_codex_command(
     parts: list[str],
     *,
     expected_cwd: Optional[Union[str, Path]],
+    expected_image_paths: Sequence[str] = (),
 ) -> bool:
+    if expected_image_paths:
+        image_args = [part for path in expected_image_paths for part in ("--image", path)]
+        count = len(image_args)
+        if (len(expected_image_paths) > 4 or parts[-2:] != ["--", "-"]
+            or parts[-2-count:-2] != image_args):
+            return False
+        parts = [*parts[:-2-count], *parts[-2:]]
+    if (
+        sys.platform == "win32"
+        and len(parts) == 17
+        and parts[1:3] == ["-c", 'windows.sandbox="unelevated"']
+    ):
+        # Recognize only this fixed native sandbox prefix, then check the full
+        # original containment profile. Arbitrary config overrides stay blocked.
+        parts = [parts[0], *parts[3:]]
     return (
         len(parts) == 15
         and Path(parts[0]).name.lower() in {"codex", "codex.exe"}
@@ -294,6 +314,8 @@ def _is_vite_preview_command(parts: list[str]) -> bool:
 
 
 def _is_claude_code_command(parts: list[str]) -> bool:
+    if len(parts) == 20 and parts[-2:] == ["--input-format", "stream-json"]:
+        parts = [*parts[:-2], "--", "<stdin>"]
     return (
         len(parts) == 20
         and Path(parts[0]).name.lower() in {"claude", "claude.exe"}
@@ -308,11 +330,11 @@ def _is_claude_code_command(parts: list[str]) -> bool:
             "dontAsk",
             "--allowedTools",
         ]
-        and parts[9] == "Read,Write,Edit,MultiEdit"
-        and parts[10:17]
+        and parts[9] in {"Read,Write,Edit,MultiEdit", "Read"}
+        and parts[11] == parts[9]
+        and [parts[10], *parts[12:17]]
         == [
             "--tools",
-            "Read,Write,Edit,MultiEdit",
             "--restricted",
             "--safe-mode",
             "--strict-mcp-config",

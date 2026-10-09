@@ -1,0 +1,90 @@
+{
+  "status": "verified",
+  "createdAt": "2026-10-08T12:31:19.587325+00:00",
+  "scope": "agenthub-scripted-login-form-styling 1.1",
+  "codeSha256": {
+    ".gitignore": "db3628bcc905f03a1e38a0c2fd9d0509f737810a581d80099c71c84324be395f",
+    "apps/api/app/scripted_mock.py": "809c70701632d1b23c327f805e52794be37e7b2264a2c39cec56aa19fdf141df",
+    "apps/api/app/planning.py": "e4f5ce7f27298d08814d2afe7a739057bc333d14eede8c71d3a1769a7037400b",
+    "apps/api/app/planning_intents.py": "a1c2d45ee0d4fb5e1381cf40c0d56cab923728d2e8f369614d4dd95283d4ffb4",
+    "apps/api/app/planning_tasks.py": "918daf358e15226b4726e39453294561c9ff9300ecd1b7a10721ae74cffedadd",
+    "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28",
+    "apps/api/tests/test_scripted_mock_adapter.py": "63363c7044c3fe3679dfa5cb1bf8f952c26e1411e1b0295746d96ae02a768baf"
+  },
+  "unchangedBaselineSha256": {
+    "apps/api/app/models.py": "4c99b5245b751618251bba9a2d3411f9462f6bd392a7db8864e15c3e29376a29",
+    "apps/api/app/db.py": "50f48ca7daffbff74d61f9471225404ac4d5ae8253f972b96f16960bafbe5e94",
+    "apps/api/app/schemas.py": "7f445a310c1211c16731faabeb47ed41e413de0e4d07b358ffdcaf820e9ee692",
+    "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+    "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+    "apps/api/app/routes/messages.py": "8b78cb64d24439303cfab3eee808ea10410aaaa81b2a9eec3fc0590fff5e92ee",
+    "apps/api/tests/test_models.py": "0e7c2341056653bde442a7f9bd344dde55fbe6b7452982b22c173789c703bd18",
+    "apps/api/tests/test_session_organization.py": "80b771e6e4175571b33b60dc83182ced6f7c4b15dd3d39834b37b8071a6ddd93",
+    "apps/api/tests/test_task_runs.py": "5b767cb2a8df0c5ba7095f9440f0d6f985f44447ea913fbf275fcd451ec23dad",
+    "apps/api/app/main.py": "f801ea4ace9c310a57428b7a838681d6a5e84d835ab5084b78b6d288d8df52f9",
+    "apps/api/app/previews.py": "279ae2b8b164ec391e17eeab0e8e5b888739f7b836b2c6afa41ccdcd78c3ba37",
+    "apps/api/tests/test_previews.py": "39c7746fce02ecf9ecfe2e79c6e48aac6502f165fe562f82c357f32120689852",
+    "apps/web/src/lib/theme.ts": "f0680aabc97408347c6874cf3690534fb74e381cc332b37b4f5cc9a0ac12092c",
+    "apps/web/src/app/globals.css": "32de297883446da773daa78ca0d8db86101a741c4780353f2339ee28ff573b42",
+    "apps/web/src/components/theme-toggle.test.tsx": "800f9795852cb350711a77d3fb3d4df682ed69b0a7824fa1028d95f549942b7f"
+  },
+  "documentationSha256": {
+    "docs/change-log.md": "9b620214c8e9fd05f6398686ca80900c4ac300156f6b1a0f2501e9472c31dab1",
+    "docs/project-state.md": "f6f9f62fe0b43212e61934821466920d7ee3fd9dfef55a5069f5471beca50976",
+    "docs/local-project-delivery.md": "d202815de38520bcd02a16da2e37883c5e780e2b283410adb9b112e61f1acaf6",
+    "docs/local-usage.md": "bc62371740a928d0e77d7387de77abcc430483f7f51d17da6d2f8e0e6d9f9cac",
+    "docs/scripted-login-form-styling-review.md": "1fc2bce1d701197890949638a680d1c88144fecd39eaa0a8fd7b002ca68e874c"
+  },
+  "specSha256": {
+    "openspec/changes/agenthub-scripted-login-form-styling/design.md": "3531a9b4ace7dc8a299818467162ab1e661d6b5e733e9df3c80bbb991a2f49af",
+    "openspec/changes/agenthub-scripted-login-form-styling/proposal.md": "18df827af412072ef0aaa1c1effa3fa43472f4fa6af9abe77b25bf0ba600cb97",
+    "openspec/changes/agenthub-scripted-login-form-styling/specs/scripted-login/spec.md": "80334102e7786635547aa3149b284f84994498150945b4e215c1af5decaa0cf5",
+    "openspec/changes/agenthub-scripted-login-form-styling/tasks.md": "dec50966dc846d54e3b7d5c9f84e5fea4551d0af3f3887d2e472313cbaf38d0e"
+  },
+  "evidenceSha256": {
+    "02c40c30-ab0e-4eec-b714-b684061fe83f-Continue.png": "59b8f07afd7eea459ec65b1aa8bcab531e4533d62e47130e856780b9552059be",
+    "02c40c30-ab0e-4eec-b714-b684061fe83f-Login-direct-Verified.png": "f1aa20f4092dc38aff951a0828ac9f617fc4467cebc69cdde3e4a5a66777cea5",
+    "5e69d337-3fda-4a5c-bae1-fb99a5da73f2-Continue.png": "90fe953ef89dd690c33655e7a40c96586275871483c49e4c4bf4cba952c688cc",
+    "5e69d337-3fda-4a5c-bae1-fb99a5da73f2-Login-orchestrator-Verified.png": "099993a5f2cb5e1ffd73a5f9f963705e4e07ed69d1a1f805b8dc37612558188f",
+    "9a668eb0-71d9-4c81-92d8-6fe505a99d51-Continue.png": "c2efa7fd6a7967dec03d5f804290c856202e20599612b3a9cacf5e31ddc689b7",
+    "9a668eb0-71d9-4c81-92d8-6fe505a99d51-Login-group-Verified.png": "95bf8af7e6b2c4b8d4a8f7f6caf7901293a07b7b4ec3bd71de833a1b530a59a6",
+    "accept-login-style.mjs": "9a218cec5921c2624d65b3d6cea401120efe635ade7b1769d05ab7edc45f9883",
+    "acceptance.json": "084a5eb168689b2454cec3d8cd508a810da6b22fe4672f0331aee418a83af765",
+    "api-tests.txt": "5c58e82873ad205e141dbe0c760c4975f816dc30c280efcb1a93846ba605dd6f",
+    "dark-history.png": "f72d00522ea8601aab4d68a56e09524aca757fe19a7cadd98d6f3b3078fe9b12",
+    "direct-copy-390.png": "e5f28aae0ff63c5cc38864261a09fce575372ff9a690bbd0a094b5d3f87afc8a",
+    "direct-login-1440.png": "d3ad4bdc87538d3cea45512191694f9d6e78fe59ee5f403eb11dbd008691da6e",
+    "direct-login-320.png": "e649b237761fc62bfcd33c82a87c5016dade85db7b889ca73fa5e2b428ec4cb4",
+    "direct-login-390.png": "e00f18015b4fe56f27e8638d401ab8fe4b7f70a50b4437c6d86874b1c15f2829",
+    "execution-lineage.json": "4de10b4bdfd065e01f53d0701e4d970c5a632f78ebd53bdab246f3336881b79c",
+    "first-start.txt": "6a868b74945a5212253aef9bfbe0424359b17f365f0d414be005495f5174db0c",
+    "focused-tests.txt": "675bd6afeee783e1cff885928e14e99537dbd85faf959e3e5800d59251c1683b",
+    "group-copy-390.png": "f3ed3229071a44a8807a2deb7e01d57aaa151b714832b6d83fc4f827a0df5870",
+    "group-login-1440.png": "d3ad4bdc87538d3cea45512191694f9d6e78fe59ee5f403eb11dbd008691da6e",
+    "group-login-320.png": "e649b237761fc62bfcd33c82a87c5016dade85db7b889ca73fa5e2b428ec4cb4",
+    "group-login-390.png": "e00f18015b4fe56f27e8638d401ab8fe4b7f70a50b4437c6d86874b1c15f2829",
+    "narrow-history.png": "1b6d1bcfa0713d04d2c8c20d13e89e9a1547777e0373f2e9834a30f80bfc68a2",
+    "openspec-checks.txt": "68abd797d66728a2af0a3574ac55cfdd26c351f475899c33c0fef57fb3859c43",
+    "orchestrator-copy-390.png": "a892d35773ed9de25975f860be09b445de9fe8b487a48ce56a12c659aef29849",
+    "orchestrator-login-1440.png": "7ff387a759d280b8959f474ca91a2f72743d87f40c28cc5df2bb2b7464e3acd1",
+    "orchestrator-login-320.png": "e649b237761fc62bfcd33c82a87c5016dade85db7b889ca73fa5e2b428ec4cb4",
+    "orchestrator-login-390.png": "e00f18015b4fe56f27e8638d401ab8fe4b7f70a50b4437c6d86874b1c15f2829",
+    "restart.txt": "36bda0c0bfceaad0fc3446a0b6c08560b4a68ca4f058cf0a0275eafeaf6c5537",
+    "restored-group-history.png": "eb92cc2d68a51d52c5712f30d3d01c8334704d4d32730a60f9b9193291fd6037",
+    "restored-login-preview.png": "3211cc18629444d1ca18fb165366d8372f33b8aa2bb4b3317a535931b1232319",
+    "static-checks.txt": "fa2fab65c9671cf212366b91fe2c1b3d3863effbe5787e54d4c61fdbdc3bd284"
+  },
+  "tests": {
+    "focusedApi": "204 passed",
+    "fullApi": "1736 passed / 1 POSIX-only skipped",
+    "static": "pnpm check passed",
+    "openspec": "strict passed",
+    "whitespace": "git diff --check passed"
+  },
+  "boundaries": [
+    "Real desktop/390/320px Vite form/focus and source preservation verified; no model invocation; CLI failure simulated or deliberately unavailable",
+    "Only managed login CSS and semantic attributes; unsupported integration, no-op/unsafe path and failed-write cases honestly rejected",
+    "Existing accepted API8006/native source unchanged; Web3000 restored after isolated validation",
+    "No dependency install, commit, push or deployment; final whole-project audit remains separate"
+  ]
+}

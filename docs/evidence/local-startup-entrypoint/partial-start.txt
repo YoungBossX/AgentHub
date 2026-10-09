@@ -1,0 +1,35 @@
+
+> agenthub@ dev:local X:\Git_Clone\AgentHub
+> node scripts/local-dev.mjs "--api-port" "8008" "--web-port" "3002"
+
+[local] Dependencies and ports OK: Node 22.19.0, Python 3.12.7.
+[local] Starting API.
+INFO:     Started server process [55908]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8008 (Press CTRL+C to quit)
+[agenthub-ready:c3dd1387-3f60-4659-ade7-eab254b178f2]
+INFO:     127.0.0.1:1117 - "GET /health HTTP/1.1" 200 OK
+[local] Starting Web.
+▲ Next.js 16.3.4 (Turbopack)
+- Local:         http://127.0.0.1:3002
+- Network:       http://127.0.0.1:3002
+✓ Ready in 330ms
+✓ Running next.config.ts took 27ms
+⨯ Another next dev server is already running.
+
+- Local:        http://127.0.0.1:3001
+- PID:          20140
+- Dir:          X:\Git_Clone\AgentHub\apps\web
+- Log:          .next\dev\logs\next-development.log
+
+You can access the existing server at http://127.0.0.1:3001,
+or run taskkill /PID 20140 /F to stop it and start a new one.
+[?25h
+[local] Web exited (1).
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [55908]
+[local] Owned services stopped. Sessions and worktrees retained.
+ ELIFECYCLE  Command failed with exit code 1.

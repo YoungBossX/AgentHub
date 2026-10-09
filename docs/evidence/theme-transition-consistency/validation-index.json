@@ -1,0 +1,65 @@
+{
+  "status": "verified",
+  "createdAt": "2026-10-08T09:24:47.248103+00:00",
+  "scope": "agenthub-theme-transition-consistency 1.1",
+  "codeSha256": {
+    ".gitignore": "39e2d0ff9ea1a2d2b9c187caef18e038af0ff911cdc32aa23c6b78dc7aecf460",
+    "apps/web/src/lib/theme.ts": "f0680aabc97408347c6874cf3690534fb74e381cc332b37b4f5cc9a0ac12092c",
+    "apps/web/src/app/globals.css": "32de297883446da773daa78ca0d8db86101a741c4780353f2339ee28ff573b42",
+    "apps/web/src/components/theme-toggle.test.tsx": "800f9795852cb350711a77d3fb3d4df682ed69b0a7824fa1028d95f549942b7f"
+  },
+  "unchangedBackendSha256": {
+    "apps/api/app/models.py": "4c99b5245b751618251bba9a2d3411f9462f6bd392a7db8864e15c3e29376a29",
+    "apps/api/app/db.py": "50f48ca7daffbff74d61f9471225404ac4d5ae8253f972b96f16960bafbe5e94",
+    "apps/api/app/schemas.py": "7f445a310c1211c16731faabeb47ed41e413de0e4d07b358ffdcaf820e9ee692",
+    "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+    "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+    "apps/api/app/routes/messages.py": "8b78cb64d24439303cfab3eee808ea10410aaaa81b2a9eec3fc0590fff5e92ee",
+    "apps/api/tests/test_models.py": "0e7c2341056653bde442a7f9bd344dde55fbe6b7452982b22c173789c703bd18",
+    "apps/api/tests/test_session_organization.py": "80b771e6e4175571b33b60dc83182ced6f7c4b15dd3d39834b37b8071a6ddd93",
+    "apps/api/tests/test_task_runs.py": "5b767cb2a8df0c5ba7095f9440f0d6f985f44447ea913fbf275fcd451ec23dad",
+    "apps/api/app/main.py": "f801ea4ace9c310a57428b7a838681d6a5e84d835ab5084b78b6d288d8df52f9",
+    "apps/api/app/previews.py": "279ae2b8b164ec391e17eeab0e8e5b888739f7b836b2c6afa41ccdcd78c3ba37",
+    "apps/api/tests/test_previews.py": "39c7746fce02ecf9ecfe2e79c6e48aac6502f165fe562f82c357f32120689852"
+  },
+  "documentationSha256": {
+    "docs/theme-transition-consistency-review.md": "8e1e839b0a3adc38b7a8c53f1fff6d6d4a97eded4dea24875369e9cec26976ef",
+    "docs/project-state.md": "0ed412b83ba90c19e2701f7c13b16ecbda12bbd4ee4fbb21e95b0ac8d381ae30",
+    "docs/change-log.md": "08af3b33c3ae7470cec45eca1d2af63127065426ae9ef5d7b9d80ca0021112e5",
+    "docs/local-project-delivery.md": "65ae11fc5626a419842c8a0a6c3e1955b0237ef9f7d1526bec2652aa3aa4a9ed",
+    "docs/preview-restart-recovery-review.md": "c2d9b1a4611205a6f673fb68eb61147efd6395edebc4d7db53d65fedf6376888"
+  },
+  "specSha256": {
+    "openspec/changes/agenthub-theme-transition-consistency/design.md": "36321cffe4970d6eb7d6891fc84ac13cc9d52f0808668fb1bfb06112fcbe93d9",
+    "openspec/changes/agenthub-theme-transition-consistency/proposal.md": "a35ea4a84f373dbfbf22495dd2dca7e9d250a074e6fc146fbc802e9a675271cc",
+    "openspec/changes/agenthub-theme-transition-consistency/specs/theme-transition/spec.md": "3ab7c6aaf7ee5d8357516a534148d80c2a8695e1caa1fb13b7d2bbea4c099237",
+    "openspec/changes/agenthub-theme-transition-consistency/tasks.md": "6b28d5ee089a38cf8cbf943906c35f1e7a3092021878e397c8c91eab01f303f9"
+  },
+  "evidenceSha256": {
+    "baseline.json": "08325a589fd21f75abd8a359b7d18e9829a96f45291eff12a4cbf8d379d6cff2",
+    "browser-checks.txt": "dfe6d15a2812bb1806d8c3637aaa1e087fa93f54bd87753fadf4275e4cf0ea7a",
+    "browser.json": "f16ece516fb283638263b630cb7f719cc1bb7292bffa3e5845f4c46890c795d8",
+    "dark.png": "00d2247b94b6f735958b3d43236862ba09a7719fccb3a68afc0c9dd1528b2932",
+    "execution-lineage.json": "5f4afebb2ed6023e23be74433d82b1896d29eb9c60bedce06b79c975f7eb3d7e",
+    "light.png": "139749a8968a06191d501abfb847403c238877541dd3e32432ec969f0e8946dc",
+    "narrow-dark-inspector.png": "d5fb39b290c251f8ee61c67b59b3d4f4cfce8c18db228397903d97fe444017d5",
+    "narrow-light.png": "f4738723ec0dd4cea2d0fd1e7d2496c9fd2386fc11f8c5abff6bddbfa5f9630b",
+    "openspec-checks.txt": "535aca95a3d133bc01d6127169a0a2931d8c8f1a1b1b7cc3df95b820ad0a5eee",
+    "static-checks.txt": "2d6de0041eba8d5c953025835ea699eb746e2d42cd19bb3da3312f8c2c50dc2d",
+    "web-tests.txt": "b61027a0ea71781a4f46051960fa177c67ef49781333d179136b74a585cca9ff"
+  },
+  "tests": {
+    "web": "215 passed / 26 files",
+    "webSeconds": 6.01,
+    "static": "pnpm check passed",
+    "openspec": "strict passed",
+    "whitespace": "git diff --check passed",
+    "api": "unchanged backend hashes; no new API test execution"
+  },
+  "boundaries": [
+    "sampled contrast only, not a whole-project accessibility certification",
+    "existing palette unchanged; iframe content and source unchanged",
+    "no dependency install, model rerun, commit, push or production deployment",
+    "overall local startup/docs and final workflow delivery are still outstanding"
+  ]
+}

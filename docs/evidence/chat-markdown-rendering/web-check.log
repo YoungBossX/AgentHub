@@ -1,0 +1,4 @@
+
+> @agenthub/web@ check X:\Git_Clone\AgentHub\apps\web
+> eslint . && tsc --noEmit
+

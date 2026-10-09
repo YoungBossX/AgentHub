@@ -1,6 +1,9 @@
+import json
 import os
 import re
 from collections.abc import Mapping
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import unquote, urlsplit
 
@@ -62,6 +65,17 @@ _ADAPTER_COMMON_KEYS = frozenset(
     }
 )
 
+_CLAUDE_CREDENTIAL_KEYS = frozenset({"ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"})
+_CLAUDE_SDK_KEYS = _CLAUDE_CREDENTIAL_KEYS | frozenset(
+    {"ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL"}
+    | {
+        f"ANTHROPIC_DEFAULT_{family}_MODEL{suffix}"
+        for family in ("HAIKU", "SONNET", "OPUS", "FABLE")
+        for suffix in ("", "_NAME")
+    }
+)
+_CLAUDE_SETTINGS_LIMIT = 256 * 1024
+
 _ADAPTER_KEYS: dict[AdapterEnvironment, frozenset[str]] = {
     "codex": frozenset(
         {
@@ -73,14 +87,7 @@ _ADAPTER_KEYS: dict[AdapterEnvironment, frozenset[str]] = {
             "OPENAI_PROJECT_ID",
         }
     ),
-    "claude_code": frozenset(
-        {
-            "ANTHROPIC_API_KEY",
-            "ANTHROPIC_AUTH_TOKEN",
-            "ANTHROPIC_BASE_URL",
-            "CLAUDE_CONFIG_DIR",
-        }
-    ),
+    "claude_code": _CLAUDE_SDK_KEYS | frozenset({"CLAUDE_CONFIG_DIR"}),
 }
 
 _SECRET_ASSIGNMENT_RE = re.compile(
@@ -143,9 +150,64 @@ def adapter_process_env(
         adapter_keys = _ADAPTER_KEYS[adapter]
     except KeyError as exc:  # pragma: no cover - typed internal call sites
         raise ValueError(f"Unsupported adapter environment: {adapter}") from exc
-    return _select_environment(
-        os.environ if environ is None else environ,
+    source = os.environ if environ is None else environ
+    selected = _select_environment(
+        source,
         allowed_keys=_PORTABLE_RUNTIME_KEYS | _ADAPTER_COMMON_KEYS | adapter_keys,
+    )
+    if adapter == "claude_code":
+        imported = _claude_settings_environment(source)
+        explicit_keys = {key.upper() for key in selected}
+        if explicit_keys & _CLAUDE_CREDENTIAL_KEYS:
+            imported = {key: value for key, value in imported.items() if key not in _CLAUDE_CREDENTIAL_KEYS}
+        selected = {key: value for key, value in imported.items() if key not in explicit_keys} | selected
+    return selected
+
+
+def _claude_settings_environment(environ: Mapping[str, str]) -> dict[str, str]:
+    normalized = {key.upper(): value for key, value in environ.items()}
+    config_dir = normalized.get("CLAUDE_CONFIG_DIR")
+    if config_dir is not None:
+        directory = Path(config_dir)
+    else:
+        home = normalized.get("USERPROFILE") or normalized.get("HOME")
+        if not home:
+            return {}
+        directory = Path(home) / ".claude"
+    # Relative paths would read settings from an untrusted working directory.
+    if not directory.is_absolute():
+        return {}
+    settings = directory / "settings.json"
+    try:
+        stat = settings.stat()
+        if stat.st_size > _CLAUDE_SETTINGS_LIMIT:
+            return {}
+        return dict(_read_claude_settings(settings, stat.st_mtime_ns, stat.st_size))
+    except (OSError, ValueError):
+        return {}
+
+
+@lru_cache(maxsize=4)
+def _read_claude_settings(path: Path, modified_ns: int, size: int) -> tuple[tuple[str, str], ...]:
+    # Cache by file identity metadata to avoid rereading secrets for every event.
+    # Read remains bounded if the file changes between stat and open.
+    with path.open("rb") as stream:
+        raw = stream.read(_CLAUDE_SETTINGS_LIMIT + 1)
+    if len(raw) > _CLAUDE_SETTINGS_LIMIT:
+        return ()
+    try:
+        settings = json.loads(raw.decode("utf-8-sig"))
+    except (UnicodeError, json.JSONDecodeError):
+        return ()
+    env = settings.get("env") if isinstance(settings, dict) else None
+    if not isinstance(env, dict):
+        return ()
+    return tuple(
+        (key, value)
+        for key, value in env.items()
+        if key in _CLAUDE_SDK_KEYS
+        and isinstance(value, str)
+        and "\x00" not in value
     )
 
 
@@ -154,8 +216,33 @@ def redact_process_evidence(
     environ: Mapping[str, str] | None = None,
 ) -> Any:
     source = os.environ if environ is None else environ
-    secret_values = _sensitive_environment_values(source)
+    secret_values = _sensitive_environment_values(_claude_settings_environment(source) | dict(source))
     return _redact_value(value, secret_values)
+
+
+class ProcessTextRedactor:
+    """Hold a possible secret prefix until subsequent text disambiguates it."""
+    def __init__(self, environ: Mapping[str, str] | None = None) -> None:
+        source = os.environ if environ is None else environ
+        self.environment = _claude_settings_environment(source) | dict(source)
+        self.secrets = _sensitive_environment_values(self.environment)
+        self.pending = ""
+
+    def append(self, text: str) -> str:
+        safe = redact_process_evidence(self.pending + text, self.environment)
+        hold = 0
+        for secret in self.secrets:
+            for length in range(min(len(secret) - 1, len(safe)), hold, -1):
+                if safe.endswith(secret[:length]):
+                    hold = length
+                    break
+        self.pending = safe[-hold:] if hold else ""
+        return safe[:-hold] if hold else safe
+
+    def finish(self) -> str:
+        remaining = REDACTED if self.pending else ""
+        self.pending = ""
+        return remaining
 
 
 def _select_environment(

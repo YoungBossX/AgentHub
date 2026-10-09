@@ -1,0 +1,28 @@
+{
+  "phase": "connection-cleanup",
+  "results": [
+    {
+      "mode": "codex",
+      "previewId": "71a6d1b5-a7b2-4ff2-a5dc-63faeb7998d3",
+      "health": "healthy",
+      "runId": "543adcb8-629c-4e22-bce2-8ef87cd0e6e0",
+      "checks": [
+        "actual Vite heading matches file",
+        "actual button matches image if Codex",
+        "workspace iframe loads actual result"
+      ]
+    },
+    {
+      "mode": "claude",
+      "previewId": "67bd8c42-b14f-4735-a675-eeb4e1b03342",
+      "health": "healthy",
+      "runId": "a9d723ac-4a05-40ec-b52b-70f3a5cc429f",
+      "checks": [
+        "actual Vite heading matches file",
+        "actual button matches image if Codex",
+        "workspace iframe loads actual result"
+      ]
+    }
+  ],
+  "errors": []
+}

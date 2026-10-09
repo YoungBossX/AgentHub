@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ApiRequestError } from "@/lib/api"
+import { ApiRequestError, type ChatMessage } from "@/lib/api"
 
 import { WorkspaceShell } from "./workspace-shell"
 
@@ -23,6 +23,7 @@ const apiMocks = vi.hoisted(() => ({
   getSessionArtifactWorkbench: vi.fn(),
   interruptTaskRun: vi.fn(),
   listSessionMessages: vi.fn(),
+  pinSessionMessage: vi.fn(),
   listSessionTasks: vi.fn(),
   listTaskRunPreviews: vi.fn(),
   retryTaskRun: vi.fn(),
@@ -54,6 +55,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   getSessionArtifactWorkbench: apiMocks.getSessionArtifactWorkbench,
   interruptTaskRun: apiMocks.interruptTaskRun,
   listSessionMessages: apiMocks.listSessionMessages,
+  pinSessionMessage: apiMocks.pinSessionMessage,
   listSessionTasks: apiMocks.listSessionTasks,
   listTaskRunPreviews: apiMocks.listTaskRunPreviews,
   retryTaskRun: apiMocks.retryTaskRun,
@@ -509,7 +511,7 @@ describe("WorkspaceShell", () => {
 
     await waitFor(() => {
       expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(3)
-      expect(screen.getByText("Current session task")).toBeTruthy()
+      expect(screen.getAllByText("Current session task").length).toBeGreaterThan(0)
       expect(screen.getByRole("button", { name: /文档/ })).toBeTruthy()
     })
     fireEvent.click(screen.getByRole("button", { name: /文档/ }))
@@ -520,9 +522,14 @@ describe("WorkspaceShell", () => {
       await Promise.resolve()
     })
 
-    expect(screen.getByText("Current session task")).toBeTruthy()
+    expect(screen.getAllByText("Current session task").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Session two workbench artifact").length).toBeGreaterThan(0)
     expect(screen.queryByRole("alert")).toBeNull()
+    // Re-selecting the current session must not discard artifacts: there is no
+    // changed route ID to trigger loading them again.
+    fireEvent.click(screen.getByRole("button", { name: /^Library app rehearsal/ }))
+    expect(screen.getAllByText("Session two workbench artifact").length).toBeGreaterThan(0)
+    expect(navigationMocks.replace).not.toHaveBeenCalled()
   })
 
   it("ignores a stale SSE task refresh failure after changing sessions", async () => {
@@ -657,7 +664,7 @@ describe("WorkspaceShell", () => {
 
     await waitFor(() => {
       expect(apiMocks.listSessionTasks).toHaveBeenCalledTimes(3)
-      expect(screen.getByText("Recovered after transient refresh failure")).toBeTruthy()
+      expect(screen.getAllByText("Recovered after transient refresh failure").length).toBeGreaterThan(0)
       expect(screen.queryByRole("alert")).toBeNull()
     })
   })
@@ -717,6 +724,7 @@ describe("WorkspaceShell", () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole("button", { name: /执行过程/ }))
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "开始运行" })).toBeTruthy()
     })
@@ -733,7 +741,7 @@ describe("WorkspaceShell", () => {
     )
   })
 
-  it("renders settings navigation links and keeps contacts off the chat sidebar", async () => {
+  it("renders settings navigation and PDF-required Agent contacts", async () => {
     apiMocks.listSessionMessages.mockResolvedValue([])
     apiMocks.listSessionTasks.mockResolvedValue([])
 
@@ -756,13 +764,13 @@ describe("WorkspaceShell", () => {
       "/settings/runtime",
     )
     expect(screen.getByText("记忆设置").closest("a")?.getAttribute("href")).toBe(
-      "/settings/memory",
+      "/settings/memory?session=session-1",
     )
     expect(screen.getByText("其他设置").closest("a")?.getAttribute("href")).toBe(
       "/settings/other",
     )
     expect(screen.getByText("新建会话")).toBeTruthy()
-    expect(screen.queryByText("Agent 联系人")).toBeNull()
+    expect(screen.getByText("Agent 联系人")).toBeTruthy()
     expect(screen.queryByText("Direct chat")).toBeNull()
   })
 
@@ -890,7 +898,7 @@ describe("WorkspaceShell", () => {
 
     expect(screen.getByText("Library app rehearsal")).toBeTruthy()
     expect(screen.queryByText("Backend API cleanup")).toBeNull()
-    expect(screen.getByText("当前会话")).toBeTruthy()
+    expect(screen.getByRole("navigation", { name: "工作台视图" })).toBeTruthy()
     expect(screen.getByRole("heading", { name: "Session 1" })).toBeTruthy()
     expect(apiMocks.createTaskRun).not.toHaveBeenCalled()
   })
@@ -1002,4 +1010,96 @@ describe("WorkspaceShell", () => {
       "session-1",
     )
   })
+  it("uses custom contact names with stable mentions and switches views without execution", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    render(<WorkspaceShell backendUrl="http://127.0.0.1:8000" initialAgents={initialAgents.map((agent) => ({ ...agent, displayName: agent.role === "frontend" ? "界面搭建师" : agent.displayName }))} initialSessions={initialSessions} workspace={workspace} />)
+    fireEvent.click(screen.getByRole("button", { name: /界面搭建师/ }))
+    expect((screen.getByRole("textbox", { name: "消息" }) as HTMLTextAreaElement).value).toBe("@frontend ")
+    fireEvent.click(screen.getByRole("button", { name: /执行过程/ }))
+    expect(screen.getByRole("region", { name: "会话执行事件" })).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: /^成果/ }))
+    expect(screen.getByRole("region", { name: "会话成果" })).toBeTruthy()
+    expect(apiMocks.createTaskRun).not.toHaveBeenCalled()
+    expect(apiMocks.createSessionMessage).not.toHaveBeenCalled()
+  })
+
+  it("selects several group contacts without losing text and replaces them in direct mode", () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    const contacts = [...initialAgents,
+      { ...initialAgents[1], id: "agent-qa", role: "qa", displayName: "QA Agent" },
+      { ...initialAgents[1], id: "agent-backend", role: "backend", displayName: "Backend Agent" },
+    ]
+    render(<WorkspaceShell backendUrl="http://127.0.0.1:8000" initialAgents={contacts} initialSessions={initialSessions} workspace={workspace} />)
+    const input = screen.getByRole("textbox", { name: "消息" }) as HTMLTextAreaElement
+    fireEvent.change(input, { target: { value: "更新 demo 按钮" } })
+    fireEvent.click(screen.getByRole("button", { name: /Frontend Agent/ }))
+    fireEvent.click(screen.getByRole("button", { name: /QA Agent/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Frontend Agent/ }))
+    expect(input.value).toBe("@frontend @qa 更新 demo 按钮")
+    fireEvent.click(screen.getByRole("button", { name: "单聊" }))
+    fireEvent.click(screen.getByRole("button", { name: /Backend Agent/ }))
+    expect(input.value).toBe("@backend 更新 demo 按钮")
+    expect(apiMocks.createSessionMessage).not.toHaveBeenCalled()
+    expect(apiMocks.createTaskRun).not.toHaveBeenCalled()
+  })
+
+  it("deduplicates replayed events, refreshes agent messages and preserves the SSE connection", async () => {
+    apiMocks.listSessionMessages.mockResolvedValue([])
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    render(<WorkspaceShell backendUrl="http://127.0.0.1:8000" initialAgents={initialAgents} initialSessions={initialSessions} workspace={workspace} />)
+    await waitFor(() => expect(MockEventSource.instances).toHaveLength(1))
+    apiMocks.listSessionMessages.mockResolvedValue([{ id: "agent-message", sessionId: "session-1", senderType: "agent", senderId: "agent-frontend", contentMd: "文件输出已生成", messageKind: "chat", parentMessageId: null, streamState: "complete", createdAt: "2026-10-07T00:00:00Z" }])
+    const data = JSON.stringify({ id: "event-1", taskRunId: "run-1", eventType: "task.state", payload: { state: "completed", secret: "hidden provider payload" }, createdAt: "2026-10-07T00:00:00Z", cursor: "cursor-1" })
+    await act(async () => { MockEventSource.instances[0].onmessage?.(new MessageEvent("message", { data })); MockEventSource.instances[0].onmessage?.(new MessageEvent("message", { data })) })
+    await waitFor(() => expect(screen.getByText("文件输出已生成")).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: /执行过程/ }))
+    expect(screen.getByText("最近 1 条 / 最多 60 条")).toBeTruthy()
+    expect(screen.queryByText("hidden provider payload")).toBeNull()
+    expect(MockEventSource.instances).toHaveLength(1)
+    await act(async () => {
+      for (let index = 2; index < 67; index++) MockEventSource.instances[0].onmessage?.(new MessageEvent("message", { data: JSON.stringify({ id: `event-${index}`, taskRunId: "run-1", eventType: "task.state", payload: { state: "completed" }, createdAt: "2026-10-07T00:00:00Z" }) }))
+    })
+    expect(screen.getByText("最近 60 条 / 最多 60 条")).toBeTruthy()
+  })
+
+  it("keeps the new session's initial messages when an old session pin finishes late", async () => {
+    const pin = deferred<ChatMessage>()
+    const loading = deferred<ChatMessage[]>()
+    const old: ChatMessage = { id: "old", sessionId: "session-1", senderType: "user", senderId: null, contentMd: "旧会话待置顶", messageKind: "chat", parentMessageId: null, streamState: "complete", createdAt: "2026-10-08T00:00:00Z" }
+    const next: ChatMessage = { ...old, id: "new", sessionId: "session-2", contentMd: "新会话完整历史" }
+    apiMocks.listSessionMessages.mockResolvedValueOnce([old]).mockImplementationOnce(() => loading.promise)
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    apiMocks.pinSessionMessage.mockImplementation(() => pin.promise)
+    const props = { backendUrl: "http://127.0.0.1:8000", initialAgents, initialSessions: searchableSessions, workspace }
+    const view = render(<WorkspaceShell {...props} />)
+    await waitFor(() => expect(screen.getByText(old.contentMd)).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: "置顶消息" }))
+    await waitFor(() => expect(apiMocks.pinSessionMessage).toHaveBeenCalledWith(props.backendUrl, old.sessionId, old.id, true))
+    navigationMocks.search = "session=session-2"
+    view.rerender(<WorkspaceShell {...props} />)
+    await waitFor(() => expect(apiMocks.listSessionMessages).toHaveBeenCalledWith(props.backendUrl, "session-2"))
+    await act(async () => pin.resolve({ ...old, pinnedAt: "2026-10-08T01:00:00Z" }))
+    await act(async () => loading.resolve([next]))
+    expect(screen.getByText(next.contentMd)).toBeTruthy()
+    expect(screen.queryByText(old.contentMd)).toBeNull()
+    expect(screen.queryByLabelText("关键消息")).toBeNull()
+  })
+
+  it("hides old-session messages immediately while the next session is loading", async () => {
+    const waiting = deferred<never[]>()
+    apiMocks.listSessionMessages.mockResolvedValueOnce([{ id: "old", sessionId: "session-1", senderType: "user", senderId: null, contentMd: "旧会话专属消息", messageKind: "chat", parentMessageId: null, streamState: "complete", createdAt: "2026-10-07T00:00:00Z" }]).mockImplementationOnce(() => waiting.promise)
+    apiMocks.listSessionTasks.mockResolvedValue([])
+    const view = render(<WorkspaceShell backendUrl="http://127.0.0.1:8000" initialAgents={initialAgents} initialSessions={searchableSessions} workspace={workspace} />)
+    await waitFor(() => expect(screen.getByText("旧会话专属消息")).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: "Quote as context" }))
+    expect(screen.getByText("待发送上下文")).toBeTruthy()
+    navigationMocks.search = "session=session-2"
+    view.rerender(<WorkspaceShell backendUrl="http://127.0.0.1:8000" initialAgents={initialAgents} initialSessions={searchableSessions} workspace={workspace} />)
+    expect(screen.queryByText("旧会话专属消息")).toBeNull()
+    expect(screen.queryByText("待发送上下文")).toBeNull()
+    await act(async () => waiting.resolve([]))
+  })
+
 })

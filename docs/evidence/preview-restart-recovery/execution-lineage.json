@@ -1,0 +1,24 @@
+{
+  "sessionId": "ac5dccd4-55ed-4c4a-b0be-bd33ff94636d",
+  "taskRunId": "5542f62c-70cf-45d5-a6dd-419e175c5b3c",
+  "sourceSha256Before": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5",
+  "sourceSha256After": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5",
+  "expectedButton": "Organization Native 20261008",
+  "sessionMessageTaskRunMetadataEqual": true,
+  "taskRunIds": [
+    "5542f62c-70cf-45d5-a6dd-419e175c5b3c",
+    "4bf14747-bf1a-4179-956f-8fce35f9e5c3"
+  ],
+  "noNewTaskRuns": true,
+  "messageIds": [
+    "0da1a27e-a8c2-4b5f-bfce-06682c5474e3",
+    "0cd5c79c-f906-4875-9f34-47af8d37656e",
+    "5917b281-7ea6-4e6a-abbc-7c9e6382490d"
+  ],
+  "source": "existing previously accepted native coding output; this task does not execute a model",
+  "checks": [
+    "full Session, Message and TaskRun API snapshots equal before/after browser, shutdown, API restart and cold recovery",
+    "source byte hash equal"
+  ],
+  "boundary": "Preview GET reconciles health and writes Preview/Artifact/Event metadata; not a read-only database snapshot"
+}

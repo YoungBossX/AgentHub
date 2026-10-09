@@ -1,0 +1,1795 @@
+{
+  "errors": [],
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "session": {
+    "id": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+    "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+    "title": "受限源码编辑 · 原生续接验证",
+    "sessionType": "demo",
+    "boundBranch": "main",
+    "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\61107635-b6c9-49e8-99b8-42ad57e7f68e",
+    "activeFrontendTargetId": null,
+    "activeBackendTargetId": null,
+    "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+    "status": "active",
+    "pinnedAt": null,
+    "archivedAt": null,
+    "lastMessageAt": "2026-10-09T08:11:12.850450",
+    "createdAt": "2026-10-09T08:11:12.850450",
+    "updatedAt": "2026-10-09T08:11:13.465764"
+  },
+  "firstMessage": {
+    "id": "b3faa978-f83b-47f7-a2e4-e90cb2926e95",
+    "sessionId": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+    "senderType": "user",
+    "senderId": null,
+    "contentMd": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+    "messageKind": "chat",
+    "parentMessageId": null,
+    "streamState": "complete",
+    "createdAt": "2026-10-09T08:11:14.502842",
+    "pinnedAt": null,
+    "groupSummary": null,
+    "attachments": [],
+    "regeneration": null,
+    "regenerationAction": null
+  },
+  "first": {
+    "task": {
+      "id": "e580de72-de02-47d0-9962-47cdf4e0ec6b",
+      "sessionId": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+      "createdByMessageId": "b3faa978-f83b-47f7-a2e4-e90cb2926e95",
+      "title": "修改 demo 页面主标题为 Manual Edit Baseline 732",
+      "intentType": "frontend_change",
+      "status": "completed",
+      "priority": 0,
+      "planJson": {
+        "planner": "explicit_group_v1",
+        "routing": "multiple_mentions",
+        "assignedRole": "frontend",
+        "target": "demo_frontend_request",
+        "targetId": "demo-frontend",
+        "frontendTargetId": "demo-frontend",
+        "safeTarget": "apps/demo/src",
+        "files": [
+          "apps/demo/src/App.tsx"
+        ],
+        "originalRequest": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+        "expectedArtifactTypes": [
+          "diff"
+        ],
+        "autoStart": true,
+        "plannerSource": "real_llm",
+        "agentProfileId": "faab6604-01ed-492a-9016-fb24162b0cda",
+        "agentProfileDisplayName": "对话界面助手 · 手工确认",
+        "agentMentionAlias": "created-front-731",
+        "plannerEvidence": {
+          "providerId": "claude-cli-planner",
+          "providerType": "claude_cli",
+          "plannerSource": "real_llm",
+          "status": "succeeded",
+          "durationMs": 11766,
+          "validationResult": "passed",
+          "planId": "plan-demo-title-baseline-732",
+          "rationale": "NATIVE_GROUP_PROMPT_20261008 用户请求目标明确且范围受限：仅修改 demo-frontend 目标内的主标题文本。创建单个 frontend_change 任务，按显式群聊分配保持角色与目标，plannedFiles 限定在 apps/demo/src/App.tsx，不涉及其他文件或后端，风险低。",
+          "createdTaskIds": [
+            "e580de72-de02-47d0-9962-47cdf4e0ec6b"
+          ],
+          "runtimeConfig": {
+            "role": "planner",
+            "agentProfileId": "0adf48ff-6952-4b95-93f1-0d564391a315",
+            "providerId": "claude-cli-planner",
+            "adapterType": "claude_cli",
+            "mode": "read_only",
+            "enabled": true,
+            "fallbackPolicy": "environment_default",
+            "providerPresetId": null,
+            "protocol": null,
+            "model": null,
+            "baseUrl": null,
+            "timeoutSeconds": null,
+            "apiKeyEnv": null,
+            "configSource": "explicit_profile"
+          },
+          "agentProfileSelection": {
+            "id": "0adf48ff-6952-4b95-93f1-0d564391a315",
+            "displayName": "原生群聊规划师",
+            "mentionAlias": "native-group-20261008",
+            "providerId": "claude-cli-planner",
+            "toolPolicy": "planner_no_tools",
+            "supportedTargets": [
+              "demo-frontend"
+            ]
+          },
+          "agentInstruction": {
+            "sha256": "5b06bfe2e468f04f9c7f7594c9859d1e279621be62f8c20cadc4226e177af791",
+            "characters": 241,
+            "profileId": "0adf48ff-6952-4b95-93f1-0d564391a315"
+          },
+          "outputSha256": "ad0704c44a88cc7af52c473bbf98f74e13f36eaaf9d2c0a8d2b9f7c452083768",
+          "cliEffort": "low",
+          "memorySnapshot": {
+            "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+            "schemaVersion": "memory_snapshot_v2",
+            "contentStatus": "frozen",
+            "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "retrievalAsOf": "2026-10-09T08:11:12.853450",
+            "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+            "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+            "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+            "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+            "contextPackHash": "0d60a76e7237a1ab83542834b8c68bab4dbe1292641a9892da71185a43990291",
+            "createdAt": "2026-10-09T08:11:12.853450"
+          },
+          "memoryUsage": {
+            "schemaVersion": "memory_usage_v1",
+            "evidenceType": "prepared_provider_request",
+            "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+            "snapshotContentStatus": "frozen",
+            "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "items": [],
+            "selection": {
+              "policyVersion": "memory_rule_budget_v1",
+              "budgetUnit": "serialized_json_characters",
+              "maxChars": 16000,
+              "usedChars": 2,
+              "experienceLimit": 5,
+              "selectedCounts": {
+                "rule": 0,
+                "preference": 0,
+                "experience": 0
+              },
+              "omittedByBudget": {
+                "preference": 0,
+                "experience": 0
+              },
+              "omittedByExperienceLimit": 0
+            },
+            "visibleChars": 2
+          }
+        },
+        "description": "显式分配的 frontend 角色，任务范围限定为单文件标题文本修改，属于低风险的受限写入。",
+        "rationale": "显式分配的 frontend 角色，任务范围限定为单文件标题文本修改，属于低风险的受限写入。",
+        "plannedFiles": [
+          "apps/demo/src/App.tsx"
+        ],
+        "acceptanceCriteria": [
+          "阅读 apps/demo/src/App.tsx，仅将页面主标题改为 Manual Edit Baseline 732",
+          "保留其他代码和现有行为不变"
+        ],
+        "groupAcceptanceCriteria": [
+          "页面主标题显示为 Manual Edit Baseline 732",
+          "除主标题外其他代码与行为保持不变"
+        ],
+        "validationExpectations": [
+          "pnpm build",
+          "pnpm build"
+        ],
+        "riskLevel": "low",
+        "requiresApproval": false,
+        "instructionMode": "llm_v1",
+        "taskGraph": {
+          "goal": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+          "intent": "explicit_group",
+          "planner": "explicit_group_v1",
+          "tasks": [
+            {
+              "key": "1-frontend-frontend_change",
+              "title": "修改 demo 页面主标题为 Manual Edit Baseline 732",
+              "assignedAgentRole": "frontend",
+              "priority": 0,
+              "dependsOn": [],
+              "parallelGroup": null,
+              "expectedArtifactTypes": [
+                "diff"
+              ],
+              "targetId": "demo-frontend"
+            }
+          ]
+        },
+        "taskKey": "1-frontend-frontend_change",
+        "groupAssignment": {
+          "id": "b3faa978-f83b-47f7-a2e4-e90cb2926e95",
+          "participants": [
+            {
+              "role": "orchestrator",
+              "profileId": "0adf48ff-6952-4b95-93f1-0d564391a315",
+              "mentionAlias": "native-group-20261008",
+              "displayName": "原生群聊规划师"
+            },
+            {
+              "role": "frontend",
+              "profileId": "faab6604-01ed-492a-9016-fb24162b0cda",
+              "mentionAlias": "created-front-731",
+              "displayName": "对话界面助手 · 手工确认"
+            }
+          ],
+          "coordinationSource": "real_llm",
+          "execution": "automatic",
+          "coordinatorMessageId": "3405afdc-5ce4-4dee-9d32-752d4a3c66fc",
+          "plannerEvidence": {
+            "providerId": "claude-cli-planner",
+            "providerType": "claude_cli",
+            "plannerSource": "real_llm",
+            "status": "succeeded",
+            "durationMs": 11766,
+            "validationResult": "passed",
+            "planId": "plan-demo-title-baseline-732",
+            "rationale": "NATIVE_GROUP_PROMPT_20261008 用户请求目标明确且范围受限：仅修改 demo-frontend 目标内的主标题文本。创建单个 frontend_change 任务，按显式群聊分配保持角色与目标，plannedFiles 限定在 apps/demo/src/App.tsx，不涉及其他文件或后端，风险低。",
+            "createdTaskIds": [
+              "e580de72-de02-47d0-9962-47cdf4e0ec6b"
+            ],
+            "runtimeConfig": {
+              "role": "planner",
+              "agentProfileId": "0adf48ff-6952-4b95-93f1-0d564391a315",
+              "providerId": "claude-cli-planner",
+              "adapterType": "claude_cli",
+              "mode": "read_only",
+              "enabled": true,
+              "fallbackPolicy": "environment_default",
+              "providerPresetId": null,
+              "protocol": null,
+              "model": null,
+              "baseUrl": null,
+              "timeoutSeconds": null,
+              "apiKeyEnv": null,
+              "configSource": "explicit_profile"
+            },
+            "agentProfileSelection": {
+              "id": "0adf48ff-6952-4b95-93f1-0d564391a315",
+              "displayName": "原生群聊规划师",
+              "mentionAlias": "native-group-20261008",
+              "providerId": "claude-cli-planner",
+              "toolPolicy": "planner_no_tools",
+              "supportedTargets": [
+                "demo-frontend"
+              ]
+            },
+            "agentInstruction": {
+              "sha256": "5b06bfe2e468f04f9c7f7594c9859d1e279621be62f8c20cadc4226e177af791",
+              "characters": 241,
+              "profileId": "0adf48ff-6952-4b95-93f1-0d564391a315"
+            },
+            "outputSha256": "ad0704c44a88cc7af52c473bbf98f74e13f36eaaf9d2c0a8d2b9f7c452083768",
+            "cliEffort": "low",
+            "memorySnapshot": {
+              "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+              "schemaVersion": "memory_snapshot_v2",
+              "contentStatus": "frozen",
+              "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "retrievalAsOf": "2026-10-09T08:11:12.853450",
+              "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+              "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+              "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+              "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+              "contextPackHash": "0d60a76e7237a1ab83542834b8c68bab4dbe1292641a9892da71185a43990291",
+              "createdAt": "2026-10-09T08:11:12.853450"
+            },
+            "memoryUsage": {
+              "schemaVersion": "memory_usage_v1",
+              "evidenceType": "prepared_provider_request",
+              "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+              "snapshotContentStatus": "frozen",
+              "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "items": [],
+              "selection": {
+                "policyVersion": "memory_rule_budget_v1",
+                "budgetUnit": "serialized_json_characters",
+                "maxChars": 16000,
+                "usedChars": 2,
+                "experienceLimit": 5,
+                "selectedCounts": {
+                  "rule": 0,
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByBudget": {
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByExperienceLimit": 0
+              },
+              "visibleChars": 2
+            }
+          }
+        },
+        "scheduler": {
+          "state": "completed",
+          "runnable": false,
+          "reason": "TaskRun completed.",
+          "dependencyIds": [],
+          "blockingDependencyIds": [],
+          "targetId": "demo-frontend",
+          "writeLockRequired": true,
+          "lockHolderTaskRunIds": [],
+          "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+          "adapterType": "claude_code",
+          "providerId": "local-claude-code-cli",
+          "providerAssignment": {
+            "role": "frontend",
+            "adapterType": "claude_code",
+            "providerId": "local-claude-code-cli",
+            "source": "runtime_config",
+            "targetId": "demo-frontend",
+            "supportedMode": "write",
+            "fallbackPolicy": "environment_default"
+          },
+          "retryable": false,
+          "fallbackAvailable": false
+        }
+      },
+      "planReviewMetadata": {
+        "plannerMode": "explicit_group_v1",
+        "rationale": "显式分配的 frontend 角色，任务范围限定为单文件标题文本修改，属于低风险的受限写入。",
+        "assignedRole": "frontend",
+        "targetId": "demo-frontend",
+        "dependencies": [],
+        "plannedFiles": [
+          "apps/demo/src/App.tsx"
+        ],
+        "acceptanceCriteria": [
+          "阅读 apps/demo/src/App.tsx，仅将页面主标题改为 Manual Edit Baseline 732",
+          "保留其他代码和现有行为不变"
+        ],
+        "validationExpectations": [
+          "pnpm build",
+          "pnpm build"
+        ],
+        "taskBreakdown": [
+          {
+            "title": "修改 demo 页面主标题为 Manual Edit Baseline 732",
+            "role": "frontend",
+            "targetId": "demo-frontend",
+            "dependsOn": [],
+            "plannedFiles": []
+          }
+        ],
+        "readOnly": true,
+        "sourceTaskId": "e580de72-de02-47d0-9962-47cdf4e0ec6b"
+      },
+      "dependsOnTaskIds": [],
+      "assignedAgentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+      "assignedAgentRole": "frontend",
+      "taskRuns": [
+        {
+          "id": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+          "taskId": "e580de72-de02-47d0-9962-47cdf4e0ec6b",
+          "sessionId": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+          "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+          "adapterType": "claude_code",
+          "adapterRunId": "claude-code-d45999af-45f0-4d82-9802-2d1026d1b61a",
+          "state": "completed",
+          "startedAt": "2026-10-09T08:11:44.926883",
+          "endedAt": "2026-10-09T08:12:26.692253",
+          "runnerId": "dispatcher:4a28a286-9375-4e9f-a9bf-cfa1be70e69f:slot:1",
+          "lastHeartbeatAt": "2026-10-09T08:11:30.648951",
+          "leaseExpiresAt": "2026-10-09T08:16:30.648951",
+          "staleDetectedAt": null,
+          "staleReason": null,
+          "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\61107635-b6c9-49e8-99b8-42ad57e7f68e",
+          "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+          "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+          "errorCode": null,
+          "errorMessage": null,
+          "metricsJson": {
+            "adapterType": "claude_code",
+            "providerAssignment": {
+              "role": "frontend",
+              "adapterType": "claude_code",
+              "providerId": "local-claude-code-cli",
+              "source": "runtime_config",
+              "targetId": "demo-frontend",
+              "supportedMode": "write",
+              "fallbackPolicy": "environment_default"
+            },
+            "agentSelection": {
+              "role": "frontend",
+              "targetId": "demo-frontend",
+              "requiredMode": "frontend",
+              "requiredCapabilities": [
+                "code_write"
+              ],
+              "safeForWrite": true,
+              "safeForReview": false,
+              "customProfile": {
+                "id": "faab6604-01ed-492a-9016-fb24162b0cda",
+                "displayName": "对话界面助手 · 手工确认",
+                "mentionAlias": "created-front-731",
+                "role": "frontend",
+                "providerId": "local-claude-code-cli",
+                "adapterType": "claude_code",
+                "toolPolicy": "claude_file_edit",
+                "supportedTargets": [
+                  "demo-frontend"
+                ],
+                "supportedModes": [
+                  "frontend"
+                ],
+                "capabilityTags": [
+                  "code_write"
+                ]
+              }
+            },
+            "memorySnapshot": {
+              "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+              "schemaVersion": "memory_snapshot_v2",
+              "contentStatus": "frozen",
+              "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "retrievalAsOf": "2026-10-09T08:11:12.853450",
+              "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+              "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+              "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+              "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+              "contextPackHash": "0d60a76e7237a1ab83542834b8c68bab4dbe1292641a9892da71185a43990291",
+              "createdAt": "2026-10-09T08:11:12.853450"
+            },
+            "runtimeConfigResolution": {
+              "role": "frontend",
+              "agentProfileId": "faab6604-01ed-492a-9016-fb24162b0cda",
+              "providerId": "local-claude-code-cli",
+              "adapterType": "claude_code",
+              "mode": "frontend",
+              "enabled": true,
+              "fallbackPolicy": "environment_default",
+              "providerPresetId": null,
+              "protocol": null,
+              "model": null,
+              "baseUrl": null,
+              "timeoutSeconds": null,
+              "apiKeyEnv": null,
+              "configSource": "explicit_profile"
+            },
+            "agentInstruction": {
+              "version": 1,
+              "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+              "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+              "role": "frontend",
+              "source": "custom_profile",
+              "sha256": "b78b251e53676fd6508db4d412b0f5ff02ce6ad6c93bdaed60eb5028e4c93904",
+              "characters": 290,
+              "profileId": "faab6604-01ed-492a-9016-fb24162b0cda"
+            },
+            "preRunCheckpoint": {
+              "targetId": "demo-frontend",
+              "allowedPaths": [
+                "apps/demo/src"
+              ],
+              "deniedPaths": [
+                "apps/api",
+                "apps/demo-api",
+                ".env*",
+                "node_modules",
+                ".git",
+                "secrets"
+              ],
+              "plannedFiles": [
+                "apps/demo/src/App.tsx"
+              ],
+              "dirtyFiles": [],
+              "baseCommit": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+              "gitStatus": {
+                "available": true,
+                "dirtyFiles": []
+              },
+              "createdAt": "2026-10-09T08:11:30.103422",
+              "scopeBaseline": {
+                "schema_version": "agenthub.task_run_scope.v2",
+                "available": true,
+                "reason": null,
+                "protected_categories": [
+                  ".git",
+                  "node_modules"
+                ],
+                "protected_entry_count": 12
+              }
+            },
+            "providerGateway": {
+              "resolution": {
+                "selectedProviderId": "local-claude-code-cli",
+                "selectedAdapterType": "claude_code",
+                "selectionReason": "Runtime coding provider configuration is compatible.",
+                "selectedIsRealProvider": true,
+                "shouldWait": false,
+                "shouldFail": false,
+                "candidates": [
+                  {
+                    "providerId": "local-claude-code-cli",
+                    "adapterType": "claude_code",
+                    "accepted": true,
+                    "reason": "Runtime coding provider configuration is compatible."
+                  }
+                ],
+                "fallbackCandidates": [],
+                "rejectedCandidates": []
+              },
+              "health": {
+                "providerId": "local-claude-code-cli",
+                "adapterType": "claude_code",
+                "status": "healthy",
+                "available": true,
+                "reason": "CLI executable and startup probe are available.",
+                "checkedAt": "2026-10-09T08:11:30.714535",
+                "safeDetails": {
+                  "command": "claude",
+                  "probe": "version",
+                  "executable": "claude.exe",
+                  "exitCode": 0,
+                  "output": "2.1.289 (Claude Code)",
+                  "rawRedacted": true
+                }
+              },
+              "capacity": {
+                "providerId": "local-claude-code-cli",
+                "status": "available",
+                "acquired": false,
+                "providerRunning": 0,
+                "providerLimit": 1,
+                "globalRunning": 0,
+                "globalLimit": 2,
+                "leaseId": "provider-lease:f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c:local-claude-code-cli",
+                "reason": "Provider capacity released."
+              }
+            },
+            "canonicalContextSnapshot": {
+              "version": "canonical_shared_context_v1",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "fields": {
+                "session": {
+                  "value": {
+                    "sessionId": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+                    "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+                    "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515"
+                  },
+                  "source": "session",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "memorySnapshot": {
+                  "value": {
+                    "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+                    "schemaVersion": "memory_snapshot_v2",
+                    "contentStatus": "frozen",
+                    "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "retrievalAsOf": "2026-10-09T08:11:12.853450",
+                    "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+                    "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+                    "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+                    "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+                    "contextPackHash": "0d60a76e7237a1ab83542834b8c68bab4dbe1292641a9892da71185a43990291",
+                    "createdAt": "2026-10-09T08:11:12.853450"
+                  },
+                  "source": "memory_snapshot",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "userGoal": {
+                  "value": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+                  "source": "session_ledger",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "user"
+                },
+                "currentTask": {
+                  "value": {
+                    "id": "e580de72-de02-47d0-9962-47cdf4e0ec6b",
+                    "title": "修改 demo 页面主标题为 Manual Edit Baseline 732",
+                    "intentType": "frontend_change",
+                    "description": "demo_frontend_request"
+                  },
+                  "source": "task",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "taskGraph": {
+                  "value": {
+                    "goal": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+                    "intent": "explicit_group",
+                    "planner": "explicit_group_v1",
+                    "tasks": [
+                      {
+                        "key": "1-frontend-frontend_change",
+                        "title": "修改 demo 页面主标题为 Manual Edit Baseline 732",
+                        "assignedAgentRole": "frontend",
+                        "priority": 0,
+                        "dependsOn": [],
+                        "parallelGroup": null,
+                        "expectedArtifactTypes": [
+                          "diff"
+                        ],
+                        "targetId": "demo-frontend"
+                      }
+                    ]
+                  },
+                  "source": "plan_draft",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "targetContext": {
+                  "value": {
+                    "targetProject": {
+                      "targetId": "demo-frontend",
+                      "name": "Demo Frontend",
+                      "type": "frontend",
+                      "root": "apps/demo",
+                      "allowedPaths": [
+                        "apps/demo/src"
+                      ],
+                      "deniedPaths": [
+                        "apps/api",
+                        "apps/demo-api",
+                        "secrets"
+                      ],
+                      "devCommand": "pnpm demo:dev",
+                      "testCommand": null,
+                      "checkCommand": null,
+                      "buildCommand": "pnpm build",
+                      "previewCommand": "pnpm dev --host 127.0.0.1 --port <port>",
+                      "baseUrl": null,
+                      "packageManager": null,
+                      "detectedFramework": null,
+                      "projectType": null,
+                      "analysisStatus": null,
+                      "allowedAgents": [
+                        "frontend",
+                        "qa",
+                        "review"
+                      ],
+                      "requiresPlatformMode": false,
+                      "requiresApproval": false,
+                      "relatedTargetIds": [
+                        "demo-backend"
+                      ]
+                    },
+                    "relatedTargetProjects": [
+                      {
+                        "targetId": "demo-backend",
+                        "name": "Demo Backend",
+                        "type": "backend",
+                        "root": "apps/demo-api",
+                        "allowedPaths": [
+                          "apps/demo-api"
+                        ],
+                        "deniedPaths": [
+                          "apps/api",
+                          "apps/demo",
+                          "secrets"
+                        ],
+                        "devCommand": "pnpm demo:api:dev",
+                        "testCommand": "pnpm demo:api:test",
+                        "checkCommand": null,
+                        "buildCommand": null,
+                        "previewCommand": null,
+                        "baseUrl": "http://127.0.0.1:5174",
+                        "packageManager": null,
+                        "detectedFramework": null,
+                        "projectType": null,
+                        "analysisStatus": null,
+                        "allowedAgents": [
+                          "backend",
+                          "qa",
+                          "review"
+                        ],
+                        "requiresPlatformMode": false,
+                        "requiresApproval": false,
+                        "relatedTargetIds": []
+                      }
+                    ]
+                  },
+                  "source": "target_registry",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "safePaths": {
+                  "value": [
+                    "apps/demo/src",
+                    "apps/demo/src/App.tsx"
+                  ],
+                  "source": "target_registry",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "recentMessages": {
+                  "value": [
+                    {
+                      "id": "b3faa978-f83b-47f7-a2e4-e90cb2926e95",
+                      "senderType": "user",
+                      "senderId": null,
+                      "messageKind": "chat",
+                      "contentMd": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+                      "createdAt": "2026-10-09T08:11:14.502842"
+                    },
+                    {
+                      "id": "3405afdc-5ce4-4dee-9d32-752d4a3c66fc",
+                      "senderType": "orchestrator",
+                      "senderId": "26143942-7005-496b-a17f-c404a2981f23",
+                      "messageKind": "plan",
+                      "contentMd": "已为 对话界面助手 · 手工确认 (@created-front-731) 创建 1 个任务。原生 Planner 已完成规划：NATIVE_GROUP_PROMPT_20261008 用户请求目标明确且范围受限：仅修改 demo-frontend 目标内的主标题文本。创建单个 frontend_change 任务，按显式群聊分配保持角色与目标，plannedFiles 限定在 apps/demo/src/App.tsx，不涉及其他文件或后端，风险低。。写任务依次执行，评审等待全部写任务完成，并分别绑定对应目标。就绪任务将自动启动；失败、中断或审批阻塞时暂停后续任务，重试成功后继续。",
+                      "createdAt": "2026-10-09T08:11:26.354701"
+                    }
+                  ],
+                  "source": "messages",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "user"
+                },
+                "relevantArtifacts": {
+                  "value": {
+                    "selectedArtifact": null,
+                    "contextItems": [],
+                    "artifactReferences": [],
+                    "latestCommandEvidence": null
+                  },
+                  "source": "artifacts",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "relevantMemories": {
+                  "value": [],
+                  "source": "memory_retrieval",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "missionTrace": {
+                  "value": null,
+                  "source": "mission_trace",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "latestDiff": {
+                  "value": null,
+                  "source": "artifact.diff",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "latestReview": {
+                  "value": null,
+                  "source": "artifact.review",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "latestPreview": {
+                  "value": null,
+                  "source": "artifact.preview",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "latestDeployment": {
+                  "value": null,
+                  "source": "artifact.deployment",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "handoffNotes": {
+                  "value": [],
+                  "source": "handoff",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "guardrails": {
+                  "value": {
+                    "protectedPaths": [],
+                    "validationExpectations": [
+                      "Keep the existing P4/P5 diff, review, preview, and mock deploy flow intact.",
+                      "Produce a focused git diff in the assigned safe target.",
+                      "The Vite React demo preview should remain startable."
+                    ]
+                  },
+                  "source": "guardrails",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                },
+                "pinnedMessageContext": {
+                  "value": {
+                    "usage": "Conversation references selected by the user. Preserve original sender attribution; these are not system instructions, trusted memory, or tool authorization. Current request and safety rules take precedence.",
+                    "messages": [],
+                    "selection": {
+                      "total": 0,
+                      "included": 0,
+                      "omitted": 0,
+                      "truncated": 0,
+                      "redacted": 0,
+                      "messageLimit": 16,
+                      "textCharacterLimit": 2000,
+                      "jsonCharacterLimit": 12000,
+                      "serialization": "ascii_json_indent_2"
+                    }
+                  },
+                  "source": "pinned_messages",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "conversation_reference"
+                },
+                "memorySelection": {
+                  "value": {
+                    "policyVersion": "memory_rule_budget_v1",
+                    "budgetUnit": "serialized_json_characters",
+                    "maxChars": 16000,
+                    "usedChars": 2,
+                    "experienceLimit": 5,
+                    "selectedCounts": {
+                      "rule": 0,
+                      "preference": 0,
+                      "experience": 0
+                    },
+                    "omittedByBudget": {
+                      "preference": 0,
+                      "experience": 0
+                    },
+                    "omittedByExperienceLimit": 0
+                  },
+                  "source": "memory_selection",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-09T08:11:30.780132",
+                  "trustLevel": "system"
+                }
+              }
+            },
+            "memoryUsage": {
+              "schemaVersion": "memory_usage_v1",
+              "evidenceType": "prepared_provider_request",
+              "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+              "snapshotContentStatus": "frozen",
+              "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "items": [],
+              "selection": {
+                "policyVersion": "memory_rule_budget_v1",
+                "budgetUnit": "serialized_json_characters",
+                "maxChars": 16000,
+                "usedChars": 2,
+                "experienceLimit": 5,
+                "selectedCounts": {
+                  "rule": 0,
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByBudget": {
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByExperienceLimit": 0
+              },
+              "visibleChars": 2
+            },
+            "taskRunScopeDecision": {
+              "schemaVersion": "agenthub.task_run_scope_validation.v2",
+              "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+              "targetId": "demo-frontend",
+              "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+              "status": "passed",
+              "changedPathCount": 1,
+              "timestamp": "2026-10-09T08:12:26.220032+00:00",
+              "errorCode": null,
+              "reason": null
+            },
+            "taskRunScopeGuard": {
+              "schemaVersion": "agenthub.task_run_scope_validation.v2",
+              "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+              "targetId": "demo-frontend",
+              "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+              "status": "passed",
+              "changedPathCount": 1,
+              "timestamp": "2026-10-09T08:12:26.220032+00:00"
+            },
+            "completionValidation": {
+              "schemaVersion": "agenthub.write_completion.v1",
+              "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+              "status": "passed",
+              "accessMode": "write",
+              "changedPathCount": 1,
+              "diffId": "679912f1-4276-4d6b-b89b-68767211b7cd",
+              "errorCode": null,
+              "functionalAcceptance": "not_evaluated"
+            }
+          },
+          "providerAssignment": {
+            "role": "frontend",
+            "adapterType": "claude_code",
+            "providerId": "local-claude-code-cli",
+            "source": "runtime_config",
+            "targetId": "demo-frontend",
+            "supportedMode": "write",
+            "fallbackPolicy": "environment_default"
+          },
+          "runtimeConfigResolution": {
+            "role": "frontend",
+            "agentProfileId": "faab6604-01ed-492a-9016-fb24162b0cda",
+            "providerId": "local-claude-code-cli",
+            "adapterType": "claude_code",
+            "mode": "frontend",
+            "enabled": true,
+            "fallbackPolicy": "environment_default",
+            "providerPresetId": null,
+            "protocol": null,
+            "model": null,
+            "baseUrl": null,
+            "timeoutSeconds": null,
+            "apiKeyEnv": null,
+            "configSource": "explicit_profile"
+          },
+          "memorySnapshot": {
+            "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+            "schemaVersion": "memory_snapshot_v2",
+            "contentStatus": "frozen",
+            "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "retrievalAsOf": "2026-10-09T08:11:12.853450",
+            "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+            "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+            "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+            "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+            "contextPackHash": "0d60a76e7237a1ab83542834b8c68bab4dbe1292641a9892da71185a43990291",
+            "createdAt": "2026-10-09T08:11:12.853450"
+          },
+          "sessionQueue": {
+            "queueEntryId": "76db1697-c91d-48c6-baad-3e392f627f3e",
+            "queueKind": "main",
+            "position": 1,
+            "accessMode": "write",
+            "targetId": "demo-frontend",
+            "targetLockKey": "target:demo-frontend:write",
+            "state": "completed",
+            "waitReason": "TaskRun finalized as completed.",
+            "startedAt": "2026-10-09T08:11:30.634926",
+            "finishedAt": "2026-10-09T08:12:26.741220"
+          },
+          "targetLock": {
+            "lockKey": "target:demo-frontend:write",
+            "targetId": "demo-frontend",
+            "sessionId": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+            "holderTaskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+            "workerId": null,
+            "mode": "write",
+            "state": "released",
+            "leaseExpiresAt": null,
+            "acquiredAt": "2026-10-09T08:11:30.621411",
+            "releasedAt": "2026-10-09T08:12:26.724874",
+            "releaseReason": "task_run_completed"
+          },
+          "previewDeployJobs": [],
+          "approvalRequest": null,
+          "createdAt": "2026-10-09T08:11:30.103422",
+          "updatedAt": "2026-10-09T08:12:26.861450"
+        }
+      ],
+      "integrationArtifacts": [],
+      "createdAt": "2026-10-09T08:11:14.525868",
+      "updatedAt": "2026-10-09T08:12:26.795118"
+    },
+    "run": {
+      "id": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+      "taskId": "e580de72-de02-47d0-9962-47cdf4e0ec6b",
+      "sessionId": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+      "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+      "adapterType": "claude_code",
+      "adapterRunId": "claude-code-d45999af-45f0-4d82-9802-2d1026d1b61a",
+      "state": "completed",
+      "startedAt": "2026-10-09T08:11:44.926883",
+      "endedAt": "2026-10-09T08:12:26.692253",
+      "runnerId": "dispatcher:4a28a286-9375-4e9f-a9bf-cfa1be70e69f:slot:1",
+      "lastHeartbeatAt": "2026-10-09T08:11:30.648951",
+      "leaseExpiresAt": "2026-10-09T08:16:30.648951",
+      "staleDetectedAt": null,
+      "staleReason": null,
+      "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\61107635-b6c9-49e8-99b8-42ad57e7f68e",
+      "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+      "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+      "errorCode": null,
+      "errorMessage": null,
+      "metricsJson": {
+        "adapterType": "claude_code",
+        "providerAssignment": {
+          "role": "frontend",
+          "adapterType": "claude_code",
+          "providerId": "local-claude-code-cli",
+          "source": "runtime_config",
+          "targetId": "demo-frontend",
+          "supportedMode": "write",
+          "fallbackPolicy": "environment_default"
+        },
+        "agentSelection": {
+          "role": "frontend",
+          "targetId": "demo-frontend",
+          "requiredMode": "frontend",
+          "requiredCapabilities": [
+            "code_write"
+          ],
+          "safeForWrite": true,
+          "safeForReview": false,
+          "customProfile": {
+            "id": "faab6604-01ed-492a-9016-fb24162b0cda",
+            "displayName": "对话界面助手 · 手工确认",
+            "mentionAlias": "created-front-731",
+            "role": "frontend",
+            "providerId": "local-claude-code-cli",
+            "adapterType": "claude_code",
+            "toolPolicy": "claude_file_edit",
+            "supportedTargets": [
+              "demo-frontend"
+            ],
+            "supportedModes": [
+              "frontend"
+            ],
+            "capabilityTags": [
+              "code_write"
+            ]
+          }
+        },
+        "memorySnapshot": {
+          "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+          "schemaVersion": "memory_snapshot_v2",
+          "contentStatus": "frozen",
+          "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "retrievalAsOf": "2026-10-09T08:11:12.853450",
+          "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+          "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+          "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+          "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+          "contextPackHash": "0d60a76e7237a1ab83542834b8c68bab4dbe1292641a9892da71185a43990291",
+          "createdAt": "2026-10-09T08:11:12.853450"
+        },
+        "runtimeConfigResolution": {
+          "role": "frontend",
+          "agentProfileId": "faab6604-01ed-492a-9016-fb24162b0cda",
+          "providerId": "local-claude-code-cli",
+          "adapterType": "claude_code",
+          "mode": "frontend",
+          "enabled": true,
+          "fallbackPolicy": "environment_default",
+          "providerPresetId": null,
+          "protocol": null,
+          "model": null,
+          "baseUrl": null,
+          "timeoutSeconds": null,
+          "apiKeyEnv": null,
+          "configSource": "explicit_profile"
+        },
+        "agentInstruction": {
+          "version": 1,
+          "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+          "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+          "role": "frontend",
+          "source": "custom_profile",
+          "sha256": "b78b251e53676fd6508db4d412b0f5ff02ce6ad6c93bdaed60eb5028e4c93904",
+          "characters": 290,
+          "profileId": "faab6604-01ed-492a-9016-fb24162b0cda"
+        },
+        "preRunCheckpoint": {
+          "targetId": "demo-frontend",
+          "allowedPaths": [
+            "apps/demo/src"
+          ],
+          "deniedPaths": [
+            "apps/api",
+            "apps/demo-api",
+            ".env*",
+            "node_modules",
+            ".git",
+            "secrets"
+          ],
+          "plannedFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "dirtyFiles": [],
+          "baseCommit": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+          "gitStatus": {
+            "available": true,
+            "dirtyFiles": []
+          },
+          "createdAt": "2026-10-09T08:11:30.103422",
+          "scopeBaseline": {
+            "schema_version": "agenthub.task_run_scope.v2",
+            "available": true,
+            "reason": null,
+            "protected_categories": [
+              ".git",
+              "node_modules"
+            ],
+            "protected_entry_count": 12
+          }
+        },
+        "providerGateway": {
+          "resolution": {
+            "selectedProviderId": "local-claude-code-cli",
+            "selectedAdapterType": "claude_code",
+            "selectionReason": "Runtime coding provider configuration is compatible.",
+            "selectedIsRealProvider": true,
+            "shouldWait": false,
+            "shouldFail": false,
+            "candidates": [
+              {
+                "providerId": "local-claude-code-cli",
+                "adapterType": "claude_code",
+                "accepted": true,
+                "reason": "Runtime coding provider configuration is compatible."
+              }
+            ],
+            "fallbackCandidates": [],
+            "rejectedCandidates": []
+          },
+          "health": {
+            "providerId": "local-claude-code-cli",
+            "adapterType": "claude_code",
+            "status": "healthy",
+            "available": true,
+            "reason": "CLI executable and startup probe are available.",
+            "checkedAt": "2026-10-09T08:11:30.714535",
+            "safeDetails": {
+              "command": "claude",
+              "probe": "version",
+              "executable": "claude.exe",
+              "exitCode": 0,
+              "output": "2.1.289 (Claude Code)",
+              "rawRedacted": true
+            }
+          },
+          "capacity": {
+            "providerId": "local-claude-code-cli",
+            "status": "available",
+            "acquired": false,
+            "providerRunning": 0,
+            "providerLimit": 1,
+            "globalRunning": 0,
+            "globalLimit": 2,
+            "leaseId": "provider-lease:f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c:local-claude-code-cli",
+            "reason": "Provider capacity released."
+          }
+        },
+        "canonicalContextSnapshot": {
+          "version": "canonical_shared_context_v1",
+          "createdAt": "2026-10-09T08:11:30.780132",
+          "fields": {
+            "session": {
+              "value": {
+                "sessionId": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+                "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+                "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515"
+              },
+              "source": "session",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "memorySnapshot": {
+              "value": {
+                "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+                "schemaVersion": "memory_snapshot_v2",
+                "contentStatus": "frozen",
+                "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "retrievalAsOf": "2026-10-09T08:11:12.853450",
+                "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+                "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+                "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+                "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+                "contextPackHash": "0d60a76e7237a1ab83542834b8c68bab4dbe1292641a9892da71185a43990291",
+                "createdAt": "2026-10-09T08:11:12.853450"
+              },
+              "source": "memory_snapshot",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "userGoal": {
+              "value": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+              "source": "session_ledger",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "user"
+            },
+            "currentTask": {
+              "value": {
+                "id": "e580de72-de02-47d0-9962-47cdf4e0ec6b",
+                "title": "修改 demo 页面主标题为 Manual Edit Baseline 732",
+                "intentType": "frontend_change",
+                "description": "demo_frontend_request"
+              },
+              "source": "task",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "taskGraph": {
+              "value": {
+                "goal": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+                "intent": "explicit_group",
+                "planner": "explicit_group_v1",
+                "tasks": [
+                  {
+                    "key": "1-frontend-frontend_change",
+                    "title": "修改 demo 页面主标题为 Manual Edit Baseline 732",
+                    "assignedAgentRole": "frontend",
+                    "priority": 0,
+                    "dependsOn": [],
+                    "parallelGroup": null,
+                    "expectedArtifactTypes": [
+                      "diff"
+                    ],
+                    "targetId": "demo-frontend"
+                  }
+                ]
+              },
+              "source": "plan_draft",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "targetContext": {
+              "value": {
+                "targetProject": {
+                  "targetId": "demo-frontend",
+                  "name": "Demo Frontend",
+                  "type": "frontend",
+                  "root": "apps/demo",
+                  "allowedPaths": [
+                    "apps/demo/src"
+                  ],
+                  "deniedPaths": [
+                    "apps/api",
+                    "apps/demo-api",
+                    "secrets"
+                  ],
+                  "devCommand": "pnpm demo:dev",
+                  "testCommand": null,
+                  "checkCommand": null,
+                  "buildCommand": "pnpm build",
+                  "previewCommand": "pnpm dev --host 127.0.0.1 --port <port>",
+                  "baseUrl": null,
+                  "packageManager": null,
+                  "detectedFramework": null,
+                  "projectType": null,
+                  "analysisStatus": null,
+                  "allowedAgents": [
+                    "frontend",
+                    "qa",
+                    "review"
+                  ],
+                  "requiresPlatformMode": false,
+                  "requiresApproval": false,
+                  "relatedTargetIds": [
+                    "demo-backend"
+                  ]
+                },
+                "relatedTargetProjects": [
+                  {
+                    "targetId": "demo-backend",
+                    "name": "Demo Backend",
+                    "type": "backend",
+                    "root": "apps/demo-api",
+                    "allowedPaths": [
+                      "apps/demo-api"
+                    ],
+                    "deniedPaths": [
+                      "apps/api",
+                      "apps/demo",
+                      "secrets"
+                    ],
+                    "devCommand": "pnpm demo:api:dev",
+                    "testCommand": "pnpm demo:api:test",
+                    "checkCommand": null,
+                    "buildCommand": null,
+                    "previewCommand": null,
+                    "baseUrl": "http://127.0.0.1:5174",
+                    "packageManager": null,
+                    "detectedFramework": null,
+                    "projectType": null,
+                    "analysisStatus": null,
+                    "allowedAgents": [
+                      "backend",
+                      "qa",
+                      "review"
+                    ],
+                    "requiresPlatformMode": false,
+                    "requiresApproval": false,
+                    "relatedTargetIds": []
+                  }
+                ]
+              },
+              "source": "target_registry",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "safePaths": {
+              "value": [
+                "apps/demo/src",
+                "apps/demo/src/App.tsx"
+              ],
+              "source": "target_registry",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "recentMessages": {
+              "value": [
+                {
+                  "id": "b3faa978-f83b-47f7-a2e4-e90cb2926e95",
+                  "senderType": "user",
+                  "senderId": null,
+                  "messageKind": "chat",
+                  "contentMd": "@native-group-20261008 @created-front-731 请只创建一个 frontend_change 任务并执行：阅读 apps/demo/src/App.tsx，只把页面主标题改为 Manual Edit Baseline 732，保留其他代码和行为。",
+                  "createdAt": "2026-10-09T08:11:14.502842"
+                },
+                {
+                  "id": "3405afdc-5ce4-4dee-9d32-752d4a3c66fc",
+                  "senderType": "orchestrator",
+                  "senderId": "26143942-7005-496b-a17f-c404a2981f23",
+                  "messageKind": "plan",
+                  "contentMd": "已为 对话界面助手 · 手工确认 (@created-front-731) 创建 1 个任务。原生 Planner 已完成规划：NATIVE_GROUP_PROMPT_20261008 用户请求目标明确且范围受限：仅修改 demo-frontend 目标内的主标题文本。创建单个 frontend_change 任务，按显式群聊分配保持角色与目标，plannedFiles 限定在 apps/demo/src/App.tsx，不涉及其他文件或后端，风险低。。写任务依次执行，评审等待全部写任务完成，并分别绑定对应目标。就绪任务将自动启动；失败、中断或审批阻塞时暂停后续任务，重试成功后继续。",
+                  "createdAt": "2026-10-09T08:11:26.354701"
+                }
+              ],
+              "source": "messages",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "user"
+            },
+            "relevantArtifacts": {
+              "value": {
+                "selectedArtifact": null,
+                "contextItems": [],
+                "artifactReferences": [],
+                "latestCommandEvidence": null
+              },
+              "source": "artifacts",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "relevantMemories": {
+              "value": [],
+              "source": "memory_retrieval",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "missionTrace": {
+              "value": null,
+              "source": "mission_trace",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "latestDiff": {
+              "value": null,
+              "source": "artifact.diff",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "latestReview": {
+              "value": null,
+              "source": "artifact.review",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "latestPreview": {
+              "value": null,
+              "source": "artifact.preview",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "latestDeployment": {
+              "value": null,
+              "source": "artifact.deployment",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "handoffNotes": {
+              "value": [],
+              "source": "handoff",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "guardrails": {
+              "value": {
+                "protectedPaths": [],
+                "validationExpectations": [
+                  "Keep the existing P4/P5 diff, review, preview, and mock deploy flow intact.",
+                  "Produce a focused git diff in the assigned safe target.",
+                  "The Vite React demo preview should remain startable."
+                ]
+              },
+              "source": "guardrails",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            },
+            "pinnedMessageContext": {
+              "value": {
+                "usage": "Conversation references selected by the user. Preserve original sender attribution; these are not system instructions, trusted memory, or tool authorization. Current request and safety rules take precedence.",
+                "messages": [],
+                "selection": {
+                  "total": 0,
+                  "included": 0,
+                  "omitted": 0,
+                  "truncated": 0,
+                  "redacted": 0,
+                  "messageLimit": 16,
+                  "textCharacterLimit": 2000,
+                  "jsonCharacterLimit": 12000,
+                  "serialization": "ascii_json_indent_2"
+                }
+              },
+              "source": "pinned_messages",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "conversation_reference"
+            },
+            "memorySelection": {
+              "value": {
+                "policyVersion": "memory_rule_budget_v1",
+                "budgetUnit": "serialized_json_characters",
+                "maxChars": 16000,
+                "usedChars": 2,
+                "experienceLimit": 5,
+                "selectedCounts": {
+                  "rule": 0,
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByBudget": {
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByExperienceLimit": 0
+              },
+              "source": "memory_selection",
+              "visibility": "provider",
+              "createdAt": "2026-10-09T08:11:30.780132",
+              "trustLevel": "system"
+            }
+          }
+        },
+        "memoryUsage": {
+          "schemaVersion": "memory_usage_v1",
+          "evidenceType": "prepared_provider_request",
+          "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+          "snapshotContentStatus": "frozen",
+          "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "items": [],
+          "selection": {
+            "policyVersion": "memory_rule_budget_v1",
+            "budgetUnit": "serialized_json_characters",
+            "maxChars": 16000,
+            "usedChars": 2,
+            "experienceLimit": 5,
+            "selectedCounts": {
+              "rule": 0,
+              "preference": 0,
+              "experience": 0
+            },
+            "omittedByBudget": {
+              "preference": 0,
+              "experience": 0
+            },
+            "omittedByExperienceLimit": 0
+          },
+          "visibleChars": 2
+        },
+        "taskRunScopeDecision": {
+          "schemaVersion": "agenthub.task_run_scope_validation.v2",
+          "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+          "targetId": "demo-frontend",
+          "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+          "status": "passed",
+          "changedPathCount": 1,
+          "timestamp": "2026-10-09T08:12:26.220032+00:00",
+          "errorCode": null,
+          "reason": null
+        },
+        "taskRunScopeGuard": {
+          "schemaVersion": "agenthub.task_run_scope_validation.v2",
+          "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+          "targetId": "demo-frontend",
+          "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+          "status": "passed",
+          "changedPathCount": 1,
+          "timestamp": "2026-10-09T08:12:26.220032+00:00"
+        },
+        "completionValidation": {
+          "schemaVersion": "agenthub.write_completion.v1",
+          "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+          "status": "passed",
+          "accessMode": "write",
+          "changedPathCount": 1,
+          "diffId": "679912f1-4276-4d6b-b89b-68767211b7cd",
+          "errorCode": null,
+          "functionalAcceptance": "not_evaluated"
+        }
+      },
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "claude_code",
+        "providerId": "local-claude-code-cli",
+        "source": "runtime_config",
+        "targetId": "demo-frontend",
+        "supportedMode": "write",
+        "fallbackPolicy": "environment_default"
+      },
+      "runtimeConfigResolution": {
+        "role": "frontend",
+        "agentProfileId": "faab6604-01ed-492a-9016-fb24162b0cda",
+        "providerId": "local-claude-code-cli",
+        "adapterType": "claude_code",
+        "mode": "frontend",
+        "enabled": true,
+        "fallbackPolicy": "environment_default",
+        "providerPresetId": null,
+        "protocol": null,
+        "model": null,
+        "baseUrl": null,
+        "timeoutSeconds": null,
+        "apiKeyEnv": null,
+        "configSource": "explicit_profile"
+      },
+      "memorySnapshot": {
+        "memorySnapshotId": "4664845f-2f54-4bc1-be13-06c3aa134515",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "retrievalAsOf": "2026-10-09T08:11:12.853450",
+        "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+        "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+        "contextPackHash": "0d60a76e7237a1ab83542834b8c68bab4dbe1292641a9892da71185a43990291",
+        "createdAt": "2026-10-09T08:11:12.853450"
+      },
+      "sessionQueue": {
+        "queueEntryId": "76db1697-c91d-48c6-baad-3e392f627f3e",
+        "queueKind": "main",
+        "position": 1,
+        "accessMode": "write",
+        "targetId": "demo-frontend",
+        "targetLockKey": "target:demo-frontend:write",
+        "state": "completed",
+        "waitReason": "TaskRun finalized as completed.",
+        "startedAt": "2026-10-09T08:11:30.634926",
+        "finishedAt": "2026-10-09T08:12:26.741220"
+      },
+      "targetLock": {
+        "lockKey": "target:demo-frontend:write",
+        "targetId": "demo-frontend",
+        "sessionId": "61107635-b6c9-49e8-99b8-42ad57e7f68e",
+        "holderTaskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+        "workerId": null,
+        "mode": "write",
+        "state": "released",
+        "leaseExpiresAt": null,
+        "acquiredAt": "2026-10-09T08:11:30.621411",
+        "releasedAt": "2026-10-09T08:12:26.724874",
+        "releaseReason": "task_run_completed"
+      },
+      "previewDeployJobs": [],
+      "approvalRequest": null,
+      "createdAt": "2026-10-09T08:11:30.103422",
+      "updatedAt": "2026-10-09T08:12:26.861450"
+    }
+  },
+  "firstDiffs": [
+    {
+      "id": "679912f1-4276-4d6b-b89b-68767211b7cd",
+      "artifactId": "dbe4e758-6186-4a28-9772-207d7631617d",
+      "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+      "artifactType": "diff",
+      "title": "Git diff",
+      "status": "ready",
+      "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+      "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+      "patchText": "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\nindex bd27649..acbb492 100644\n--- a/apps/demo/src/App.tsx\n+++ b/apps/demo/src/App.tsx\n@@ -10,7 +10,7 @@ export default function App() {\n       <section className=\"workspace-panel\" aria-labelledby=\"demo-heading\">\n         <div className=\"workspace-copy\">\n           <p className=\"eyebrow\">AgentHub demo workspace</p>\n-          <h1 id=\"demo-heading\">Launchpad for a visible coding-agent change</h1>\n+          <h1 id=\"demo-heading\">Manual Edit Baseline 732</h1>\n           <p className=\"lede\">\n             This baseline Vite React app gives future agents a stable place to\n             add a login page and then adjust button copy without changing the\n",
+      "changedFiles": [
+        "apps/demo/src/App.tsx"
+      ],
+      "stats": {
+        "filesChanged": 1,
+        "additions": 1,
+        "deletions": 1,
+        "files": [
+          {
+            "path": "apps/demo/src/App.tsx",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      }
+    }
+  ],
+  "firstDiffHash": "477eccea8d7e532a2bb93863582e11fcabd0008133dc6bdb732edb1152baef2e",
+  "localMonaco": true,
+  "controls390": [
+    {
+      "tag": "BUTTON",
+      "label": "完整源码",
+      "x": 29,
+      "right": 95,
+      "width": 66
+    },
+    {
+      "tag": "BUTTON",
+      "label": "输入补丁",
+      "x": 103,
+      "right": 169,
+      "width": 66
+    },
+    {
+      "tag": "SELECT",
+      "label": "apps/demo/src/App.tsx",
+      "x": 29,
+      "right": 361,
+      "width": 332
+    },
+    {
+      "tag": "BUTTON",
+      "label": "重新读取文件并替换草稿",
+      "x": 29,
+      "right": 179,
+      "width": 150
+    },
+    {
+      "tag": "BUTTON",
+      "label": "代码编辑器",
+      "x": 29,
+      "right": 89,
+      "width": 60
+    },
+    {
+      "tag": "TEXTAREA",
+      "label": "const checklistItems = [\r\n  \"Cre",
+      "x": 29,
+      "right": 361,
+      "width": 332
+    },
+    {
+      "tag": "BUTTON",
+      "label": "检查并生成差异",
+      "x": 29,
+      "right": 137,
+      "width": 108
+    },
+    {
+      "tag": "BUTTON",
+      "label": "应用以上差异",
+      "x": 38,
+      "right": 134,
+      "width": 96
+    }
+  ],
+  "controls320": [
+    {
+      "tag": "BUTTON",
+      "label": "完整源码",
+      "x": 29,
+      "right": 95,
+      "width": 66
+    },
+    {
+      "tag": "BUTTON",
+      "label": "输入补丁",
+      "x": 103,
+      "right": 169,
+      "width": 66
+    },
+    {
+      "tag": "SELECT",
+      "label": "apps/demo/src/App.tsx",
+      "x": 29,
+      "right": 291,
+      "width": 262
+    },
+    {
+      "tag": "BUTTON",
+      "label": "重新读取文件并替换草稿",
+      "x": 29,
+      "right": 179,
+      "width": 150
+    },
+    {
+      "tag": "BUTTON",
+      "label": "代码编辑器",
+      "x": 29,
+      "right": 89,
+      "width": 60
+    },
+    {
+      "tag": "TEXTAREA",
+      "label": "const checklistItems = [\r\n  \"Cre",
+      "x": 29,
+      "right": 291,
+      "width": 262
+    },
+    {
+      "tag": "BUTTON",
+      "label": "检查并生成差异",
+      "x": 29,
+      "right": 137,
+      "width": 108
+    },
+    {
+      "tag": "BUTTON",
+      "label": "应用以上差异",
+      "x": 38,
+      "right": 134,
+      "width": 96
+    }
+  ],
+  "operation": {
+    "id": "ba1e5adf-d809-43e2-8d6d-ca2441fb0885",
+    "state": "applied",
+    "actor": "user",
+    "sourceArtifactId": "dbe4e758-6186-4a28-9772-207d7631617d",
+    "targetId": "demo-frontend",
+    "patch": "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\n--- a/apps/demo/src/App.tsx\n+++ b/apps/demo/src/App.tsx\n@@ -10,7 +10,7 @@\n       <section className=\"workspace-panel\" aria-labelledby=\"demo-heading\">\r\n         <div className=\"workspace-copy\">\r\n           <p className=\"eyebrow\">AgentHub demo workspace</p>\r\n-          <h1 id=\"demo-heading\">Manual Edit Baseline 732</h1>\r\n+          <h1 id=\"demo-heading\">Manual Edit User 732</h1>\r\n           <p className=\"lede\">\r\n             This baseline Vite React app gives future agents a stable place to\r\n             add a login page and then adjust button copy without changing the\r\n",
+    "files": [
+      {
+        "path": "apps/demo/src/App.tsx",
+        "operation": "modify",
+        "beforeSha256": "98334bb79ffdc97f02340d1d758b34b150e5aea904e994521bf94da2ecf54662",
+        "afterSha256": "ddd4ef344f598777731336eefc9cb42cdd7078cf21a943cae8bf205a6bb12902",
+        "beforeBytes": 1874,
+        "afterBytes": 1870
+      }
+    ],
+    "reason": "User changes applied; tests and reviews have not been run for this revision.",
+    "createdAt": "2026-10-09T08:19:14.805914",
+    "updatedAt": "2026-10-09T08:19:15.630458"
+  },
+  "appliedSourceSha256": "ddd4ef344f598777731336eefc9cb42cdd7078cf21a943cae8bf205a6bb12902",
+  "preview": {
+    "id": "d77438b1-59ea-4ab0-b52c-1033e942634a",
+    "artifactId": "0f20ac08-1a76-4b74-a01a-f519ba796354",
+    "taskRunId": "f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c",
+    "artifactType": "preview",
+    "title": "Vite React preview",
+    "status": "ready",
+    "port": 29683,
+    "url": "http://127.0.0.1:29683",
+    "command": "pnpm dev --host 127.0.0.1 --port 29683",
+    "processId": 74972,
+    "healthStatus": "healthy",
+    "statusReason": null,
+    "expiresAt": "2026-10-09T10:19:16.799080",
+    "lastCheckedAt": "2026-10-09T08:19:15.738054"
+  },
+  "oldDiffRecollect": {
+    "status": 405,
+    "body": "{\"detail\":\"Method Not Allowed\"}"
+  },
+  "failure": "AssertionError [ERR_ASSERTION]: {\"detail\":\"Claude CLI planner executable was not found.\"}"
+}

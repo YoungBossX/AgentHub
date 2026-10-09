@@ -1,6 +1,6 @@
-# AgentHub 评委演示脚本
+# AgentHub 本地演示脚本
 
-本文档用于 3-10 分钟比赛 Demo 视频、现场演示和答辩。主线只展示已经落地的本地单用户 Agent Coding Workspace，不承诺多用户 IM、真实第三方生产部署、Docker 沙箱或外部飞书/微信集成。
+本文档用于 3-10 分钟项目演示和面试讲解。主线展示已落地的本地单用户 Agent Coding Workspace。首次安装、配置和故障恢复见 [本地使用说明](local-usage.md)；原始竞赛要求与个人项目范围见 [交付核对](local-project-delivery.md)。
 
 ## 一句话定位
 
@@ -15,17 +15,15 @@ pnpm install
 python -m venv .venv
 .venv\Scripts\pip install -r apps/api\requirements.txt
 pnpm demo:setup
-pnpm db:init
 ```
 
-启动两个终端：
+统一启动时自动初始化/增量升级数据库，不需要先运行 `db:init`。
+
+检查并统一启动（无需 Bash）：
 
 ```bash
-pnpm dev:api
-```
-
-```bash
-pnpm dev:web
+pnpm doctor:local
+pnpm dev:local
 ```
 
 打开：
@@ -80,7 +78,7 @@ http://127.0.0.1:3000
 
 操作：
 
-1. 在任务卡片点击 **Start run**。
+1. 默认自动组会启动就绪任务；历史手动计划在任务卡片点击 **Start run**。
 2. 等待运行完成。
 3. 打开 Diff 卡片，展示真实文件变更。
 4. 打开 Review 卡片，展示 QA/审查证据。

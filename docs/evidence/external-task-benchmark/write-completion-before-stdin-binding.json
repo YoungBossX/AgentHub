@@ -1,0 +1,1146 @@
+{
+  "schemaVersion": "agenthub.external_task_benchmark.v1",
+  "recordedAt": "2026-10-07T08:23:16.962951+00:00",
+  "mode": "live_codex",
+  "developmentHead": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+  "sourceHashes": {
+    "apps/api/app/__init__.py": "4032d434a3866ac373e2f61e184f0d833fd5208fa81c877d41ec01d7d521b1b5",
+    "apps/api/app/adapters.py": "480eeddec77bf3b4178c84bb4ab2aa1e2ec2466f3a49cf25378bcc932fd4b2ad",
+    "apps/api/app/agent_capabilities.py": "7063ecacfb8e8a79a2d858a2226c9a36a85b7190e1fddb7b74ea02ca69628268",
+    "apps/api/app/agent_directory.py": "a9705524e37c01a47c8a7bdb18d58f6e2e015fbabf5668a1618c39e026526e1e",
+    "apps/api/app/agent_profile_drafts.py": "6f5add5145c275f0f5c39450593d1496720fc4129b74166b34dfda4a6729a585",
+    "apps/api/app/agent_profiles.py": "c3aefe9e772d5eec986af8e66dd16caded762643a186510fd746c32acb43f810",
+    "apps/api/app/agent_runtime_config.py": "5bd830f6e6114117e9206b989808d86c7164e2454f0e95e573da2974b2eb133f",
+    "apps/api/app/agent_selection_policy.py": "5a8fc3f145196b0f0a75cd739cf1ab0e5a891f08a1a51c94ed727e59fc3665d0",
+    "apps/api/app/agent_target_compatibility.py": "5e243f4d1f3acca5c718fd29b13f72707e2b8d3fbdf834114601a3a11cae7432",
+    "apps/api/app/artifact_references.py": "b9824e6dff82d5189483b4d3625ef635b01622a5d9f97a6da8ac33dc5dca66f7",
+    "apps/api/app/artifact_versions.py": "db9930cce0f9876e92a07a7199422b849d5647a8e58c5de34a181d5174c3a279",
+    "apps/api/app/artifact_workbench.py": "ee1fb815b2125cb7d99ee3f42f764cb5370d1b836a230c8435b1f36569d05552",
+    "apps/api/app/canonical_context.py": "da6202e65d3534d47aca9069f7f6037bea9759a52c43a339e52a36f441711805",
+    "apps/api/app/claude_code_adapter.py": "1c3b862a3cd5c4513f13d82b1267a0f171b04a538bde31e8e48a839fc2bf344d",
+    "apps/api/app/codex_adapter.py": "d008f393e4565dd72e0e6a22fd1969f1c5f4aaa5971a1b8911b8fbb606045aea",
+    "apps/api/app/config.py": "e24a808616d6ee1f4945aeff63cb1018a975bd014f922b96cebb1f6592cdbce2",
+    "apps/api/app/context_items.py": "690540944f29a0a2fdb30bf74be2149b9dd99ca9c1a0fc684cdf167291486e0d",
+    "apps/api/app/context_pack.py": "161217b8d92d03f0b92d0c39e1bbc4ce010184a2e4658503c22c6a711f2834cc",
+    "apps/api/app/dag_integration.py": "d0325de18ce6166d04b490f847f55637a7c15541876cc335d28470576923f173",
+    "apps/api/app/db.py": "56b479c81f814904ed8bcbd8583ed5181885460fd5b26826cd04fe55da84d5e4",
+    "apps/api/app/demo_planner.py": "d9a603c0b86bb804344e41fa1d9bd50d477fd2e38f9fef9a43cf611af25dd8ed",
+    "apps/api/app/dependencies.py": "447ba2c75bbd7c67ba2872931df493f5f149ce11bd9b4066870e489e88037612",
+    "apps/api/app/deployment_providers.py": "d0895e60602a98760114855c2420e4376ab693f5e064980daa70c22aef08e6a2",
+    "apps/api/app/deployments.py": "4b9712034b98fcf29d6fbccdf3b41185686c619b3921f1037802b753439d7252",
+    "apps/api/app/diffs.py": "8ed0750d9ba4ec2beec01bb37bfa54f74257eaa4038ba0cdca7f561ec90c78fd",
+    "apps/api/app/events.py": "99bc736d0cc6ab45740787510fc189eb69d8955f66bf2d5534cf8cd72993f016",
+    "apps/api/app/execution_worktrees.py": "3477347dae171b4b3cf5ac5ad594ea73cf4a9835804e32a9b4d87253c3f3e0e6",
+    "apps/api/app/external_benchmark.py": "43a471fb0850bef8e17426fef5763bbb3d4e807c3b291f444759460b78a3443a",
+    "apps/api/app/external_evidence.py": "7ab53df7bd32823c202b457c5cf05915d73186cbe1d5d87b533f3dee4617fb9f",
+    "apps/api/app/external_memory_scan.py": "5136e89bb0845b9720c6ed9592bd42eaa11a7dbe9abd9773f25ca1db082394e7",
+    "apps/api/app/external_workspaces.py": "104c8423e38046aef2c32fe868175e28514b44426b3be681f5e2188f1fbc167f",
+    "apps/api/app/guardrails.py": "25fee4a9cfdb167373aa3c264dd2c1d82cb8e83e4c9b232ff3986518b7a67cce",
+    "apps/api/app/handoffs.py": "48ed68f007931045d7199be1472b5dd07d02f89b59fba47f7d2086b9e17c38d0",
+    "apps/api/app/instruction_adapters/__init__.py": "255abc6a7f52074c673f80c0d9b3968f5cc0be49a456a1709a7664fa5508d3b9",
+    "apps/api/app/instruction_adapters/base.py": "1dd62dabba89b8a3abe448afedd8d5dd44c2b19cb93b2832197bda512c5965f9",
+    "apps/api/app/instruction_adapters/claude_code.py": "9ef3988644bf4cd5a73037cfa1f9f29e950a2cd991a8fc782c5a9e30d9d54b9d",
+    "apps/api/app/instruction_adapters/codex.py": "6e2c13c7ea9d4a3efd68c646375f372856f424d7a2dd8507031e8565f187d865",
+    "apps/api/app/instruction_adapters/scripted_mock.py": "672f10f7b4b4a321665711bf0e54cf2dce36a08c1abc5a561301f857718b243b",
+    "apps/api/app/instruction_adapters/shared_sections.py": "166de527ce5265dbd9fa5038e4a426d63c4157aa3a49f352e7d1bc3633110bea",
+    "apps/api/app/instruction_builder.py": "b45169c750241ffb1ca9ff9f02105374ee6cbb28d026cd64ea87515b715a9c57",
+    "apps/api/app/ledger.py": "3624d9eea2af7467883b004be9dce33db58566c41ea306b8237e362e863eaa77",
+    "apps/api/app/live_memory_compliance.py": "b3ee3a425b5ac251ba93fe88d8886ada26caa61b5468729b0c27ecf0905642ae",
+    "apps/api/app/llm_planner.py": "92b4fe6eb75580109b7128c872216a674459d3761f4bc06c6e494b16ce6c2896",
+    "apps/api/app/local_folders.py": "79684e7a6fff0ad71fa9b9c65a4a313934f93056ab67b6ffe7908fae79dbcde1",
+    "apps/api/app/main.py": "0e3ea65520c1e19f924b0c38af69fc469a65e34917e8ff7f4389edc85bbd3bdc",
+    "apps/api/app/memory_evals.py": "02f64bfe9612345e12d2942595b27f46a8f766926fb873a99f6222facf1af8be",
+    "apps/api/app/memory_instructions.py": "26c2dde8583b96daeff528332c85b972d716e8d9efe82083b761a834b55180fe",
+    "apps/api/app/memory_rehearsal.py": "0d7a8be40a2d52f7c710abd5f0c739b88cb58d55f02d421e588dc4421794b92d",
+    "apps/api/app/memory_retrieval.py": "514cfc9dbedeec7f29e38580cbe39b5b7c5c3a12851ea6b649735592cd43ece5",
+    "apps/api/app/memory_snapshots.py": "c392f7ac60f82dff487608089611041f23237b823fee4d52c296dbc412092d3b",
+    "apps/api/app/memory_store.py": "5661d94972ccde7ed6211d0c5e74242a6307b451115c9234b089af7f9701ebbe",
+    "apps/api/app/memory_usage.py": "7c2f2082d6c64960a7107e4a64f1ca88a1f17cffc977e1d63abe212389dc0235",
+    "apps/api/app/memory_write_policy.py": "12f83685069ec34b52e0e418dd9c3cd2bc77a43150f80f14bbda9f549f4e7b9f",
+    "apps/api/app/mission_trace.py": "108949ef22d917aa319b42a36dd9e61865cbf85b76244c82e21e980da7b8f06a",
+    "apps/api/app/models.py": "b470777e4305d8e02b852ceaa9114a9c16f1ade57139451588c85dea8d6869b1",
+    "apps/api/app/p18b_workflow_rehearsal.py": "c6600517de751f644cb70666fe844abbc6e8893104ee0a15c99f8b9c6de06252",
+    "apps/api/app/plan_validator.py": "c857102a693df631bf05877599ee5aafec19da62f55ce2d3d8e0b6cdf2741d9a",
+    "apps/api/app/planner_contracts.py": "668ae51b10a1f726dbd1d1c3ea2e2cb0da78f42036dd12e6c2adea605284ed6c",
+    "apps/api/app/planner_providers.py": "1d6933d3a732d448f70ca0d9a01696e6682605fabce70bdb136c98b3b5589e11",
+    "apps/api/app/planner_service.py": "87c358cefafd33f6d6fb7f7f80df319eaeea0fb9c00282abd9bddc1cce496d56",
+    "apps/api/app/planning.py": "80ed4f9bc87b380c238b594fb9ce32ad2e0e8e130cede970c0b24667c9a8f3fe",
+    "apps/api/app/planning_intents.py": "17bce64b0fc51648793ad0aec094be2cc78ddd2e5739c2a27d4b93ecdb9329b7",
+    "apps/api/app/planning_tasks.py": "6b8819eb09faf6465cc390d942d28207cd7a3caf2a2a1de2855ead2361602b4a",
+    "apps/api/app/pmo_decisions.py": "38e6c57d6e01a73c949a3f74cee866eb785c4645a40f6700f2f5c280efb51656",
+    "apps/api/app/policy_engine.py": "cea26c6b0e51e5325a4ad3d4446f8f274b17a585bdcb980907c35eb1354be239",
+    "apps/api/app/preview_deploy_jobs.py": "3a5bc8244ebef6de74a27a51ce2f5d392b8bbb3b691a252a2815de95a414e041",
+    "apps/api/app/previews.py": "4701dc0a02452afebb47a4e58e178a38f7e42ccbddb84c4541a9149f0f03a4fe",
+    "apps/api/app/process_environment.py": "8ce26c687c43db736470af8311898d4d3c461569a4f568e3393d406f677fabfe",
+    "apps/api/app/project_analyzer.py": "26aa9d58fa989810453b38f69aa17d22c5924eb54d02e7991612e0c4e6649897",
+    "apps/api/app/project_command_policy.py": "165d9c18980ddde63fb46efe04c20653d70e1eaaeed0101a06680ee8f07e15a3",
+    "apps/api/app/project_profiles.py": "6640c534f9f3eec8b7f685b932e8fc2716c97930405ba14c55c33af78bf83288",
+    "apps/api/app/project_provisioning.py": "a2661afdf2e00dbeb698f0d8954201b4335f12391caf512281abe5c730f05474",
+    "apps/api/app/provider_assignments.py": "40ed3c0fc50c5ddd9dd1d47dd9ba2847ce29d3679400f8063f258de44c90ea76",
+    "apps/api/app/provider_configs.py": "c16c8fe130066d0993d1519efb69bf36f0ff2cfda3ab5727cb4f5ae56047f992",
+    "apps/api/app/provider_evidence.py": "b447e45622f079f271c005d6cbbe890554ea323e65e15ab4ad97bdd100fba93d",
+    "apps/api/app/provider_gateway.py": "287b43b348e7dbf23fef1bf472dffc0a6cfe6bf7efa85fc59e7a2ab17d082ca3",
+    "apps/api/app/provider_health.py": "bd67f18029dc28696d433c8428b09682f05997adc72b741c51cea43eb69b8964",
+    "apps/api/app/recovery.py": "5cfb3229ac02290e6182d49590586e966bbfa127616a4551539b4bfa7fa3e8aa",
+    "apps/api/app/repositories.py": "21f7653182e56960fc3a90bb51b0d75688614872fcf1a3c7f5f7b12401700852",
+    "apps/api/app/reviews.py": "5eade578360b6b571d1f244148048676e1d3ff3e9ffabadc5ff528c7597e83c2",
+    "apps/api/app/routes/__init__.py": "cee0da60c1e3aef4654b95fa07ab0c97c7f64af2d061e636106a40f03470a1df",
+    "apps/api/app/routes/agent_settings.py": "1f0c2403c2ae74f68d4abf7c6d549f441e6ce035289cf6814c4ede76f77838c8",
+    "apps/api/app/routes/health.py": "7d6d02b448bf0dfdfa471fb47424d839b01971f40a076d3f295e74414caaa9fc",
+    "apps/api/app/routes/messages.py": "686264616fa514b565eca229a4014e50417ce993d62716cb3515c69c1189e244",
+    "apps/api/app/routes/registries.py": "bd6ca38e10d30f3f11f93b5b6284cdf9374b0b5b46c097986a205c971ee0c4d9",
+    "apps/api/app/routes/session_events.py": "403e3ad2575a33a16950700c3771fddc0300c4eb3944221b5dca1a1f0b5f20cc",
+    "apps/api/app/routes/sessions.py": "0932990a6cd067fc6ba9f08ce4c5fa509a302c21a4e4e2c8b1c08390a26ed3d1",
+    "apps/api/app/routes/targets.py": "768bf33c4ebc813c0f94af21a42498fd6cce50eeafcc4a54d47568ca0cd0ce09",
+    "apps/api/app/routes/task_artifacts.py": "ad3018f1900ee3ab411c5660ebbcaee0f65c7d4680ef861ebba310b130d64d0c",
+    "apps/api/app/routes/task_runs.py": "197a1581a75b4b943d5b0e47c9fadc7254230878ded7464c74338287dedf21d9",
+    "apps/api/app/routes/workspaces.py": "0e1516a81818e5e4d3231d57bf1b5595e3452da3d69af24d6fe353f2f47c5db0",
+    "apps/api/app/run_diagnostics.py": "60cf992dadc74e4a1b388e2f437b626ec084025b3f1a21e595732cd4f362b8fc",
+    "apps/api/app/run_engine.py": "ec9e78146562f154a47c7e24d97fb51799161c97a127d37603c2979dde5251c2",
+    "apps/api/app/run_supervisor.py": "5314508a98d0d198667d2a1b41d19a072bc3a0f14145d5bd0fab4ca8f78ff558",
+    "apps/api/app/scheduler.py": "a24ab203bf54485b83b8199fac00a574bb45f618d75d8c51ea9239c583f08677",
+    "apps/api/app/schemas.py": "27345b886cc58c7bd6e520f56c245d11347495dddd85d92aa450f0f6c49d6fcc",
+    "apps/api/app/scripted_mock.py": "32fa8bc9ba8bae3d1d3c37f6bd04f8357e55edbac806d1f1dd150af320c84b32",
+    "apps/api/app/seed.py": "8980c417eb8dca27834f14ac10ea32be012450c0af7ef8ee8df3a0976e0517ef",
+    "apps/api/app/session_queue.py": "eb5be430c0549cf98590b89cc49b7c2ddaeccbc34b5a4d01583fe97a731f2638",
+    "apps/api/app/target_locks.py": "45b2a037d29d4c77bad8737090dbf6e782dac9ba81c905780944e97faabb1fb0",
+    "apps/api/app/target_registry.py": "c1d71cd0e6ab408083e7e9636e3e227bdf5eed5e256dafe08ae19c599c0fe3da",
+    "apps/api/app/task_graph_builder.py": "ea8df977b018ab76fc5ed1b368840dd5aae3a68f98b6abfe0de03e03630e2ffb",
+    "apps/api/app/task_run_scope.py": "22640722a2c13726815e92d0ae2bf294c3881fa93a14c1f22e8d711927db2a5c",
+    "apps/api/app/task_runs.py": "8430d3aecca8921d69d184c69f6e5125a7ca7eef702553cf807bb187d699c620",
+    "apps/api/app/transactional_delivery.py": "aea6d809711547fe8b12329cd86edce3ee2fa6b5e616edd43e47f3ab28fe5195",
+    "apps/api/app/worktrees.py": "5a057baec0f25b37ab5c5c0e9e5f079e7b0f67a96571571aeaf3ed4d9c9b5e8d"
+  },
+  "suiteHashes": {
+    "catalog-search.mjs": "37c3a3e39191bca949436f64c6eaf45f4c9930c88e1b4ce56ade57f69d881cc1",
+    "catalog-search.test.mjs": "4c2f565aae8ccfc39aedcd58b7a73a2f9e15001d7e045681ee0683eeda08852c",
+    "invoice-discount.mjs": "698c250299ced9cc5a5c6aeb6f855616cf3456442f1f920023c95c0e16c220f2",
+    "invoice-discount.test.mjs": "ebe2e41c5f60028177c8e19b3dec2754e5f00a2c2d1e29ba3d33d36a286cdc43",
+    "README.md": "e3a69823a8837bd9d4f37656883dfa9b05b72e8d9e1b710b1cc1c4fcd81b00b9",
+    "suite.json": "21cfa9bdbd75b8538a8b4a15e7c5ef053ceb31eca58f5fa687c43895ef0ffc9d",
+    "title-normalization.mjs": "c45b4b937abda7f3b7f08276aec21c5f810328c739496ba66270c7951f5418aa",
+    "title-normalization.test.mjs": "1be217f911281a84052c46614ac80f395b2d0a0f267addc4968c8fdc9709ac43"
+  },
+  "livePreviewStarted": false,
+  "buildExecuted": false,
+  "productionDeployed": false,
+  "planner": "fixed_task_plan",
+  "cases": [
+    {
+      "caseId": "title-normalization",
+      "verdict": "failed",
+      "baseCommit": "cdc2582fdf10f87076e5f42e8b031a09550081a9",
+      "inputHashes": {
+        "src/domain.mjs": "d48d9dfb36b3afc781d397fcfc0b8fa9c452157d9a6823a82e89fdad3daa5f02",
+        "src/App.jsx": "f427efd9b1c7bb98660202f21d7dfbd449d71d74013364f008407a9f7e36ed66",
+        "src/main.jsx": "a26b7120ee6b82fa97b58803a3f682d199cb18aed2affbd8582212204035eb1d",
+        "index.html": "0a2edc447e41e9443e76e3be2833a1d0218287f1199d475f74f51e05b83d2c95",
+        "package.json": "63ffd652fe9035ad227745ea269baf2db903472d2a55f63758f3a43676d66fd5"
+      },
+      "evaluatorHash": "1be217f911281a84052c46614ac80f395b2d0a0f267addc4968c8fdc9709ac43",
+      "promptHash": "db9e162ecc93319d91fb24efdab7f83f2d6817dcc6a60b15b8b6e557bc7e9b8e",
+      "expectedTests": 3,
+      "baselineCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 3,
+          "pass": 0,
+          "fail": 3
+        },
+        "stdoutHash": "436808be4c4ae6084749fbcb9de66af5c435b0ea7e78d643f7e93dd2653e00be",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "baselineFailing": true,
+      "providerTurnObserved": true,
+      "taskId": "5a3d309e-38e7-41c6-9649-2a86e62f6011",
+      "taskRunId": "a47d08a3-2564-431a-88a5-3c05794f563e",
+      "sessionId": "813ec3b1-2086-4f8e-869f-a45d3da9a3e9",
+      "targetId": "external-bench-title-normalization",
+      "state": "failed",
+      "errorCode": "TASK_RUN_NO_CHANGES",
+      "errorMessage": "The coding adapter finished without verifiable new file output. Inspect provider tool errors and retry; text-only suggestions do not complete a write task.",
+      "executionErrorType": null,
+      "elapsedSeconds": 27.734,
+      "adapterRunId": "codex-539aa015-d996-4d42-91fb-87d43d4db884",
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "codex",
+        "providerId": "local-codex-cli",
+        "source": "explicit",
+        "targetId": "external-bench-title-normalization",
+        "supportedMode": "write",
+        "fallbackPolicy": "explicit_only"
+      },
+      "model": null,
+      "providerHealth": {
+        "providerId": "local-codex-cli",
+        "adapterType": "codex",
+        "status": "healthy",
+        "available": true,
+        "reason": "CLI executable and startup probe are available.",
+        "checkedAt": "2026-10-07T08:23:17.669847",
+        "safeDetails": {
+          "command": "codex.exe",
+          "probe": "version",
+          "executable": "codex.exe",
+          "exitCode": 0,
+          "output": "codex-cli 0.162.0-alpha.2",
+          "rawRedacted": true
+        }
+      },
+      "providerMessages": [
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"agent_message\",\"text\":\"I\\u2019ll inspect `src/domain.mjs` and prepare a minimal fix. This session has read-only filesystem access, so I may only be able to provide the patch.\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"agent_message\",\"text\":\"No files were changed. The environment is read-only, and policy blocked the file inspection command, so I couldn\\u2019t inspect or validate `src/domain.mjs`.\\n\\nThe intended named-export implementation is:\\n\\n```js\\nexport function slugifyTitle(title) {\\n  return title\\n    .trim()\\n    .toLowerCase()\\n    .replace(/[^\\\\p{L}\\\\p{N}]+/gu, '-')\\n    .replace(/^-+|-+$/g, '');\\n}\\n```\\n\\nThis preserves Chinese characters and returns an empty string for empty or punctuation-only titles.\"}}"
+      ],
+      "providerDiagnostics": [
+        {
+          "eventId": "9b19bcfa-5c92-43c3-9be8-15c0f7587542",
+          "exitCode": 0,
+          "stderrExcerpt": "Reading additional input from stdin...\n2026-10-07T08:23:27.373156Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: \"Rejected(\\\"`\\\\\\\"C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\XCC\\\\\\\\\\\\\\\\.cache\\\\\\\\\\\\\\\\codex-runtimes\\\\\\\\\\\\\\\\codex-primary-runtime\\\\\\\\\\\\\\\\dependencies\\\\\\\\\\\\\\\\native\\\\\\\\\\\\\\\\powershell\\\\\\\\\\\\\\\\pwsh.exe\\\\\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'` rejected: blocked by policy\\\")\" }\n"
+        }
+      ],
+      "events": [
+        {
+          "id": "3bf2582b-2a98-456f-9f22-eb946487ab8b",
+          "sequence": 1,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "2895f395-e099-47fc-a869-d1dbc5764935",
+          "sequence": 2,
+          "type": "session_queue.enqueued",
+          "codexEventType": null
+        },
+        {
+          "id": "e6e9e17e-4533-4a67-b444-1295297591c5",
+          "sequence": 3,
+          "type": "task.checkpoint.created",
+          "codexEventType": null
+        },
+        {
+          "id": "0cccb0c5-e123-40f6-b658-0bc833207d4d",
+          "sequence": 4,
+          "type": "run.claimed",
+          "codexEventType": null
+        },
+        {
+          "id": "80e7b809-a3bc-4ebf-80e6-2eddfd70260f",
+          "sequence": 5,
+          "type": "session_queue.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "1b772db6-89b8-46ad-9cdd-e623d98f07a2",
+          "sequence": 6,
+          "type": "target_lock.acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "59ed60be-a87c-4b87-a302-b2867fbd4aa2",
+          "sequence": 7,
+          "type": "session_queue.running",
+          "codexEventType": null
+        },
+        {
+          "id": "7ca585c6-2015-4611-b9c7-5a08e505b406",
+          "sequence": 8,
+          "type": "task.heartbeat",
+          "codexEventType": null
+        },
+        {
+          "id": "deff7d3d-77d7-43d6-9764-eaa430073e3a",
+          "sequence": 9,
+          "type": "provider.resolved",
+          "codexEventType": null
+        },
+        {
+          "id": "2d1d3636-f1e1-4a6c-b33a-318d3e7102e6",
+          "sequence": 10,
+          "type": "provider.health_checked",
+          "codexEventType": null
+        },
+        {
+          "id": "5e17d7aa-9fe9-4cfa-86a4-5879751bd378",
+          "sequence": 11,
+          "type": "provider.capacity_acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "8803101e-c38f-45da-9ac2-62b104e71b76",
+          "sequence": 12,
+          "type": "task.state",
+          "codexEventType": "thread.started"
+        },
+        {
+          "id": "10d03502-ecd7-4069-ba66-625e8fa601f5",
+          "sequence": 13,
+          "type": "task.state",
+          "codexEventType": "turn.started"
+        },
+        {
+          "id": "d068e0f6-d0c5-4e5b-8cec-22c75876fd36",
+          "sequence": 14,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "f7b5314a-0312-4ea2-b83a-7bc27435f654",
+          "sequence": 15,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "9b19bcfa-5c92-43c3-9be8-15c0f7587542",
+          "sequence": 16,
+          "type": "completed",
+          "codexEventType": "turn.completed"
+        },
+        {
+          "id": "ea1c486d-7b83-48fe-9b1a-4617fa07e6f1",
+          "sequence": 17,
+          "type": "task.scope_validation.passed",
+          "codexEventType": null
+        },
+        {
+          "id": "eeeec55c-0a46-457d-b9c4-8258236e1156",
+          "sequence": 18,
+          "type": "task.completion_validation",
+          "codexEventType": null
+        },
+        {
+          "id": "69d805c2-f2a8-428e-997b-9fd11009b2a7",
+          "sequence": 19,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "ec31eb5c-0044-411d-9d1b-d43bd748aac2",
+          "sequence": 20,
+          "type": "target_lock.released",
+          "codexEventType": null
+        },
+        {
+          "id": "a9238f8b-5214-4ee1-a311-58eae23b96ff",
+          "sequence": 21,
+          "type": "session_queue.advanced",
+          "codexEventType": null
+        },
+        {
+          "id": "942e678e-503c-4e7f-8ee7-859207282714",
+          "sequence": 22,
+          "type": "provider.capacity_released",
+          "codexEventType": null
+        }
+      ],
+      "memorySnapshot": {
+        "memorySnapshotId": "6806e463-25fa-4b32-9a74-3ba89143fdce",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "e97a86b22022b4db5b619a5a662e8a080fbd5132c1da8e8437e63e0ed683b290",
+        "retrievalAsOf": "2026-10-07T08:23:17.371958",
+        "agentsMdHash": "e9269c2517168b1bf1471792b82be3ae8b8987193bb7118f9ce81a68f020babd",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "0f803a7c035447f89b86d9c671a57a4b05f64bd0edf6f0c2bb0d82bdb4c5a157",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "578f0c46cc19ab50a0d71796eb6f846fb4c3538034a4577fd519c5b568b7183b",
+        "runtimeConfigVersion": "dc551daf7f91bede9f94cfe1a96f0e635c86c7a52f4fc9620a592c7f4184eec4",
+        "contextPackHash": "c1dd0e9a9dee76221793ef70a15894319c9381beeba1d869cc5fc8dc56abf64e",
+        "createdAt": "2026-10-07T08:23:17.371958"
+      },
+      "memoryUsage": {
+        "schemaVersion": "memory_usage_v1",
+        "evidenceType": "prepared_provider_request",
+        "memorySnapshotId": "6806e463-25fa-4b32-9a74-3ba89143fdce",
+        "snapshotContentStatus": "frozen",
+        "snapshotItemsHash": "e97a86b22022b4db5b619a5a662e8a080fbd5132c1da8e8437e63e0ed683b290",
+        "visibleMemoriesHash": "de1cdcfdedaf6426793b2cbe46708e38a6f662a643b744dfe7b94a330676d406",
+        "items": [
+          {
+            "id": "5c62c31c-0903-481a-bb98-8d6b02cf2b69",
+            "version": 1,
+            "contentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1",
+            "rank": 1,
+            "score": 27.0529,
+            "matchedTerms": [
+              "do",
+              "keep",
+              "named",
+              "not",
+              "or",
+              "the"
+            ],
+            "layer": "rule",
+            "selectionReason": "applicable_trusted_rule",
+            "visibleFields": [
+              "agentRoles",
+              "contentHash",
+              "contentMd",
+              "id",
+              "layer",
+              "matchedTerms",
+              "rank",
+              "scope",
+              "score",
+              "selectionReason",
+              "source",
+              "status",
+              "targetIds",
+              "title",
+              "trustLevel",
+              "type",
+              "version"
+            ],
+            "contentVisible": true,
+            "visibleContentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1"
+          }
+        ],
+        "selection": {
+          "policyVersion": "memory_rule_budget_v1",
+          "budgetUnit": "serialized_json_characters",
+          "maxChars": 16000,
+          "usedChars": 722,
+          "experienceLimit": 5,
+          "selectedCounts": {
+            "rule": 1,
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByBudget": {
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByExperienceLimit": 0
+        },
+        "visibleChars": 722
+      },
+      "canonicalContextHash": "a3ae51aad111629e10573021b28713987dc1e8055b053e30edbff66a8b776270",
+      "memoryReceiptValid": true,
+      "scope": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "a47d08a3-2564-431a-88a5-3c05794f563e",
+        "targetId": "external-bench-title-normalization",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "status": "passed",
+        "changedPathCount": 0,
+        "timestamp": "2026-10-07T08:23:45.027810+00:00",
+        "errorCode": null,
+        "reason": null
+      },
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "a47d08a3-2564-431a-88a5-3c05794f563e",
+        "status": "failed",
+        "accessMode": "write",
+        "changedPathCount": 0,
+        "diffId": null,
+        "errorCode": "TASK_RUN_NO_CHANGES",
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffs": [],
+      "diffValid": false,
+      "immutableInputs": true,
+      "resultFileHash": "d48d9dfb36b3afc781d397fcfc0b8fa9c452157d9a6823a82e89fdad3daa5f02",
+      "postCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 3,
+          "pass": 0,
+          "fail": 3
+        },
+        "stdoutHash": "84a49c6137832779007542660d5a389af925bab88dbb9b8f507f49f1d9afe4ee",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.094
+      },
+      "artifacts": [],
+      "failureGates": [
+        "run_not_completed",
+        "post_check_failed",
+        "diff_invalid"
+      ]
+    },
+    {
+      "caseId": "invoice-discount",
+      "verdict": "failed",
+      "baseCommit": "7fd0e576ae23fde4519573a79dab95113642c908",
+      "inputHashes": {
+        "src/domain.mjs": "e0d3d953908fd5abb947764a6fe7379594524f7dc13bdfe5a2701ca2d0170071",
+        "src/App.jsx": "7c836364c2df4417d66eeb4d73062729d9dec485db44c8ea71059419e0daf319",
+        "src/main.jsx": "a26b7120ee6b82fa97b58803a3f682d199cb18aed2affbd8582212204035eb1d",
+        "index.html": "0a2edc447e41e9443e76e3be2833a1d0218287f1199d475f74f51e05b83d2c95",
+        "package.json": "7c93bd07c3547fab31ce87483b0dfa9ca103e760ff302073ab461ddf1ececa01"
+      },
+      "evaluatorHash": "ebe2e41c5f60028177c8e19b3dec2754e5f00a2c2d1e29ba3d33d36a286cdc43",
+      "promptHash": "783d0e1c98b73f4fcffa208efab22364fa24791ce346ee266c07091c08c16cde",
+      "expectedTests": 4,
+      "baselineCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 4,
+          "pass": 0,
+          "fail": 4
+        },
+        "stdoutHash": "461d914cfa5281b82ad8eb631a8a1fdc576a1d67dbf124013be766e523fe4f68",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "baselineFailing": true,
+      "providerTurnObserved": true,
+      "taskId": "9bc8c425-448d-4a61-a1c0-1347ffe90180",
+      "taskRunId": "49fc2850-6d96-4dae-ba91-4e1857d44708",
+      "sessionId": "8c25b1eb-1a6b-45be-82b5-156dacbdcc05",
+      "targetId": "external-bench-invoice-discount",
+      "state": "failed",
+      "errorCode": "TASK_RUN_NO_CHANGES",
+      "errorMessage": "The coding adapter finished without verifiable new file output. Inspect provider tool errors and retry; text-only suggestions do not complete a write task.",
+      "executionErrorType": null,
+      "elapsedSeconds": 37.328,
+      "adapterRunId": "codex-9f384392-51bd-4761-9bb5-fb26eac26488",
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "codex",
+        "providerId": "local-codex-cli",
+        "source": "explicit",
+        "targetId": "external-bench-invoice-discount",
+        "supportedMode": "write",
+        "fallbackPolicy": "explicit_only"
+      },
+      "model": null,
+      "providerHealth": {
+        "providerId": "local-codex-cli",
+        "adapterType": "codex",
+        "status": "healthy",
+        "available": true,
+        "reason": "CLI executable and startup probe are available.",
+        "checkedAt": "2026-10-07T08:23:45.888912",
+        "safeDetails": {
+          "command": "codex.exe",
+          "probe": "version",
+          "executable": "codex.exe",
+          "exitCode": 0,
+          "output": "codex-cli 0.162.0-alpha.2",
+          "rawRedacted": true
+        }
+      },
+      "providerMessages": [
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"agent_message\",\"text\":\"I\\u2019ll inspect `src/domain.mjs` and prepare the targeted change. This session has read-only filesystem access, so I can provide a patch but cannot apply it.\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"agent_message\",\"text\":\"No files changed. The session is read-only, and policy also blocked reading `src/domain.mjs`, so I could not prepare an exact patch or run validation.\\n\\nThis implementation is ready to replace the existing named function when write access is available:\\n\\n```js\\nexport function invoiceTotalCents(lines, discountBps = 0) {\\n  if (\\n    !Number.isSafeInteger(discountBps) ||\\n    discountBps < 0 ||\\n    discountBps > 10000\\n  ) {\\n    throw new RangeError(\\\"Invalid discountBps\\\");\\n  }\\n\\n  let total = 0n;\\n  const maxTotal = BigInt(Number.MAX_SAFE_INTEGER);\\n\\n  for (const { priceCents, quantity } of lines) {\\n    if (\\n      !Number.isSafeInteger(priceCents) ||\\n      priceCents < 0 ||\\n      !Number.isSafeInteger(quantity) ||\\n      quantity < 0\\n    ) {\\n      throw new RangeError(\\\"Invalid priceCents or quantity\\\");\\n    }\\n\\n    total += BigInt(priceCents) * BigInt(quantity);\\n\\n    if (total > maxTotal) {\\n      throw new RangeError(\\\"Unsafe invoice total\\\");\\n    }\\n  }\\n\\n  return Number(\\n    (total * BigInt(10000 - discountBps) + 5000n) / 10000n\\n  );\\n}\\n```\\n\\nIt uses exact integer arithmetic, rounds half cents upward, and does not mutate input lines.\"}}"
+      ],
+      "providerDiagnostics": [
+        {
+          "eventId": "f2d92ed1-d395-4f2a-ad5f-339b63dec6dc",
+          "exitCode": 0,
+          "stderrExcerpt": "Reading additional input from stdin...\n2026-10-07T08:23:58.237108Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: \"Rejected(\\\"`\\\\\\\"C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\XCC\\\\\\\\\\\\\\\\.cache\\\\\\\\\\\\\\\\codex-runtimes\\\\\\\\\\\\\\\\codex-primary-runtime\\\\\\\\\\\\\\\\dependencies\\\\\\\\\\\\\\\\native\\\\\\\\\\\\\\\\powershell\\\\\\\\\\\\\\\\pwsh.exe\\\\\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'` rejected: blocked by policy\\\")\" }\n"
+        }
+      ],
+      "events": [
+        {
+          "id": "cf7fcb31-b339-425a-9784-e48b63b97808",
+          "sequence": 1,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "bd99c663-ebbc-433c-9354-00a23166278e",
+          "sequence": 2,
+          "type": "session_queue.enqueued",
+          "codexEventType": null
+        },
+        {
+          "id": "fee830c6-73c1-4052-9606-db069fe7aaae",
+          "sequence": 3,
+          "type": "task.checkpoint.created",
+          "codexEventType": null
+        },
+        {
+          "id": "5cc68b6e-2386-4608-aa9a-b092251c0e8c",
+          "sequence": 4,
+          "type": "run.claimed",
+          "codexEventType": null
+        },
+        {
+          "id": "2f2f2b6f-d175-4460-811a-1bfd797253d1",
+          "sequence": 5,
+          "type": "session_queue.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "1dbe97e5-730c-4f1e-81c3-5e29e99ee6a9",
+          "sequence": 6,
+          "type": "target_lock.acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "90a6af4b-9c4f-4b1b-bb06-ff499eee877c",
+          "sequence": 7,
+          "type": "session_queue.running",
+          "codexEventType": null
+        },
+        {
+          "id": "c370e42b-ed04-4220-a7f5-fd4f2238848e",
+          "sequence": 8,
+          "type": "task.heartbeat",
+          "codexEventType": null
+        },
+        {
+          "id": "1031934e-c86e-4e48-9998-34317eaa1ab9",
+          "sequence": 9,
+          "type": "provider.resolved",
+          "codexEventType": null
+        },
+        {
+          "id": "2bc316a1-cbd5-4eb5-8cb3-2ea60ba3a09c",
+          "sequence": 10,
+          "type": "provider.health_checked",
+          "codexEventType": null
+        },
+        {
+          "id": "b1cfabe6-9629-4497-8a69-1e8548146f4a",
+          "sequence": 11,
+          "type": "provider.capacity_acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "126ff5aa-b3ab-4b94-b504-ed7b06f78156",
+          "sequence": 12,
+          "type": "task.state",
+          "codexEventType": "thread.started"
+        },
+        {
+          "id": "13bc962d-e0b2-4faf-880c-c7b5610d1479",
+          "sequence": 13,
+          "type": "task.state",
+          "codexEventType": "turn.started"
+        },
+        {
+          "id": "3224678b-a380-4bd1-9965-61d8cda27927",
+          "sequence": 14,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "2d1e7b0d-cc9c-4b64-8ca8-5200544d3b42",
+          "sequence": 15,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "f2d92ed1-d395-4f2a-ad5f-339b63dec6dc",
+          "sequence": 16,
+          "type": "completed",
+          "codexEventType": "turn.completed"
+        },
+        {
+          "id": "b1c37acb-b31c-4ddd-8043-9961da6c22bc",
+          "sequence": 17,
+          "type": "task.scope_validation.passed",
+          "codexEventType": null
+        },
+        {
+          "id": "78290a63-b869-477b-ae3f-24a37a67bda0",
+          "sequence": 18,
+          "type": "task.completion_validation",
+          "codexEventType": null
+        },
+        {
+          "id": "7d6105d1-570c-4822-b2f6-293944577149",
+          "sequence": 19,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "1f2e7e91-c244-491e-b460-70b74e9b4e60",
+          "sequence": 20,
+          "type": "target_lock.released",
+          "codexEventType": null
+        },
+        {
+          "id": "45529cb3-c8fe-40a2-a697-8eb999769da2",
+          "sequence": 21,
+          "type": "session_queue.advanced",
+          "codexEventType": null
+        },
+        {
+          "id": "86df387b-e899-4b0d-9937-7e00310f2343",
+          "sequence": 22,
+          "type": "provider.capacity_released",
+          "codexEventType": null
+        }
+      ],
+      "memorySnapshot": {
+        "memorySnapshotId": "0508cb02-35df-42d7-b59b-aad83f1272bf",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "e97a86b22022b4db5b619a5a662e8a080fbd5132c1da8e8437e63e0ed683b290",
+        "retrievalAsOf": "2026-10-07T08:23:45.536422",
+        "agentsMdHash": "c34c821dc720b64f69e1e9131a6aa93607550a33901924451e80ac689aefaa1a",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "0f803a7c035447f89b86d9c671a57a4b05f64bd0edf6f0c2bb0d82bdb4c5a157",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "c467292a50b6a1e1bd8483da5e908fcfa9a43aa1c79b56bac527457f3170390e",
+        "runtimeConfigVersion": "dc551daf7f91bede9f94cfe1a96f0e635c86c7a52f4fc9620a592c7f4184eec4",
+        "contextPackHash": "cffdd1bee4f5de84ef2b5b4da8493c8da2ce47f657b848ec9a51cc619d394d9f",
+        "createdAt": "2026-10-07T08:23:45.536422"
+      },
+      "memoryUsage": {
+        "schemaVersion": "memory_usage_v1",
+        "evidenceType": "prepared_provider_request",
+        "memorySnapshotId": "0508cb02-35df-42d7-b59b-aad83f1272bf",
+        "snapshotContentStatus": "frozen",
+        "snapshotItemsHash": "e97a86b22022b4db5b619a5a662e8a080fbd5132c1da8e8437e63e0ed683b290",
+        "visibleMemoriesHash": "9b1f531bbf8ac077f62150ad740c3ffc45c4c72114add218aa29d92deaec1469",
+        "items": [
+          {
+            "id": "5c62c31c-0903-481a-bb98-8d6b02cf2b69",
+            "version": 1,
+            "contentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1",
+            "rank": 1,
+            "score": 26.7,
+            "matchedTerms": [
+              "do",
+              "keep",
+              "named",
+              "not",
+              "or",
+              "the"
+            ],
+            "layer": "rule",
+            "selectionReason": "applicable_trusted_rule",
+            "visibleFields": [
+              "agentRoles",
+              "contentHash",
+              "contentMd",
+              "id",
+              "layer",
+              "matchedTerms",
+              "rank",
+              "scope",
+              "score",
+              "selectionReason",
+              "source",
+              "status",
+              "targetIds",
+              "title",
+              "trustLevel",
+              "type",
+              "version"
+            ],
+            "contentVisible": true,
+            "visibleContentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1"
+          }
+        ],
+        "selection": {
+          "policyVersion": "memory_rule_budget_v1",
+          "budgetUnit": "serialized_json_characters",
+          "maxChars": 16000,
+          "usedChars": 719,
+          "experienceLimit": 5,
+          "selectedCounts": {
+            "rule": 1,
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByBudget": {
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByExperienceLimit": 0
+        },
+        "visibleChars": 719
+      },
+      "canonicalContextHash": "b2a7af1c4ac72c3fadb74ef3e25f7e6b4d142392be13b9afc2b5ba82aa1a8cb4",
+      "memoryReceiptValid": true,
+      "scope": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "49fc2850-6d96-4dae-ba91-4e1857d44708",
+        "targetId": "external-bench-invoice-discount",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "status": "passed",
+        "changedPathCount": 0,
+        "timestamp": "2026-10-07T08:24:22.873522+00:00",
+        "errorCode": null,
+        "reason": null
+      },
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "49fc2850-6d96-4dae-ba91-4e1857d44708",
+        "status": "failed",
+        "accessMode": "write",
+        "changedPathCount": 0,
+        "diffId": null,
+        "errorCode": "TASK_RUN_NO_CHANGES",
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffs": [],
+      "diffValid": false,
+      "immutableInputs": true,
+      "resultFileHash": "e0d3d953908fd5abb947764a6fe7379594524f7dc13bdfe5a2701ca2d0170071",
+      "postCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 4,
+          "pass": 0,
+          "fail": 4
+        },
+        "stdoutHash": "aefcab3f755e00e4d90c43a6e8eb1a06f45bb8366c9b59d0f42770750469bcf4",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "artifacts": [],
+      "failureGates": [
+        "run_not_completed",
+        "post_check_failed",
+        "diff_invalid"
+      ]
+    },
+    {
+      "caseId": "catalog-search",
+      "verdict": "failed",
+      "baseCommit": "7037df0d41c0e0cdc6dfed0270966e4440243605",
+      "inputHashes": {
+        "src/domain.mjs": "35a182c141ff6f415d5f250ef3fc2eb468fcc1781867ed390ec311db4f31a981",
+        "src/App.jsx": "b1d8472676d6da41520073674a38e820828af369d2aa761de28e884af3fadebc",
+        "src/main.jsx": "a26b7120ee6b82fa97b58803a3f682d199cb18aed2affbd8582212204035eb1d",
+        "index.html": "0a2edc447e41e9443e76e3be2833a1d0218287f1199d475f74f51e05b83d2c95",
+        "package.json": "baab849d73ee5f804af8bddac9d8fe74a3db3fc6aca3202a1b877fea03a90f47"
+      },
+      "evaluatorHash": "4c2f565aae8ccfc39aedcd58b7a73a2f9e15001d7e045681ee0683eeda08852c",
+      "promptHash": "57ca97bfc3816a1da6506f3ab5457ce376c72fe261a01834a46c82b5cb2eb262",
+      "expectedTests": 3,
+      "baselineCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 3,
+          "pass": 0,
+          "fail": 3
+        },
+        "stdoutHash": "27e4bc55fb222d0e6a46034fa1ee658068fddcb6c7d8d879672dc61095b76128",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "baselineFailing": true,
+      "providerTurnObserved": true,
+      "taskId": "c2dfe1af-1aa2-475e-9754-87420a4b418f",
+      "taskRunId": "91cc5d39-b949-40b3-949c-e2a66fdac7a3",
+      "sessionId": "673ef30d-913a-4e7c-b7ba-a5c69515ea87",
+      "targetId": "external-bench-catalog-search",
+      "state": "failed",
+      "errorCode": "TASK_RUN_NO_CHANGES",
+      "errorMessage": "The coding adapter finished without verifiable new file output. Inspect provider tool errors and retry; text-only suggestions do not complete a write task.",
+      "executionErrorType": null,
+      "elapsedSeconds": 32.312,
+      "adapterRunId": "codex-650d2651-6859-4b46-841d-9edccef2a236",
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "codex",
+        "providerId": "local-codex-cli",
+        "source": "explicit",
+        "targetId": "external-bench-catalog-search",
+        "supportedMode": "write",
+        "fallbackPolicy": "explicit_only"
+      },
+      "model": null,
+      "providerHealth": {
+        "providerId": "local-codex-cli",
+        "adapterType": "codex",
+        "status": "healthy",
+        "available": true,
+        "reason": "CLI executable and startup probe are available.",
+        "checkedAt": "2026-10-07T08:24:23.712058",
+        "safeDetails": {
+          "command": "codex.exe",
+          "probe": "version",
+          "executable": "codex.exe",
+          "exitCode": 0,
+          "output": "codex-cli 0.162.0-alpha.2",
+          "rawRedacted": true
+        }
+      },
+      "providerMessages": [
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"agent_message\",\"text\":\"I\\u2019ll inspect `src/domain.mjs` and prepare the smallest change that preserves the export and book identities. This session has read-only filesystem access, so I cannot apply the edit directly.\"}}",
+        "{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"agent_message\",\"text\":\"No files changed. The session is read-only, and policy blocked reading `src/domain.mjs`, so I could not inspect, patch, or validate it.\\n\\nAssuming string titles, authors, and queries, the requested implementation is:\\n\\n```js\\nexport function searchBooks(books, query) {\\n  const normalizedQuery = query.trim().toLowerCase();\\n\\n  if (!normalizedQuery) return books.slice();\\n\\n  return books.filter(\\n    (book) =>\\n      book.title.toLowerCase().includes(normalizedQuery) ||\\n      book.author.toLowerCase().includes(normalizedQuery)\\n  );\\n}\\n```\\n\\nThis preserves order and object identities without mutating the input.\"}}"
+      ],
+      "providerDiagnostics": [
+        {
+          "eventId": "cd3e2c5f-ef7f-4ec1-bf81-94c695ec12a0",
+          "exitCode": 0,
+          "stderrExcerpt": "Reading additional input from stdin...\n2026-10-07T08:24:36.156265Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: \"Rejected(\\\"`\\\\\\\"C:\\\\\\\\\\\\\\\\Users\\\\\\\\\\\\\\\\XCC\\\\\\\\\\\\\\\\.cache\\\\\\\\\\\\\\\\codex-runtimes\\\\\\\\\\\\\\\\codex-primary-runtime\\\\\\\\\\\\\\\\dependencies\\\\\\\\\\\\\\\\native\\\\\\\\\\\\\\\\powershell\\\\\\\\\\\\\\\\pwsh.exe\\\\\\\" -Command 'Get-Content -LiteralPath src/domain.mjs'` rejected: blocked by policy\\\")\" }\n"
+        }
+      ],
+      "events": [
+        {
+          "id": "5da7284a-66aa-4efc-8191-7563b936084f",
+          "sequence": 1,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "8b3b288f-eaf1-438b-baa8-e7f8950d7dd6",
+          "sequence": 2,
+          "type": "session_queue.enqueued",
+          "codexEventType": null
+        },
+        {
+          "id": "b7d61ea9-f425-4fdd-9b49-a29a3fb2d137",
+          "sequence": 3,
+          "type": "task.checkpoint.created",
+          "codexEventType": null
+        },
+        {
+          "id": "bb608211-3138-43b5-9e26-9101e65ed0bc",
+          "sequence": 4,
+          "type": "run.claimed",
+          "codexEventType": null
+        },
+        {
+          "id": "4bba3866-4769-48b3-a290-8257102b429b",
+          "sequence": 5,
+          "type": "session_queue.ready",
+          "codexEventType": null
+        },
+        {
+          "id": "05fe7845-86e8-486a-9c90-84b3fc125fc8",
+          "sequence": 6,
+          "type": "target_lock.acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "0ec6e8c1-08e1-4846-9b1a-dbdbb2830bca",
+          "sequence": 7,
+          "type": "session_queue.running",
+          "codexEventType": null
+        },
+        {
+          "id": "0f13710f-1d28-4e67-851f-8ccc60705fb3",
+          "sequence": 8,
+          "type": "task.heartbeat",
+          "codexEventType": null
+        },
+        {
+          "id": "859bc181-6423-4690-bedc-c4450a7c8d34",
+          "sequence": 9,
+          "type": "provider.resolved",
+          "codexEventType": null
+        },
+        {
+          "id": "0eb89732-ce0c-4961-95b8-28c4a7efcd19",
+          "sequence": 10,
+          "type": "provider.health_checked",
+          "codexEventType": null
+        },
+        {
+          "id": "216eb25d-66dd-489d-a645-309b0a570c1f",
+          "sequence": 11,
+          "type": "provider.capacity_acquired",
+          "codexEventType": null
+        },
+        {
+          "id": "21812918-6580-45ef-963d-6cb8468ef02a",
+          "sequence": 12,
+          "type": "task.state",
+          "codexEventType": "thread.started"
+        },
+        {
+          "id": "8fb95d90-50b2-4e3b-b5df-57b9352f334f",
+          "sequence": 13,
+          "type": "task.state",
+          "codexEventType": "turn.started"
+        },
+        {
+          "id": "da56b073-f39c-446c-9354-91b6a51dd039",
+          "sequence": 14,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "cbe5b84c-5ee8-4813-b8ff-1278d88a9f30",
+          "sequence": 15,
+          "type": "message.delta",
+          "codexEventType": "item.completed"
+        },
+        {
+          "id": "cd3e2c5f-ef7f-4ec1-bf81-94c695ec12a0",
+          "sequence": 16,
+          "type": "completed",
+          "codexEventType": "turn.completed"
+        },
+        {
+          "id": "c8523ad1-1c90-4f00-a9fc-b39af362e699",
+          "sequence": 17,
+          "type": "task.scope_validation.passed",
+          "codexEventType": null
+        },
+        {
+          "id": "ff599650-2284-444d-863b-44b7abd86a60",
+          "sequence": 18,
+          "type": "task.completion_validation",
+          "codexEventType": null
+        },
+        {
+          "id": "a695b6a6-3bf5-4686-b37e-58bb0c7c45de",
+          "sequence": 19,
+          "type": "task.state",
+          "codexEventType": null
+        },
+        {
+          "id": "e9640ee8-001e-40f3-a40a-f9428a3b111e",
+          "sequence": 20,
+          "type": "target_lock.released",
+          "codexEventType": null
+        },
+        {
+          "id": "aa9a71be-b1dc-47ca-8c04-6dbd26fafbf7",
+          "sequence": 21,
+          "type": "session_queue.advanced",
+          "codexEventType": null
+        },
+        {
+          "id": "14a5a1c0-ba64-432f-b987-7855c26adfeb",
+          "sequence": 22,
+          "type": "provider.capacity_released",
+          "codexEventType": null
+        }
+      ],
+      "memorySnapshot": {
+        "memorySnapshotId": "75794e1b-541c-4b02-b389-9cab59920a26",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "e97a86b22022b4db5b619a5a662e8a080fbd5132c1da8e8437e63e0ed683b290",
+        "retrievalAsOf": "2026-10-07T08:24:23.295487",
+        "agentsMdHash": "691b6b5be3f2293e2402895ee04eaf1c0f1a4e9a788d2cc25a225b9f744a8a59",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "0f803a7c035447f89b86d9c671a57a4b05f64bd0edf6f0c2bb0d82bdb4c5a157",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "fdcaa4ee6523356d8aab2302cdab6bc3ae03a3d002bd3cac00250e2717caf6fd",
+        "runtimeConfigVersion": "dc551daf7f91bede9f94cfe1a96f0e635c86c7a52f4fc9620a592c7f4184eec4",
+        "contextPackHash": "65b3427f9eb5708eef1da75d162506b70d9fa1b9b9abc7ea571e1fcfa99b6a71",
+        "createdAt": "2026-10-07T08:24:23.295487"
+      },
+      "memoryUsage": {
+        "schemaVersion": "memory_usage_v1",
+        "evidenceType": "prepared_provider_request",
+        "memorySnapshotId": "75794e1b-541c-4b02-b389-9cab59920a26",
+        "snapshotContentStatus": "frozen",
+        "snapshotItemsHash": "e97a86b22022b4db5b619a5a662e8a080fbd5132c1da8e8437e63e0ed683b290",
+        "visibleMemoriesHash": "db27f1e6e23ef691db56182d0e7a089cbcd8b92eca90752e007f34723b6758f1",
+        "items": [
+          {
+            "id": "5c62c31c-0903-481a-bb98-8d6b02cf2b69",
+            "version": 1,
+            "contentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1",
+            "rank": 1,
+            "score": 26.8579,
+            "matchedTerms": [
+              "do",
+              "keep",
+              "named",
+              "not",
+              "or",
+              "the"
+            ],
+            "layer": "rule",
+            "selectionReason": "applicable_trusted_rule",
+            "visibleFields": [
+              "agentRoles",
+              "contentHash",
+              "contentMd",
+              "id",
+              "layer",
+              "matchedTerms",
+              "rank",
+              "scope",
+              "score",
+              "selectionReason",
+              "source",
+              "status",
+              "targetIds",
+              "title",
+              "trustLevel",
+              "type",
+              "version"
+            ],
+            "contentVisible": true,
+            "visibleContentHash": "a074ee6452d6d9622f110bb28eda256e4eec81ab64bda94668862b0c56d543a1"
+          }
+        ],
+        "selection": {
+          "policyVersion": "memory_rule_budget_v1",
+          "budgetUnit": "serialized_json_characters",
+          "maxChars": 16000,
+          "usedChars": 722,
+          "experienceLimit": 5,
+          "selectedCounts": {
+            "rule": 1,
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByBudget": {
+            "preference": 0,
+            "experience": 0
+          },
+          "omittedByExperienceLimit": 0
+        },
+        "visibleChars": 722
+      },
+      "canonicalContextHash": "362b0e705c4313807fa02d1da3736b131abdc971e2e26dc02ee848d85d4faf18",
+      "memoryReceiptValid": true,
+      "scope": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "91cc5d39-b949-40b3-949c-e2a66fdac7a3",
+        "targetId": "external-bench-catalog-search",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "status": "passed",
+        "changedPathCount": 0,
+        "timestamp": "2026-10-07T08:24:55.644994+00:00",
+        "errorCode": null,
+        "reason": null
+      },
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "91cc5d39-b949-40b3-949c-e2a66fdac7a3",
+        "status": "failed",
+        "accessMode": "write",
+        "changedPathCount": 0,
+        "diffId": null,
+        "errorCode": "TASK_RUN_NO_CHANGES",
+        "functionalAcceptance": "not_evaluated"
+      },
+      "diffs": [],
+      "diffValid": false,
+      "immutableInputs": true,
+      "resultFileHash": "35a182c141ff6f415d5f250ef3fc2eb468fcc1781867ed390ec311db4f31a981",
+      "postCheck": {
+        "exitCode": 1,
+        "counts": {
+          "tests": 3,
+          "pass": 0,
+          "fail": 3
+        },
+        "stdoutHash": "77665ac49b69c4b039a1c9117d32ae85c6ecdcfd2da51ab58b2fe6022ff09d82",
+        "stderrHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderrExcerpt": "",
+        "elapsedSeconds": 0.047
+      },
+      "artifacts": [],
+      "failureGates": [
+        "run_not_completed",
+        "post_check_failed",
+        "diff_invalid"
+      ]
+    }
+  ],
+  "summary": {
+    "selectedCases": 3,
+    "passedCases": 0,
+    "failedCases": 3,
+    "notAttemptedCases": 0,
+    "providerTurnsObserved": 3,
+    "successRate": 0.0
+  }
+}

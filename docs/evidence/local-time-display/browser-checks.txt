@@ -1,0 +1,4 @@
+Checking Asia/Shanghai
+Checking America/New_York
+Checking UTC
+Actual local time UI verified in three browser timezones

@@ -1,0 +1,75 @@
+{
+  "status": "verified",
+  "createdAt": "2026-10-08T06:57:15.262025+00:00",
+  "scope": "agenthub-local-time-display 1.1",
+  "codeSha256": {
+    "apps/web/src/lib/date-format.ts": "54ed1672d220b29cdbff13622429a77c96b53b7e161dd4e74efc0fcbff88e215",
+    "apps/web/src/lib/date-format.test.ts": "6f06245249a3aec2b763f88f4a3e915674ab6bdb6d88f70b1115b12461a91147",
+    "apps/web/src/components/local-time.tsx": "5e566d1374d167eeeab8fb4a1e760642ad7f21b0f84602b10f8bfe078b40c7fc",
+    "apps/web/src/components/local-time.test.tsx": "451649978dae9547b5d64f589a5ab464142dc662e384a5a13e1b0b7f871ae6cc",
+    "apps/web/src/components/session-sidebar.tsx": "836346500ff9520bb68a2841cef0cb20dd856cfe85d2c25d828068311ac2a66d",
+    "apps/web/src/components/session-organization.test.tsx": "0f65e57f699f18b9bd8ed1f8dff1820b1446b0ef068a398d6ba2265039a71fba",
+    "apps/web/src/components/session-event-timeline.tsx": "3b9c8ff94a93ae9e8a4b10d169ebe96af4c6e0392bacb2ab8051eff0e86502e9",
+    "apps/web/src/components/session-workbench.test.tsx": "6968222429775c75e848ec079061fb7d85a759ddaafcf47128247212fc79101c",
+    "apps/web/src/components/dag-summary.tsx": "c68ed495cecbd37f51f2164d71d4557bf3338b37e91ed432c8831cce4b7cc014",
+    "apps/web/src/components/dag-summary.test.tsx": "92abe441240f3eaf095e925d0f3aeb47e0711609991a75dd298fc62268732744",
+    "apps/web/src/components/preview-card.tsx": "70368a560846e76f3039093372057fd0d74c0cb56f4db9c7fdc46f32b44db8eb",
+    "apps/web/src/components/preview-card.test.tsx": "d1e242b373417c48d2363d745f35888c721ad7fa0be04a009a74f87779161f5d"
+  },
+  "specSha256": {
+    "openspec/changes/agenthub-local-time-display/design.md": "7c81e8e02e8970eba8720fb03afea54044a2141f242931db00cd86bfd6cffc3e",
+    "openspec/changes/agenthub-local-time-display/proposal.md": "b2f5009ea8d600d5b5c3c34dd2bf382997cd246ed8f075fb5513c14117604a27",
+    "openspec/changes/agenthub-local-time-display/tasks.md": "069006cfb152bf822676e648f5c968ba542e06d66dd6d10f551d6bfce57c58dd",
+    "openspec/changes/agenthub-local-time-display/specs/local-time-display/spec.md": "19b6200c9f681cadb2bebe0ba3a283d9a934e7f566a1c73152ff8653b2183cec"
+  },
+  "unchangedBackendSha256": {
+    "apps/api/app/models.py": "4c99b5245b751618251bba9a2d3411f9462f6bd392a7db8864e15c3e29376a29",
+    "apps/api/app/db.py": "50f48ca7daffbff74d61f9471225404ac4d5ae8253f972b96f16960bafbe5e94",
+    "apps/api/app/schemas.py": "7f445a310c1211c16731faabeb47ed41e413de0e4d07b358ffdcaf820e9ee692",
+    "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+    "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+    "apps/api/app/routes/messages.py": "8b78cb64d24439303cfab3eee808ea10410aaaa81b2a9eec3fc0590fff5e92ee",
+    "apps/api/tests/test_models.py": "0e7c2341056653bde442a7f9bd344dde55fbe6b7452982b22c173789c703bd18",
+    "apps/api/tests/test_session_organization.py": "80b771e6e4175571b33b60dc83182ced6f7c4b15dd3d39834b37b8071a6ddd93",
+    "apps/api/tests/test_task_runs.py": "5b767cb2a8df0c5ba7095f9440f0d6f985f44447ea913fbf275fcd451ec23dad"
+  },
+  "evidenceSha256": {
+    "browser-checks.txt": "06f1b81d659e97ff887011216eb491d95d0e339e4043f58591334b65a20965e3",
+    "browser.json": "218cd1e73860bd124fc8d7b97f8ab01fe963ed0edbfc66f4181308943a830502",
+    "dark.png": "bd9af75d06a84e2f73b43a4eb77f4d29b54f25956191d280d762f861d1309075",
+    "development-history.json": "4955d2d806ffbf52273145105c46959fab480b6abfb81bda1f89842c6746fe47",
+    "events-narrow.png": "59978d58fff1325bbf1d8887972e9abdd39b5cea99d31ce7240b60800e93d024",
+    "local.png": "42ecd987f6f1997cebe1c600bbac54b1e2cd9b95531e7faf7929bcd0083907be",
+    "preview.png": "57da7d1aaf3447286ed2c7881b0e25f5d45712d5c083551f70bbe2abc422fea0",
+    "sidebar-narrow.png": "38b72e16bdc0f885fa8ec15dbd59512912f2d911ca6f7a38981606a6bb7457e6",
+    "static-checks.txt": "2d6de0041eba8d5c953025835ea699eb746e2d42cd19bb3da3312f8c2c50dc2d",
+    "web-tests.txt": "997323e3cc2f65f65a3ca705c8d1ae53d91fe07f866211dc3f1a9beec4b864ca"
+  },
+  "verification": {
+    "web": {
+      "passed": 209,
+      "files": 25,
+      "seconds": 5.91,
+      "exitCode": 0
+    },
+    "staticChecks": {
+      "exitCode": 0
+    },
+    "browser": {
+      "zones": 3,
+      "eventTimesPerZone": 60,
+      "reload": true,
+      "hydrationErrors": 0,
+      "lightDarkNarrow": true
+    },
+    "backend": "9 frozen backend hashes unchanged; no new backend test run",
+    "openSpec": "strict passed",
+    "gitWhitespace": "passed"
+  },
+  "boundaries": [
+    "milliseconds used for JS display/comparison; exact raw API precision retained in title",
+    "no new provider execution or fresh Preview acceptance",
+    "existing unhealthy Preview truthfully retained; existing Preview GET may reconcile health metadata",
+    "local uncommitted checkout"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "session": {
+    "count": 32,
+    "sha256": "ee95053c85ff989044074bc9dd7def3456dd2ddd3c307deb32045e13d597c9ee"
+  },
+  "message": {
+    "count": 98,
+    "sha256": "7bf36f25d35677c71692840f0d6df128529285e127a5afe184fd3f5f8f7e273b"
+  },
+  "taskrun": {
+    "count": 46,
+    "sha256": "f4ce1f5ff0733d34c987f4d10d8e870189d7edc2380f79c3adb459d78131317c"
+  },
+  "diff": {
+    "count": 37,
+    "sha256": "4fde3a62332d825e74493cead608c2ed909c048d93396ad8cec551cdb43b6483"
+  },
+  "messageattachment": {
+    "count": 9,
+    "sha256": "371da0d645cfb85a4869126750403c7e5ecaa7bc3509a02b08d9b186ed553ed0"
+  }
+}

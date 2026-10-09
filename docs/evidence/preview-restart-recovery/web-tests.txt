@@ -1,0 +1,17 @@
+
+> agenthub@ test:web X:\Git_Clone\AgentHub
+> pnpm --filter @agenthub/web test
+
+
+> @agenthub/web@ test X:\Git_Clone\AgentHub\apps\web
+> vitest run
+
+
+ RUN  v4.1.11 X:/Git_Clone/AgentHub/apps/web
+
+
+ Test Files  26 passed (26)
+      Tests  212 passed (212)
+   Start at  16:24:28
+   Duration  7.57s (transform 7.79s, setup 0ms, import 21.26s, tests 16.33s, environment 33.05s)
+

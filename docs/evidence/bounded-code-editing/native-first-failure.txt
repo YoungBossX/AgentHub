@@ -1,0 +1,11 @@
+{"stage":"waiting-native","iteration":0,"run":"f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c","state":"queued"}
+{"stage":"waiting-native","iteration":15,"run":"f5ba5ba6-fd7f-4560-8b2b-6fdd532e774c","state":"streaming"}
+AssertionError [ERR_ASSERTION]: [{"tag":"BUTTON","label":"完整源码","x":-9,"right":57,"width":66},{"tag":"BUTTON","label":"输入补丁","x":65,"right":131,"width":66},{"tag":"SELECT","label":"apps/demo/src/App.tsx","x":-9,"right":592.40625,"width":601.40625},{"tag":"BUTTON","label":"重新读取文件并替换草稿","x":-9,"right":141,"width":150},{"tag":"BUTTON","label":"代码编辑器","x":-9,"right":51,"width":60},{"tag":"TEXTAREA","label":"const checklistItems = [\n  \"Crea","x":-9,"right":592.40625,"width":601.40625},{"tag":"BUTTON","label":"检查并生成差异","x":-9,"right":99,"width":108},{"tag":"BUTTON","label":"应用以上差异","x":0,"right":96,"width":96}]
+    at file:///C:/Users/XCC/AppData/Local/Temp/agenthub-edit-native.mjs:64:3 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

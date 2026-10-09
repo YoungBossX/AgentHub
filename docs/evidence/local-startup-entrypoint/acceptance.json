@@ -1,0 +1,32 @@
+{
+  "checks": [
+    "Doctor is read-only: no SQLite and no listeners",
+    "Real FastAPI, Next and optional demo API become ready on selected loopback ports",
+    "Actual Edge UI uses selected backend and creates a new Session/worktree",
+    "Simulated failure -> ScriptedMock real write/Diff -> healthy Vite Preview, with no model call",
+    "Occupied port fails without touching the existing API",
+    "Real Next lock failure after API startup rolls back only new services",
+    "Normal stop runs API lifespan cleanup and frees API/Web/demo/owned Vite ports",
+    "Restart preserves full Session/Message/TaskRun metadata and visible history",
+    "EOF also exits normally and frees owned service ports",
+    "Actual owned API process failure exits nonzero and cleans remaining Web/demo services",
+    "Separate pre-existing API8006, accepted Session/TaskRuns and native source remain unchanged"
+  ],
+  "boundaries": [
+    "Fresh isolated SQLite; no model invocation",
+    "Forced Codex failure is a simulation; recovered write is ScriptedMock",
+    "Only startup-owned services are supervised; no adoption of existing listeners"
+  ],
+  "customCors": {
+    "accepted": 200,
+    "rejected": 400
+  },
+  "freshSessionId": "f844f531-5d29-4c55-bdf2-116a545d86ad",
+  "scriptedRunId": "2177a0e2-1086-4411-ba51-9b15b91c25de",
+  "previewId": "1f74f5b4-3c29-46be-9777-b97cc53c5cfb",
+  "previewPort": 61825,
+  "metadataSha256Before": "6a41508b72d4c6b4b56abef440e0b178f6a8d50cd25d450868090054e4e3f96a",
+  "metadataSha256After": "6a41508b72d4c6b4b56abef440e0b178f6a8d50cd25d450868090054e4e3f96a",
+  "existingSessionSha256": "c8ecf6b8257c68b2c2d6162c50a3a6d0abfdde852f72bf436687a1292b735201",
+  "existingSourceSha256": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5"
+}

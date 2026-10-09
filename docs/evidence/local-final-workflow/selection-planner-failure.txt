@@ -1,0 +1,16 @@
+{"stage":"native-selection","enabled":true}
+{"iteration":0,"state":"queued"}
+{"iteration":15,"state":"streaming"}
+{"iteration":30,"state":"completed"}
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(final.includes('Selected Context 734'))
+
+    at file:///C:/Users/XCC/AppData/Local/Temp/agenthub-final-selection.mjs:62:48 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

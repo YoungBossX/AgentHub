@@ -158,6 +158,7 @@ export type ProjectProvisioningApplyResponse = {
 }
 
 export type AgentContact = {
+  mentionAlias?: string | null
   id: string
   displayName: string
   avatarInitials: string
@@ -175,6 +176,10 @@ export type AgentContact = {
 }
 
 export type AgentProfile = {
+  origin?: string
+  systemPrompt?: string
+  mentionAlias?: string | null
+  toolPolicy?: string | null
   id: string
   displayName: string
   avatarInitials: string
@@ -212,6 +217,9 @@ export type AgentCompatibility = {
 }
 
 export type AgentDirectoryEntry = {
+  systemPrompt?: string
+  mentionAlias?: string | null
+  toolPolicy?: string | null
   id: string
   entryType: "built_in" | "draft" | string
   displayName: string
@@ -252,6 +260,7 @@ export type AgentProfileDraftInput = {
 }
 
 export type RuntimeRoleConfig = {
+  systemPrompt?: string | null
   role: string
   agentProfileId: string | null
   providerId: string | null
@@ -294,6 +303,7 @@ export type RuntimeProviderCheck = {
 }
 
 export type RuntimeRoleConfigInput = {
+  systemPrompt?: string | null
   agentProfileId?: string | null
   providerId?: string | null
   adapterType?: string | null
@@ -320,6 +330,8 @@ export type WorkspaceSession = {
   activeBackendTargetId?: string | null
   memorySnapshotId?: string | null
   status: string
+  pinnedAt?: string | null
+  archivedAt?: string | null
   lastMessageAt: string | null
   createdAt: string
   updatedAt: string
@@ -349,6 +361,9 @@ export type MemoryItem = {
 }
 
 export type ChatMessage = {
+  regeneration?: { sourceMessageId: string; requestMessageId: string; operationId: string; kind: "request" | "summary"; state: string; errorCode?: string } | null
+  regenerationAction?: { kind: "request" | "summary"; available: boolean; reason: string | null } | null
+  attachments?: MessageAttachment[]
   id: string
   sessionId: string
   senderType: "user" | "system" | "orchestrator" | "agent" | string
@@ -358,6 +373,51 @@ export type ChatMessage = {
   parentMessageId: string | null
   streamState: string
   createdAt: string
+  groupSummary?: GroupSummary | null
+  pinnedAt?: string | null
+}
+
+export class RegenerationRequestError extends ApiRequestError {
+  constructor(message: string, readonly status: number) { super(message) }
+}
+
+export async function regenerateSessionMessage(backendUrl: string, sessionId: string, messageId: string, requestId: string, fetcher: Fetcher = fetch): Promise<ChatMessage> {
+  const response = await fetcher(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/regenerate`), {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestId }),
+  })
+  if (!response.ok) throw new RegenerationRequestError(await responseErrorMessage(response, "无法重新生成消息"), response.status)
+  return await response.json() as ChatMessage
+}
+
+export type GroupSummary = {
+  groupId: string
+  isPlan?: boolean
+  state: string
+  current?: boolean
+  source?: string
+  coordinatorName?: string
+  errorCode?: string | null
+  validation?: string
+  evidence?: {
+    inputFingerprint: string
+    outcome: string
+    tasks: {
+      taskId: string; title: string; displayName: string; state: string
+      runId: string | null; adapterType: string | null; attemptCount: number
+      errorCode: string | null; missingEvidence: string[]
+      artifacts: { artifactId: string; type: string; version: number; contentHash: string; readOnlySnapshot?: boolean; changedFiles?: string[] }[]
+      reviews: { artifactId: string; status: string; source: string; summary: string }[]
+    }[]
+  }
+  interpretation?: { summary: string; nextSteps: string[] } | null
+  providerEvidence?: { providerType?: string; model?: string; outputSha256?: string }
+  agentInstruction?: { sha256: string; profileId: string | null; characters: number }
+}
+
+export async function retryGroupSummary(backendUrl: string, sessionId: string, groupId: string): Promise<ChatMessage> {
+  const response = await fetch(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/groups/${encodeURIComponent(groupId)}/summary/retry`), { method: "POST" })
+  if (!response.ok) throw new ApiRequestError(await responseErrorMessage(response, "无法重试任务组汇总"))
+  return await response.json() as ChatMessage
 }
 
 export type SessionExecutionLedger = {
@@ -509,6 +569,18 @@ export type ReviewArtifact = {
   findings: Array<Record<string, unknown>>
   suggestedChanges: string[]
   adapterType: string
+  nativeReceipt?: {
+    schemaVersion: string
+    taskRunId: string
+    adapterRunId: string
+    targetId: string
+    inputFingerprint: string
+    outputSha256: string
+    validation: "not_run"
+    assessmentKind: string
+    boundFileCount: number
+    files: Record<string, { sha256: string; bytes: number; textSha256?: string; lines?: number }>
+  } | null
 }
 
 export type PreviewArtifact = {
@@ -635,9 +707,10 @@ export async function listWorkspaceSessions(
   backendUrl: string,
   workspaceId: string,
   fetcher: Fetcher = fetch,
+  view: "active" | "archived" | "all" = "active",
 ): Promise<WorkspaceSession[]> {
   const response = await fetcher(
-    apiUrl(backendUrl, `/workspaces/${workspaceId}/sessions`),
+    apiUrl(backendUrl, `/workspaces/${workspaceId}/sessions${view === "active" ? "" : `?view=${view}`}`),
     {
       cache: "no-store",
     },
@@ -648,6 +721,22 @@ export async function listWorkspaceSessions(
   }
 
   return (await response.json()) as WorkspaceSession[]
+}
+
+export async function organizeSession(backendUrl: string, sessionId: string, changes: { pinned?: boolean; archived?: boolean }, fetcher: Fetcher = fetch): Promise<WorkspaceSession> {
+  const response = await fetcher(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/organization`), {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(changes),
+  })
+  if (!response.ok) throw new ApiRequestError(await responseErrorMessage(response, "无法整理会话"))
+  return await response.json() as WorkspaceSession
+}
+
+export async function pinSessionMessage(backendUrl: string, sessionId: string, messageId: string, pinned: boolean, fetcher: Fetcher = fetch): Promise<ChatMessage> {
+  const response = await fetcher(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/pin`), {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pinned }),
+  })
+  if (!response.ok) throw new ApiRequestError(await responseErrorMessage(response, "无法置顶消息"))
+  return await response.json() as ChatMessage
 }
 
 export async function listWorkspaceTargets(
@@ -667,6 +756,82 @@ export async function listWorkspaceTargets(
   }
 
   return (await response.json()) as TargetProject[]
+}
+
+export type CustomAgentInput = {
+  displayName: string
+  mentionAlias: string
+  role: string
+  providerId: string
+  toolPolicy: string
+  supportedTargets: string[]
+  capabilityTags: string[]
+  systemPrompt: string
+  description: string
+  avatarInitials: string
+  enabled: boolean
+}
+
+export type AgentCreationTurn = { role: "user" | "assistant"; content: string }
+export type AgentCreationResult = {
+  kind: "draft" | "clarification"
+  reply: string
+  draft: CustomAgentInput | null
+  provenance: { providerId: string; plannerSource: string; durationMs: number; outputSha256: string; inputSha256: string }
+}
+
+export async function generateAgentConfiguration(
+  backendUrl: string, workspaceId: string, input: { message: string; history: AgentCreationTurn[]; currentDraft: CustomAgentInput | null },
+  fetcher: Fetcher = fetch,
+): Promise<AgentCreationResult> {
+  const response = await fetcher(apiUrl(backendUrl, `/workspaces/${encodeURIComponent(workspaceId)}/agent-creation`), {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    let detail = "配置生成失败，请检查连接后重试。"
+    try { const payload = await response.json(); if (typeof payload.detail === "string") detail = payload.detail } catch { /* stable error */ }
+    throw new Error(detail)
+  }
+  return await response.json() as AgentCreationResult
+}
+
+export async function saveCustomAgent(
+  backendUrl: string, workspaceId: string, input: CustomAgentInput,
+  profileId?: string, fetcher: Fetcher = fetch,
+): Promise<AgentProfile> {
+  const response = await fetcher(apiUrl(backendUrl, `/workspaces/${workspaceId}/custom-agents${profileId ? `/${profileId}` : ""}`), {
+    method: profileId ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    let detail = "保存自定义 Agent 失败。"
+    try {
+      const payload = await response.json() as { detail?: unknown }
+      if (typeof payload.detail === "string") detail = payload.detail
+    } catch { /* Preserve the stable error if the server returns no JSON. */ }
+    throw new Error(detail)
+  }
+  return await response.json() as AgentProfile
+}
+
+export async function refreshSessionMemorySnapshot(
+  backendUrl: string,
+  sessionId: string,
+  fetcher: Fetcher = fetch,
+): Promise<WorkspaceSession> {
+  const response = await fetcher(
+    apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/memory-snapshot/refresh`),
+    { method: "POST" },
+  )
+
+  if (!response.ok) {
+    throw new ApiRequestError(
+      response.status === 409
+        ? "会话快照暂时无法刷新。若有任务正在执行，请等待结束后重试。"
+        : await responseErrorMessage(response, "无法刷新会话快照，请检查后端连接后重试。"),
+    )
+  }
+
+  return (await response.json()) as WorkspaceSession
 }
 
 export async function analyzeExternalProject(
@@ -1071,6 +1236,7 @@ export async function createSessionMessage(
   contentMd: string,
   fetcher: Fetcher = fetch,
   context?: MessageContextInput,
+  attachmentIds: string[] = [],
 ): Promise<ChatMessage> {
   const body: Record<string, unknown> = {
     contentMd,
@@ -1079,6 +1245,7 @@ export async function createSessionMessage(
   if (context && Object.keys(context).length > 0) {
     body.context = context
   }
+  if (attachmentIds.length) body.attachmentIds = attachmentIds
   const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
     body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },
@@ -1086,10 +1253,49 @@ export async function createSessionMessage(
   })
 
   if (!response.ok) {
-    throw new Error("Could not create message")
+    throw await attachmentRequestError(response, "无法发送消息")
   }
 
   return (await response.json()) as ChatMessage
+}
+
+export type MessageAttachment = {
+  id: string
+  sessionId: string
+  messageId: string | null
+  filename: string
+  kind: "text" | "pdf" | "image"
+  mediaType: string
+  byteSize: number
+  sha256: string
+  extractionStatus: "ready" | "no_text" | "image"
+  textTruncated: boolean
+  imageWidth: number | null
+  imageHeight: number | null
+  imageSha256: string | null
+  createdAt: string
+}
+
+export function attachmentContentUrl(backendUrl: string, item: MessageAttachment, preview = false) {
+  return apiUrl(backendUrl, `/sessions/${encodeURIComponent(item.sessionId)}/attachments/${encodeURIComponent(item.id)}/content${preview ? "?preview=true" : ""}`)
+}
+
+async function attachmentRequestError(response: Response, fallback: string) {
+  const body = await response.json().catch(() => null)
+  return new Error(typeof body?.detail === "string" ? body.detail : `${fallback} (${response.status})`)
+}
+
+export async function uploadMessageAttachment(backendUrl: string, sessionId: string, file: File, signal: AbortSignal): Promise<MessageAttachment> {
+  const response = await fetch(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/attachments?filename=${encodeURIComponent(file.name)}`), {
+    method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file, signal,
+  })
+  if (!response.ok) throw await attachmentRequestError(response, "附件上传失败")
+  return response.json()
+}
+
+export async function deletePendingAttachment(backendUrl: string, sessionId: string, attachmentId: string) {
+  const response = await fetch(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/attachments/${encodeURIComponent(attachmentId)}`), { method: "DELETE" })
+  if (!response.ok && response.status !== 404) throw await attachmentRequestError(response, "附件移除失败")
 }
 
 export function sessionEventsUrl(
@@ -1396,3 +1602,27 @@ async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {
 
   return (await response.json()) as TaskRun
 }
+
+export type CodeEditSource = { path: string; content: string | null; sha256: string | null; binding: string; head: string; targetId: string }
+export type CodeEditOperation = {
+  id: string; state: string; actor: "user"; sourceArtifactId: string; targetId: string; patch: string
+  files: { path: string; operation: string; beforeSha256: string | null; afterSha256: string | null; beforeBytes: number | null; afterBytes: number | null }[]
+  reason: string | null; createdAt: string; updatedAt: string
+}
+export type PrepareCodeEdit = { operationId: string; sourceArtifactId: string } & (
+  { patch: string } | { path: string; content: string; expectedSha256: string | null; expectedBinding: string }
+)
+
+async function codeEditRequest<T>(backendUrl: string, sessionId: string, suffix: string, body?: unknown): Promise<T> {
+  const response = await fetch(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/code-edits${suffix}`), body === undefined
+    ? { cache: "no-store" } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+  if (!response.ok) throw new ApiRequestError(await responseErrorMessage(response, "代码编辑请求失败"))
+  return await response.json() as T
+}
+export const loadCodeEditSource = (url: string, sessionId: string, artifactId: string, path: string) =>
+  codeEditRequest<CodeEditSource>(url, sessionId, `/source?${new URLSearchParams({ sourceArtifactId: artifactId, path })}`)
+export const listCodeEdits = (url: string, sessionId: string) => codeEditRequest<CodeEditOperation[]>(url, sessionId, "")
+export const prepareCodeEdit = (url: string, sessionId: string, body: PrepareCodeEdit) => codeEditRequest<CodeEditOperation>(url, sessionId, "", body)
+export const applyCodeEdit = (url: string, sessionId: string, id: string) => codeEditRequest<CodeEditOperation>(url, sessionId, `/${encodeURIComponent(id)}/apply`, {})
+export const resolveCodeEdit = (url: string, sessionId: string, id: string, action: "inspect" | "keep_current") =>
+  codeEditRequest<CodeEditOperation>(url, sessionId, `/${encodeURIComponent(id)}/resolve`, { action })

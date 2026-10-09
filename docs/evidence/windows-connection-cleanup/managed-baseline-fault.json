@@ -1,0 +1,9 @@
+{
+  "mode": "baseline",
+  "controlledInjection": true,
+  "before": 0,
+  "after": 1,
+  "socketCloses": 0,
+  "protocolCallbacks": 1,
+  "cleaned": false
+}

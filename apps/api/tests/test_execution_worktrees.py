@@ -261,6 +261,7 @@ def test_real_write_execution_intervals_overlap_without_cross_branch_diffs(branc
 
 class BlockingWritingAdapter(ScriptedMockAdapter):
     def __init__(self):
+        super().__init__()
         self.requests = {}
         self.intervals = {}
         self.all_started = asyncio.Event()

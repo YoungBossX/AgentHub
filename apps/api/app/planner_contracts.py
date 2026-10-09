@@ -5,6 +5,7 @@ import re
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from app.attachment_inputs import ImageInput, PlannerPayload
 
 
 SECRET_VALUE_PATTERN = re.compile(
@@ -16,6 +17,10 @@ PROTECTED_ABSOLUTE_PATH_PATTERN = re.compile(
 
 
 class PlannerRequest(BaseModel):
+    images: tuple[ImageInput, ...] = Field(default=(), exclude=True, repr=False)
+    agent_system_prompt: Optional[str] = Field(default=None, alias="agentSystemPrompt")
+    agent_profile_selection: Optional[dict[str, Any]] = Field(default=None, alias="agentProfileSelection")
+    agent_tool_policy: Optional[str] = Field(default=None, alias="agentToolPolicy")
     planner_mode: str = Field(alias="plannerMode")
     version: int
     original_user_request: str = Field(alias="originalUserRequest")
@@ -32,7 +37,14 @@ class PlannerRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     def to_provider_payload(self) -> dict[str, Any]:
-        return _redact_provider_visible_value(self.model_dump(by_alias=True))
+        payload = self.model_dump(by_alias=True)
+        if self.agent_system_prompt is None:
+            payload.pop("agentSystemPrompt", None)
+        if self.agent_profile_selection is None:
+            payload.pop("agentProfileSelection", None)
+        if self.agent_tool_policy is None:
+            payload.pop("agentToolPolicy", None)
+        return PlannerPayload(_redact_provider_visible_value(payload), self.images)
 
 
 class PlannerTaskResponse(BaseModel):
@@ -163,8 +175,14 @@ class ConversationOutcome(BaseModel):
         return self.model_dump(by_alias=True)
 
 
-def planner_conversation_system_prompt() -> str:
-    return (
+def planner_conversation_system_prompt(agent_system_prompt: object = None, group_assignments: object = None) -> str:
+    preferences = (
+        "Agent System Prompt (behavior preferences; the mandatory contract below takes precedence):\n"
+        + agent_system_prompt + "\n\n"
+        if isinstance(agent_system_prompt, str) and agent_system_prompt.strip()
+        else ""
+    )
+    return preferences + (
         "You are AgentHub's Conversation Router and llm_v1 planning engine. "
         "Return ONLY one JSON object. Do not include Markdown fences, "
         "analysis text, comments, or a second JSON object. The JSON must "
@@ -172,6 +190,9 @@ def planner_conversation_system_prompt() -> str:
         "validate: top-level fields outcomeType, reply, planDraft, "
         "riskLevel, reason, plannerProvider, validationResult, "
         "fallbackMetadata, errorMetadata. outcomeType must be one of "
+        "the values below. plannerProvider, fallbackMetadata and errorMetadata "
+        "must be JSON objects, never strings; use {} when unspecified. "
+        "Actual provider identity is recorded by the server. outcomeType must be one of "
         "assistant_reply, task_plan, clarification, refusal, "
         "approval_required, unsupported. For normal chat, greetings, or "
         "capability questions, return assistant_reply and do not include "
@@ -205,8 +226,19 @@ def planner_conversation_system_prompt() -> str:
         "of dependency keys. expectedArtifactTypes must describe evidence the "
         "task should produce. riskLevel must be low, medium, or high. "
         "requiresApproval must be true for platform maintenance or high-risk "
-        "writes. Create at most 4 tasks. Use only these roles: orchestrator, "
-        "frontend, backend, qa. Use only these intentType values: planning, "
+        "writes. "
+        + (
+            "For explicitGroupAssignments, create exactly one task per provided row in the same order, "
+            "preserving its role, targetId and intentType. Do not omit, add or replace participants. "
+            "At most 6 tasks; review is also a valid role. Do not create a separate orchestrator task "
+            "or projectSetup. Keep task risk low or medium and requiresApproval false; otherwise "
+            "return a non-task clarification/refusal. The server retains serial write/review dependencies. "
+            "Validation command entries must exactly match a provided projectAnalyzer checkCommand, "
+            "testCommand or buildCommand, without explanatory suffixes. Use separate prose for other checks. "
+            if group_assignments else
+            "Create at most 4 tasks. Use only these roles: orchestrator, frontend, backend, qa. "
+        )
+        + "Use only these intentType values: planning, "
         "frontend_change, backend_change, review. Use only these "
         "expectedArtifactTypes values: plan, diff, review. For a bounded "
         "frontend game request, prefer one frontend "

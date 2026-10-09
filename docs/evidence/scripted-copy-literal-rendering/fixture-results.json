@@ -1,0 +1,153 @@
+{
+  "boundary": "Structured adapter fixtures with test ownership guard; not production route/lease evidence",
+  "typescript": "5.9.3",
+  "esbuild": "0.28.2",
+  "adapterSha256": "112629dcb6d1eedbac3c8edb2e62eed52fb6be5bb0259167ec59bb99a71bd988",
+  "verifierSha256": "1729f0c883ce79d2ee4e701ef4701a4c3f99f4ed8ccd03964a08a7b27a586015",
+  "cases": [
+    {
+      "target": "primary_action_button_text",
+      "expected": "{agenthubCopyProbe}",
+      "actual": "{agenthubCopyProbe}",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "33283aab4179b38f99dfa5ffaca84ca4090df1b45b464dc1be465fb67e63e84e"
+    },
+    {
+      "target": "primary_action_button_text",
+      "expected": "A &amp; B <strong>text</strong>",
+      "actual": "A &amp; B <strong>text</strong>",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "e69c14dc35472e88fae68889ff7559f1e220889225e698731ffff6e7f8cb3bf3"
+    },
+    {
+      "target": "primary_action_button_text",
+      "expected": "Close </button> </h1> {x} &lt;",
+      "actual": "Close </button> </h1> {x} &lt;",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "e2e6c61e5d1e8a4840193e4705b383afb5bf112be19091bc7676ef1f7854f5d1"
+    },
+    {
+      "target": "primary_action_button_text",
+      "expected": "路径 C:\\demo\\1\\g<1> $&",
+      "actual": "路径 C:\\demo\\1\\g<1> $&",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "ade90ff55925cd0944f0a2f547b999330859fa7c694b153e99e396a817e747ca"
+    },
+    {
+      "target": "primary_action_button_text",
+      "expected": "首行\n第二行\r第三行\t末尾 分隔 段落",
+      "actual": "首行\n第二行\r第三行\t末尾 分隔 段落",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "171575d5f2d40d4193cfae0a08b296562719196f0d98a1273d24506d0edab1a4"
+    },
+    {
+      "target": "primary_action_button_text",
+      "expected": "Emoji 🚀 \"quote\" 'single' & {name}",
+      "actual": "Emoji 🚀 \"quote\" 'single' & {name}",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "9084fc327f6dd2dcee1ae6d9a12a1c3065fe9acdd8e847ccb0971119ae088691"
+    },
+    {
+      "target": "primary_action_button_text",
+      "expected": "C:\\demo\\1",
+      "actual": "C:\\demo\\1",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "f0504e3f52c4bfb22cec6e15825734dc18fa961a2918ed016d92bb7a0d264546"
+    },
+    {
+      "target": "primary_action_button_text",
+      "expected": "普通文案",
+      "actual": "普通文案",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "d7276059841f608f085fcecfada7f6a15e02bb77bd9dff88cf2e429a72182a71"
+    },
+    {
+      "target": "demo_heading_text",
+      "expected": "{agenthubCopyProbe}",
+      "actual": "{agenthubCopyProbe}",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "367a3d58cce1f7d6141a6af7fcefa33296ed7b758810ecff1741ec8e946ba11e"
+    },
+    {
+      "target": "demo_heading_text",
+      "expected": "A &amp; B <strong>text</strong>",
+      "actual": "A &amp; B <strong>text</strong>",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "c6af16cb71e52123cf005e8418580573350a8fcce97d2ab6fd96c105320f12a3"
+    },
+    {
+      "target": "demo_heading_text",
+      "expected": "Close </button> </h1> {x} &lt;",
+      "actual": "Close </button> </h1> {x} &lt;",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "3b2f3e8a5b56e3d31706670e4e6a0cc2395b5426e230bc6a1dff0ccb56c578b1"
+    },
+    {
+      "target": "demo_heading_text",
+      "expected": "路径 C:\\demo\\1\\g<1> $&",
+      "actual": "路径 C:\\demo\\1\\g<1> $&",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "5b49b2ddd3e6b8e71c22e1a1014bd52ab59695af60e180dc3365afc7e8b69bd4"
+    },
+    {
+      "target": "demo_heading_text",
+      "expected": "首行\n第二行\r第三行\t末尾 分隔 段落",
+      "actual": "首行\n第二行\r第三行\t末尾 分隔 段落",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "fd02327357ed3d3a86113a3f26ac78b0ca0a2823ba41ba7dd20b66dffc4d57b8"
+    },
+    {
+      "target": "demo_heading_text",
+      "expected": "Emoji 🚀 \"quote\" 'single' & {name}",
+      "actual": "Emoji 🚀 \"quote\" 'single' & {name}",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "c3974a2f796524d20c251bfdaaa5bd1b020d0b9eb70ea2ec70d4d32180fadff2"
+    },
+    {
+      "target": "demo_heading_text",
+      "expected": "C:\\demo\\1",
+      "actual": "C:\\demo\\1",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "5479d9d56f27832993b1046ea37d909c791d80f3cd1f10932a14b334b4c932e5"
+    },
+    {
+      "target": "demo_heading_text",
+      "expected": "普通文案",
+      "actual": "普通文案",
+      "childElements": 0,
+      "typeErrors": 0,
+      "browserErrors": [],
+      "sourceSha256": "368e73f9d585e08ca5aa440b65519cf6e0a7acdc7f370dd3d19ae1fe91bacc06"
+    }
+  ]
+}

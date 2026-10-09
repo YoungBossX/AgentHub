@@ -1,7 +1,9 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+import app.guardrails as guardrails_module
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
 from sqlmodel import SQLModel, create_engine
@@ -326,6 +328,64 @@ def test_codex_command_policy_binds_cd_to_expected_worktree() -> None:
 
     assert decision.allowed is False
     assert decision.approval is not None
+
+
+@pytest.mark.parametrize("runtime_platform", ["win32", "linux", "darwin"])
+def test_codex_windows_sandbox_prefix_is_platform_scoped(
+    monkeypatch: pytest.MonkeyPatch, runtime_platform: str,
+) -> None:
+    monkeypatch.setattr(guardrails_module, "sys", SimpleNamespace(platform=runtime_platform), raising=False)
+    command = _bounded_codex_command()
+    command[1:1] = ["-c", 'windows.sandbox="unelevated"']
+
+    assert evaluate_command(command, expected_cwd="/tmp/worktree").allowed is (runtime_platform == "win32")
+
+
+@pytest.mark.parametrize("prefix", [
+    ["--config", 'windows.sandbox="unelevated"'],
+    ["-c", 'windows.sandbox="elevated"'],
+    ["-c", 'windows.sandbox="disabled"'],
+    ["-c", "windows.sandbox=unelevated"],
+    ["-c", 'sandbox_mode="danger-full-access"'],
+    ["-c", "sandbox_workspace_write.network_access=true"],
+    ["-c", 'windows.sandbox="unelevated"', "-c", 'windows.sandbox="elevated"'],
+    ["-c", 'windows.sandbox="unelevated"', "--add-dir", "/tmp/outside"],
+    ["-c", 'windows.sandbox="unelevated"', "--dangerously-bypass-approvals-and-sandbox"],
+    ["-c", 'windows.sandbox="unelevated"\nsandbox_workspace_write.network_access=true'],
+])
+def test_codex_windows_sandbox_prefix_rejects_other_overrides(
+    monkeypatch: pytest.MonkeyPatch, prefix: list[str],
+) -> None:
+    monkeypatch.setattr(guardrails_module, "sys", SimpleNamespace(platform="win32"), raising=False)
+    command = _bounded_codex_command()
+    command[1:1] = prefix
+
+    assert evaluate_command(command, expected_cwd="/tmp/worktree").allowed is False
+
+
+@pytest.mark.parametrize("removed_index", [1, 2, 4, 7, 8, 10, 11, 12, 13])
+def test_codex_windows_sandbox_keeps_all_containment_arguments(
+    monkeypatch: pytest.MonkeyPatch, removed_index: int,
+) -> None:
+    monkeypatch.setattr(guardrails_module, "sys", SimpleNamespace(platform="win32"), raising=False)
+    command = _bounded_codex_command()
+    command.pop(removed_index)
+    command[1:1] = ["-c", 'windows.sandbox="unelevated"']
+
+    assert evaluate_command(command, expected_cwd="/tmp/worktree").allowed is False
+
+
+def test_codex_windows_sandbox_keeps_cwd_binding_and_prefix_position(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(guardrails_module, "sys", SimpleNamespace(platform="win32"), raising=False)
+    command = _bounded_codex_command(cwd="/tmp/outside")
+    command[1:1] = ["-c", 'windows.sandbox="unelevated"']
+    assert evaluate_command(command, expected_cwd="/tmp/worktree").allowed is False
+
+    command = _bounded_codex_command()
+    command[4:4] = ["-c", 'windows.sandbox="unelevated"']
+    assert evaluate_command(command, expected_cwd="/tmp/worktree").allowed is False
 
 
 @pytest.mark.parametrize("removed_index", [1, 4, 7, 8, 10, 11, 12, 13])

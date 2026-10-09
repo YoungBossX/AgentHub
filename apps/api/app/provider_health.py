@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from app.planner_providers import (
 )
 from app.provider_configs import ProviderConfig
 from app.process_environment import adapter_process_env
+from app.claude_executable import resolve_claude_executable
 
 
 CLI_COMMANDS_BY_ADAPTER = {
@@ -83,7 +85,12 @@ def check_runtime_role_provider(
             message=f"{provider.display_name} 暂无可用性检测规则。",
         )
 
+    if provider.adapter_type in {"claude_cli", "claude_code"}:
+        override_key = "AGENTHUB_LLM_PLANNER_CLAUDE_CLI_PATH" if provider.adapter_type == "claude_cli" else "CLAUDE_CODE_CLI_PATH"
+        command = os.environ.get(override_key, "").strip() or command
     executable = shutil.which(command)
+    if executable is not None and provider.adapter_type in {"claude_cli", "claude_code"}:
+        executable = resolve_claude_executable(executable)
     if executable is None:
         return ProviderHealthCheckResult(
             role=role_config.role,
@@ -104,6 +111,8 @@ def check_runtime_role_provider(
             capture_output=True,
             check=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=3,
             env=adapter_process_env(environment_profile),
         )

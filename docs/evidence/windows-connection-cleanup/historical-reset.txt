@@ -1,0 +1,15 @@
+Historical natural failure, NOT the controlled fault injection.
+Source: C:\Users\XCC\AppData\Local\Temp\agenthub-attachment-server-v2.log
+Source SHA-256: f7ccf0ff9282069692fe87ddac753289ecba26235362da91bb30357b68ba473b
+
+1493: Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+1494: handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+1495: Traceback (most recent call last):
+1496:   File "E:\Anaconda\Lib\asyncio\events.py", line 88, in _run
+1497:     self._context.run(self._callback, *self._args)
+1498:   File "E:\Anaconda\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+1499:     self._sock.shutdown(socket.SHUT_RDWR)
+1500: ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+1600: INFO:     127.0.0.1:1927 - "GET /task-runs/a9d723ac-4a05-40ec-b52b-70f3a5cc429f/diffs HTTP/1.1" 200 OK
+1601: INFO:     127.0.0.1:11033 - "GET /task-runs/a9d723ac-4a05-40ec-b52b-70f3a5cc429f/previews HTTP/1.1" 200 OK
+1602: INFO:     Shutting down

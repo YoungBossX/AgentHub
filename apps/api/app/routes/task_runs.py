@@ -150,6 +150,7 @@ def task_response(db: DbSession, task: Task) -> TaskResponse:
             task,
             plan=plan,
             dependency_ids=dependency_ids,
+            assigned_role=assigned_role,
         ),
         dependsOnTaskIds=dependency_ids,
         assignedAgentId=task.assigned_agent_id,
@@ -166,6 +167,7 @@ def plan_review_metadata_for_task(
     *,
     plan: dict[str, Any],
     dependency_ids: list[str],
+    assigned_role: Optional[str],
 ) -> dict[str, Any]:
     plan_draft = _dict_value(plan.get("planDraft"))
     task_graph = _dict_value(plan.get("taskGraph"))
@@ -177,7 +179,7 @@ def plan_review_metadata_for_task(
             plan_draft.get("planner"),
         ),
         "rationale": _first_string(plan.get("rationale"), plan_draft.get("rationale")),
-        "assignedRole": _first_string(plan.get("assignedRole")),
+        "assignedRole": _first_string(plan.get("assignedRole"), assigned_role),
         "targetId": _first_string(
             plan.get("targetId"),
             plan.get("frontendTargetId"),
@@ -214,7 +216,9 @@ def _task_breakdown(value: object) -> list[dict[str, Any]]:
         items.append(
             {
                 "title": _first_string(item.get("title"), item.get("name")),
-                "role": _first_string(item.get("role"), item.get("assignedRole")),
+                "role": _first_string(
+                    item.get("role"), item.get("assignedRole"), item.get("assignedAgentRole"),
+                ),
                 "targetId": _first_string(item.get("targetId")),
                 "dependsOn": _string_list(item.get("dependsOn")),
                 "plannedFiles": _string_list(item.get("plannedFiles"), item.get("files")),

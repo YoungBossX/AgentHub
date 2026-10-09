@@ -13,11 +13,11 @@ export default async function Home() {
   const workspace = await getDemoWorkspace(backendUrl)
   const agents = workspace ? await listWorkspaceAgents(backendUrl, workspace.id) : []
   const sessions = workspace
-    ? await listWorkspaceSessions(backendUrl, workspace.id)
+    ? await listWorkspaceSessions(backendUrl, workspace.id, undefined, "all")
     : []
 
   return (
-    <main className="h-screen overflow-hidden bg-[var(--background)]">
+    <div className="h-screen overflow-hidden bg-[var(--background)]">
       <WorkspaceShell
         backendUrl={backendUrl}
         healthSlot={<HealthCard health={health} backendUrl={backendUrl} />}
@@ -25,6 +25,6 @@ export default async function Home() {
         initialSessions={sessions}
         workspace={workspace}
       />
-    </main>
+    </div>
   )
 }

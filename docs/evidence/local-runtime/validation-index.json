@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-07",
+  "baselineHead": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+  "sourceState": "development checkout plus uncommitted changes",
+  "originalPdfSha256": "95d472e103ed53e50b6264f4a07c895dbbc01f5a669027c81194ae83c53b289c",
+  "evidenceFiles": [
+    {
+      "name": "diff-inspector.png",
+      "sha256": "3a8f32ae1df07163194a4277c786a29fc89cadaa932e654f37d6e9bf29ca553b",
+      "bytes": 57608
+    },
+    {
+      "name": "fallback-healthy.png",
+      "sha256": "23c8a8db1e4597a833316bf050724fa862361561977289caea98a0262ba5d839",
+      "bytes": 149335
+    },
+    {
+      "name": "fallback-workflow.json",
+      "sha256": "3b4c9ce245efe795777bf0c55bf310b03b111eaba2a34a62d2d2773684609606",
+      "bytes": 3314
+    },
+    {
+      "name": "followup-dark.png",
+      "sha256": "38a6d5c7ed8a4c1b98e4678f862d9bfce9602f8cad961d386226b0ea84685fc2",
+      "bytes": 132167
+    },
+    {
+      "name": "followup-healthy.png",
+      "sha256": "055921fcdb8cfa76858ef685759c33874fb0f87a20324589d493e47518fc75ea",
+      "bytes": 149907
+    },
+    {
+      "name": "followup-mobile.png",
+      "sha256": "acbd625a727c0102a61c1ded52efb07cf84efb0826a3f7b50c6b14444c637eb3",
+      "bytes": 42309
+    },
+    {
+      "name": "preview-inspector.png",
+      "sha256": "d742a718967128dd6d2d6086f80c054c9a6248669dfd8be2dd2f2b37fe41e1d5",
+      "bytes": 110887
+    },
+    {
+      "name": "real-after-repair.json",
+      "sha256": "b97695cf17f538f103acde04bbf7e76f06d744e74638f5d9fdfef9e5ee17f71e",
+      "bytes": 5684
+    },
+    {
+      "name": "real-after-repair.png",
+      "sha256": "2d626b881917680f808f9d271fd8eff759ee69aadb2d25464840b5e68c621326",
+      "bytes": 97675
+    },
+    {
+      "name": "real-codex-workflow.json",
+      "sha256": "b31ac573e0be3ce7e9f7920d2f1a8b9173b0f32915927449a600887ee8563c49",
+      "bytes": 10813
+    },
+    {
+      "name": "result-inspection.json",
+      "sha256": "6f53c7722304e4358a47e499bec660be8d0dc357dc3a1d9e49f263291e225dc7",
+      "bytes": 2380
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "apps/api/app/run_engine.py",
+      "sha256": "b2752bc74d762f001793282ab314246cc357578b378552d53c245a2659584823"
+    },
+    {
+      "path": "apps/api/app/routes/task_runs.py",
+      "sha256": "04e293f862e897ed6f9dceefa37d8f7795017f285c9c9985aabed79de4f64eb7"
+    },
+    {
+      "path": "apps/api/tests/test_provider_gateway_contract.py",
+      "sha256": "35df4155ac52cd927ff33c90d4ef1479056a121d14e7fdbbbe3cbd2ee9c0f48d"
+    },
+    {
+      "path": "apps/api/tests/test_run_engine_responsiveness.py",
+      "sha256": "4f70ea3308d683ca9c7aa8bf3d937d347155fecbef6882580e582086c930ec91"
+    },
+    {
+      "path": "apps/api/tests/test_planning.py",
+      "sha256": "47fbce49f2303e1ec8e14749ddcd53ec34ef739fbdad5f8b03e94179c8f64d2e"
+    }
+  ],
+  "apiBaseline": {
+    "failure": "host Codex launcher configuration in probe contract test",
+    "passed": 1438,
+    "failed": 1,
+    "skipped": 1
+  },
+  "apiFinalRelated": {
+    "groups": [
+      345,
+      182
+    ],
+    "passed": 527,
+    "fullSuiteRerun": false
+  },
+  "webBaseline": {
+    "passed": 159,
+    "files": 18
+  },
+  "limits": [
+    "scripted advisory Review",
+    "fallback Planner",
+    "simulated failure is not real provider outage",
+    "mock deployment only",
+    "no real Claude acceptance"
+  ]
+}

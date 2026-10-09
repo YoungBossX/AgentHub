@@ -1,0 +1,43 @@
+{
+  "sha256": {
+    "runtime.json": "fe43ba85aa73c1cc3efa8a79430869ca8f5a2630583992de5cac45ad7e9c1edc",
+    "plan.png": "b03d282b473676eb967dcec5f4a93e64cdd3a5cbb238de883607f9bf3d3b3d72",
+    "planner.png": "7380ddb713e44ce46a4e17409cc9d416d19f3839a3a1b2127de35606785b0beb",
+    "review.png": "699b271ea2e4e9ace75c6a96b04effed3352cda82e1d70536b1b091cd5ee7e35"
+  },
+  "validation": {
+    "api": {
+      "passed": 1544,
+      "skipped": 1,
+      "seconds": 917.89,
+      "logSha256": "6fe0272849cfbf4b45d3bf9e1366900ac27fb48b06bf9d138710eaadd23c2bed",
+      "command": "python -m pytest -q --tb=short"
+    },
+    "targetedApi": {
+      "passed": 165
+    },
+    "web": {
+      "passed": 167,
+      "files": 20
+    },
+    "demoApi": {
+      "passed": 5
+    },
+    "check": "pnpm check passed"
+  },
+  "sourceSha256": {
+    "apps/api/app/group_planner.py": "1171b631b1ad8b23bae6e472f1ad8bd0d23ba6c2f0ccf9bacaa6db3c4ab605b4",
+    "apps/api/app/group_planning.py": "1d30397e4f73a993d2d075ddcf26a9c8ccd588ba8cffaad0525e44c1c36dc10f",
+    "apps/api/app/llm_planner.py": "c7ec09e8a5b1715c0a9924124fd9cc501dae012209f7dd9e8dce44d00909660d",
+    "apps/api/app/planner_contracts.py": "a9f4677273bec26c9447744a3d802961b5fdaa5377c4e86b717240182644017f",
+    "apps/api/app/planner_providers.py": "8a52103dfdec5897f155f6ba57654a3e0e2891338322827633f6ca0d31932e69",
+    "apps/api/app/planning_tasks.py": "5bec9280cb256e5a0f054ce878f8028ac49e462e0bdad09078b209fcf85d1849",
+    "apps/api/app/instruction_builder.py": "51fefc6cbf4015061d5e524b7da33a28ee1dc2b0fce829591b241c0db94816ce",
+    "apps/api/tests/test_group_planning.py": "d2adf659de8956c8306cee90beda78a717a418f76765371e450b28e7c8ef4504",
+    "apps/api/tests/test_planner_providers.py": "99b24d580fe870c9d48e47df3c77f7f65260509941ae69bbadac11d04b15ab95"
+  },
+  "browserScriptSha256": {
+    "accept-native-group.mjs": "d5ada05918eab2a7eb7fab558e1467d1c390bf16940b187c2d9ba9b739402c44",
+    "capture-native-group.mjs": "251b8470bc63b727854635b0e718df73d56ddc1d8476591f93ef38d8cf6f200f"
+  }
+}

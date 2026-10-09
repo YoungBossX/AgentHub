@@ -1,0 +1,5 @@
+{"stage":"native-selection","enabled":true}
+{"iteration":0,"state":"queued"}
+{"iteration":15,"state":"streaming"}
+{"iteration":30,"state":"collecting_diff"}
+{"passed":true,"runId":"f5f453c5-11d0-4367-b3be-1e8fc79b5f0a"}

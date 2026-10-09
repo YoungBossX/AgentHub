@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, Index, LargeBinary
 
 
 def new_id() -> str:
@@ -10,7 +11,9 @@ def new_id() -> str:
 
 
 def utc_now() -> datetime:
-    return datetime.utcnow()
+    # Persist UTC without tzinfo for compatibility with existing SQLite rows,
+    # serialized API timestamps and lease comparisons.
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class User(SQLModel, table=True):
@@ -101,6 +104,8 @@ class Session(SQLModel, table=True):
     active_backend_target_id: Optional[str] = None
     memory_snapshot_id: Optional[str] = Field(default=None, foreign_key="memorysnapshot.id")
     status: str = "active"
+    pinned_at: Optional[datetime] = None
+    archived_at: Optional[datetime] = None
     last_message_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
@@ -116,6 +121,30 @@ class Message(SQLModel, table=True):
     parent_message_id: Optional[str] = Field(default=None, foreign_key="message.id")
     stream_state: str = "complete"
     context_json: str = "{}"
+    regeneration_json: str = "{}"
+    pinned_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=utc_now)
+
+
+class MessageAttachment(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    session_id: str = Field(foreign_key="session.id", index=True)
+    message_id: Optional[str] = Field(default=None, foreign_key="message.id", index=True)
+    position: int = 0
+    filename: str
+    kind: str
+    media_type: str
+    byte_size: int
+    sha256: str
+    extraction_status: str
+    text_content: str = ""
+    text_truncated: bool = False
+    image_width: Optional[int] = None
+    image_height: Optional[int] = None
+    image_media_type: Optional[str] = None
+    image_sha256: Optional[str] = None
+    payload: bytes = Field(sa_column=Column(LargeBinary, nullable=False), exclude=True)
+    image_payload: Optional[bytes] = Field(default=None, sa_column=Column(LargeBinary), exclude=True)
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -135,6 +164,7 @@ class Agent(SQLModel, table=True):
 
 
 class AgentProfileDraft(SQLModel, table=True):
+    __table_args__ = (Index("ux_custom_agent_workspace_alias", "workspace_id", "mention_alias", unique=True),)
     id: str = Field(default_factory=new_id, primary_key=True)
     workspace_id: str = Field(foreign_key="workspace.id", index=True)
     display_name: str
@@ -149,6 +179,9 @@ class AgentProfileDraft(SQLModel, table=True):
     safe_for_review: bool = True
     description: str = ""
     status: str = "draft_only"
+    system_prompt: str = ""
+    mention_alias: Optional[str] = None
+    tool_policy: str = ""
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 

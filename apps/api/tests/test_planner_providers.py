@@ -75,6 +75,26 @@ def test_disabled_planner_provider_records_disabled_source() -> None:
     }
 
 
+@pytest.mark.parametrize("text", ["x" * 40000, "续接😀" * 10000], ids=["long-ascii", "long-utf16"])
+def test_long_claude_continuation_uses_stdin_without_changing_tool_policy(text):
+    observed = {}
+    class Runner:
+        def run(self, command, *, timeout, input_text=None):
+            observed.update(command=command, input=input_text)
+            return subprocess.CompletedProcess(command, 0, stdout=json.dumps({
+                "type": "result", "is_error": False, "result": '{"tasks": []}',
+            }), stderr="")
+    result = ClaudeCliPlannerProvider(command_runner=Runner(), claude_binary="claude").create_plan({
+        "originalUserRequest": text, "agentToolPolicy": "planner_no_tools",
+    })
+    assert result.status == "succeeded" and result.raw_output == '{"tasks": []}'
+    command = observed["command"]
+    assert len(subprocess.list2cmdline(command).encode("utf-16-le")) < 32767 * 2
+    assert command[command.index("--tools") + 1] == ""
+    assert "--safe-mode" in command and "--strict-mcp-config" in command
+    assert text in json.loads(observed["input"])["message"]["content"][0]["text"]
+
+
 def test_planner_provider_protocol_registry_lists_supported_protocols() -> None:
     protocols = {item.protocol: item for item in list_planner_provider_protocols()}
 
@@ -767,7 +787,7 @@ def test_claude_cli_planner_provider_returns_real_llm_result() -> None:
     )
     provider = ClaudeCliPlannerProvider(
         command_runner=runner,
-        claude_binary="claude",
+        claude_binary="claude.exe",
         timeout_sec=12,
     )
 
@@ -776,7 +796,7 @@ def test_claude_cli_planner_provider_returns_real_llm_result() -> None:
     assert result.status == "succeeded"
     assert result.raw_output == '{"planner":"llm_v1"}'
     assert result.planner_source == "real_llm"
-    assert runner.command[:2] == ["claude", "--print"]
+    assert runner.command[:2] == ["claude.exe", "--print"]
     assert "--allowedTools" in runner.command
     assert "Return ONLY one JSON object" in runner.command[-1]
     assert "ConversationOutcome contract" in runner.command[-1]
@@ -786,6 +806,42 @@ def test_claude_cli_planner_provider_returns_real_llm_result() -> None:
     assert "Create at most 4 tasks" in runner.command[-1]
     assert "1-frontend-frontend_change" in runner.command[-1]
     assert runner.timeout == 12
+
+
+def test_group_contract_reaches_native_cli_and_removes_tools():
+    runner = FakePlannerCommandRunner(subprocess.CompletedProcess(args=["claude"], returncode=0, stdout="{}", stderr=""))
+    provider = ClaudeCliPlannerProvider(command_runner=runner, claude_binary="claude")
+    provider.create_plan({"agentSystemPrompt": "GROUP_PROMPT", "agentToolPolicy": "planner_no_tools", "explicitGroupAssignments": [{"role": "review", "targetId": "demo-frontend"}]})
+    assert "exactly one task per provided row" in runner.command[-1]
+    assert "At most 6 tasks; review is also a valid role" in runner.command[-1]
+    assert "Create at most 4 tasks" not in runner.command[-1]
+    assert "GROUP_PROMPT" in runner.command[-1]
+    assert runner.command[runner.command.index("--tools") + 1] == ""
+    assert runner.command[runner.command.index("--allowedTools") + 1] == ""
+    assert "--strict-mcp-config" in runner.command
+    assert "--safe-mode" in runner.command
+    assert runner.command[runner.command.index("--effort") + 1] == "low"
+
+
+def test_windows_planner_uses_installed_native_executable_without_cmd(monkeypatch, tmp_path):
+    from app.planner_providers import _default_claude_planner_binary
+    import app.planner_providers as providers
+    native = tmp_path / "node_modules/@anthropic-ai/claude-code/bin/claude.exe"
+    native.parent.mkdir(parents=True); native.write_bytes(b"fixture")
+    monkeypatch.setattr(providers.shutil, "which", lambda _: str(tmp_path / "claude.cmd"))
+    monkeypatch.setattr(providers.os, "name", "nt")
+    assert _default_claude_planner_binary() == str(native)
+
+
+def test_native_planner_process_uses_utf8_without_a_shell(monkeypatch):
+    import app.planner_providers as providers
+    calls = []
+    monkeypatch.setattr(providers.subprocess, "run", lambda *args, **kwargs: calls.append((args, kwargs)))
+    providers.SubprocessPlannerCommandRunner().run(["claude.exe", "--print", '中文 & %PATH%'], timeout=2)
+    args, kwargs = calls[0]
+    assert args[0][-1] == '中文 & %PATH%'
+    assert kwargs["encoding"] == "utf-8"
+    assert not kwargs.get("shell", False)
 
 
 @pytest.mark.parametrize(

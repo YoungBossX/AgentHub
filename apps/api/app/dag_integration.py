@@ -90,6 +90,10 @@ def _input_git(root: Path, args: list[str], value: str) -> str:
 
 
 def _assert_idle(db: DbSession, session_id: str) -> None:
+    from app.user_edit_fences import pending_user_edit
+
+    if pending_user_edit(db, session_id):
+        raise IntegrationWaiting("Session has an unresolved user edit; integration is waiting.")
     active = db.exec(select(TaskRun).join(Task, TaskRun.task_id == Task.id).where(
         Task.session_id == session_id, TaskRun.state.notin_(TERMINAL),
     )).first()

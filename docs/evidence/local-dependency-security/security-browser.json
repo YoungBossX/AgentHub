@@ -1,0 +1,388 @@
+{
+  "errors": [],
+  "blocked": [],
+  "workers": [
+    "http://127.0.0.1:3000/_next/static/chunks/turbopack-worker-%5Bclient-fs%5D__next_static_chunks_1_hyozq._.js#params=%5B%5B%22%2F_next%2Fstatic%2Fchunks%2F0zfj_monaco-editor_esm_vs_editor_editor_worker_1qzkt1x.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F04ku_monaco-editor_esm_vs_editor_editor_worker_1eq-gvg.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F1788_next_dist_2094ok3._.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F04ku_monaco-editor_esm_vs_11pmykl._.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F04ku_monaco-editor_esm_vs_editor_02vl4wm._.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F04ku_monaco-editor_esm_vs_base_common_0v--d8r._.js%22%5D%2C%22%22%2C%22%2F_next%2F%22%2Cnull%2Cnull%5D",
+    "http://127.0.0.1:3000/_next/static/chunks/turbopack-worker-%5Bclient-fs%5D__next_static_chunks_1_hyozq._.js#params=%5B%5B%22%2F_next%2Fstatic%2Fchunks%2F0zfj_monaco-editor_esm_vs_editor_editor_worker_1qzkt1x.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F04ku_monaco-editor_esm_vs_editor_editor_worker_1eq-gvg.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F1788_next_dist_2094ok3._.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F04ku_monaco-editor_esm_vs_11pmykl._.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F04ku_monaco-editor_esm_vs_editor_02vl4wm._.js%22%2C%22%2F_next%2Fstatic%2Fchunks%2F04ku_monaco-editor_esm_vs_base_common_0v--d8r._.js%22%5D%2C%22%22%2C%22%2F_next%2F%22%2Cnull%2Cnull%5D"
+  ],
+  "sources": [
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_0ar5mgp._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_compiled_react-server-dom-turbopack_054sg81._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_compiled_1b5axje._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_1-86t23._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/0zix_%40swc_helpers_cjs_0hi-e47._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/apps_web_1anvha4._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/apps_web_219uq1s._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/turbopack-apps_web_1szr6i2._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_0k6h000._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/apps_web_src_lib_local-monaco_ts_0htkigv._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/0zdr_micromark_dev_lib_07c-3uv._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1hn7_tailwind-merge_dist_bundle-mjs_mjs_04a_myf._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_compiled_react-dom_1qtd0av._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_compiled_next-devtools_index_07p6-q9.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_client_0ky7qcs._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/0loa_micromark-core-commonmark_dev_lib_1q85j3p._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/apps_web_src_1jnpju-._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/node_modules__pnpm_15soxj_._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/%5Bturbopack%5D_browser_dev_hmr-client_hmr-client_ts_1mojsay._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_languages_0v-7pm5._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_common_observableInternal_0js9t-o._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_common_codiconsLibrary_032farj.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_browser_ui_list_0xsngdb._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_browser_ui_tree_16amfp5._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_parts_storage_common_storage_1vduirr.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_browser_1_8r9k7._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_config_045xi1d._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_core_0kpu84k._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_services_10lznc5._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_languages_0db5cm3._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_browser_ui_03u5awu._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_diff_1m16on7._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_viewLayout_0rs1lbb._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_common_0pgyvan._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_browser_services_0ianl_a._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_viewModel_00dt6d7._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_cursor_01qn6rm._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_0fuom0l._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_common_model_1-q3ctp._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_browser_viewParts_1le-aek._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_browser_coreCommands_1nv3tj2.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_browser_gpu_0yrpekw._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_browser_controller_1k0tg5i._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_browser_widget_0f8zfem._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_19frhro._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_platform_contextkey_1lef_m3._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_platform_actions_1yojfa3._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_standalone_1lddhxc._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_browser_00i77z6._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_0uguvrx._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_platform_hover_browser_1ugr70o._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/node_modules__pnpm_1kyecj6._.js",
+      "patchedSanitizer": true,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/%5Broot-of-the-server%5D__042m5i9._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_platform_theme_1ue3u8w._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_platform_quickinput_16577-0._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_platform_0xia7oi._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_1ztr_r-._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_0ddbz9u._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/node_modules__pnpm_18vamsk._.js",
+      "patchedSanitizer": true,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/turbopack-worker-%5Bclient-fs%5D__next_static_chunks_1_hyozq._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/0zfj_monaco-editor_esm_vs_editor_editor_worker_1qzkt1x.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_editor_worker_1eq-gvg.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_2094ok3._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_11pmykl._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_02vl4wm._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_common_0v--d8r._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/turbopack-worker-%5Bclient-fs%5D__next_static_chunks_1_hyozq._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/0zfj_monaco-editor_esm_vs_editor_editor_worker_1qzkt1x.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_editor_worker_1eq-gvg.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/1788_next_dist_2094ok3._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_11pmykl._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_editor_02vl4wm._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/04ku_monaco-editor_esm_vs_base_common_0v--d8r._.js",
+      "patchedSanitizer": false,
+      "embeddedOldSanitizer": false
+    }
+  ],
+  "checks": [
+    "existing native Diff content displayed in local Monaco",
+    "external network blocked with no attempted requests",
+    "local editor worker started",
+    "actual chunks contain DOMPurify 3.4.16 and exclude embedded 3.4.8",
+    "read-only content resists keyboard mutation",
+    "light/dark editor and patch view switching",
+    "existing healthy Vite preview iframe displays native marker"
+  ],
+  "boundaries": [
+    "reused prior native TaskRun; no new model execution",
+    "no dependency audit suppression"
+  ]
+}

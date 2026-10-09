@@ -1,0 +1,22 @@
+{
+  "historyBefore": {
+    "session": "ea7151ec7577898e735f56342b3be13942e42c8bec9d712d6168638a9724ea28",
+    "message": "3cdd0ad5999f13f42a67d773c3f65cbd11a77e0231c7a562d9f440f4614c7820",
+    "task": "7fafb7571976685854d1dcb5a83839838f596a561505ce4ab61c340cb1e284da",
+    "taskrun": "a4bc834e4956d494c81006c918f5a2be45102d12068c054c0c56dfbd81c3200c"
+  },
+  "historyAfterStartup": {
+    "session": "ea7151ec7577898e735f56342b3be13942e42c8bec9d712d6168638a9724ea28",
+    "message": "3cdd0ad5999f13f42a67d773c3f65cbd11a77e0231c7a562d9f440f4614c7820",
+    "task": "7fafb7571976685854d1dcb5a83839838f596a561505ce4ab61c340cb1e284da",
+    "taskrun": "a4bc834e4956d494c81006c918f5a2be45102d12068c054c0c56dfbd81c3200c"
+  },
+  "sessionId": "47bcb9f8-3fcd-410f-9078-cc7b671da95b",
+  "runId": "3a8d9152-469b-4918-afd3-06bc4f70bf14",
+  "previewId": "2455b9fe-e42d-4897-bcde-e405baea6d48",
+  "actualText": "Timing second",
+  "errors": [],
+  "nativeSessionSha256": "c8ecf6b8257c68b2c2d6162c50a3a6d0abfdde852f72bf436687a1292b735201",
+  "nativeSourceSha256": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5",
+  "helperSha256": "2ae0e7da2ad71c2cf3d1b8d3f43b9507e4384c198250e647996ae53a62e74588"
+}

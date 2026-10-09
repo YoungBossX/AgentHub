@@ -179,7 +179,7 @@ async def test_claude_code_adapter_builds_documented_command_shape(
     runner = FakeClaudeCodeRunner(process)
     adapter = ClaudeCodeAdapter(
         process_runner=runner,
-        claude_binary="claude",
+        claude_binary="claude.exe",
         max_budget_usd="0.25",
     )
     request = AgentRunRequest(
@@ -195,7 +195,7 @@ async def test_claude_code_adapter_builds_documented_command_shape(
     await adapter.createRun(request)
 
     assert runner.command == [
-        "claude",
+        "claude.exe",
         "--print",
         "--verbose",
         "--output-format",
@@ -414,7 +414,6 @@ async def test_claude_code_auth_required_event_is_normalized(
     db.refresh(task_run)
     assert task_run.state == "failed"
 
-
 @pytest.mark.anyio
 async def test_claude_code_cli_unavailable_is_normalized(
     db: DbSession,
@@ -499,13 +498,28 @@ def test_claude_code_adapter_type_is_dispatchable() -> None:
         process_runner=FakeClaudeCodeRunner(),
         claude_binary="claude",
     )
-
     assert (
         adapter_for_type(
-            "claude_code",
-            codex_adapter=adapter,
-            claude_code_adapter=adapter,
+            "claude_code", codex_adapter=adapter, claude_code_adapter=adapter,
             scripted_mock_adapter=adapter,
-        )
-        is adapter
+        ) is adapter
     )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("stdout,returncode,stderr,code", [
+    ('{"type":"result"}\n', 1, "runtime failed", "CLAUDE_CODE_EXIT_ERROR"),
+    ('{"type":"result"}\n{"type":"error","message":"unauthorized"}\n', 0, "", "CLAUDE_CODE_AUTH_REQUIRED"),
+    ('{"type":"assistant","text":"suggestion only"}\n', 0, "", "CLAUDE_CODE_MISSING_RESULT"),
+    ('[]\n', 0, "", "CLAUDE_CODE_STDOUT_PARSE_ERROR"),
+])
+async def test_claude_success_requires_result_and_clean_exit(db, tmp_path, stdout, returncode, stderr, code):
+    session, task_run = create_task_run(db, str(tmp_path))
+    process = FakeClaudeCodeProcess(stdout=stdout, returncode=returncode, stderr=stderr)
+    adapter = ClaudeCodeAdapter(process_runner=FakeClaudeCodeRunner(process), claude_binary="claude.exe")
+    events = await run_adapter_event_stream(db, adapter, request_for(task_run, session))
+    assert all(event.event_type != "completed" for event in events)
+    assert json.loads(events[-1].payload_json)["code"] == code
+    assert process.waited is True
+    db.refresh(task_run)
+    assert task_run.state == "failed"

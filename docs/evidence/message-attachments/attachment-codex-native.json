@@ -1,0 +1,24 @@
+{
+  "mode": "codex",
+  "sessionId": "02f9f276-bce4-4ba9-be2a-31cc87043aeb",
+  "messageId": "7d3995e6-0cae-4052-a89e-959cc0527c5f",
+  "taskId": "c571cb2e-acee-4174-9668-87fc79135f38",
+  "runId": "543adcb8-629c-4e22-bce2-8ef87cd0e6e0",
+  "adapter": "codex",
+  "attachmentIds": [
+    "a410af6a-360e-479c-ad51-7501e5b194a5",
+    "db10489d-03a1-484c-91f5-0696aaab4830"
+  ],
+  "appSha256": "5f71a1fe63df6e7d1fd7f4fc2f6c2d2d450e2d2caa1fc5d9da26e2c5b44bea0d",
+  "diffIds": [
+    "1837f66f-5038-4775-8e16-b302ed66f111"
+  ],
+  "errors": [],
+  "checks": [
+    "actual browser upload and send",
+    "request contains neither literal",
+    "direct Codex writer used file and image",
+    "download SHA matches original",
+    "history survives reload"
+  ]
+}

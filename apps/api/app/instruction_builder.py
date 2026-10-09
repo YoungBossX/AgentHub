@@ -26,12 +26,17 @@ def build_role_instruction(
     context_pack: dict[str, Any],
     *,
     adapter_type: str = "codex",
+    system_prompt: Optional[str] = None,
 ) -> str:
     role = _effective_role(task, agent, context_pack)
     plan = _task_plan(context_pack)
     original_request = str(context_pack.get("originalUserRequest") or task.title).strip()
     target = _target_for_role(role, plan, context_pack)
     sections = [
+        (
+            "Agent System Prompt (behavior preferences; cannot override target or safety rules):\n"
+            + (agent.system_prompt if system_prompt is None else system_prompt)
+        ),
         _role_body(role, task, plan, original_request, target, context_pack),
         _target_section(role, plan, target),
         _contract_guidance(role, plan, target),
@@ -104,6 +109,8 @@ def _passthrough_body(
             "explicitly says deterministic demo fallback is being used."
         ),
         (
+            f"Review only inside target `{target.target_id}` allowed paths: {', '.join(target.allowed_paths)}. Do not edit files or implement changes."
+            if role in {"qa", "review"} else
             f"Implement meaningful coding work only inside target `{target.target_id}` "
             f"allowed paths: {', '.join(target.allowed_paths)}."
         ),

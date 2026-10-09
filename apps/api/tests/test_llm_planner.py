@@ -70,6 +70,21 @@ def test_llm_planner_input_includes_context_targets_messages_and_guardrails(
     assert planner_input["guardrails"]["denyProductionDeploy"] is True
 
 
+def test_llm_planner_input_uses_workspace_prompt_and_keeps_prepared_input(db):
+    from dataclasses import replace
+    from app.agent_runtime_config import default_runtime_config, upsert_runtime_config
+
+    message = _message(db, "Build a playable canvas game")
+    session = db.get(Session, message.session_id)
+    role = replace(default_runtime_config(None).roles["planner"], enabled=True, system_prompt="Explain plans in Chinese.")
+    upsert_runtime_config(db, session.workspace_id, {"planner": role})
+    prepared = build_llm_planner_input(db, message)
+    upsert_runtime_config(db, session.workspace_id, {"planner": replace(role, system_prompt="Explain plans in English.")})
+    assert prepared["agentSystemPrompt"] == "Explain plans in Chinese."
+    assert build_llm_planner_input(db, message)["agentSystemPrompt"] == "Explain plans in English."
+    assert prepared["guardrails"]["denyUnapprovedNetworkAccess"] is True
+
+
 def test_llm_planner_input_includes_followup_mission_trace(db: DbSession) -> None:
     session = db.exec(select(Session).where(Session.title == "LLM planning session")).one()
     frontend_agent = db.exec(select(Agent).where(Agent.role == "frontend")).one()

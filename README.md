@@ -57,6 +57,8 @@ TaskRunEvent → SSE → Web Workspace
 
 | 文档 | 用途 |
 |---|---|
+| [`docs/local-usage.md`](docs/local-usage.md) | 本地安装、统一启动、Agent 配置、使用与故障恢复 |
+| [`docs/local-project-delivery.md`](docs/local-project-delivery.md) | 原始设计要求与当前个人项目的实现、验证边界 |
 | [`docs/demo-script.md`](docs/demo-script.md) | 录屏、现场演示和答辩脚本 |
 | [`docs/architecture.md`](docs/architecture.md) | 架构、核心链路、模块地图和可靠性边界 |
 | [`docs/project-state.md`](docs/project-state.md) | 当前基线、冻结证据、已知限制与交付状态 |
@@ -313,9 +315,9 @@ AgentHub/
 
 ### 环境要求
 
-- Node.js 20.19+ 或 22.12+
-- pnpm ≥ 9（`package.json` 锁定 `pnpm@10.33.4`）
-- Python ≥ 3.9
+- Node.js `^20.19.0 || ^22.12.0 || >=24.0.0`
+- pnpm 10.33.4（以 `package.json` 的 `packageManager` 为准）
+- Python 3.11+（当前代码使用 `datetime.UTC`）
 - Git
 
 当前锁文件中的 Vite 8 要求 Node `^20.19.0 || >=22.12.0`。Node 22.11 等更早的
@@ -352,37 +354,45 @@ python -m venv .venv
 pnpm demo:setup
 ```
 
-### 4. 初始化数据库
+### 4. 检查并启动
 
 ```bash
-pnpm db:init
+pnpm doctor:local
+pnpm dev:local
 ```
 
-### 5. 启动服务
+打开 `http://127.0.0.1:3000`。统一入口无需 Bash，自动初始化/增量升级 SQLite，
+启动产品 API 和 Web，等待实际就绪后给出地址；按 Ctrl+C 清理本次启动的服务。
+启动不会安装依赖、重置数据库或执行模型。首次需要在界面新建会话。
 
-终端 1：
+端口被其他服务占用时可显式指定，前后端地址及 CORS 会一起同步：
 
 ```bash
-pnpm dev:api
+pnpm dev:local --api-port 8001 --web-port 3001
 ```
 
-终端 2：
+需要内置演示后端时加 `--demo-api`，它使用目标契约固定的 5174 端口：
 
 ```bash
-pnpm dev:web
+pnpm dev:local --demo-api
 ```
 
-浏览器访问：
+Session 网页预览仍由 API 在实际运行的工作树中启动，不能用仓库根目录 Demo
+页面代替 Agent 结果。详细配置、备份与恢复见 [本地使用说明](docs/local-usage.md)。
 
-```text
-http://127.0.0.1:3000
-```
+修改产品 API 源码时需要自动 reload，可继续分别使用 `pnpm dev:api` 和
+`pnpm dev:web`；旧后端包装命令需要 Bash，统一入口的 API 不启用 reload。
 
-### 6. 发送任务
+### 5. 发送任务
 
 ```text
 @orchestrator build a login page for the demo app
 ```
+
+默认自动组会依次规划、执行、评审并汇总；历史手动计划仍可逐项启动。
+真实执行需要在“工作区设置 → 运行设置”选择可用的本机 Codex/Claude Code，
+执行失败可显式使用 ScriptedMock 兜底。脚本兜底不执行模型提示词，不应被视为
+真实 Agent 成功。
 
 系统将进入：
 
@@ -395,17 +405,21 @@ Planning
 → TaskRunEvent / SSE
 ```
 
-### Windows 包装脚本
+### Python 环境与旧包装脚本
 
-项目 `pnpm` 后端命令通过 Git Bash 脚本运行。脚本会依次识别显式
+统一入口和旧后端包装命令会识别显式
 `AGENTHUB_PYTHON_BIN`、当前工作树 `.venv`、主检出目录共享 `.venv` 以及激活的
-Conda 环境；pytest 使用运行级唯一、自动清理的外部临时目录。
+Conda 环境。统一入口会拒绝无效的显式 Python 路径。旧检查/测试/数据库命令
+仍通过 Bash 运行；pytest 使用运行级唯一、自动清理的外部临时目录。
 
 ---
 
 ## 常用命令
 
 ```bash
+pnpm doctor:local  # 只读检查依赖和端口，不调用模型
+pnpm dev:local     # 一起启动产品 API 和 Web，退出清理自有服务
+pnpm test:local    # 启动器定向测试，亦包含在 pnpm test
 pnpm dev:web       # 启动 Web Workspace
 pnpm dev:api       # 启动 FastAPI
 pnpm demo:dev      # 启动 Demo App

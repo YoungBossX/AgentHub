@@ -1,0 +1,1 @@
+Change 'agenthub-local-startup-entrypoint' is valid

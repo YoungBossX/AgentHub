@@ -1,0 +1,11 @@
+{
+  "sessionId": "572639f7-5771-427a-a151-1ff0b1bff368",
+  "eventCount": 559,
+  "checks": [
+    "API restart preserves identical stored summary, prompt/output hashes and own run receipt",
+    "exactly one summary and participant attempt after repeated wakes/restart",
+    "source hashes unchanged",
+    "same-transaction summary SSE events match persisted receipt",
+    "Last-Event-ID skips old frames"
+  ]
+}

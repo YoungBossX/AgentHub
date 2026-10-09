@@ -1,0 +1,11 @@
+{
+  "phase": "before-restart",
+  "previewId": "fc096ad2-4b18-47e3-a446-9f4ca0fe533a",
+  "healthStatus": "healthy",
+  "button": "Pinned Reference 20261008",
+  "errors": [],
+  "checks": [
+    "actual Vite DOM displays label from pinned reference",
+    "pin still visible after reload"
+  ]
+}

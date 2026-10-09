@@ -1,0 +1,140 @@
+{
+  "recordedAt": "2026-10-07T11:24:30.885072+00:00",
+  "change": "agenthub-conversation-workbench-ui",
+  "task": "1.1",
+  "pdf": {
+    "path": "E:\\BaiduSyncdisk\\简历项目文档\\AgentHub- 多Agent协作平台设计.pdf",
+    "sha256": "95d472e103ed53e50b6264f4a07c895dbbc01f5a669027c81194ae83c53b289c",
+    "pages": 3
+  },
+  "sourceHashes": {
+    "apps/web/src/app/globals.css": "9ea7ebd8746d0551235db1dd0e877829f65d206e0c1aa73b7e71a7678c93313c",
+    "apps/web/src/app/page.tsx": "d37b7403dd98d4be0a89ea7417af9712ad5bc67d6de43f844fa6b66312d7bcaa",
+    "apps/web/src/components/workspace-shell.tsx": "da9c0455a4a62531003b2339b11d699c7e6e31bc32bedffa5dae23ab1727a344",
+    "apps/web/src/components/workspace-shell-header.tsx": "5e2c7d9b38421f137ad37c05b024326d4549a6aedc4d13e741917f14840c785e",
+    "apps/web/src/components/session-sidebar.tsx": "ed5e8dd3a973a6e237972abf6cd83878f67648d45b806e675ba58d4357aac393",
+    "apps/web/src/components/chat-thread.tsx": "9da11ed54dff3c8eb6dc22210d6db5a8ea63ca2374c1487b412759570f43415e",
+    "apps/web/src/components/message-composer.tsx": "17df789719481c9187a206982c94233ee24cc6fbb221d32fee6eacd44cbca889",
+    "apps/web/src/components/dag-summary.tsx": "28fe4297e24b0f99f45fb964340cfd580b5160a7b98ba4a2ad435580d36ad552",
+    "apps/web/src/components/task-card-list.tsx": "81709601b2b4c21523940e8eaf5d1021dc854f93ff5657d24a28e657f98848d8",
+    "apps/web/src/components/preview-card.tsx": "e889dbbdd4158bca8721115047b2333d7ac30e8b05876924886be194cdf413ac",
+    "apps/web/src/components/diff-card.tsx": "94d56f3d84ddd7cf3ded399c72f799c26a6c8d70bd47a4bb8315f8df2e2b16b5",
+    "apps/web/src/components/session-event-timeline.tsx": "7026a7ad6317274cdea4251aeeef7ab81b198b0b03f7046c2d230b30f8e3b4a7",
+    "apps/web/src/components/session-overview.tsx": "aa20279d10bb9254d0c19cf03a0f6f782a0c94bd55c12d89e89075032f00dd18",
+    "apps/web/src/components/task-dependency-graph.tsx": "15e85c328443bf41a0e20ea61c8c1e06f474e9c6dda38a4fbe1993d3cea7c0bf",
+    "apps/web/src/components/session-workbench-state.ts": "0d06ea4595ef5fee61f5f96c6260278f81374e5f6530888fb61e5c89118cc3e5",
+    "apps/web/src/components/use-session-event-refresh.ts": "5e81ad07a2c6b4baaee08ac2319f76563a97a636e7a043bbdf8a09deb2e41bc8"
+  },
+  "screenshots": [
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-process-failure.jpg",
+      "sha256": "6a8963fc76eb086aca24a837beaed28c8a5338298a7a3f059aaec9f8909dae5c",
+      "dimensions": [
+        1145,
+        1244
+      ]
+    },
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-result-expanded.jpg",
+      "sha256": "bf30567a10d68a061eef2e1ae4b3fdaccfe6d9196e5a35e316581bcab86dca67",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-workbench-desktop.jpg",
+      "sha256": "1a823846da76ab8650e59a282837e52dda3c4f3cc47d40f2f3681f88acc8b574",
+      "dimensions": [
+        1440,
+        900
+      ]
+    },
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-workbench-mobile.jpg",
+      "sha256": "ee1cd00ab11d23c671a54a50e7dc92e9b8030afba1502f983142d591fc820dad",
+      "dimensions": [
+        390,
+        844
+      ]
+    },
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-workbench-process.jpg",
+      "sha256": "f84359eaa6cb24d1db010072b4d50543ff31236233ba3541283b39bae56daa36",
+      "dimensions": [
+        1440,
+        900
+      ]
+    }
+  ],
+  "verification": {
+    "webTestFiles": 16,
+    "webTestsPassed": 143,
+    "pnpmCheck": "passed",
+    "apiFullTestsRerun": false,
+    "newBuild": false,
+    "freshHealthyPreview": false
+  },
+  "browser": {
+    "desktop": [
+      1440,
+      900
+    ],
+    "mobile": [
+      390,
+      844
+    ],
+    "mobileDocumentWidth": 390,
+    "interactions": [
+      "conversation/process/results",
+      "actual patch",
+      "expand/restore",
+      "sidebar drawer",
+      "artifact open/close",
+      "empty inspector close"
+    ],
+    "webPort": 3000,
+    "apiPort": 8006
+  },
+  "historicalResult": {
+    "originalDatabase": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-windows-sandbox-fixed-suite-20261007\\benchmark.sqlite3",
+    "copiedDatabase": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-ui-20261007\\benchmark-ui.sqlite3",
+    "sessionId": "c346a0a2-fcc3-4a59-8f63-347d768f36cb",
+    "taskRunId": "582527fa-1112-48f1-9c51-ce76dca304e6",
+    "codingProvider": "codex",
+    "reviewProvider": "scripted_mock",
+    "originalAndCopiedDiffMatch": true,
+    "diff": {
+      "diffId": "b8bf5b23-f325-4573-9ef4-ddf190cffb50",
+      "artifactId": "6127bf30-06bb-4d4f-8dae-1b3a9f469b4d",
+      "patchSha256": "88c718dbcc4c74f1a1eca17d99d1bace18acbda051df34819f6ef278b2f7e719",
+      "stats": {
+        "filesChanged": 1,
+        "additions": 1,
+        "deletions": 1,
+        "files": [
+          {
+            "path": "src/domain.mjs",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      }
+    },
+    "newProviderRunDuringDisplay": false
+  },
+  "freshChatAttempt": {
+    "sessionId": "8c1f3260-8985-4894-989c-5ee639efe881",
+    "firstFailedRunId": "15d3610a-6d5e-49f2-adc5-186c6e8ef9a9",
+    "firstError": "TASK_RUN_SCOPE_UNVERIFIABLE",
+    "fixtureAdjustment": "targetId added to temporary-copy plans only; no fabricated success/artifacts",
+    "subsequentBlock": "Windows node_modules links reported untracked; run interrupted via UI",
+    "healthyPreviewProduced": false
+  },
+  "limitations": [
+    "Historical Diff is not a fresh provider benchmark",
+    "Default database briefly initialized on API recovery with incorrect environment variable; no task requested; see review",
+    "Automatic approval review blocked removal of test dependency symlinks; preserved",
+    "No new healthy Preview, cloud deployment, production build or SaaS claim"
+  ]
+}

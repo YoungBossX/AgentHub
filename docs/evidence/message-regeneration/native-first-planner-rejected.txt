@@ -1,0 +1,15 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: {"detail":"Manager planner generated unsupported validation command for demo-frontend: pnpm build 通过，且主标题文字符合前缀加递增序号的要求"}
+    at file:///C:/Users/XCC/AppData/Local/Temp/agenthub-regeneration-native.mjs:30:25 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v22.19.0

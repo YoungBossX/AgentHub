@@ -1,0 +1,33 @@
+F....................................................................... [ 86%]
+...........                                                              [100%]
+================================== FAILURES ===================================
+___ test_selected_code_reaches_ordinary_and_group_planner_before_execution ____
+
+    def test_selected_code_reaches_ordinary_and_group_planner_before_execution():
+        with conversation() as (db, session, agent, artifact):
+            text = "  const title = 'SELECTION_ONLY_VALUE';\n"
+            message = Message(session_id=session.id, sender_type="user", content_md="Use the selected code", context_json=json.dumps({
+                "contextItems": [{"kind": "selected_text", "artifactId": artifact.id, "selectedText": text,
+                                  "metadata": {"path": "apps/demo/src/App.tsx", "source": "editor_draft"}}],
+            }))
+            task = Task(session_id=session.id, title="Continue", intent_type="frontend_change", assigned_agent_id=agent.id,
+                        created_by_message_id=message.id, plan_json=json.dumps({"targetId": "demo-frontend"}))
+            db.add_all([message, task]); db.commit()
+            ordinary = build_llm_planner_input(db, message)
+            group = build_llm_planner_request(db, message, target_ids={"demo-frontend"}).to_provider_payload()
+            execution = build_session_context_pack(db, task)
+            for request in (ordinary, group):
+                field = request["canonicalSharedContext"]["fields"]["relevantArtifacts"]
+                item = field["value"]["contextItems"][0]
+                assert item == execution["contextItems"][0]
+                assert item["selectedText"] == text
+                assert item["metadata"] == {"path": "apps/demo/src/App.tsx", "source": "editor_draft"}
+                assert request["artifactReferences"][0]["selectedText"] == text
+                assert "metadata" not in request["artifactReferences"][0]
+>               assert field["trustLevel"] != "system"
+E               AssertionError: assert 'system' != 'system'
+
+tests\test_planner_message_references.py:50: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_planner_message_references.py::test_selected_code_reaches_ordinary_and_group_planner_before_execution
+1 failed, 82 passed in 41.09s

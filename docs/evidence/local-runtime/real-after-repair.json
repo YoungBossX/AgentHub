@@ -1,0 +1,149 @@
+{
+  "sessionId": "cb667e1e-fe2a-4761-bcdc-9ece7d8edc77",
+  "taskId": "f221ec97-e855-433d-89f4-7e703096abf1",
+  "runId": "51761354-97b8-420b-adc8-4e04d2e32181",
+  "adapter": "codex",
+  "state": "completed",
+  "readLatenciesMs": [
+    320,
+    35,
+    34,
+    33,
+    33,
+    33,
+    33,
+    65,
+    33,
+    35,
+    33,
+    41,
+    43,
+    42,
+    41,
+    48,
+    45,
+    41,
+    42,
+    41,
+    42,
+    40,
+    41,
+    42,
+    41,
+    43,
+    43,
+    40,
+    43,
+    42,
+    41,
+    42,
+    43,
+    42,
+    43,
+    41,
+    54,
+    41,
+    44,
+    41,
+    42,
+    42,
+    41,
+    60,
+    41,
+    43,
+    42,
+    142,
+    43,
+    43,
+    43,
+    41,
+    43,
+    41,
+    43,
+    42,
+    42,
+    43,
+    42,
+    41,
+    43,
+    42,
+    44,
+    75,
+    43,
+    43,
+    42,
+    41,
+    42,
+    226
+  ],
+  "diffs": [
+    {
+      "id": "eb87617a-a134-4d55-96a1-fae6943cdc64",
+      "artifactId": "80630926-0f37-4d94-beb6-1cba0119a21a",
+      "taskRunId": "51761354-97b8-420b-adc8-4e04d2e32181",
+      "artifactType": "diff",
+      "title": "Git diff",
+      "status": "ready",
+      "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+      "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+      "patchText": "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\nindex bd27649..2a65fd7 100644\n--- a/apps/demo/src/App.tsx\n+++ b/apps/demo/src/App.tsx\n@@ -35,10 +35,36 @@ export default function App() {\n             data-agenthub-target=\"login-page-slot\"\n             aria-label=\"Login page insertion target\"\n           >\n-            <p className=\"slot-label\">Login page target</p>\n-            <p className=\"slot-copy\">\n-              Build the login page here during the first demo request.\n-            </p>\n+            <p className=\"slot-label\">Welcome back</p>\n+            <p className=\"slot-copy\">Sign in to your workspace.</p>\n+            <form\n+              aria-label=\"Login\"\n+              onSubmit={(event) => event.preventDefault()}\n+              style={{ display: \"grid\", gap: 12, marginTop: 20 }}\n+            >\n+              <label style={{ display: \"grid\", gap: 6 }}>\n+                Email\n+                <input\n+                  name=\"email\"\n+                  type=\"email\"\n+                  autoComplete=\"username\"\n+                  placeholder=\"you@example.com\"\n+                  required\n+                  style={{ width: \"100%\", minHeight: 40, padding: \"8px 10px\", font: \"inherit\" }}\n+                />\n+              </label>\n+              <label style={{ display: \"grid\", gap: 6 }}>\n+                Password\n+                <input\n+                  name=\"password\"\n+                  type=\"password\"\n+                  autoComplete=\"current-password\"\n+                  required\n+                  style={{ width: \"100%\", minHeight: 40, padding: \"8px 10px\", font: \"inherit\" }}\n+                />\n+              </label>\n+              <button className=\"primary-action\" type=\"submit\">Sign in</button>\n+            </form>\n           </div>\n \n           <button\n@@ -46,7 +72,7 @@ export default function App() {\n             data-agenthub-target=\"primary-action-button\"\n             type=\"button\"\n           >\n-            Continue\n+            Enter project\n           </button>\n         </aside>\n       </section>\n",
+      "changedFiles": [
+        "apps/demo/src/App.tsx"
+      ],
+      "stats": {
+        "filesChanged": 1,
+        "additions": 31,
+        "deletions": 5,
+        "files": [
+          {
+            "path": "apps/demo/src/App.tsx",
+            "additions": 31,
+            "deletions": 5
+          }
+        ]
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "id": "751aaaaf-8ca0-4423-9b9d-284434babda2",
+      "artifactId": "6ac368ae-229d-43e1-a72d-310da0f0dc4a",
+      "taskRunId": "51761354-97b8-420b-adc8-4e04d2e32181",
+      "reviewedDiffArtifactId": "80630926-0f37-4d94-beb6-1cba0119a21a",
+      "artifactType": "review",
+      "title": "Review Agent report",
+      "status": "passed",
+      "riskLevel": "low",
+      "summary": "Scripted Review Agent passed 1 changed file with low risk.",
+      "filesReviewed": [
+        "apps/demo/src/App.tsx"
+      ],
+      "findings": [],
+      "suggestedChanges": [],
+      "adapterType": "scripted_mock"
+    }
+  ],
+  "previews": [
+    {
+      "id": "f21a969f-93e5-41ad-a73a-38fa62b62af3",
+      "artifactId": "3a815664-c795-4bed-9521-1417721a932b",
+      "taskRunId": "51761354-97b8-420b-adc8-4e04d2e32181",
+      "artifactType": "preview",
+      "title": "Vite React preview",
+      "status": "ready",
+      "port": 6543,
+      "url": "http://127.0.0.1:6543",
+      "command": "pnpm dev --host 127.0.0.1 --port 6543",
+      "processId": 47916,
+      "healthStatus": "healthy",
+      "statusReason": null,
+      "expiresAt": "2026-10-07T17:29:45.147725",
+      "lastCheckedAt": "2026-10-07T15:29:44.119618"
+    }
+  ],
+  "previewBody": "AGENTHUB DEMO WORKSPACE\n\nLaunchpad for a visible coding-agent change\n\nThis baseline Vite React app gives future agents a stable place to add a login page and then adjust button copy without changing the rest of the product scaffold.\n\nCreate a focused login page in the empty slot\nKeep the change small enough for a readable diff\nRefresh the preview after the follow-up button copy change\nReady for adapter changes\n\nWELCOME BACK\n\nSign in to your workspace.\n\nEmail\nPassword\nSign in\nEnter project",
+  "checks": [
+    "after responsiveness repair ordinary chat triggered real Codex and completed with current scope/completion fences",
+    "own healthy Preview renders form and Enter project button"
+  ]
+}

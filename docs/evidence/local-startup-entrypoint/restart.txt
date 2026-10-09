@@ -1,0 +1,106 @@
+
+> agenthub@ dev:local X:\Git_Clone\AgentHub
+> node scripts/local-dev.mjs "--api-port" "8007" "--web-port" "3001" "--demo-api"
+
+[local] Dependencies and ports OK: Node 22.19.0, Python 3.12.7.
+[local] Starting API.
+INFO:     Started server process [40140]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8007 (Press CTRL+C to quit)
+[agenthub-ready:c24b4c2f-bc83-4b48-83c3-76cf00cd7cb8]
+INFO:     127.0.0.1:1124 - "GET /health HTTP/1.1" 200 OK
+[local] Starting Demo API.
+INFO:     Started server process [48544]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:5174 (Press CTRL+C to quit)
+[agenthub-ready:c24b4c2f-bc83-4b48-83c3-76cf00cd7cb8]
+INFO:     127.0.0.1:1127 - "GET /health HTTP/1.1" 200 OK
+[local] Starting Web.
+▲ Next.js 16.3.4 (Turbopack)
+- Local:         http://127.0.0.1:3001
+- Network:       http://127.0.0.1:3001
+✓ Ready in 330ms
+✓ Running next.config.ts took 27ms
+
+INFO:     127.0.0.1:1134 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1136 - "GET /workspaces/demo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1134 - "GET /workspaces/9758b2e6-9794-4c0e-817e-7a56aff0c976/agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1136 - "GET /workspaces/9758b2e6-9794-4c0e-817e-7a56aff0c976/sessions?view=all HTTP/1.1" 200 OK
+[local] Ready: http://127.0.0.1:3001/ (API http://127.0.0.1:8007)
+[local] Demo API: http://127.0.0.1:5174
+[local] Ctrl+C to stop. API source changes require a restart; dev:api retains reload mode.
+ GET / 200 in 548ms (next.js: 301ms, application-code: 248ms)
+INFO:     127.0.0.1:1138 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1139 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1138 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1134 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1136 - "GET /workspaces/demo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1134 - "GET /workspaces/9758b2e6-9794-4c0e-817e-7a56aff0c976/agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1136 - "GET /workspaces/9758b2e6-9794-4c0e-817e-7a56aff0c976/sessions?view=all HTTP/1.1" 200 OK
+ GET /?session=f844f531-5d29-4c55-bdf2-116a545d86ad 200 in 64ms (next.js: 3ms, application-code: 62ms)
+INFO:     127.0.0.1:7479 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7479 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/events?stream=true HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4550 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4550 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4550 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4550 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/artifact-workbench HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4550 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4550 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /sessions/f844f531-5d29-4c55-bdf2-116a545d86ad/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4550 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/reviews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:1228 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/diffs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:5647 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:12047 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/deployments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:4550 - "GET /task-runs/2177a0e2-1086-4411-ba51-9b15b91c25de/previews HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10147 - "GET /task-runs/2fed4f17-a056-49d3-a7b9-85f93ccd374f/previews HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [48544]
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40140]
+[local] Owned services stopped. Sessions and worktrees retained.

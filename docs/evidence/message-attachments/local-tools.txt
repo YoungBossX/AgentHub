@@ -1,0 +1,116 @@
+
+> agenthub@ test:local X:\Git_Clone\AgentHub
+> node --test scripts/local-dev.test.mjs scripts/dependency-security.test.mjs
+
+TAP version 13
+# Subtest: braces preserves ordinary file globs, ranges, escaping and incomplete input
+ok 1 - braces preserves ordinary file globs, ranges, escaping and incomplete input
+  ---
+  duration_ms: 3.726
+  type: 'test'
+  ...
+# Subtest: braces rejects deep patterns below the existing character limit without stack exhaustion
+ok 2 - braces rejects deep patterns below the existing character limit without stack exhaustion
+  ---
+  duration_ms: 2.4634
+  type: 'test'
+  ...
+# Subtest: braces bounds simultaneous nesting rather than total groups or literal punctuation
+ok 3 - braces bounds simultaneous nesting rather than total groups or literal punctuation
+  ---
+  duration_ms: 5.8304
+  type: 'test'
+  ...
+# Subtest: caller-supplied ASTs cannot bypass the recursion guard
+ok 4 - caller-supplied ASTs cannot bypass the recursion guard
+  ---
+  duration_ms: 2.5833
+  type: 'test'
+  ...
+# Subtest: the real micromatch and fast-glob importers retain normal matching
+ok 5 - the real micromatch and fast-glob importers retain normal matching
+  ---
+  duration_ms: 3.902
+  type: 'test'
+  ...
+# Subtest: port overrides, forwarding and fixed demo contract stay coherent
+ok 6 - port overrides, forwarding and fixed demo contract stay coherent
+  ---
+  duration_ms: 1.2566
+  type: 'test'
+  ...
+# Subtest: Web and demo API do not inherit private backend or tool configuration
+ok 7 - Web and demo API do not inherit private backend or tool configuration
+  ---
+  duration_ms: 0.6853
+  type: 'test'
+  ...
+# Subtest: invalid explicit Python fails rather than falling back; paths with spaces resolve
+ok 8 - invalid explicit Python fails rather than falling back; paths with spaces resolve
+  ---
+  duration_ms: 65.7602
+  type: 'test'
+  ...
+# Subtest: occupied port detection retains the original listener
+ok 9 - occupied port detection retains the original listener
+  ---
+  duration_ms: 15.6661
+  type: 'test'
+  ...
+# Subtest: owned readiness plus HTTP identity, graceful cleanup and repeat cleanup
+ok 10 - owned readiness plus HTTP identity, graceful cleanup and repeat cleanup
+  ---
+  duration_ms: 154.3117
+  type: 'test'
+  ...
+# Subtest: wrong HTTP identity times out even when its own ready marker exists
+ok 11 - wrong HTTP identity times out even when its own ready marker exists
+  ---
+  duration_ms: 1214.66
+  type: 'test'
+  ...
+# Subtest: child start failure and early exit cannot be reported ready
+ok 12 - child start failure and early exit cannot be reported ready
+  ---
+  duration_ms: 253.4583
+  type: 'test'
+  ...
+# Subtest: a sibling exit aborts readiness and startup cancellation cleans siblings
+ok 13 - a sibling exit aborts readiness and startup cancellation cleans siblings
+  ---
+  duration_ms: 74.2513
+  type: 'test'
+  ...
+# Subtest: stdin EOF stops the managed service instead of orphaning it
+ok 14 - stdin EOF stops the managed service instead of orphaning it
+  ---
+  duration_ms: 128.1917
+  type: 'test'
+  ...
+# Subtest: Python control pipe is private; subprocess stdin reaches EOF while launcher stays open
+ok 15 - Python control pipe is private; subprocess stdin reaches EOF while launcher stays open
+  ---
+  duration_ms: 538.899
+  type: 'test'
+  ...
+# Subtest: forced cleanup stops an owned child tree while another listener survives
+ok 16 - forced cleanup stops an owned child tree while another listener survives
+  ---
+  duration_ms: 655.6984
+  type: 'test'
+  ...
+# Subtest: CLI rejects bad arguments before spawning services
+ok 17 - CLI rejects bad arguments before spawning services
+  ---
+  duration_ms: 77.9461
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4990.9439

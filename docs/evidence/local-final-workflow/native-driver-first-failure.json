@@ -1,0 +1,7 @@
+{
+  "startedAt": "2026-10-09T09:10:43.107Z",
+  "requests": [],
+  "observations": [],
+  "failure": "TypeError: r.ok is not a function",
+  "finishedAt": "2026-10-09T09:10:43.139Z"
+}

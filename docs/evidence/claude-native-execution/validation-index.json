@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "status": "verified",
+  "files": {
+    "execution.png": "0ed284a3cacbc59c15afb7cdc0e529e1b8ab732b3893b216be5e31873f8bc221",
+    "runtime.json": "34cff1556cf15a13529faa00639614cf72cf371fcaa22430fee33f5002c45475",
+    "scripted-report.png": "a156db2635685cd99441b04a9e9f94cb488c19abf91e57ee4affb3e1305652f5"
+  },
+  "validation": {
+    "targetedApi": {
+      "passed": 235
+    },
+    "fullApi": {
+      "passed": 1564,
+      "skipped": 1,
+      "seconds": 741.79,
+      "exitCode": 0
+    },
+    "staticCheck": "pnpm check passed",
+    "openSpec": "strict validation passed",
+    "whitespace": "passed",
+    "webAndDemoApiTests": "not rerun; frontend and demo API unchanged",
+    "realExecution": "native Claude coding and read-only reply passed",
+    "commitAndPush": "not performed"
+  }
+}

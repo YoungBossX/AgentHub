@@ -1,0 +1,224 @@
+{
+  "scope": "agenthub-windows-connection-cleanup 1.1",
+  "status": "verified",
+  "createdAt": "2026-10-09T05:00:49.640170+00:00",
+  "previousIndex": {
+    "path": "docs/evidence/message-attachments/validation-index.json",
+    "sha256": "8960427037ba865c514b151811e867e3799742338351ad0578e16b8f2978034a"
+  },
+  "codeSha256": {
+    ".gitignore": "5ef923167d3f4702cec9abe2698746a32f9e5a833b4fe739e00be573b67ec85e",
+    "apps/api/app/main.py": "f82b4afb3a46ff300f60ab61471488f9f782aca6032f3b0b952709d8496ed83d",
+    "apps/api/app/windows_connection_cleanup.py": "28d2bf8677d99389d03f40632e963de657934fa1b2baf5187d7ffb6b26d18735",
+    "apps/api/tests/test_windows_connection_cleanup.py": "e8ce38b1730699535c753053ad63ad4046cc745da70b66e130cc5cd6a8d24bc0",
+    "scripts/local-api.py": "d9a5628cbfbc1e6a447ef9d23a049d994bdf8967fc88f62e3f109ea4d8730a35"
+  },
+  "unchangedBaselineSha256": {
+    "AGENTS.md": "72fe93be991d36b518ba71dfc3d0bdc318db704cc0df076d21e6f4e153cd342d",
+    "apps/api/requirements.txt": "68da584fad7eb8648f6d9c55156fabc949793e2c5aef33945f6311a2eef35cb9",
+    "scripts/local-dev.mjs": "e7e1944e7ad43fae8036bcc663d27d1530b2278cf12d85bb3cb29729c04a13a0",
+    "apps/api/app/models.py": "b37a4195300566f0ee7fd4191c7b1f4a816d573886addce872144f08c91a7794",
+    "apps/api/app/schemas.py": "35e0e38c2143bcf3506a44e318dd9f488ebf25e934419c6e590c2e8d815e5545",
+    "apps/api/app/attachments.py": "e667e8ce721e125f9585b0be60d56ea230767d77d5195ab2c2b2591f45751e46",
+    "apps/api/app/attachment_parser.py": "776a41920937bc655ec9928fe71e34a12c28bed80963bf5cb21bc69efc771d51",
+    "apps/api/app/attachment_context.py": "635fc1beadc5b393a1f74c2a537aeca7deae1cdd1f6ace9fad129d8da3273295",
+    "apps/api/app/attachment_inputs.py": "fc6894657380c732e39706b1c94711afd823089003935cc92f4b8450ba926208",
+    "apps/api/app/process_input.py": "1d1e2480d13e0bc687a721ab72fda1c7475469c0de61ae77896b79b34910b24e",
+    "apps/api/app/canonical_context.py": "f0cb650e0e33e965f4ea9af1fc30525ae9c3d61a7e242d34f29adfe7dfc0d47c",
+    "apps/api/app/context_pack.py": "05975943582b67fce6bff17d09ca1b684020dbb71cfa55a2ac13d10069af96ec",
+    "apps/api/app/llm_planner.py": "d9e6137eb438a79fe592f1a5b0e26a77c4fe856fe345667c8edb947ed09ad173",
+    "apps/api/app/planner_contracts.py": "8454671461d6e1d85a1e9049db491d26e24f51054f8df9e3332ad6a0ec27c4ec",
+    "apps/api/app/planner_providers.py": "2d79a9469908efe5ba2684b8893326d54b69bc578cf4a04016ecb91dc224c0e5",
+    "apps/api/app/adapters.py": "53c3aa0f4a9b398760fbe9ed25d52f43f1c86612bfa8683d8bd002a17f4c3ad8",
+    "apps/api/app/codex_adapter.py": "a2396199b9bd8f4dd8b760f90b08efe8996a973ec5a454d30e67ded7a5e2060d",
+    "apps/api/app/claude_code_adapter.py": "c013177ec978732aae480b53c9dd175e084a808b8e2aa69680259c278b8b76ac",
+    "apps/api/app/scripted_mock.py": "952bc9970412b4150032b15ad86d5acfb5604895379264feae2bb4a3e2f276d8",
+    "apps/api/app/guardrails.py": "a880d4314e560533f90f88ee71f98a94937b2a48b15b1c511759f9aa0ee6c240",
+    "apps/api/app/run_engine.py": "eb65656d9ef666fe98869d9a7e352bb6dc7dfdc2824b34bc75a5b3d90bd6741b",
+    "apps/api/app/routes/attachments.py": "d7de2054d95471c15e94a6b703c59f673683b91c67c34dbca977bdfd49942d81",
+    "apps/api/app/routes/messages.py": "c2335c880bc2d6ff62dbff08de58fafb1870cd50f6d1cd10538c3592bb009789",
+    "apps/api/tests/test_message_attachments.py": "d097962a151838e818e7314d3958ee8ce21ef89ca37f3474885e8b19c6db1bd4",
+    "apps/api/tests/test_attachment_transports.py": "f52e97778455f60484e7cbd61846a41da4057da82119f20d058e484d479297bf",
+    "apps/api/tests/test_models.py": "1763106a3d512dee5dfcf83f9d6030811a80899f827375d4a2f1090408276c70",
+    "apps/api/tests/test_task_runs.py": "f67b7816cd9ca7d308b3d8686dc56918c4870d762f3c062c64e47706cc241a50",
+    "apps/web/src/lib/api.ts": "5d2771e02bad8611d51e5c7e1cd4c808429ea7fe03affe750e5f795ef760c443",
+    "apps/web/src/components/use-message-attachments.ts": "9f0f38b383fff1879f8fd8b18c31616708ec11456095c525e550be88230c5abd",
+    "apps/web/src/components/message-attachments.tsx": "7a9e916664ffe0fd2d8a09d8b92146f936ad8ddcb28a40a997939316ad06e03e",
+    "apps/web/src/components/message-attachments.test.tsx": "e6028607a8b881021bec9254fd1c81988a2f8facd7c535e7e0f3defa87cb2f05",
+    "apps/web/src/components/message-composer.tsx": "c9f1eceb5eb1ac756adfb5d18d5fce365be0424da22fb541fb97efeb95afad97",
+    "apps/web/src/components/workspace-shell.tsx": "91a123a122d95cf7de50414e9bbadbe963963aa8e5d5c0ff7dab3c3f66fb6733",
+    "apps/web/src/components/chat-thread.tsx": "15c88a0f4b9867bbfd50a69a98ca1937b0aa2fc3d2ab1ea7002a885c6bdb43f3",
+    "apps/web/src/components/session-overview.tsx": "335da65b00768acd81291049ce2cb8ca0f8b6b95348c80eaa4248de5198b1f8a",
+    "package.json": "82faf5695d7d516219857dd3dd10eb085be5dd87835681b98b0d8065eb660e1d",
+    "apps/web/package.json": "05a44718eb356b230bc257b3a191e4ccf3b2976a3b8b0c3bd9d025515351a0ec",
+    "pnpm-lock.yaml": "344dc94bca92e6617532c5953a6419c75730a50b2ebf4e851e728f9a70223784",
+    "scripts/dependency-security.test.mjs": "6f49773d71b8859e189c4519d7fc22f84be2448b83ef704972f158088c14a92c",
+    "patches/braces@3.0.3.patch": "8bb219f5e9bba11a14f0db85bf3191edff9e38f534a4b10509618a2301041be1",
+    "patches/monaco-editor@0.56.0.patch": "68027eb849d067a0dd490502a379de9a8bc3a0f18ab82212a02f7013e9e1ac00",
+    "patches/README.md": "a83c52f994499159804d499783c230c1b4322969b85b438dc68d74247e0914af",
+    "apps/web/src/lib/local-monaco.ts": "bebc01cda76ee1f454dd982f2911796ef8fd3e4331bfd69af5930ac9d37039b8",
+    "apps/web/src/lib/load-local-monaco.ts": "426a906170581b44eb12d8c386b41068dd66821c8d620114a688f88792c3018d",
+    "apps/web/src/components/local-diff-editor.tsx": "2d68fcfe7c52333573b7eb07083b06eca124b6dbbff9c4ed1a634d890bf5ba88",
+    "apps/web/src/components/local-diff-editor.test.tsx": "97eb261ddaf77bb8eab70a128fad282b3dcf2c44718729dfba3a8f1fe4aac690",
+    "apps/web/src/components/diff-card.tsx": "1bb482905f35b70cb2b9e5a38d0989af860d2afbd1e63ae415288f3e880a0caa",
+    "apps/web/src/components/diff-card.test.tsx": "a578e9619885f748bb274020dd24e0dad977f97d2869a5127be6d6db64cf68ee",
+    "apps/web/src/components/task-card-list.test.tsx": "e7dea51620f2138f7d6a82dbdf8ab7a9e0adbb7ece82ceadd7f3cc5ced555bd6",
+    "apps/api/app/pinned_context.py": "556f75df9cfdd1d349b86503f4e9b56f8c9c3107920621bb68ee6e8ef3857976",
+    "apps/api/tests/test_pinned_message_context.py": "7ee5d177a74027fc748d1741b83495cc080a51d723f0ab7f2b7a03c7b9acc5db",
+    "apps/api/app/task_runs.py": "98dea1b9de2749195415184cf66295062b2f69b09dddcb7f40f8a180ed9cfa70",
+    "apps/api/app/planning.py": "e4f5ce7f27298d08814d2afe7a739057bc333d14eede8c71d3a1769a7037400b",
+    "apps/api/app/planning_intents.py": "a1c2d45ee0d4fb5e1381cf40c0d56cab923728d2e8f369614d4dd95283d4ffb4",
+    "apps/api/app/planning_tasks.py": "918daf358e15226b4726e39453294561c9ff9300ecd1b7a10721ae74cffedadd",
+    "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28",
+    "apps/api/tests/test_scripted_mock_adapter.py": "1cdc7d8cbd20508f8b74fe32b618041ef5e38f2b380029b16592859312fab489",
+    "apps/api/app/db.py": "50f48ca7daffbff74d61f9471225404ac4d5ae8253f972b96f16960bafbe5e94",
+    "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+    "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+    "apps/api/tests/test_session_organization.py": "80b771e6e4175571b33b60dc83182ced6f7c4b15dd3d39834b37b8071a6ddd93",
+    "apps/api/app/previews.py": "279ae2b8b164ec391e17eeab0e8e5b888739f7b836b2c6afa41ccdcd78c3ba37",
+    "apps/api/tests/test_previews.py": "39c7746fce02ecf9ecfe2e79c6e48aac6502f165fe562f82c357f32120689852",
+    "apps/api/app/task_run_scope.py": "22640722a2c13726815e92d0ae2bf294c3881fa93a14c1f22e8d711927db2a5c"
+  },
+  "documentationSha256": {
+    "docs/windows-connection-cleanup-review.md": "ab1016a51722548428e8fd1efa7fafb6e85d9ed12e5532f956ef97c302bd116e",
+    "docs/change-log.md": "183a68a3a90acb339239dc811c7384a99662ae24af6e62f872436027da7c15b1",
+    "docs/project-state.md": "179f53dc80a352eff6c73f7e747c4a2109757e4880be35d2576c14d7d5dd2564",
+    "docs/local-project-delivery.md": "8eb6e37e2b8f4238c2d4dd2ac2a6e3800be687c0f0c21b0f2e7b2f6c4d54bfb2",
+    "docs/local-usage.md": "06cfd8947b30b4c39ba31f90762d8a2147f4ec96f107356e880974d58d1fecc1"
+  },
+  "specSha256": {
+    "openspec/changes/agenthub-windows-connection-cleanup/design.md": "04a1f9d2ac73a5a30cf516f2c3b3c09e53f2f6809a4a2f09ec0a3f1031eae9d1",
+    "openspec/changes/agenthub-windows-connection-cleanup/proposal.md": "fffab266671e281c71ecc80e17bca4743b850944d5fbb6af7c3be7217d0d105a",
+    "openspec/changes/agenthub-windows-connection-cleanup/specs/local-runtime/spec.md": "b524c78712b457da805716af153d19e35039562d189e7af36455eec27bb64d66",
+    "openspec/changes/agenthub-windows-connection-cleanup/tasks.md": "799e47c58c147a869ea2609f29c1afbefdbf9793987a408f3e056e9a5b42849a"
+  },
+  "evidenceSha256": {
+    "docs/evidence/windows-connection-cleanup/agenthub-attachment-preview.mjs": "1474c18a48e74fc8d57bb5a0fc17e98661c058cc005b99a8ae5f9125e487d859",
+    "docs/evidence/windows-connection-cleanup/agenthub-freeze-shutdown.py": "bc4aabd6ebcc453512e15987ec7180f4c840962963aac2fbd305cedcc01a2bfc",
+    "docs/evidence/windows-connection-cleanup/agenthub-shutdown-history.py": "f13b8757fed8287b9d393321f8fe7d1e8bace7d87d9e194e4a2d574a22fe5a13",
+    "docs/evidence/windows-connection-cleanup/agenthub-shutdown-managed.mjs": "edbe1d914bcbcb895ab5b1f97f87825a6f10d43ee31aa8fcbf7f854f0f96e123",
+    "docs/evidence/windows-connection-cleanup/agenthub-shutdown-managed.py": "fc754817194cef661c311626a02d1e4a7b2663273351a7d1e621414e93df9e30",
+    "docs/evidence/windows-connection-cleanup/agenthub-shutdown-probe.py": "757e4d6be698b5599d6f2239479a993dac302b4bcda04bd332872bd2916fabbb",
+    "docs/evidence/windows-connection-cleanup/api-full.txt": "af790de46e4cd1a390acc80c4388df5041c2693cf62deb3fa52546dc1cc6b0b1",
+    "docs/evidence/windows-connection-cleanup/api-related.txt": "1d0a5df60659c970c2a73a2c5791fb229537f6ae50594319795a364fb07f7743",
+    "docs/evidence/windows-connection-cleanup/attachment-claude-preview-connection-cleanup.png": "8c770199a4821b992775fe1e0e755253b084000f7de2703122c419ea91af98b7",
+    "docs/evidence/windows-connection-cleanup/attachment-codex-preview-connection-cleanup.png": "001b66249027310090d376ec52f5b5254e0af89a4d2995d2d98612457e3308bb",
+    "docs/evidence/windows-connection-cleanup/attachment-preview-connection-cleanup.json": "3cd81fb96a6a45a36cdf154bcdadd9563f880ee7647f32e9b7a2a7c17b214afe",
+    "docs/evidence/windows-connection-cleanup/check.txt": "a30a0243ec9781b84c672ffeec9f70525507332cabf7bf6c92dca5b9854c633c",
+    "docs/evidence/windows-connection-cleanup/current-browser.txt": "f3af06b36efe4b644d9cbcb2987ea68ffe2b18fa8e2be4e9c3350024ce6e2c05",
+    "docs/evidence/windows-connection-cleanup/diff-check.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "docs/evidence/windows-connection-cleanup/historical-reset.txt": "70ca3ea5980655fd34788ea8adc031da293d0bd42ddb30af43ca17ed3796afe1",
+    "docs/evidence/windows-connection-cleanup/history-before.json": "3a6a07fd049bfaf76493fda7de1d8831988d013e6ebd9bfb736a2a77ece733e6",
+    "docs/evidence/windows-connection-cleanup/history-current-before-stop.json": "3a6a07fd049bfaf76493fda7de1d8831988d013e6ebd9bfb736a2a77ece733e6",
+    "docs/evidence/windows-connection-cleanup/history-current-restarted.json": "3a6a07fd049bfaf76493fda7de1d8831988d013e6ebd9bfb736a2a77ece733e6",
+    "docs/evidence/windows-connection-cleanup/history-managed-baseline.json": "3a6a07fd049bfaf76493fda7de1d8831988d013e6ebd9bfb736a2a77ece733e6",
+    "docs/evidence/windows-connection-cleanup/history-managed-fixed.json": "3a6a07fd049bfaf76493fda7de1d8831988d013e6ebd9bfb736a2a77ece733e6",
+    "docs/evidence/windows-connection-cleanup/local-tools.txt": "1cf6075d291b20e91b42a60a2417275a49f106727baa66e9925e543cc9fd4ba8",
+    "docs/evidence/windows-connection-cleanup/managed-baseline-fault.json": "12e07c9e09206fda020f13adb0dd97de3a1acf9e3d39cf8bfeb6dea191455120",
+    "docs/evidence/windows-connection-cleanup/managed-baseline-preview.png": "d664bffb8ce00ca1d25403210b3ff5d1a5b68c5f40997ca0a37c7fb8d4ef21f0",
+    "docs/evidence/windows-connection-cleanup/managed-baseline.txt": "4e886000097517915514d868174a55e5bbcd6b32c7574a19d9836ed866d11d66",
+    "docs/evidence/windows-connection-cleanup/managed-fixed-fault.json": "10bb0de3c44eb67e251adcab84add1cc430ab0f72c8aecea39f2898211a2180f",
+    "docs/evidence/windows-connection-cleanup/managed-fixed-preview.png": "d664bffb8ce00ca1d25403210b3ff5d1a5b68c5f40997ca0a37c7fb8d4ef21f0",
+    "docs/evidence/windows-connection-cleanup/managed-fixed.txt": "b433b13ee75dec60730103420bc4a3156e97502c15b0f0b077b577461870ffc1",
+    "docs/evidence/windows-connection-cleanup/managed-report.json": "9962131d1698827a13a2dc2ab37df4f7a0069d55d0a49f8fa5625971a814ab1a",
+    "docs/evidence/windows-connection-cleanup/openspec.txt": "93145d3eb3805e3d5fd0f40ea7c7242d216d11b6f582fe45f1e8e9c84912ea35",
+    "docs/evidence/windows-connection-cleanup/ordinary-rst.json": "8cd7146b51862043e164036dd1ec736e3a081daf8c5539209f858f1eefae41fd",
+    "docs/evidence/windows-connection-cleanup/ordinary-rst.txt": "f3b660296827e4094dc46c049ca1fbb8710e7e0e60ad5f9138f6c990ebd14439",
+    "docs/evidence/windows-connection-cleanup/reused-output-hashes.json": "89cdbb8a469208a2ea9aae62c61fcd3b67ae288b18ccd254359847e68659d068"
+  },
+  "verification": {
+    "apiPassed": 1827,
+    "apiSkipped": 1,
+    "apiSeconds": 1021.18,
+    "relatedPassed": 62,
+    "newTests": 13,
+    "localToolsPassed": 17,
+    "check": "pnpm check exit 0",
+    "strictOpenSpec": "passed",
+    "diffCheck": "passed",
+    "managedControl": {
+      "reports": [
+        {
+          "mode": "baseline",
+          "shutdownMs": 6285,
+          "exitCode": 0,
+          "sse": {
+            "replayed": 36,
+            "resumed": 35,
+            "firstExcluded": true
+          },
+          "fault": {
+            "mode": "baseline",
+            "controlledInjection": true,
+            "before": 0,
+            "after": 1,
+            "socketCloses": 0,
+            "protocolCallbacks": 1,
+            "cleaned": false
+          },
+          "previewId": "622961f3-0261-4f2a-8119-c40315d1e397",
+          "previewPort": 53876,
+          "previewHealth": "healthy",
+          "apiAndPreviewPortsClosed": true,
+          "errors": []
+        },
+        {
+          "mode": "fixed",
+          "shutdownMs": 1126,
+          "exitCode": 0,
+          "sse": {
+            "replayed": 36,
+            "resumed": 35,
+            "firstExcluded": true
+          },
+          "fault": {
+            "mode": "fixed",
+            "controlledInjection": true,
+            "before": 1,
+            "after": 1,
+            "socketCloses": 1,
+            "protocolCallbacks": 1,
+            "cleaned": true
+          },
+          "previewId": "0f381ee5-0391-4e12-87e1-0903f53fa946",
+          "previewPort": 22711,
+          "previewHealth": "healthy",
+          "apiAndPreviewPortsClosed": true,
+          "errors": []
+        }
+      ],
+      "source": "controlled socket-shutdown injection through actual local-api entrypoint; real Edge SSE/preview, no new model inference"
+    },
+    "currentRuntime": "API 8006 on official wrapper; Web 3000 iframe passed for both prior native outputs",
+    "persistence": {
+      "session": {
+        "count": 32,
+        "sha256": "ee95053c85ff989044074bc9dd7def3456dd2ddd3c307deb32045e13d597c9ee"
+      },
+      "message": {
+        "count": 98,
+        "sha256": "7bf36f25d35677c71692840f0d6df128529285e127a5afe184fd3f5f8f7e273b"
+      },
+      "taskrun": {
+        "count": 46,
+        "sha256": "f4ce1f5ff0733d34c987f4d10d8e870189d7edc2380f79c3adb459d78131317c"
+      },
+      "diff": {
+        "count": 37,
+        "sha256": "4fde3a62332d825e74493cead608c2ed909c048d93396ad8cec551cdb43b6483"
+      },
+      "messageattachment": {
+        "count": 9,
+        "sha256": "371da0d645cfb85a4869126750403c7e5ecaa7bc3509a02b08d9b186ed553ed0"
+      }
+    },
+    "privateSdkValues": "excluded"
+  },
+  "limits": [
+    "Exact socket-shutdown controlled injection reproduces historical failure path; ordinary 200 TCP resets did not",
+    "One managed control comparison is not a performance benchmark",
+    "Actually exercised Windows Python 3.12.7; newer detach signature has unit-test coverage only",
+    "No new model inference, database schema changes or deployment",
+    "Whole project remains incomplete; see local-project-delivery.md"
+  ]
+}

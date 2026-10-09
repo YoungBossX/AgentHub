@@ -1,0 +1,71 @@
+{
+  "change": "agenthub-native-review-artifacts",
+  "task": "1.1",
+  "date": "2026-10-08",
+  "status": "verified",
+  "runId": "de74f9e9-610d-473b-b6f2-dae28212ad2a",
+  "sessionId": "f59b4979-51d1-4a55-95f3-25585a9becab",
+  "validation": {
+    "focusedApi": {
+      "passed": 103,
+      "log": "focused-api-tests.txt"
+    },
+    "web": {
+      "passed": 168,
+      "files": 20,
+      "log": "web-tests.txt"
+    },
+    "static": {
+      "status": "passed",
+      "command": "pnpm check",
+      "log": "static-checks.txt"
+    },
+    "openspec": "strict passed",
+    "fullApi": {
+      "passed": 1603,
+      "skipped": 1,
+      "durationSeconds": 906.09,
+      "log": "api-tests.txt"
+    },
+    "whitespace": "passed",
+    "sourceAndEvidenceHashes": "verified"
+  },
+  "sourceSha256": {
+    "apps/api/app/native_reviews.py": "3a1ae07607356d22d9cf7e3a53e6519f67fb49d6b1dc55c58f3a1f75e2e9afd4",
+    "apps/api/app/claude_code_adapter.py": "71a73b669ddbf2663f4a5816c687a873d5323ea844d7a23e3f711aed1aec2bc8",
+    "apps/api/app/run_engine.py": "b387300b1cf15173c8eb2f1afd9dfe9f6ad3574e7b2eb08381526235f9806404",
+    "apps/api/app/planning.py": "ec346a4b1f2b9a56ac6024f33487cc7a4fc075597112b84c388316e65cd7b3b3",
+    "apps/api/app/reviews.py": "e840f9981789c7c65d5c5cf920129784dbf04475beeefcc40804b0062c8bd700",
+    "apps/api/app/task_runs.py": "5c3434c80425b76923941ead64417d5eecc4f25068bcd3a40d84bb1e6054e28d",
+    "apps/api/app/schemas.py": "16c44bd17afec7546864ece2bdba8362a814beea1a8da6d058741aae3d653c3f",
+    "apps/api/app/routes/task_artifacts.py": "6453f181f81221d6388909a4dc4383a11d7bf281de624e5863922a962f9bae0d",
+    "apps/api/tests/test_native_review_artifacts.py": "8fde7a9907a2e93cb714adc6e83838a3713367bc4f3e3381c3dd98d8acb9e37d",
+    "apps/api/tests/test_task_runs.py": "65763afc241a8601a1507abef9d7e6aa31ab5b9704d3b764d66b43d6a01891a8",
+    "apps/web/src/components/preview-card.tsx": "4a820715d94d3691352a64722d6470c1f60ed7629157d4c8c4081003d6059221",
+    "apps/web/src/components/preview-card.test.tsx": "d350c90cfda2cc641ced5ca2616d18b22a5359d3fa366c22cc02f9848bd39db3",
+    "apps/web/src/components/task-card-list.tsx": "820f7f824ad9bc5572fa74ca1d4d237666de0e05f6c5507327517521093133d4",
+    "apps/web/src/lib/api.ts": "370b5574468696388a48cf11173093736e069dcbcd2579db79b00d9c3d1d9781"
+  },
+  "evidenceSha256": {
+    "api-tests.txt": "6cd72c2560fb6ed59c1bddae8cec8c4d6cecf1648d6bef19525ea9cbc80b4d18",
+    "dark.png": "e9ac300c4b1f31166f6bc9d25e757a007f7cdbd6e23a4253e4345ea0bc9029d5",
+    "execution.png": "abb5f23b9e2e58821e236fca6f39ab7475eab358be16567c1dc09a8f8729cf8e",
+    "focused-api-tests.txt": "b7f9a3ec047ed0e34b44b61707432d83d1f1cebc4425d81f65114d3964e2611a",
+    "report.png": "b5c2c310e6ce87cb87d8cf98f04703874c121a252882a028da06831e996768cc",
+    "runtime.json": "2beedc215c5492a8c5698f7bbfbe81297ad2c6a0f7b07140089e79eadd3a407d",
+    "static-checks.txt": "454fea3890af890b56d3c94e8472e5dfd178fb7b004bb1d276450e54d7cde9db",
+    "web-tests.txt": "18e265be67adffe8ca584c52d52291d92b46976c345c033e50e008ae114cb00a"
+  },
+  "boundaries": [
+    "advisory static assessment; no test execution",
+    "CLI platform does not establish underlying model vendor",
+    "no Preview/deploy acceptance"
+  ],
+  "failedAttempts": [
+    "initial native direct review rejected missing target binding (fixed)",
+    "appending after that failed review remained blocked by existing dependency (fresh Session used)",
+    "old dev resources and hidden theme button in browser script (restart and layout restoration)",
+    "legacy background factory test virtual worktree/empty result (fixture updated without weakening contract)",
+    "intermediate stopped suites and failed suite are not successful final validation"
+  ]
+}

@@ -13,6 +13,15 @@ export function preferredPreview(previews: PreviewArtifact[]) {
     null
 }
 
+export function artifactSelectionAfterRefresh(current: string | null, artifacts: ArtifactPanelItem[]) {
+  // Independent artifact reads can arrive before the newly created Preview.
+  // Session changes already clear selection; keep explicit preview intent here.
+  if (current && (current.startsWith("preview:") || current.startsWith("workbench:") || artifacts.some((item) => item.id === current))) {
+    return current
+  }
+  return artifacts[artifacts.length - 1]?.id ?? null
+}
+
 
 export function mergeArtifactPanelItems(
   evidenceItems: ArtifactPanelItem[],

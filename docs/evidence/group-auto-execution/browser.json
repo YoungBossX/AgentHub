@@ -1,0 +1,9 @@
+{
+  "sessionId": "21afb96a-37c3-47b5-8f39-8d5f5d8d1984",
+  "checks": [
+    "automatic execution hint in chat",
+    "separate writer and native reviewer artifacts",
+    "actual model assessment shown",
+    "reload retains two completed runs without duplicate execution"
+  ]
+}

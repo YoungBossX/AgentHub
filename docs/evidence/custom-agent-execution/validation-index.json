@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "file": "real-run.png",
+      "sha256": "3fdb5aa6e20a730a3c70ba7d7f0189f8f545a47a37f2ebace8c2ece76e2482ad",
+      "bytes": 141730
+    },
+    {
+      "file": "runtime.json",
+      "sha256": "92c36d0ce23844443d44c72918c1278928318a9bd810071d26f92c851d63226a",
+      "bytes": 2603
+    },
+    {
+      "file": "settings.png",
+      "sha256": "5ebadf1d20c0e2d523d52b2df819e32316f989169e0a4494b1c828e7b19b7e34",
+      "bytes": 104697
+    }
+  ],
+  "verification": "runtime lineage and fresh UI screenshots; test results recorded in review document"
+}

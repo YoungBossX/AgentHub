@@ -1,0 +1,32 @@
+
+> @agenthub/web@ build X:\Git_Clone\AgentHub\apps\web
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 22ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1193ms
+  Running TypeScript ...
+  Finished TypeScript in 1682ms ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/8) ...
+  Generating static pages using 9 workers (2/8) 
+  Generating static pages using 9 workers (4/8) 
+  Generating static pages using 9 workers (6/8) 
+✓ Generating static pages using 9 workers (8/8) in 459ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /settings/agents
+├ ƒ /settings/contacts
+├ ƒ /settings/memory
+├ ○ /settings/other
+└ ○ /settings/runtime
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

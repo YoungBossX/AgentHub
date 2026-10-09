@@ -1,0 +1,6 @@
+
+> agenthub@ doctor:local X:\Git_Clone\AgentHub
+> node scripts/local-dev.mjs --doctor
+
+[local] Web port 3000 is occupied or unavailable. Stop its owner yourself or choose another port; existing listeners are untouched.
+ ELIFECYCLE  Command failed with exit code 1.

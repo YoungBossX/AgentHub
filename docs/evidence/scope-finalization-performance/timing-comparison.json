@@ -1,0 +1,161 @@
+{
+  "original": {
+    "runs": [
+      {
+        "runId": "18bc51e5-2f7d-43c9-aa32-b023e29be805",
+        "seconds": 19.64,
+        "finalizationSeconds": 12.366239,
+        "scopeBaselineEntries": 517,
+        "scopeBaselineSha256": "cbbb004c1a061504a834ab0be1155f84c9eba00fd3d47a5f911be563cbf77e4e",
+        "completion": {
+          "schemaVersion": "agenthub.write_completion.v1",
+          "taskRunId": "18bc51e5-2f7d-43c9-aa32-b023e29be805",
+          "status": "passed",
+          "accessMode": "write",
+          "changedPathCount": 1,
+          "diffId": "770f26c4-b5e5-448e-a328-fd7128f372b4",
+          "errorCode": null,
+          "functionalAcceptance": "not_evaluated"
+        }
+      },
+      {
+        "runId": "46f0969c-ae81-4978-8bcf-0aa0d0635fd7",
+        "seconds": 21.42,
+        "finalizationSeconds": 13.81569,
+        "scopeBaselineEntries": 517,
+        "scopeBaselineSha256": "63c1db5bef8d905d9992e83321191465b648e7d487f2948a7bd4e59389594955",
+        "completion": {
+          "schemaVersion": "agenthub.write_completion.v1",
+          "taskRunId": "46f0969c-ae81-4978-8bcf-0aa0d0635fd7",
+          "status": "passed",
+          "accessMode": "write",
+          "changedPathCount": 1,
+          "diffId": "a3abe742-973b-4765-a7f8-f27b1495ca71",
+          "errorCode": null,
+          "functionalAcceptance": "not_evaluated"
+        }
+      }
+    ],
+    "totalSnapshots": 8,
+    "snapshotSeconds": [
+      5.583916799994768,
+      5.87073650000093,
+      6.117375899993931,
+      6.149289499997394,
+      6.219311699998798,
+      6.526881600002525,
+      6.850321000005351,
+      6.846952199994121
+    ],
+    "maxHealthMilliseconds": 226.47220000000016
+  },
+  "revised": {
+    "runs": [
+      {
+        "runId": "2cca3464-a1c1-428b-977e-1c74892b753a",
+        "seconds": 13.308,
+        "finalizationSeconds": 6.260558,
+        "scopeBaselineEntries": 517,
+        "scopeBaselineSha256": "cbbb004c1a061504a834ab0be1155f84c9eba00fd3d47a5f911be563cbf77e4e",
+        "completion": {
+          "schemaVersion": "agenthub.write_completion.v1",
+          "taskRunId": "2cca3464-a1c1-428b-977e-1c74892b753a",
+          "status": "passed",
+          "accessMode": "write",
+          "changedPathCount": 1,
+          "diffId": "341902bd-f402-475c-b0c6-8cf5719c5c22",
+          "errorCode": null,
+          "functionalAcceptance": "not_evaluated"
+        }
+      },
+      {
+        "runId": "63a70520-aa35-4ca7-9b01-77ce3e0425e7",
+        "seconds": 15.066,
+        "finalizationSeconds": 7.152938,
+        "scopeBaselineEntries": 517,
+        "scopeBaselineSha256": "63c1db5bef8d905d9992e83321191465b648e7d487f2948a7bd4e59389594955",
+        "completion": {
+          "schemaVersion": "agenthub.write_completion.v1",
+          "taskRunId": "63a70520-aa35-4ca7-9b01-77ce3e0425e7",
+          "status": "passed",
+          "accessMode": "write",
+          "changedPathCount": 1,
+          "diffId": "6c22c554-9810-4663-b771-cc5b59758f79",
+          "errorCode": null,
+          "functionalAcceptance": "not_evaluated"
+        }
+      }
+    ],
+    "totalSnapshots": 6,
+    "snapshotSeconds": [
+      5.653858100005891,
+      5.949190999992425,
+      6.202895499998704,
+      6.418800100000226,
+      6.562574499999755,
+      7.059682699997211
+    ],
+    "maxHealthMilliseconds": 205.35319999999774
+  },
+  "browser": {
+    "runs": [
+      {
+        "runId": "cb15737d-8ba5-4c74-83a8-57c8e3cde2e0",
+        "seconds": 32.375,
+        "finalizationSeconds": 16.48585,
+        "scopeBaselineEntries": 517,
+        "scopeBaselineSha256": "cbbb004c1a061504a834ab0be1155f84c9eba00fd3d47a5f911be563cbf77e4e",
+        "completion": {
+          "schemaVersion": "agenthub.write_completion.v1",
+          "taskRunId": "cb15737d-8ba5-4c74-83a8-57c8e3cde2e0",
+          "status": "passed",
+          "accessMode": "write",
+          "changedPathCount": 1,
+          "diffId": "d0d1076c-3396-43c4-9ec2-16ae1b1a9437",
+          "errorCode": null,
+          "functionalAcceptance": "not_evaluated"
+        }
+      },
+      {
+        "runId": "3a8d9152-469b-4918-afd3-06bc4f70bf14",
+        "seconds": 41.641,
+        "finalizationSeconds": 21.080945,
+        "scopeBaselineEntries": 517,
+        "scopeBaselineSha256": "63c1db5bef8d905d9992e83321191465b648e7d487f2948a7bd4e59389594955",
+        "completion": {
+          "schemaVersion": "agenthub.write_completion.v1",
+          "taskRunId": "3a8d9152-469b-4918-afd3-06bc4f70bf14",
+          "status": "passed",
+          "accessMode": "write",
+          "changedPathCount": 1,
+          "diffId": "96315626-ca44-41b2-9edf-68ba02f60327",
+          "errorCode": null,
+          "functionalAcceptance": "not_evaluated"
+        }
+      }
+    ],
+    "totalSnapshots": 6,
+    "snapshotSeconds": [
+      11.772620099989581,
+      12.831786800001282,
+      16.321697499995935,
+      18.881213100001332,
+      17.1973175000021,
+      20.88932470000873
+    ],
+    "maxHealthMilliseconds": 419.5158999999985
+  },
+  "comparison": {
+    "meanTaskSecondsBefore": 20.53,
+    "meanTaskSecondsAfter": 14.187000000000001,
+    "taskReductionPercent": 30.896249391134923,
+    "meanFinalizationSecondsBefore": 13.0909645,
+    "meanFinalizationSecondsAfter": 6.706747999999999,
+    "finalizationReductionPercent": 48.76811406829498,
+    "boundaries": [
+      "Two sequential tasks per version; same host and baseline entry hashes; no general benchmark claim",
+      "Browser acceptance ran during regression load; not included in before/after timing comparison",
+      "No real provider invocation; ScriptedMock with deliberately simulated Codex failure"
+    ]
+  }
+}

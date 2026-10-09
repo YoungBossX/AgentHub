@@ -1,0 +1,86 @@
+
+> agenthub@ test:local X:\Git_Clone\AgentHub
+> node --test scripts/local-dev.test.mjs
+
+TAP version 13
+# Subtest: port overrides, forwarding and fixed demo contract stay coherent
+ok 1 - port overrides, forwarding and fixed demo contract stay coherent
+  ---
+  duration_ms: 0.9561
+  type: 'test'
+  ...
+# Subtest: Web and demo API do not inherit private backend or tool configuration
+ok 2 - Web and demo API do not inherit private backend or tool configuration
+  ---
+  duration_ms: 0.5444
+  type: 'test'
+  ...
+# Subtest: invalid explicit Python fails rather than falling back; paths with spaces resolve
+ok 3 - invalid explicit Python fails rather than falling back; paths with spaces resolve
+  ---
+  duration_ms: 46.5464
+  type: 'test'
+  ...
+# Subtest: occupied port detection retains the original listener
+ok 4 - occupied port detection retains the original listener
+  ---
+  duration_ms: 11.7367
+  type: 'test'
+  ...
+# Subtest: owned readiness plus HTTP identity, graceful cleanup and repeat cleanup
+ok 5 - owned readiness plus HTTP identity, graceful cleanup and repeat cleanup
+  ---
+  duration_ms: 146.5639
+  type: 'test'
+  ...
+# Subtest: wrong HTTP identity times out even when its own ready marker exists
+ok 6 - wrong HTTP identity times out even when its own ready marker exists
+  ---
+  duration_ms: 1226.2105
+  type: 'test'
+  ...
+# Subtest: child start failure and early exit cannot be reported ready
+ok 7 - child start failure and early exit cannot be reported ready
+  ---
+  duration_ms: 210.9683
+  type: 'test'
+  ...
+# Subtest: a sibling exit aborts readiness and startup cancellation cleans siblings
+ok 8 - a sibling exit aborts readiness and startup cancellation cleans siblings
+  ---
+  duration_ms: 53.8666
+  type: 'test'
+  ...
+# Subtest: stdin EOF stops the managed service instead of orphaning it
+ok 9 - stdin EOF stops the managed service instead of orphaning it
+  ---
+  duration_ms: 127.8732
+  type: 'test'
+  ...
+# Subtest: Python control pipe is private; subprocess stdin reaches EOF while launcher stays open
+ok 10 - Python control pipe is private; subprocess stdin reaches EOF while launcher stays open
+  ---
+  duration_ms: 302.7549
+  type: 'test'
+  ...
+# Subtest: forced cleanup stops an owned child tree while another listener survives
+ok 11 - forced cleanup stops an owned child tree while another listener survives
+  ---
+  duration_ms: 340.2228
+  type: 'test'
+  ...
+# Subtest: CLI rejects bad arguments before spawning services
+ok 12 - CLI rejects bad arguments before spawning services
+  ---
+  duration_ms: 49.1013
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4880.0103

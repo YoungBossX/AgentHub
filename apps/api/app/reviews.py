@@ -1,4 +1,5 @@
 import json
+import hashlib
 import re
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -9,7 +10,8 @@ from sqlmodel import select
 from app.artifact_versions import record_artifact_version
 from app.events import append_task_run_event
 from app.external_evidence import list_task_run_command_evidence
-from app.models import Artifact, Diff, Review, Task, TaskRun, utc_now
+from app.models import Artifact, ArtifactVersion, Diff, Review, Task, TaskRun, TaskRunEvent, utc_now
+from app.native_reviews import NativeReviewError, validate_native_assessment
 from app.models import Session as AgentHubSession
 from app.provider_evidence import provider_evidence_for_task_run, scripted_provider_evidence
 from app.target_registry import (
@@ -45,12 +47,86 @@ class StoredReviewArtifact:
     findings: list[dict[str, Any]]
     suggested_changes: list[str]
     adapter_type: str
+    native_receipt: Optional[dict[str, Any]] = None
+
+
+def stage_native_review_for_task_run(
+    db: DbSession, task_run: TaskRun, diff_artifact_id: str, binding: dict[str, Any],
+) -> TaskRunEvent:
+    """Stage the assessment with completion; the caller owns the commit fence."""
+    from app.events import stage_task_run_event
+
+    terminal = db.exec(select(TaskRunEvent).where(
+        TaskRunEvent.task_run_id == task_run.id, TaskRunEvent.event_type == "completed",
+    ).order_by(TaskRunEvent.sequence.desc())).first()
+    try:
+        payload = json.loads(terminal.payload_json) if terminal else {}
+        native = payload["nativeReview"]
+        diff_artifact = db.get(Artifact, diff_artifact_id)
+        if (payload.get("adapter") != "claude_code" or payload.get("exitCode") != 0
+                or native["adapterRunId"] != task_run.adapter_run_id
+                or not isinstance(native["outputSha256"], str)
+                or not re.fullmatch(r"[0-9a-f]{64}", native["outputSha256"])
+                or diff_artifact is None or diff_artifact.task_run_id != task_run.id
+                or diff_artifact.artifact_type != "diff"):
+            raise ValueError("Unbound native completion.")
+        assessment = validate_native_assessment(
+            json.dumps(native["assessment"], ensure_ascii=False), binding, native["readEvidence"],
+        )
+    except (KeyError, ValueError, TypeError) as exc:
+        if isinstance(exc, NativeReviewError):
+            raise
+        raise NativeReviewError("NATIVE_REVIEW_OUTPUT_INVALID", "No verified native assessment for this execution.") from exc
+    receipt = {
+        "schemaVersion": binding["schemaVersion"], "taskRunId": task_run.id,
+        "adapterRunId": task_run.adapter_run_id, "targetId": binding["targetId"],
+        "inputFingerprint": binding["inputFingerprint"], "outputSha256": native["outputSha256"],
+        "validation": "not_run", "assessmentKind": "advisory_static_review",
+        "boundFileCount": len(binding["files"]),
+        "files": {path: binding["files"][path] for path in assessment["filesReviewed"]},
+    }
+    evidence = provider_evidence_for_task_run(db, task_run, artifact_refs={"diffArtifactId": diff_artifact_id})
+    # The artifact is staged before the terminal commit, but represents that completed execution.
+    evidence["runStatus"] = "completed"
+    artifact = Artifact(task_run_id=task_run.id, artifact_type="review", title="Native model review",
+                        status=assessment["status"], meta_json=json.dumps({
+                            "reviewedDiffArtifactId": diff_artifact_id, "adapterType": "claude_code",
+                            "providerEvidence": evidence, "nativeReceipt": receipt,
+                        }, separators=(",", ":")))
+    review = Review(artifact_id=artifact.id, reviewed_diff_artifact_id=diff_artifact_id,
+                    reviewer_agent_id=task_run.agent_id, adapter_type="claude_code",
+                    status=assessment["status"], risk_level=assessment["riskLevel"], summary=assessment["summary"],
+                    files_reviewed_json=json.dumps(assessment["filesReviewed"]),
+                    findings_json=json.dumps(assessment["findings"], ensure_ascii=False),
+                    suggested_changes_json=json.dumps(assessment["suggestedChanges"], ensure_ascii=False))
+    content = json.dumps(assessment, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    version = ArtifactVersion(artifact_id=artifact.id, source_task_run_id=task_run.id,
+                              parent_artifact_id=diff_artifact_id, changed_files_json=review.files_reviewed_json,
+                              summary=review.summary, content_md=content,
+                              content_hash=hashlib.sha256(content.encode("utf-8")).hexdigest(), editor_source="agent")
+    db.add(artifact)
+    db.add(review)
+    db.add(version)
+    return stage_task_run_event(db, task_run_id=task_run.id, event_type="artifact.review.ready",
+                                payload_json=json.dumps({
+                                    "artifactId": artifact.id, "reviewId": review.id,
+                                    "reviewedDiffArtifactId": diff_artifact_id,
+                                    "status": review.status, "riskLevel": review.risk_level,
+                                    "adapterType": review.adapter_type, "nativeReceipt": receipt,
+                                    "providerEvidence": evidence,
+                                }, separators=(",", ":")))
 
 
 def create_scripted_review_for_task_run(
     db: DbSession,
     task_run_id: str,
 ) -> StoredReviewArtifact:
+    run = db.get(TaskRun, task_run_id)
+    if run is not None and "_nativeReviewBinding" in json.loads(run.metrics_json):
+        native = [review for review in list_task_run_reviews(db, task_run_id) if review.native_receipt]
+        if native:
+            return native[-1]
+        raise ReviewError("Native review has no verified assessment; start a fresh native run.")
     diff_artifact = _latest_diff_artifact(db, task_run_id)
     if diff_artifact is None:
         raise ReviewError(f"No diff artifact found for TaskRun: {task_run_id}")
@@ -87,6 +163,9 @@ def create_scripted_review_for_diff(
     diff_artifact = db.get(Artifact, diff_artifact_id)
     if diff_artifact is None or diff_artifact.artifact_type != "diff":
         raise ReviewError(f"Diff artifact not found: {diff_artifact_id}")
+    run = db.get(TaskRun, diff_artifact.task_run_id)
+    if run is not None and "_nativeReviewBinding" in json.loads(run.metrics_json):
+        return create_scripted_review_for_task_run(db, run.id)
 
     existing = db.exec(
         select(Review).where(Review.reviewed_diff_artifact_id == diff_artifact.id)
@@ -690,6 +769,10 @@ def _string_value(value: Any) -> Optional[str]:
 
 
 def _to_stored_review(artifact: Artifact, review: Review) -> StoredReviewArtifact:
+    try:
+        metadata = json.loads(artifact.meta_json)
+    except (ValueError, TypeError):
+        metadata = {}
     return StoredReviewArtifact(
         id=review.id,
         artifact_id=artifact.id,
@@ -704,6 +787,7 @@ def _to_stored_review(artifact: Artifact, review: Review) -> StoredReviewArtifac
         findings=_json_dict_list(review.findings_json),
         suggested_changes=_json_list(review.suggested_changes_json),
         adapter_type=review.adapter_type,
+        native_receipt=metadata.get("nativeReceipt") if isinstance(metadata, dict) else None,
     )
 
 

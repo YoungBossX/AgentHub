@@ -1,0 +1,9 @@
+{
+  "binaryExists": true,
+  "shortExitCode": 0,
+  "version": "2.1.289 (Claude Code)",
+  "longArgumentCharacters": 40000,
+  "errorClass": "FileNotFoundError",
+  "errno": 2,
+  "winerror": 206
+}

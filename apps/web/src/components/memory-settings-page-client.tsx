@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Archive, Check, RefreshCw, Trash2, X } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { Archive, ArrowLeft, Check, RefreshCw, Trash2, X } from "lucide-react"
 
 import {
   getDemoWorkspace,
   listWorkspaceMemory,
   listWorkspaceSessions,
+  refreshSessionMemorySnapshot,
   updateMemoryItemStatus,
   type MemoryItem,
   type Workspace,
@@ -25,10 +27,12 @@ const STATUS_FILTERS = [
 
 type MemorySettingsPageClientProps = {
   backendUrl: string
+  initialSessionId?: string | null
 }
 
 export function MemorySettingsPageClient({
   backendUrl,
+  initialSessionId,
 }: MemorySettingsPageClientProps) {
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
   const [sessions, setSessions] = useState<WorkspaceSession[]>([])
@@ -36,77 +40,140 @@ export function MemorySettingsPageClient({
   const [statusFilter, setStatusFilter] = useState<string>("active")
   const [message, setMessage] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [selectedSessionId, setSelectedSessionId] = useState(initialSessionId ?? "")
+  const generation = useRef(0)
+  const operationPending = useRef(false)
 
   useEffect(() => {
-    let cancelled = false
+    const currentGeneration = ++generation.current
+    const isCurrent = () => generation.current === currentGeneration
     async function load() {
+      setIsLoading(true)
+      setIsPending(false)
+      setIsRefreshing(false)
+      operationPending.current = false
+      setMessage(null)
+      setWorkspace(null)
+      setSessions([])
+      setItems([])
       const loadedWorkspace = await getDemoWorkspace(backendUrl)
-      if (cancelled) {
+      if (!isCurrent()) {
         return
       }
       setWorkspace(loadedWorkspace)
       if (!loadedWorkspace) {
         setSessions([])
         setItems([])
+        setMessage("当前工作区不可用，请检查后端连接。")
         return
       }
       const [loadedSessions, loadedMemory] = await Promise.all([
         listWorkspaceSessions(backendUrl, loadedWorkspace.id),
         listWorkspaceMemory(backendUrl, loadedWorkspace.id, statusFilter),
       ])
-      if (cancelled) {
+      if (!isCurrent()) {
         return
       }
-      setSessions(loadedSessions)
+      setSessions(loadedSessions.filter((session) => session.workspaceId === loadedWorkspace.id))
       setItems(loadedMemory)
     }
-    load().catch(() => {
-      if (!cancelled) {
-        setMessage("加载记忆失败")
-      }
-    })
+    load()
+      .catch(() => {
+        if (isCurrent()) setMessage("加载记忆失败")
+      })
+      .finally(() => {
+        if (isCurrent()) setIsLoading(false)
+      })
     return () => {
-      cancelled = true
+      generation.current += 1
     }
   }, [backendUrl, statusFilter])
 
-  const currentSnapshotId = useMemo(() => {
-    return sessions.find((session) => session.memorySnapshotId)?.memorySnapshotId ?? null
-  }, [sessions])
+  const selectedSession = sessions.find((session) => session.id === selectedSessionId) ?? null
+  const currentSnapshotId = selectedSession?.memorySnapshotId ?? null
+  const busy = isPending || isLoading
+
+  function beginOperation() {
+    if (busy || operationPending.current) return false
+    operationPending.current = true
+    setIsPending(true)
+    setMessage(null)
+    return true
+  }
+
+  function finishOperation(currentGeneration: number) {
+    if (generation.current !== currentGeneration) return
+    operationPending.current = false
+    setIsPending(false)
+    setIsRefreshing(false)
+  }
+
+  async function refreshSnapshot() {
+    if (!workspace || !selectedSession || !beginOperation()) return
+    const currentGeneration = generation.current
+    setIsRefreshing(true)
+    try {
+      const updated = await refreshSessionMemorySnapshot(backendUrl, selectedSession.id)
+      if (generation.current !== currentGeneration) return
+      if (
+        updated.id !== selectedSession.id ||
+        updated.workspaceId !== workspace.id ||
+        !updated.memorySnapshotId
+      ) {
+        throw new Error("返回的会话快照与当前会话不匹配，请重新加载页面后重试。")
+      }
+      setSessions((current) =>
+        current.map((session) => session.id === updated.id ? updated : session),
+      )
+      setMessage("会话快照已刷新，后续请求将采用新快照；历史任务的记忆绑定保持不变。")
+    } catch (error) {
+      if (generation.current === currentGeneration) {
+        setMessage(`刷新失败：${error instanceof Error ? error.message : "请检查后端连接后重试。"}`)
+      }
+    } finally {
+      finishOperation(currentGeneration)
+    }
+  }
 
   function reload() {
-    if (!workspace) {
+    if (!workspace || !beginOperation()) {
       return
     }
-    setIsPending(true)
+    const currentGeneration = generation.current
     listWorkspaceMemory(backendUrl, workspace.id, statusFilter)
       .then((loadedMemory) => {
+        if (generation.current !== currentGeneration) return
         setItems(loadedMemory)
+        setMessage("列表已重新加载，会话快照保持不变。")
       })
       .catch(() => {
-        setMessage("刷新记忆失败")
+        if (generation.current === currentGeneration) setMessage("重新加载记忆列表失败，请重试。")
       })
       .finally(() => {
-        setIsPending(false)
+        finishOperation(currentGeneration)
       })
   }
 
   function updateStatus(item: MemoryItem, status: string) {
-    setIsPending(true)
+    if (!beginOperation()) return
+    const currentGeneration = generation.current
     updateMemoryItemStatus(backendUrl, item.id, status)
       .then((updated) => {
+        if (generation.current !== currentGeneration) return
         setItems((current) =>
           current
             .map((entry) => (entry.id === updated.id ? updated : entry))
             .filter((entry) => entry.status === statusFilter),
         )
-        setMessage(`已更新：${statusLabel(status)}`)
+        setMessage(`已更新：${statusLabel(status)}。如需当前会话采用变更，请刷新会话快照。`)
       })
       .catch(() => {
-        setMessage("更新记忆状态失败")
+        if (generation.current === currentGeneration) setMessage("更新记忆状态失败")
       })
       .finally(() => {
-        setIsPending(false)
+        finishOperation(currentGeneration)
       })
   }
 
@@ -114,27 +181,66 @@ export function MemorySettingsPageClient({
     <section className="grid gap-4">
       <div className="rounded-lg border border-[var(--border)] bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="grid min-w-0 flex-1 gap-3">
+            <p className="text-sm font-semibold text-slate-950">会话记忆快照</p>
+            <label className="grid gap-1 text-sm text-slate-700">
+              会话
+              <select
+                aria-label="会话"
+                className="w-full rounded-md border border-[var(--border)] bg-white px-3 py-2 disabled:opacity-60"
+                disabled={busy || !sessions.length}
+                onChange={(event) => {
+                  setSelectedSessionId(event.target.value)
+                  setMessage(null)
+                }}
+                value={selectedSession?.id ?? ""}
+              >
+                <option value="">请选择会话</option>
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>{session.title}</option>
+                ))}
+              </select>
+            </label>
             <p className="max-w-xl break-all font-mono text-xs text-[var(--muted-foreground)]">
               {currentSnapshotId
-                ? `memorySnapshotId: ${currentSnapshotId}`
-                : "暂无 memory snapshot"}
+                ? `快照：${currentSnapshotId}`
+                : selectedSession ? "尚未绑定记忆快照" : "选择会话后查看和刷新快照"}
+            </p>
+            <p className="max-w-xl text-xs leading-5 text-slate-500">
+              记忆变更不会自动替换会话快照。刷新后，后续请求采用新快照，历史任务保留原有记忆绑定。任务执行中请等待结束后再刷新。
             </p>
           </div>
-          <button
-            className="inline-flex items-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-[var(--primary-border)] hover:text-[var(--primary)] disabled:opacity-60"
-            disabled={isPending || !workspace}
-            onClick={reload}
-            type="button"
-          >
-            <RefreshCw aria-hidden="true" size={16} />
-            刷新
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--border)] px-3 py-2 text-sm font-semibold text-slate-700"
+              href={selectedSession ? `/?session=${encodeURIComponent(selectedSession.id)}` : "/"}
+            >
+              <ArrowLeft aria-hidden="true" size={16} />
+              返回聊天
+            </Link>
+            <button
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-[var(--primary-border)] hover:text-[var(--primary)] disabled:opacity-60"
+              disabled={busy || !selectedSession || !workspace}
+              onClick={refreshSnapshot}
+              type="button"
+            >
+              <RefreshCw aria-hidden="true" size={16} />
+              {isRefreshing ? "刷新中…" : "刷新会话快照"}
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">
+          <button
+            className="rounded-md border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-60"
+            disabled={busy || !workspace}
+            onClick={reload}
+            type="button"
+          >
+            重新加载列表
+          </button>
           {STATUS_FILTERS.map((status) => (
             <button
               className={cn(
@@ -144,6 +250,7 @@ export function MemorySettingsPageClient({
                   : "border-[var(--border)] bg-white text-slate-600 hover:border-slate-400",
               )}
               key={status}
+              disabled={busy}
               onClick={() => setStatusFilter(status)}
               type="button"
             >
@@ -154,7 +261,7 @@ export function MemorySettingsPageClient({
       </div>
 
       {message ? (
-        <div className="rounded-md border border-[var(--border)] bg-white px-4 py-3 text-sm text-slate-700">
+        <div role="status" className="rounded-md border border-[var(--border)] bg-white px-4 py-3 text-sm text-slate-700">
           {message}
         </div>
       ) : null}
@@ -163,7 +270,7 @@ export function MemorySettingsPageClient({
         {items.length ? (
           items.map((item) => (
             <MemoryCard
-              disabled={isPending}
+              disabled={busy}
               item={item}
               key={item.id}
               onUpdateStatus={updateStatus}

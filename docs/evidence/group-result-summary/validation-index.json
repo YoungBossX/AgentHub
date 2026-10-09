@@ -1,0 +1,65 @@
+{
+  "status": "verified",
+  "createdAt": "2026-10-08T04:43:04.292961+00:00",
+  "scope": "agenthub-group-result-summary 1.1",
+  "codeSha256": {
+    "apps/api/app/group_summary_contracts.py": "efbcc625dc3c8dafa08eca6a8892c42cb8f7b1cc56a6100f53c2435c69c92d3a",
+    "apps/api/app/group_summaries.py": "0e8ca1e61a218e812c133b6cf7ab5e7d69b15d5707dfba20aece53ae09fc344f",
+    "apps/api/app/group_planning.py": "2bf3202926c6f9d167a8c95aa7aa3e65c727a1cf73d5ccea1b3d4748836249cd",
+    "apps/api/app/group_planner.py": "595375b854c7394af87ff40517af79aa001a46a3735715734e83aecb787eebaf",
+    "apps/api/app/planner_providers.py": "75811125d331ef7574c6ebb2e19bc757487ec0085078ba67b21f80b51651149a",
+    "apps/api/app/group_execution.py": "ad902f9643514fc9448e0bb2c93e559044ebf5d2bfcef1d0e6c81708260b9fcd",
+    "apps/api/app/run_engine.py": "fe49b27e16583c8d168ccc3caa91ecfbe01e67a131b58fce760ed63a14a094a9",
+    "apps/api/app/routes/messages.py": "510cca58f056d5496b97a671e9f82401d3ee30c58f530028f9cd8c6b88421769",
+    "apps/api/app/schemas.py": "cf09f3d1b61a3fe293db8a06dbef19edc49c8d63d615b6c59d617a3d95102166",
+    "apps/api/tests/test_group_result_summary.py": "455b080871cca0f369b91bf87d754f556a8e22070375b5e06883de6f3c82d02e",
+    "apps/web/src/components/group-summary-card.tsx": "4f269cbb952487bebb7670a76ca955cd2af1723639537e2c0e1ebd242b9cfb7f",
+    "apps/web/src/components/group-summary-card.test.tsx": "df0d2fe8ed8e7d929a306231f6bc14f0da45ef7139ef5abd7c204bc1770f43b4",
+    "apps/web/src/components/chat-thread.tsx": "72d591288c4e65021a4fc3e43ddc7b2935ff191782ad7f805508110494f885b5",
+    "apps/web/src/components/use-session-event-refresh.ts": "d50991870da7b0bb5334237a9cf99ae77464fb8a5ef8154a8b5ff6672fe8cfb6",
+    "apps/web/src/components/use-session-summary-refresh.test.tsx": "d50dc2c40d80a186526d1f85fc1ac7091a10352f2f77186b1ce5baea0bada1b8",
+    "apps/web/src/components/workspace-shell.tsx": "b58ad81caf6e50edde3c7915e07e37c1b3d4309b3783eece033f16f51722ff9d",
+    "apps/web/src/lib/api.ts": "98793768ad601ec0d157aefee89c1645ef1107c390e261e95693532a2d5a7996"
+  },
+  "evidenceSha256": {
+    "api-tests.txt": "c070e9a48ba4b36b5d39f47855e8653de1e813c9e126aac5f0be5d936ba22d34",
+    "browser.json": "fa547ddf2d76c4b6e3be8fd7caa79e84bb4e93d93b34a795c2c230f99325abc6",
+    "chat.png": "09226e8dd573553edebc298c470a7f3a524e14744698bd7899230e54d0ff8857",
+    "dark.png": "fe9f6524a9dea799967221720d2e7bc2a51151426b4a6f7d80fad24206c9edfa",
+    "development-history.json": "d5236eccf42c876b99c9a8c819fa82dbb811f077a7673f564389f36dfbc235c0",
+    "focused-api-tests.txt": "357b16021994d2ced68f1fd24f3b5857704d5f3f1bd6a6b81d63370828243036",
+    "history.json": "02858bfee7e58ccfd3cb97a5d458ac3e25e48422c6ebf0f4738270b7ea6852ea",
+    "runtime.json": "e066a39b0a917facd049eefc223e6445cc5fd55004869ed3c6b3b761ae8c2fb2",
+    "static-checks.txt": "97d1701a1cf6ddef39d7f94e56bd8840d3ae19ba9f8c83992fa7fc6317668e9c",
+    "web-tests.txt": "37ef3041b4f2e39082204b542724a69ad18586f5da158088eccc06869d764ba0"
+  },
+  "boundaries": [
+    "native CLI route does not prove model vendor",
+    "static review and summary do not run tests",
+    "no new Preview or deployment acceptance",
+    "local uncommitted checkout"
+  ],
+  "verifiedAt": "2026-10-08T04:56:08.340525+00:00",
+  "verification": {
+    "api": {
+      "passed": 1651,
+      "skipped": 1,
+      "seconds": 722.26,
+      "exitCode": 0
+    },
+    "web": {
+      "passed": 174,
+      "files": 22,
+      "exitCode": 0
+    },
+    "focusedApi": {
+      "passed": 31,
+      "exitCode": 0
+    },
+    "staticChecks": {
+      "exitCode": 0
+    },
+    "openSpec": "strict passed",
+    "gitWhitespace": "passed"
+  }
+}

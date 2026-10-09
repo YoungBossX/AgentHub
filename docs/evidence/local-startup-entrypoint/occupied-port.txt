@@ -1,0 +1,6 @@
+
+> agenthub@ dev:local X:\Git_Clone\AgentHub
+> node scripts/local-dev.mjs "--api-port" "8007" "--web-port" "3002"
+
+[local] API port 8007 is occupied or unavailable. Stop its owner yourself or choose another port; existing listeners are untouched.
+ ELIFECYCLE  Command failed with exit code 1.

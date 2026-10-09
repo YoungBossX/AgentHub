@@ -31,6 +31,7 @@ from app.adapters import (
     run_adapter_event_stream,
 )
 from app.context_pack import build_session_context_pack
+from app.diffs import StoredDiffArtifact
 from app.external_workspaces import (
     ExternalWorkspaceRegistration,
     register_external_project_target,
@@ -197,6 +198,36 @@ def _stub_scope_snapshot(
         "capture_worktree_scope_snapshot",
         lambda worktree_path, **kwargs: snapshot,
     )
+
+
+def _test_write_diff() -> StoredDiffArtifact:
+    return StoredDiffArtifact(
+        id="test-diff", artifact_id="test-artifact", task_run_id="test-run",
+        artifact_type="diff", title="Controlled test output", status="ready",
+        base_ref="test-base", head_ref="test-head", patch_text="+controlled change\n",
+        changed_files=["apps/demo/src/App.tsx"], stats={},
+    )
+
+
+def _stub_scope_finalization(monkeypatch, validate, persist) -> None:
+    def finalize(db, task_run_id):
+        decision = validate(db, task_run_id)
+        persist(db, db.get(TaskRun, task_run_id), decision)
+        return decision
+
+    monkeypatch.setattr(run_engine_module, "validate_and_persist_task_run_scope", finalize)
+
+
+def _stub_new_write_on_final_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    original_validate = run_engine_module.validate_and_persist_task_run_scope
+    def validate_with_changed_snapshot(*args, **kwargs):
+        _stub_scope_snapshot(monkeypatch, _scope_snapshot(entries=(
+            task_run_scope.ScopeEntry(
+                path="apps/demo/src/App.tsx", status="untracked-present", fingerprint="b" * 64,
+            ),
+        )))
+        return original_validate(*args, **kwargs)
+    monkeypatch.setattr(run_engine_module, "validate_and_persist_task_run_scope", validate_with_changed_snapshot)
 
 
 def _acquire_scope_lock(
@@ -1241,6 +1272,158 @@ def test_validate_scope_is_unverifiable_when_same_target_policy_changes(
     assert decision.error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
 
 
+def _persist_through_scope_entry_point(db, run, decision, entry_point):
+    if entry_point == "supplied":
+        return task_runs_module.persist_scope_decision(db, run, decision)
+    result = task_runs_module.validate_and_persist_task_run_scope(db, run.id)
+    assert result.status == "unverifiable"
+    return db.get(TaskRun, run.id)
+
+
+@pytest.mark.parametrize("mode", ("changed", "unchanged", "out_of_scope", "unavailable"))
+def test_internal_scope_finalization_uses_fresh_complete_evidence(client, monkeypatch, mode):
+    _stub_scope_snapshot(monkeypatch, _scope_snapshot())
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps({"targetId": DEMO_FRONTEND_TARGET_ID})
+        db.add(task)
+        db.commit()
+        run = create_task_run(db, task.id)
+        _acquire_scope_lock(db, run)
+        task_runs_module.capture_task_run_scope_baseline(db, run.id)
+        calls = []
+
+        def current_snapshot(*args, **kwargs):
+            calls.append(kwargs)
+            if mode == "unavailable":
+                return replace(_scope_snapshot(), available=False, reason="scope_capture_unavailable")
+            if mode == "unchanged":
+                return _scope_snapshot()
+            return _scope_snapshot(entries=(task_run_scope.ScopeEntry(
+                path="package.json" if mode == "out_of_scope" else "apps/demo/src/App.tsx",
+                status="tracked-present", fingerprint="b" * 64,
+            ),))
+
+        monkeypatch.setattr(task_runs_module, "capture_worktree_scope_snapshot", current_snapshot)
+        decision = task_runs_module.validate_and_persist_task_run_scope(db, run.id)
+        metrics = json.loads(db.get(TaskRun, run.id).metrics_json)
+        expected = {"out_of_scope": "rejected", "unavailable": "unverifiable"}.get(mode, "passed")
+        assert decision.status == metrics["taskRunScopeDecision"]["status"] == expected
+        assert len(calls) == 1
+        assert calls[0]["trusted_git_dir"]
+        assert bool(decision.changed_paths) == (mode in {"changed", "out_of_scope"})
+        if expected == "passed":
+            task_runs_module.require_task_run_scope_passed(db, run.id)
+        else:
+            assert "taskRunScopeGuard" not in metrics
+            with pytest.raises(task_run_scope.TaskRunScopeError):
+                task_runs_module.require_task_run_scope_passed(db, run.id)
+
+
+@pytest.mark.parametrize("mutation", ("metrics", "baseline", "worker", "lock", "expired_lock", "runtime", "policy"))
+def test_internal_scope_finalization_rejects_changed_authorization(client, monkeypatch, mutation):
+    _stub_scope_snapshot(monkeypatch, _scope_snapshot())
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps({"targetId": DEMO_FRONTEND_TARGET_ID})
+        db.add(task)
+        db.commit()
+        run = create_task_run(db, task.id)
+        _acquire_scope_lock(db, run)
+        task_runs_module.capture_task_run_scope_baseline(db, run.id)
+        original_validate = task_runs_module.validate_task_run_scope
+        original_target = task_runs_module.get_target_for_workspace
+
+        def validate_then_mutate(current_db, run_id):
+            decision = original_validate(current_db, run_id)
+            assert decision.status == "passed"
+            if mutation == "runtime":
+                task_run_scope.clear_task_run_scope_runtime_context(run_id)
+            elif mutation == "policy":
+                monkeypatch.setattr(task_runs_module, "get_target_for_workspace", lambda *args: replace(
+                    original_target(*args), allowed_paths=("apps/demo/src", "package.json"),
+                ))
+            else:
+                with DbSession(db.get_bind()) as writer:
+                    changed = writer.get(TaskRun, run_id)
+                    if mutation in {"metrics", "baseline"}:
+                        metrics = json.loads(changed.metrics_json)
+                        if mutation == "baseline":
+                            metrics["preRunCheckpoint"]["scopeBaselineIdentity"] = "changed-baseline"
+                        metrics["concurrentScopeTest"] = mutation
+                        changed.metrics_json = json.dumps(metrics)
+                        writer.add(changed)
+                    elif mutation == "worker":
+                        changed.runner_id = "replacement-worker"
+                        writer.add(changed)
+                    else:
+                        lock = held_lock_for_target(writer, DEMO_FRONTEND_TARGET_ID)
+                        if mutation == "lock":
+                            lock.state = "released"
+                        else:
+                            lock.lease_expires_at = utc_now() - timedelta(seconds=1)
+                        writer.add(lock)
+                    writer.commit()
+            return decision
+
+        monkeypatch.setattr(task_runs_module, "validate_task_run_scope", validate_then_mutate)
+        decision = task_runs_module.validate_and_persist_task_run_scope(db, run.id)
+        db.refresh(run)
+        metrics = json.loads(run.metrics_json)
+        assert decision.status == metrics["taskRunScopeDecision"]["status"] == "unverifiable"
+        assert "taskRunScopeGuard" not in metrics
+        if mutation in {"metrics", "baseline"}:
+            assert metrics["concurrentScopeTest"] == mutation
+        if mutation == "worker":
+            assert run.runner_id == "replacement-worker"
+        with pytest.raises(task_run_scope.TaskRunScopeError):
+            task_runs_module.require_task_run_scope_passed(db, run.id)
+
+
+def test_internal_scope_finalization_does_not_return_pass_when_all_cas_attempts_fail(client, monkeypatch):
+    _stub_scope_snapshot(monkeypatch, _scope_snapshot())
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps({"targetId": DEMO_FRONTEND_TARGET_ID})
+        db.add(task)
+        db.commit()
+        run = create_task_run(db, task.id)
+        _acquire_scope_lock(db, run)
+        task_runs_module.capture_task_run_scope_baseline(db, run.id)
+        assert task_runs_module.validate_and_persist_task_run_scope(db, run.id).status == "passed"
+        previous_metrics = run.metrics_json
+        monkeypatch.setattr(task_runs_module, "_persist_scope_metrics_under_current_lock", lambda *args, **kwargs: False)
+        monkeypatch.setattr(task_runs_module, "_persist_scope_metrics_cas", lambda *args, **kwargs: False)
+        with pytest.raises(task_run_scope.TaskRunScopeError) as exc_info:
+            task_runs_module.validate_and_persist_task_run_scope(db, run.id)
+        assert exc_info.value.error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
+        assert run.metrics_json == previous_metrics
+
+
+def test_scope_finalizer_rejects_current_failure_even_with_previous_pass_marker(client, monkeypatch):
+    _stub_scope_snapshot(monkeypatch, _scope_snapshot())
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        task.plan_json = json.dumps({"targetId": DEMO_FRONTEND_TARGET_ID})
+        db.add(task)
+        db.commit()
+        run = create_task_run(db, task.id)
+        _acquire_scope_lock(db, run)
+        task_runs_module.capture_task_run_scope_baseline(db, run.id)
+        _bind_started_write_execution(db, run)
+        transition_task_run(db, run.id, "collecting_diff")
+        assert task_runs_module.validate_and_persist_task_run_scope(db, run.id).status == "passed"
+        monkeypatch.setattr(run_engine_module, "validate_and_persist_task_run_scope", lambda *args: (
+            task_runs_module._unverifiable_scope_decision(DEMO_FRONTEND_TARGET_ID)
+        ))
+        monkeypatch.setattr(run_engine_module, "collect_task_run_diff", lambda *args: pytest.fail(
+            "A previous pass marker authorized artifacts despite current failure"
+        ))
+        assert run_engine_module._commit_adapter_completed_task_run(db, run) is False
+        assert run.state == "failed"
+        assert run.error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
+
+
 def test_require_scope_passed_rejects_legacy_run_without_marker(
     client: TestClient,
 ) -> None:
@@ -1324,10 +1507,12 @@ def test_persisted_passed_scope_decision_authorizes_the_task_run(
 
 
 @pytest.mark.parametrize("decision_status", ("passed", "rejected"))
+@pytest.mark.parametrize("entry_point", ("supplied", "internal"))
 def test_scope_decision_persistence_fails_closed_if_lock_generation_changes_after_validation(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
     decision_status: str,
+    entry_point: str,
 ) -> None:
     baseline_snapshot = _scope_snapshot()
     current_snapshot = (
@@ -1401,7 +1586,7 @@ def test_scope_decision_persistence_fails_closed_if_lock_generation_changes_afte
             "_utc_scope_timestamp",
             rotate_lock_before_persistence,
         )
-        stored = task_runs_module.persist_scope_decision(db, baseline, decision)
+        stored = _persist_through_scope_entry_point(db, baseline, decision, entry_point)
         metrics = json.loads(stored.metrics_json)
         events = db.exec(
             select(TaskRunEvent).where(TaskRunEvent.task_run_id == run.id)
@@ -1599,10 +1784,12 @@ def test_target_lock_generation_stays_private_across_public_run_surfaces(
 
 
 @pytest.mark.parametrize("decision_status", ("passed", "rejected"))
+@pytest.mark.parametrize("entry_point", ("supplied", "internal"))
 def test_scope_decision_guard_rechecks_sqlite_time_after_write_lock_wait(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     decision_status: str,
+    entry_point: str,
 ) -> None:
     database_path = tmp_path / f"scope-lease-wait-{decision_status}.db"
     engine = create_engine(
@@ -1736,10 +1923,11 @@ def test_scope_decision_guard_rechecks_sqlite_time_after_write_lock_wait(
     def persist_from_second_session() -> None:
         try:
             with DbSession(engine) as writer_db:
-                stored = task_runs_module.persist_scope_decision(
+                stored = _persist_through_scope_entry_point(
                     writer_db,
                     writer_db.get(TaskRun, run_id),
                     decision,
+                    entry_point,
                 )
                 writer_results.append(json.loads(stored.metrics_json))
         except BaseException as exc:
@@ -1806,9 +1994,11 @@ def test_scope_decision_guard_rechecks_sqlite_time_after_write_lock_wait(
     assert "taskRunScopeGuard" not in durable_metrics
 
 
+@pytest.mark.parametrize("entry_point", ("supplied", "internal"))
 def test_scope_decision_fallback_cas_preserves_write_after_refresh(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    entry_point: str,
 ) -> None:
     database_path = tmp_path / "scope-fallback-cas.db"
     engine = create_engine(
@@ -1915,10 +2105,11 @@ def test_scope_decision_fallback_cas_preserves_write_after_refresh(
             "_scope_metrics_with_decision",
             write_between_fallback_refresh_and_cas,
         )
-        stored = task_runs_module.persist_scope_decision(
+        stored = _persist_through_scope_entry_point(
             writer_db,
             writer_db.get(TaskRun, run_id),
             decision,
+            entry_point,
         )
         metrics = json.loads(stored.metrics_json)
 
@@ -3354,7 +3545,7 @@ def test_runtime_config_frontend_adapter_overrides_default_adapter(
             {
                 "frontend": RuntimeRoleConfig(
                     role="frontend",
-                    agent_profile_id="agent-frontend",
+                    agent_profile_id=db.exec(select(Agent).where(Agent.role == "frontend")).one().id,
                     provider_id="local-claude-code-cli",
                     adapter_type="claude_code",
                     mode="frontend",
@@ -3391,7 +3582,7 @@ def test_run_engine_gateway_honors_runtime_provider_id(
             {
                 "frontend": RuntimeRoleConfig(
                     role="frontend",
-                    agent_profile_id="agent-frontend",
+                    agent_profile_id=db.exec(select(Agent).where(Agent.role == "frontend")).one().id,
                     provider_id="local-claude-code-cli",
                     adapter_type="claude_code",
                     mode="frontend",
@@ -3474,7 +3665,7 @@ def test_runtime_config_backend_adapter_overrides_environment_default(
             {
                 "backend": RuntimeRoleConfig(
                     role="backend",
-                    agent_profile_id="agent-backend",
+                    agent_profile_id=db.exec(select(Agent).where(Agent.role == "backend")).one().id,
                     provider_id="local-codex-cli",
                     adapter_type="codex",
                     mode="backend",
@@ -3728,7 +3919,7 @@ def test_runtime_config_resolution_is_visible_in_mission_trace(
             {
                 "frontend": RuntimeRoleConfig(
                     role="frontend",
-                    agent_profile_id="agent-frontend",
+                    agent_profile_id=db.exec(select(Agent).where(Agent.role == "frontend")).one().id,
                     provider_id="local-claude-code-cli",
                     adapter_type="claude_code",
                     mode="frontend",
@@ -3774,6 +3965,80 @@ def test_agent_run_request_bounds_frontend_login_demo_instruction(
     assert "do not read the OpenSpec change" in request.instruction
     assert "dependency install" in request.instruction
     assert request.instruction != "Build login page"
+
+
+@pytest.mark.parametrize("adapter", ["codex", "claude_code", "scripted_mock"])
+def test_agent_system_prompt_freezes_defaults_and_ignores_caller_context(client, adapter):
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        agent = db.get(Agent, task.assigned_agent_id)
+        agent.system_prompt = "Frozen behavior marker"
+        db.add(agent)
+        db.commit()
+        run = create_task_run(db, task.id, adapter_type=adapter)
+        agent.system_prompt = "Changed default marker"
+        db.add(agent)
+        db.commit()
+        request = agent_run_request_for(
+            db, run, adapter_type=adapter,
+            plan_context={"systemPrompt": "Caller replacement marker"},
+        )
+        public = task_run_response(db, run).metrics_json
+    assert "Frozen behavior marker" in request.instruction
+    assert "Changed default marker" not in request.instruction
+    assert "Agent System Prompt" in request.instruction
+    assert request.permission_profile == {"network": "off"}
+    assert "agentInstructionBinding" not in public
+    assert "Frozen behavior marker" not in json.dumps(public)
+    assert public["agentInstruction"]["source"] == "agent_default"
+
+
+def test_workspace_prompt_changes_apply_only_to_new_runs(client):
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        session = db.get(Session, task.session_id)
+        agent = db.get(Agent, task.assigned_agent_id)
+        role = RuntimeRoleConfig(
+            role="frontend", agent_profile_id=agent.id, provider_id="local-codex-cli",
+            adapter_type="codex", mode="frontend", enabled=True,
+            system_prompt="First workspace instruction",
+        )
+        upsert_runtime_config(db, session.workspace_id, {"frontend": role})
+        first = create_task_run(db, task.id)
+        upsert_runtime_config(db, session.workspace_id, {"frontend": replace(role, system_prompt="Second workspace instruction")})
+        request = agent_run_request_for(db, first, adapter_type="codex")
+        assert "First workspace instruction" in request.instruction
+        assert "Second workspace instruction" not in request.instruction
+        transition_task_run(db, first.id, "failed")
+        second = create_task_run(db, task.id, retry_of_run_id=first.id)
+        request = agent_run_request_for(db, second, adapter_type="codex")
+        assert "Second workspace instruction" in request.instruction
+        assert "First workspace instruction" not in request.instruction
+
+
+def test_legacy_run_freezes_prompt_on_first_request_and_corrupt_binding_fails(client):
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        agent = db.get(Agent, task.assigned_agent_id)
+        agent.system_prompt = "Legacy preparation marker"
+        db.add(agent)
+        db.commit()
+        run = create_task_run(db, task.id)
+        metrics = json.loads(run.metrics_json)
+        metrics.pop("agentInstructionBinding")
+        run.metrics_json = json.dumps(metrics)
+        db.add(run)
+        db.commit()
+        assert "Legacy preparation marker" in agent_run_request_for(db, run, adapter_type="codex").instruction
+        db.refresh(run)
+        metrics = json.loads(run.metrics_json)
+        assert metrics["agentInstructionBinding"]["text"] == "Legacy preparation marker"
+        metrics["agentInstructionBinding"]["text"] = "Corrupted marker"
+        run.metrics_json = json.dumps(metrics)
+        db.add(run)
+        db.commit()
+        with pytest.raises(TaskRunLifecycleError, match="digest"):
+            agent_run_request_for(db, run, adapter_type="codex")
 
 
 def test_provider_instruction_adapters_dispatch_without_losing_context(
@@ -4767,8 +5032,18 @@ def test_passthrough_instruction_preserves_original_request_without_demo_rewrite
     assert 'data-agenthub-target="login-page-slot"' not in request.instruction
 
 
-def test_llm_review_task_is_satisfied_by_generated_review_artifact(
+@pytest.mark.parametrize("planner", [
+    "llm_v1", "contract_first_v1", "deterministic_login_v1", "dynamic_manager_v1",
+])
+@pytest.mark.parametrize("evidence_case", [
+    "passed", "warning", "failed", "missing_review", "missing_diff",
+    "foreign_diff", "newer_no_review", "newer_failed", "foreign_dependency",
+    "explicit_review_run",
+])
+def test_planned_review_is_satisfied_only_by_current_matching_artifacts(
     client: TestClient,
+    planner: str,
+    evidence_case: str,
 ) -> None:
     with db_from_override() as db:
         session_id = db.exec(select(Task).where(Task.title == "Build login page")).one().session_id
@@ -4778,7 +5053,7 @@ def test_llm_review_task_is_satisfied_by_generated_review_artifact(
         frontend_task.status = "completed"
         frontend_task.plan_json = json.dumps(
             {
-                "planner": "llm_v1",
+                "planner": planner,
                 "targetId": DEMO_FRONTEND_TARGET_ID,
             },
             separators=(",", ":"),
@@ -4805,7 +5080,7 @@ def test_llm_review_task_is_satisfied_by_generated_review_artifact(
             task_run_id=frontend_run.id,
             artifact_type="review",
             title="Review Agent report",
-            status="passed",
+            status=evidence_case if evidence_case in {"warning", "failed"} else "passed",
         )
         db.add(diff_artifact)
         db.add(review_artifact)
@@ -4816,7 +5091,7 @@ def test_llm_review_task_is_satisfied_by_generated_review_artifact(
             artifact_id=review_artifact.id,
             reviewed_diff_artifact_id=diff_artifact.id,
             adapter_type="scripted_mock",
-            status="passed",
+            status=review_artifact.status,
             risk_level="low",
             summary="Generated review passed.",
         )
@@ -4825,13 +5100,13 @@ def test_llm_review_task_is_satisfied_by_generated_review_artifact(
         review_task = Task(
             session_id=session_id,
             title="QA review Breakout game implementation",
-            intent_type="review",
+            intent_type="qa_review" if planner == "deterministic_login_v1" else "review",
             status="pending",
             assigned_agent_id=qa_agent.id,
             depends_on_task_ids=json.dumps([frontend_task.id], separators=(",", ":")),
             plan_json=json.dumps(
                 {
-                    "planner": "llm_v1",
+                    "planner": planner,
                     "targetId": DEMO_FRONTEND_TARGET_ID,
                 },
                 separators=(",", ":"),
@@ -4841,13 +5116,64 @@ def test_llm_review_task_is_satisfied_by_generated_review_artifact(
         db.commit()
         db.refresh(review_task)
 
+        if evidence_case == "missing_review":
+            db.delete(review)
+        elif evidence_case == "missing_diff":
+            diff_artifact.artifact_type = "preview"
+            db.add(diff_artifact)
+        elif evidence_case == "foreign_diff":
+            other_task = Task(session_id=session_id, title="Other frontend change", intent_type="frontend_change")
+            db.add(other_task)
+            other_run = TaskRun(task_id=other_task.id, agent_id=frontend_agent.id, state="completed", worktree_path=".worktrees/taskrun-session")
+            db.add(other_run)
+            diff_artifact.task_run_id = other_run.id
+            db.add(diff_artifact)
+        elif evidence_case in {"newer_no_review", "newer_failed"}:
+            db.add(TaskRun(
+                task_id=frontend_task.id, agent_id=frontend_agent.id,
+                state="failed" if evidence_case == "newer_failed" else "completed",
+                worktree_path=".worktrees/taskrun-session",
+                created_at=frontend_run.created_at + timedelta(seconds=1),
+            ))
+        elif evidence_case == "foreign_dependency":
+            other_session = Session(
+                workspace_id=db.get(Session, session_id).workspace_id, title="Other",
+                bound_branch="main", worktree_path=".worktrees/other-session",
+            )
+            db.add(other_session)
+            other_task = Task(session_id=other_session.id, title="Other change", intent_type="frontend_change", status="completed")
+            db.add(other_task)
+            frontend_run.task_id = other_task.id
+            db.add(frontend_run)
+            review_task.depends_on_task_ids = json.dumps([other_task.id])
+            db.add(review_task)
+        elif evidence_case == "explicit_review_run":
+            db.add(TaskRun(task_id=review_task.id, agent_id=qa_agent.id, state="queued", worktree_path=".worktrees/taskrun-session"))
+        db.commit()
+
         completed = _complete_ready_pipeline_review_tasks(db, frontend_task.id)
 
+        if evidence_case not in {"passed", "warning", "failed"}:
+            assert completed == []
+            db.refresh(review_task)
+            assert review_task.status != "completed"
+            assert "reviewSatisfaction" not in json.loads(review_task.plan_json)
+            return
         assert [task.id for task in completed] == [review_task.id]
         db.refresh(review_task)
         assert review_task.status == "completed"
         assert json.loads(review_task.plan_json)["scheduler"]["state"] == "completed"
         assert "generated review artifact" in json.loads(review_task.plan_json)["scheduler"]["reason"]
+        assert json.loads(review_task.plan_json)["reviewSatisfaction"] == {
+            "source": "generated_review_artifacts",
+            "reports": [{
+                "taskId": frontend_task.id, "taskRunId": frontend_run.id,
+                "reviewArtifactId": review_artifact.id,
+                "reviewedDiffArtifactId": diff_artifact.id,
+                "status": review.status, "adapterType": "scripted_mock",
+            }],
+        }
+        assert not db.exec(select(TaskRun).where(TaskRun.task_id == review_task.id)).all()
 
 
 def test_external_target_context_reaches_instruction_builder(
@@ -5312,7 +5638,7 @@ def test_runtime_config_backend_does_not_bypass_platform_approval(
             {
                 "backend": RuntimeRoleConfig(
                     role="backend",
-                    agent_profile_id="agent-backend",
+                    agent_profile_id=db.exec(select(Agent).where(Agent.role == "backend")).one().id,
                     provider_id="local-codex-cli",
                     adapter_type="codex",
                     mode="backend",
@@ -6940,12 +7266,7 @@ def test_finalize_adapter_completed_task_run_fails_scope_before_artifacts(
     async def unexpected_async(*args, **kwargs):
         pytest.fail("scope failure reached downstream scheduling")
 
-    monkeypatch.setattr(
-        run_engine_module, "validate_task_run_scope", validate_scope, raising=False
-    )
-    monkeypatch.setattr(
-        run_engine_module, "persist_scope_decision", persist_decision, raising=False
-    )
+    _stub_scope_finalization(monkeypatch, validate_scope, persist_decision)
     monkeypatch.setattr(
         run_engine_module,
         "require_task_run_scope_passed",
@@ -7064,12 +7385,7 @@ def test_finalize_adapter_completed_task_run_uses_durable_unverifiable_after_sta
     async def unexpected_async(*args, **kwargs):
         pytest.fail("stale scope evidence reached downstream scheduling")
 
-    monkeypatch.setattr(
-        run_engine_module,
-        "validate_task_run_scope",
-        stale_validate_scope,
-        raising=False,
-    )
+    _stub_scope_finalization(monkeypatch, stale_validate_scope, task_runs_module.persist_scope_decision)
     monkeypatch.setattr(
         task_runs_module,
         "validate_task_run_scope",
@@ -7276,6 +7592,7 @@ def test_finalize_adapter_completed_task_run_passes_scope_before_completion(
 
     def collect_diff(db, task_run_id):
         calls.append(f"diff:{task_run_id}")
+        return _test_write_diff()
 
     def create_review(db, task_run_id):
         calls.append(f"review:{task_run_id}")
@@ -7294,12 +7611,7 @@ def test_finalize_adapter_completed_task_run_passes_scope_before_completion(
         calls.append(f"downstream:{task_id}")
         return None
 
-    monkeypatch.setattr(
-        run_engine_module, "validate_task_run_scope", validate_scope, raising=False
-    )
-    monkeypatch.setattr(
-        run_engine_module, "persist_scope_decision", persist_decision, raising=False
-    )
+    _stub_scope_finalization(monkeypatch, validate_scope, persist_decision)
     monkeypatch.setattr(
         run_engine_module, "require_task_run_scope_passed", require_scope, raising=False
     )
@@ -11836,7 +12148,9 @@ async def test_old_adapter_completed_event_is_fenced_after_stale_recovery(
         )
     )
     try:
-        await asyncio.wait_for(stream_started.wait(), timeout=1)
+        # This tests stale-event fencing, not a one-second startup deadline.
+        # Windows SQLite/worktree setup can exceed that deadline under load.
+        await asyncio.wait_for(stream_started.wait(), timeout=10)
         recovery_time = utc_now()
         with db_from_override() as recovery_db:
             stale_run = recovery_db.get(TaskRun, run_id)
@@ -11975,13 +12289,8 @@ async def test_durable_adapter_run_replacement_during_real_finalizer_fails_close
     )
     monkeypatch.setattr(
         run_engine_module,
-        "validate_task_run_scope",
+        "validate_and_persist_task_run_scope",
         record_sync("scope"),
-    )
-    monkeypatch.setattr(
-        run_engine_module,
-        "persist_scope_decision",
-        record_sync("persist"),
     )
     monkeypatch.setattr(
         run_engine_module,
@@ -12029,7 +12338,10 @@ async def test_durable_adapter_run_replacement_during_real_finalizer_fails_close
     )
     finished_before_releasing_finalizer = True
     try:
-        await asyncio.wait_for(finalizer_preflight_passed.wait(), timeout=1)
+        # Reaching this gate includes real Git/SQLite setup. Give that setup
+        # room under a loaded Windows runner; keep the replacement-fence
+        # deadline below at 0.5 s so the security assertion is unchanged.
+        await asyncio.wait_for(finalizer_preflight_passed.wait(), timeout=10)
         with db_from_override() as mutation_db:
             stored = mutation_db.get(TaskRun, task_run_id)
             assert stored is not None
@@ -12121,8 +12433,7 @@ async def test_real_scope_finalizer_never_starts_after_execution_ownership_is_lo
         critical_side_effects.append("downstream")
         return None
 
-    monkeypatch.setattr(run_engine_module, "validate_task_run_scope", record_sync("scope"))
-    monkeypatch.setattr(run_engine_module, "persist_scope_decision", record_sync("persist"))
+    monkeypatch.setattr(run_engine_module, "validate_and_persist_task_run_scope", record_sync("scope"))
     monkeypatch.setattr(
         run_engine_module,
         "require_task_run_scope_passed",
@@ -12390,6 +12701,40 @@ def _record_finalizer_critical_calls(
 
 
 @pytest.mark.anyio
+async def test_no_output_completion_cannot_write_metrics_after_generation_replacement(client, monkeypatch):
+    db = db_from_override()
+    run = _prepare_write_finalizer_fence_race(db, monkeypatch, worker_id="worker:no-output-generation")
+    run_id = run.id
+    record = run_engine_module._record_completion_validation
+    replaced = []
+    def replace_before_completion_metrics(current_db, current_run, *args, **kwargs):
+        with db_from_override() as writer:
+            stored = writer.get(TaskRun, run_id)
+            stored.adapter_run_id = "replacement:no-output-generation"
+            writer.add(stored)
+            writer.commit()
+        replaced.append(run_id)
+        return record(current_db, current_run, *args, **kwargs)
+    monkeypatch.setattr(run_engine_module, "_record_completion_validation", replace_before_completion_metrics)
+    try:
+        await run_engine_module.execute_task_run(
+            db, run, adapter_type="scripted_mock",
+            adapter=_FenceRaceCompletedAdapter(run_id, []),
+            supervisor=run_engine_module.RunSupervisor(), lease_renewal_interval_seconds=3600,
+        )
+    finally:
+        db.close()
+    with db_from_override() as verification:
+        stored = verification.get(TaskRun, run_id)
+        events = verification.exec(select(TaskRunEvent).where(TaskRunEvent.task_run_id == run_id)).all()
+        assert stored.adapter_run_id == "replacement:no-output-generation"
+        assert stored.state == "collecting_diff"
+        assert "completionValidation" not in json.loads(stored.metrics_json)
+        assert not any(item.event_type == "task.completion_validation" for item in events)
+    assert replaced == [run_id]
+
+
+@pytest.mark.anyio
 async def test_generation_replacement_wins_before_real_finalizer_commit_fence(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -12590,11 +12935,12 @@ async def test_real_finalizer_winner_seals_generation_through_async_downstream(
     allow_downstream = asyncio.Event()
     downstream_calls: list[str] = []
     supervisor = run_engine_module.RunSupervisor()
+    _stub_new_write_on_final_validation(monkeypatch)
 
     monkeypatch.setattr(
         run_engine_module,
         "collect_task_run_diff",
-        lambda *args, **kwargs: None,
+        lambda *args, **kwargs: _test_write_diff(),
     )
     monkeypatch.setattr(
         run_engine_module,
@@ -13820,7 +14166,7 @@ async def test_prepare_scope_failure_preserves_execution_identity_drift(
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("failure", ["malformed_context", "memory_budget"])
+@pytest.mark.parametrize("failure", ["malformed_context", "memory_budget", "attachment_input"])
 async def test_malformed_canonical_context_is_owned_prepare_failure(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -13841,6 +14187,10 @@ async def test_malformed_canonical_context_is_owned_prepare_failure(
         worker_id="worker:malformed-canonical-context-prepare-failure",
     )
     task_run_id = task_run.id
+    if failure == "attachment_input":
+        def corrupt_attachment(*args, **kwargs):
+            raise ValueError("Attachment hash does not match")
+        monkeypatch.setattr("app.attachment_context.resolve_image_inputs", corrupt_attachment)
     if failure == "malformed_context":
         monkeypatch.setattr(
             run_engine_module,
@@ -13871,6 +14221,7 @@ async def test_malformed_canonical_context_is_owned_prepare_failure(
     assert result_state == "failed"
     assert result_error_code == (
         "MEMORY_CONTEXT_BUDGET_EXCEEDED" if failure == "memory_budget"
+        else "ATTACHMENT_INPUT_INVALID" if failure == "attachment_input"
         else "TASK_RUN_SCOPE_UNVERIFIABLE"
     )
     with db_from_override() as verification_db:
@@ -14341,6 +14692,7 @@ def _prepare_external_write_launch_boundary(
     *,
     target_id: str,
     worker_id: str,
+    custom_profile: bool = False,
 ) -> tuple[ExternalProjectTarget, TaskRun]:
     _stub_scope_snapshot(monkeypatch, _scope_snapshot())
     (external_root / "src").mkdir(parents=True)
@@ -14383,7 +14735,17 @@ def _prepare_external_write_launch_boundary(
     task = db.exec(select(Task).where(Task.title == "Build login page")).one()
     session = db.get(Session, task.session_id)
     assert session is not None
-    task.plan_json = json.dumps({"targetId": target_id}, separators=(",", ":"))
+    plan = {"targetId": target_id}
+    if custom_profile:
+        from app.custom_agents import CustomAgentInput, save_custom_agent
+
+        profile = save_custom_agent(db, workspace_id=workspace.id, value=CustomAgentInput(
+            display_name="Custom launch Agent", mention_alias="custom-launch", role="frontend",
+            provider_id="local-codex-cli", tool_policy="codex_coding",
+            supported_targets=[target_id], capability_tags=["code_write"],
+        ))
+        plan["agentProfileId"] = profile.id
+    task.plan_json = json.dumps(plan, separators=(",", ":"))
     task.updated_at = utc_now()
     db.add(task)
     db.commit()
@@ -14400,6 +14762,99 @@ def _prepare_external_write_launch_boundary(
     stored = db.get(TaskRun, task_run.id)
     assert stored is not None
     return external_target, stored
+
+
+def test_background_custom_claude_review_selects_read_only_factory_and_gateway(client, monkeypatch, tmp_path):
+    from app.custom_agents import CustomAgentInput, save_custom_agent
+    from app.claude_code_adapter import ClaudeCodeAdapter as NativeAdapter
+    from test_native_review_artifacts import ReviewRunner
+
+    requests = []
+    factory_options = []
+    review_root = tmp_path / "native-review-factory"
+    source = review_root / "apps/demo/src/App.tsx"
+    source.parent.mkdir(parents=True)
+    source.write_text('export const title = "review input"\n', encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(review_root)], check=True)
+    subprocess.run(["git", "-C", str(review_root), "add", "apps/demo/src/App.tsx"], check=True)
+    subprocess.run(["git", "-C", str(review_root), "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                    "-c", "core.hooksPath=", "commit", "-qm", "fixture"], check=True)
+    with db_from_override() as db:
+        original_task = db.get(Task, task_id())
+        session = db.get(Session, original_task.session_id)
+        session.worktree_path = str(review_root)
+        db.add(session); db.commit()
+        qa = db.exec(select(Agent).where(Agent.role == "qa")).one()
+        profile = save_custom_agent(db, workspace_id=session.workspace_id, value=CustomAgentInput(
+            display_name="Read only reviewer", mention_alias="readonly-reviewer", role="review",
+            provider_id="local-claude-code-cli", tool_policy="claude_read_only",
+            supported_targets=[DEMO_FRONTEND_TARGET_ID], capability_tags=["code_review"],
+        ))
+        review_task = Task(session_id=session.id, title="Read only custom review", intent_type="review", assigned_agent_id=qa.id,
+            plan_json=json.dumps({"assignedRole": "review", "targetId": DEMO_FRONTEND_TARGET_ID, "agentProfileId": profile.id}))
+        db.add(review_task); db.commit()
+        run = create_task_run(db, review_task.id)
+        run_id = run.id
+
+    class ReadOnlyAdapter(NativeAdapter):
+        async def createRun(self, request):
+            requests.append(request)
+            return await super().createRun(request)
+
+    def factory(**kwargs):
+        factory_options.append(kwargs)
+        return ReadOnlyAdapter(process_runner=ReviewRunner(), **kwargs)
+
+    _allow_test_provider_health(monkeypatch)
+    monkeypatch.setattr(run_engine_module, "ClaudeCodeAdapter", factory)
+    with db_from_override() as db:
+        assert asyncio.run(run_engine_module.execute_task_run_background(db, run_id, "claude_code", worker_id="worker:custom-readonly"))
+        stored = db.get(TaskRun, run_id)
+        assert stored.state == "completed", (stored.error_code, stored.error_message)
+        report = db.exec(select(Review).where(Review.adapter_type == "claude_code")).one()
+        assert report.status == "warning"
+    assert factory_options == [{"read_only": True}]
+    assert len(requests) == 1
+    assert requests[0].permission_profile == {"network": "off", "toolPolicy": "claude_read_only"}
+
+
+@pytest.mark.anyio
+async def test_custom_profile_revocation_after_binding_prevents_native_launch(client, monkeypatch, tmp_path):
+    from app.models import AgentProfileDraft
+
+    db = db_from_override()
+    _, run = _prepare_external_write_launch_boundary(
+        db, monkeypatch, tmp_path / "custom-revocation",
+        target_id="external-custom-revocation", worker_id="worker:custom-revocation", custom_profile=True,
+    )
+    profile_id = json.loads(run.metrics_json)["agentSelection"]["customProfile"]["id"]
+    original = run_engine_module.persist_task_run_execution_access_binding
+    delegate_calls = []
+
+    def bind_then_disable(*args, **kwargs):
+        result = original(*args, **kwargs)
+        with db_from_override() as mutation_db:
+            profile = mutation_db.get(AgentProfileDraft, profile_id)
+            profile.status = "disabled"
+            mutation_db.add(profile); mutation_db.commit()
+        return result
+
+    class MustNotLaunch(_FenceRaceCompletedAdapter):
+        async def createRun(self, request):
+            delegate_calls.append(request.task_run_id)
+            return await super().createRun(request)
+
+    monkeypatch.setattr(run_engine_module, "persist_task_run_execution_access_binding", bind_then_disable)
+    try:
+        result = await run_engine_module.execute_task_run(
+            db, run, adapter_type="codex", adapter=MustNotLaunch(run.id, []),
+            supervisor=run_engine_module.RunSupervisor(), lease_renewal_interval_seconds=3600,
+        )
+    finally:
+        db.close()
+    assert delegate_calls == []
+    assert result.state == "failed"
+    assert result.error_code == "TASK_RUN_SCOPE_UNVERIFIABLE"
 
 
 @pytest.mark.anyio
@@ -15299,10 +15754,11 @@ async def test_stale_concurrent_execute_cannot_persist_request_after_winner_seal
             return super().run_if_current(expected, operation)
 
     supervisor = PauseFirstRequestGateSupervisor()
+    _stub_new_write_on_final_validation(monkeypatch)
     monkeypatch.setattr(
         run_engine_module,
         "collect_task_run_diff",
-        lambda *args, **kwargs: None,
+        lambda *args, **kwargs: _test_write_diff(),
     )
     monkeypatch.setattr(
         run_engine_module,
@@ -15887,6 +16343,9 @@ async def test_finalizer_terminal_commit_rejects_opposite_queue_terminal_state(
     later_side_effects: list[str] = []
     real_refresh_ledger = run_engine_module.refresh_session_ledger_for_task_run
 
+    if terminal_state == "completed":
+        _stub_new_write_on_final_validation(monkeypatch)
+
     if terminal_state == "failed":
         decision = task_run_scope.ScopeDecision(
             status="rejected",
@@ -15898,13 +16357,8 @@ async def test_finalizer_terminal_commit_rejects_opposite_queue_terminal_state(
         )
         monkeypatch.setattr(
             run_engine_module,
-            "validate_task_run_scope",
+            "validate_and_persist_task_run_scope",
             lambda *args, **kwargs: decision,
-        )
-        monkeypatch.setattr(
-            run_engine_module,
-            "persist_scope_decision",
-            lambda current_db, current_task_run, current_decision: current_task_run,
         )
 
         def reject_scope(*args, **kwargs):
@@ -15921,7 +16375,7 @@ async def test_finalizer_terminal_commit_rejects_opposite_queue_terminal_state(
 
     def record_diff(*args, **kwargs):
         later_side_effects.append("diff")
-        return None
+        return _test_write_diff()
 
     def record_review(*args, **kwargs):
         later_side_effects.append("review")
@@ -16625,6 +17079,10 @@ def test_execute_task_run_recovery_rechecks_database_lease_after_writer_wait(
         "_collect_completed_task_run_artifacts",
         lambda *args, **kwargs: None,
     )
+    if access_mode == "write":
+        _stub_new_write_on_final_validation(monkeypatch)
+        monkeypatch.setattr(run_engine_module, "collect_task_run_diff", lambda *_args: _test_write_diff())
+        monkeypatch.setattr(run_engine_module, "_collect_task_run_review", lambda *_args: None)
 
     class CompletedAdapter:
         def getCapabilities(self) -> AdapterCapabilities:
@@ -16905,13 +17363,8 @@ async def test_exact_finalizer_scope_failure_completes_failed_queue_and_lock_cle
 
     monkeypatch.setattr(
         run_engine_module,
-        "validate_task_run_scope",
+        "validate_and_persist_task_run_scope",
         lambda *args, **kwargs: decision,
-    )
-    monkeypatch.setattr(
-        run_engine_module,
-        "persist_scope_decision",
-        lambda current_db, current_task_run, current_decision: current_task_run,
     )
 
     def reject_scope(*args, **kwargs):

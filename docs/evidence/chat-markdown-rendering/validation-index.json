@@ -1,0 +1,89 @@
+{
+  "status": "verified_with_existing_dependency_advisories",
+  "scope": "agenthub-chat-markdown-rendering 1.1",
+  "createdAt": "2026-10-08T15:37:33.480519+00:00",
+  "codeSha256": {
+    ".gitignore": "3f6907e1c26463fc1de1ee66e4a2986a78bb1209d3c4f5ea7f94f5e446a3a8ad",
+    "apps/web/package.json": "64a55e8b7521584e294ac9895a5d0cd3f7d7c72cdc0c611441eaa445dbe14565",
+    "pnpm-lock.yaml": "c00c7e3fff8ee20ce5b93bd20495a9bccb3797c33bf8684f7770ecb11c071328",
+    "apps/web/src/components/chat-markdown.tsx": "33d71420078cecd55bf0f9c7e160a0cb30a98316e7196275892cc19eb2999a3c",
+    "apps/web/src/components/chat-markdown.module.css": "ea259b0f3cb967cc154ddc935f25aa4a0b4a630af0cc4bbf683446607996bb42",
+    "apps/web/src/components/copy-text-button.tsx": "7e82e8e9d774ee424d95f8f7f2aeb17b85af8980cd957a7b13199ef99943c8a7",
+    "apps/web/src/components/chat-markdown.test.tsx": "0d6013b8c886c6ba3a6139723a4c0b98654489b945a641a1536c96894cc3449f",
+    "apps/web/src/components/chat-thread.tsx": "72d0ca2c15902dad34e21c8944d5717afe759327de07b05090198315870db009",
+    "apps/web/src/components/chat-thread.test.tsx": "2ce5f5c52a7adcec29aec952057bd13799db82a972ae9a0613fab363414cb56d"
+  },
+  "unchangedBackendSha256": {
+    "apps/api/app/pinned_context.py": "556f75df9cfdd1d349b86503f4e9b56f8c9c3107920621bb68ee6e8ef3857976",
+    "apps/api/app/canonical_context.py": "e0f92ded8f0afea691bb7a9a6efd85705bca7018adb49bbd99d6d1dc0c339666",
+    "apps/api/app/context_pack.py": "cd73b9b8f114093ab4fea2778fdf3fd68aaec3a5ae04530a65e5ed5781a355d0",
+    "apps/api/app/llm_planner.py": "5401cc40f85f2b4ef8c76e29a40af22bcdcf9de7817b0cda04643521556922e6",
+    "apps/api/tests/test_pinned_message_context.py": "7ee5d177a74027fc748d1741b83495cc080a51d723f0ab7f2b7a03c7b9acc5db",
+    "apps/api/app/task_runs.py": "98dea1b9de2749195415184cf66295062b2f69b09dddcb7f40f8a180ed9cfa70",
+    "apps/api/app/run_engine.py": "e79680013541633a8ec3f26cbb42f743e7e438c31267004d16eb38cc89c52ee0",
+    "apps/api/tests/test_task_runs.py": "55ffcba301093704413deea9a0f82e0fca3be41de94e43e128ec9e5d3482cce2",
+    "apps/api/app/scripted_mock.py": "112629dcb6d1eedbac3c8edb2e62eed52fb6be5bb0259167ec59bb99a71bd988",
+    "apps/api/app/planning.py": "e4f5ce7f27298d08814d2afe7a739057bc333d14eede8c71d3a1769a7037400b",
+    "apps/api/app/planning_intents.py": "a1c2d45ee0d4fb5e1381cf40c0d56cab923728d2e8f369614d4dd95283d4ffb4",
+    "apps/api/app/planning_tasks.py": "918daf358e15226b4726e39453294561c9ff9300ecd1b7a10721ae74cffedadd",
+    "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28",
+    "apps/api/tests/test_scripted_mock_adapter.py": "1cdc7d8cbd20508f8b74fe32b618041ef5e38f2b380029b16592859312fab489",
+    "apps/api/app/models.py": "4c99b5245b751618251bba9a2d3411f9462f6bd392a7db8864e15c3e29376a29",
+    "apps/api/app/db.py": "50f48ca7daffbff74d61f9471225404ac4d5ae8253f972b96f16960bafbe5e94",
+    "apps/api/app/schemas.py": "7f445a310c1211c16731faabeb47ed41e413de0e4d07b358ffdcaf820e9ee692",
+    "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+    "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+    "apps/api/app/routes/messages.py": "8b78cb64d24439303cfab3eee808ea10410aaaa81b2a9eec3fc0590fff5e92ee",
+    "apps/api/tests/test_models.py": "0e7c2341056653bde442a7f9bd344dde55fbe6b7452982b22c173789c703bd18",
+    "apps/api/tests/test_session_organization.py": "80b771e6e4175571b33b60dc83182ced6f7c4b15dd3d39834b37b8071a6ddd93",
+    "apps/api/app/main.py": "f801ea4ace9c310a57428b7a838681d6a5e84d835ab5084b78b6d288d8df52f9",
+    "apps/api/app/previews.py": "279ae2b8b164ec391e17eeab0e8e5b888739f7b836b2c6afa41ccdcd78c3ba37",
+    "apps/api/tests/test_previews.py": "39c7746fce02ecf9ecfe2e79c6e48aac6502f165fe562f82c357f32120689852",
+    "apps/api/app/task_run_scope.py": "22640722a2c13726815e92d0ae2bf294c3881fa93a14c1f22e8d711927db2a5c"
+  },
+  "documentationSha256": {
+    "docs/chat-markdown-rendering-review.md": "82ec07830f5bccbe39b264274b0233b47c60f0607d29df81906be58105ca2501",
+    "docs/change-log.md": "a9211372e593ed48231c929b924f33f19bba0d02da20a712a77d51d053419c12",
+    "docs/project-state.md": "f13d5396214db7f65eb283b27d24a9416ef455dd0a9a6f5a05755c62d9846c2a",
+    "docs/local-project-delivery.md": "0d63ef432b982bedae08b1f0048af7a7bb10bed6cc51591ea5efe7c535a5c44e",
+    "docs/local-usage.md": "6bf19d0d350c16da48f1561c54963a702012fe755ce21754b0d3712637dfd056"
+  },
+  "specSha256": {
+    "openspec/changes/agenthub-chat-markdown-rendering/design.md": "1f1fa9ad8e3ecdae5af7a7b8b581b8033e96c792cf98ff194f470ff99c915aa1",
+    "openspec/changes/agenthub-chat-markdown-rendering/proposal.md": "62014902275ac2cd0c1ffd1539dce3754f587010fcc76e45cc3d8ae82d1ee317",
+    "openspec/changes/agenthub-chat-markdown-rendering/specs/chat-markdown/spec.md": "9896b28f3d39a5a3c2f1e73e103cda52c71cd0ad81dae07596074c50b1abff49",
+    "openspec/changes/agenthub-chat-markdown-rendering/tasks.md": "2fde1478a00db06650649793a8f05c71a7fa72df03448389f8919c48a997f184"
+  },
+  "evidenceSha256": {
+    "docs/evidence/chat-markdown-rendering/accept-chat-markdown.mjs": "a5898be947a6f9c4b016621bbf5e6546d198165628f4ff2892f22e84ecf51791",
+    "docs/evidence/chat-markdown-rendering/baseline-production-audit.json": "391a6a8f9ba680d2bc1de6bf2a6156c603b2da9c13222a6706c766544defa3c3",
+    "docs/evidence/chat-markdown-rendering/chat-markdown-browser.json": "c10cdf7a4a30ae69e97583445a9970453b37947a47c35371a08374801b4d789e",
+    "docs/evidence/chat-markdown-rendering/chat-markdown-dark.png": "6dc19006b0fd5bda49e6e4bacea7fb5f8efbae25a353766195ad9aaa4c2b6224",
+    "docs/evidence/chat-markdown-rendering/chat-markdown-dependency-comparison.json": "759e8c6d4f701639e4950a7b500d92276ff981fa87f7145f770d0cee88b848f7",
+    "docs/evidence/chat-markdown-rendering/chat-markdown-image.png": "b030bc97e8e8e9ad2043cd745bbb36b5a8de3d989917cd8309e256b36109b459",
+    "docs/evidence/chat-markdown-rendering/chat-markdown-light.png": "710ff2ba446b716e91815a4cb3d9e3f070e32b829423050b29b1cc5d34800da1",
+    "docs/evidence/chat-markdown-rendering/chat-markdown-narrow.png": "e423923b95c3f8016c897706f6b7d128ce565cb635c8942ddb25c554859d56b0",
+    "docs/evidence/chat-markdown-rendering/chat-markdown-session.json": "b9bb3ca46584392b38bc4c6d874eab9637c324bd8ea75131f4d38e26a3f70f6b",
+    "docs/evidence/chat-markdown-rendering/freeze-chat-markdown.py": "a51725ce710ac7d7619683cd20dd8187533172c17fb382e626876a5dd2b10b93",
+    "docs/evidence/chat-markdown-rendering/production-audit.json": "4abfda2e811a4d9976aeb0c32f350d58092d95c3b5418428817046ca536a8337",
+    "docs/evidence/chat-markdown-rendering/production-build.log": "dd9473a9f71d375e5c7da398a7e04d56b50045ecc8f644ed63162cde012bc9e7",
+    "docs/evidence/chat-markdown-rendering/root-check.log": "215c0acd329df557058c29406125c8b46d753a73f63b025af33367fb093745ec",
+    "docs/evidence/chat-markdown-rendering/web-check.log": "a23179e1571bcbdf5c9bc9b323526c3c6e8af2d2e0c73400b0c6c75a7293eede",
+    "docs/evidence/chat-markdown-rendering/web-full.log": "206f92e6aff19283b3de58c12af0a3f03ce62d795993cccfaa966ef72878438a",
+    "docs/evidence/chat-markdown-rendering/web-related.log": "59e1af88c636c418de84a7a6e8785a14c994dd6e4660394b4eb0c123e97ca761"
+  },
+  "verification": {
+    "webTests": "233 passed",
+    "relatedTests": "19 passed",
+    "webCheck": "ESLint and TypeScript exit 0",
+    "productionBuild": "Next.js build exit 0",
+    "browser": "persisted API samples; light/dark, 1440/390/320px, clipboard, inert HTML/URLs, opt-in images, quote/pin/reload",
+    "audit": "12 existing advisories; original lockfile has identical advisory IDs; no new advisories"
+  },
+  "boundaries": [
+    "Presentation samples are not real model outputs",
+    "Windows clipboard read uses CRLF; only newline normalization applied",
+    "Dependency safety update is the next focused task; audit is not clean",
+    "No binary file attachment or model vision claim"
+  ]
+}

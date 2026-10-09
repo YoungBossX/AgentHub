@@ -1,0 +1,34 @@
+{
+  "status": "confirmed pending separate fix",
+  "scenarios": [
+    {
+      "scenario": "direct frontend",
+      "targets": [
+        "demo_frontend_request"
+      ],
+      "failures": [
+        {
+          "runId": "8af5d661-1f38-4038-a995-82fa8594798e",
+          "state": "failed",
+          "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+          "errorMessage": "Unsupported scripted demo task target."
+        }
+      ]
+    },
+    {
+      "scenario": "manual deterministic group",
+      "targets": [
+        "demo_frontend_request"
+      ],
+      "failures": [
+        {
+          "runId": "0e904287-eae3-4f41-a83b-d5b8702a624a",
+          "state": "failed",
+          "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+          "errorMessage": "Unsupported scripted demo task target."
+        }
+      ]
+    }
+  ],
+  "boundary": "Failed login fallback attempts are not accepted startup/Agent success; supported button scenario was used for the owned Preview cleanup test"
+}

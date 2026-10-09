@@ -1,0 +1,445 @@
+{
+  "errors": [],
+  "measurements": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "form": {
+        "x": 266,
+        "right": 1034,
+        "width": 768
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 275,
+          "right": 309,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 353,
+          "right": 921,
+          "y": 788,
+          "bottom": 852,
+          "width": 568,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 941,
+          "right": 1025,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 1024,
+      "form": {
+        "x": 228,
+        "right": 996,
+        "width": 768
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 237,
+          "right": 271,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 315,
+          "right": 883,
+          "y": 788,
+          "bottom": 852,
+          "width": 568,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 903,
+          "right": 987,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 768,
+      "form": {
+        "x": 20,
+        "right": 748,
+        "width": 728
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 29,
+          "right": 63,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 107,
+          "right": 635,
+          "y": 788,
+          "bottom": 852,
+          "width": 528,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 655,
+          "right": 739,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "form": {
+        "x": 20,
+        "right": 370,
+        "width": 350
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 29,
+          "right": 63,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 107,
+          "right": 257,
+          "y": 788,
+          "bottom": 852,
+          "width": 150,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 277,
+          "right": 361,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "form": {
+        "x": 20,
+        "right": 363,
+        "width": 343
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 29,
+          "right": 63,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 107,
+          "right": 250,
+          "y": 788,
+          "bottom": 852,
+          "width": 143,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 270,
+          "right": 354,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "form": {
+        "x": 266,
+        "right": 1034,
+        "width": 768
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 275,
+          "right": 309,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 353,
+          "right": 921,
+          "y": 788,
+          "bottom": 852,
+          "width": 568,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 941,
+          "right": 1025,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 1024,
+      "form": {
+        "x": 228,
+        "right": 996,
+        "width": 768
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 237,
+          "right": 271,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 315,
+          "right": 883,
+          "y": 788,
+          "bottom": 852,
+          "width": 568,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 903,
+          "right": 987,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 768,
+      "form": {
+        "x": 20,
+        "right": 748,
+        "width": 728
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 29,
+          "right": 63,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 107,
+          "right": 635,
+          "y": 788,
+          "bottom": 852,
+          "width": 528,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 655,
+          "right": 739,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "form": {
+        "x": 20,
+        "right": 370,
+        "width": 350
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 29,
+          "right": 63,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 107,
+          "right": 257,
+          "y": 788,
+          "bottom": 852,
+          "width": 150,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 277,
+          "right": 361,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "form": {
+        "x": 20,
+        "right": 363,
+        "width": 343
+      },
+      "controls": [
+        {
+          "tag": "BUTTON",
+          "label": "\u6dfb\u52a0\u9644\u4ef6",
+          "x": 29,
+          "right": 63,
+          "y": 814,
+          "bottom": 848,
+          "width": 34,
+          "height": 34,
+          "hit": true
+        },
+        {
+          "tag": "TEXTAREA",
+          "label": "\u6d88\u606f",
+          "x": 107,
+          "right": 250,
+          "y": 788,
+          "bottom": 852,
+          "width": 143,
+          "height": 64,
+          "hit": true
+        },
+        {
+          "tag": "BUTTON",
+          "label": "\u53d1\u9001",
+          "x": 270,
+          "right": 354,
+          "y": 808,
+          "bottom": 848,
+          "width": 84,
+          "height": 40,
+          "hit": true
+        }
+      ]
+    }
+  ]
+}

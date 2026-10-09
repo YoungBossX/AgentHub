@@ -1,0 +1,79 @@
+{
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "sessionId": "cb667e1e-fe2a-4761-bcdc-9ece7d8edc77",
+  "profileId": "6c880742-065f-40df-9eb3-deedb2083cda",
+  "alias": "ux-custom-20261008",
+  "displayName": "界面工程师 · 自定义",
+  "role": "frontend",
+  "toolPolicy": "codex_coding",
+  "promptHash": "f03cebdb24c0fe1dd3c024bbec69c608358883c913f22af4ba7aa61e9111a647",
+  "marker": "AH_CUSTOM_AGENT_20261008",
+  "taskId": "a6e92084-b17d-4501-9f39-83dcd4bff8e0",
+  "runId": "7d091c25-63c5-452b-a84f-50315ec5e0a5",
+  "adapter": "codex",
+  "state": "completed",
+  "selection": {
+    "role": "frontend",
+    "targetId": "demo-frontend",
+    "requiredMode": "frontend",
+    "requiredCapabilities": [
+      "code_write"
+    ],
+    "safeForWrite": true,
+    "safeForReview": false,
+    "customProfile": {
+      "id": "6c880742-065f-40df-9eb3-deedb2083cda",
+      "displayName": "界面工程师 · 自定义",
+      "mentionAlias": "ux-custom-20261008",
+      "role": "frontend",
+      "providerId": "local-codex-cli",
+      "adapterType": "codex",
+      "toolPolicy": "codex_coding",
+      "supportedTargets": [
+        "demo-frontend"
+      ],
+      "supportedModes": [
+        "frontend"
+      ],
+      "capabilityTags": [
+        "code_write",
+        "diff_analysis",
+        "preview"
+      ]
+    }
+  },
+  "receipt": {
+    "version": 1,
+    "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+    "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+    "role": "frontend",
+    "source": "custom_profile",
+    "sha256": "f03cebdb24c0fe1dd3c024bbec69c608358883c913f22af4ba7aa61e9111a647",
+    "characters": 63,
+    "profileId": "6c880742-065f-40df-9eb3-deedb2083cda"
+  },
+  "diffIds": [
+    "224863a4-69b2-4a6f-b94b-8b9d37df36fc"
+  ],
+  "checks": [
+    "browser create/edit/reload/cancel",
+    "runtime select/save/reload",
+    "contact inserts custom alias",
+    "explicit alias selects custom profile",
+    "fresh real Codex execution and matching Diff",
+    "historical name and prompt lineage",
+    "disable rejects mention and removes contact",
+    "original role config restored",
+    "restart preserves disabled custom profile and original role config",
+    "fresh UI reload shows completed historical custom identity and matching Diff"
+  ],
+  "limitations": [
+    "no fresh real Claude or LLM Planner execution",
+    "profile left disabled in dedicated acceptance database"
+  ],
+  "finalResponseMarkerObserved": true,
+  "markerEventIds": [
+    "3ad22b20-25d7-438b-8fa6-58af6cda7d5c"
+  ],
+  "markerEvidence": "persisted native Codex event text contains the prompt-only marker"
+}

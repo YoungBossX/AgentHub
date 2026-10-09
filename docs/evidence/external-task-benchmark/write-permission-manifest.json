@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "agenthub.codex_file_access_diagnosis.v1",
+  "cliVersion": "codex-cli 0.162.0-alpha.2",
+  "cliSha256": "97c57e4eb64257bcd7a470757950886f2c59eec4aa8537908979c6475d41cc08",
+  "originalArguments": [
+    "--ask-for-approval",
+    "never",
+    "exec",
+    "--json",
+    "--cd",
+    "<assigned fixture>",
+    "--skip-git-repo-check",
+    "--sandbox",
+    "workspace-write",
+    "--ephemeral",
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--",
+    "<fixture probe prompt>"
+  ],
+  "comparisonOverride": [
+    "-c",
+    "windows.sandbox=\"unelevated\""
+  ],
+  "observations": {
+    "original": "tool process creation rejected by policy; no edits",
+    "nativeTemp": "tool starts; relative cwd resolution differs; explicit assigned absolute file read denied",
+    "nativeExternalDrive": "explicit workdir command starts; assigned absolute read and append denied; shell returned zero despite errors; no edits"
+  },
+  "productionOverrideAdopted": false,
+  "scopeExpanded": false,
+  "aclChangedByAgentHub": false,
+  "reports": {
+    "write-permission-original.json": "49b76efba9496bb57d468664a37851c72f9fdcbb4fb348d5def64b77155ae4c2",
+    "write-permission-native-temp.json": "11b9f1ea8bbac3113005637719ee1ed2205644238d84e86935df29648c4029c0",
+    "write-permission-native-drive.json": "f3d16566c2072112b064a16052f953ae6e5a7b09ba25d8f3b1f6efae0260faf2"
+  }
+}

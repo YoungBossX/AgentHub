@@ -1,0 +1,40 @@
+{
+  "source": "controlled process interruption boundary: claim committed without invoking dispatch",
+  "operationId": "e2bb09b6-806f-46fd-ab4f-8d59faf13bc5",
+  "sessionId": "1c7d153a-eb09-40cd-bada-007a548f9d13",
+  "sourceMessageId": "856433d2-0893-4708-95b4-9d07bcbe1459",
+  "rows": {
+    "Message": {
+      "9aee6101-0105-482c-b6b8-a002ff6529c2": "1dfa802c3d8c7b7ef5e9e98737877c99f5c76a9b599e19bf1b320e0e5c35558d",
+      "856433d2-0893-4708-95b4-9d07bcbe1459": "f558972eef46cb34213b68194469353e28d7cfcccd46aa7e863fa04c1ac00642",
+      "182e1f0b-3cae-4721-bb91-b27bb4c0734f": "67d28ff1775bb24b88363880f460b078681c1e0010dc225a66f25c179b4cbe7f",
+      "6028c2be-c91f-49dc-ae54-a0fd42d8ea25": "afce12aa839e1e278555ca542e3f90201351db75afc1f739cc71a248fb1aa401",
+      "6086b73d-c871-4e27-aeb8-08ac48d79f71": "42dde2330fd96946d69f35a81c80cb710199112c8a82c58b3fe3d3226c68ba73",
+      "b04453b8-4173-41f7-96f3-d581b7c9bf7b": "02f3db2033e331d51b1e728a4d6210f7e36a9bf17bddbc6306f2694adb791f2a",
+      "e593b357-61fd-4d93-9788-901ad60f99a5": "7985286518a8e6a5d52d939ab7b885e7d4b78850b8f0cf74018ff2acf3d8577d",
+      "bcc34992-3bd6-47c5-ac12-a2133012c6a1": "0cebab107a4a0e147ff509d210640b5edeace958a7bf997ea048bbd41ddcee88",
+      "e2bb09b6-806f-46fd-ab4f-8d59faf13bc5": "ae33522f3a00c5e4ee069e44a0e3e1caa6abceda1b1a138104d2a13c2d985939"
+    },
+    "Task": {
+      "c0616002-af99-499c-9aaf-764431a4e2b9": "15a6bc10d6d1eac0715f4e0e9bf0dfc6b31034669fa249584a7e90c97231ea1f",
+      "2a646996-9d25-4177-8564-941b3cd8c211": "1672a226fbd97d001ec71ef414153963676626fa14552f5a1f22fbd44362a81c"
+    },
+    "TaskRun": {
+      "bec5c6b4-c464-4ead-b0eb-0fa9366cc5aa": "db3745fe26b929eb9af40928a6d016869f75dd3019285f6056f1a035d11e2974",
+      "a7b3028a-2f70-4ed4-bd3d-a806a3c3180c": "95b7ecc5e451d457a43a28c3a435fd2d85659448c285f2219a2c11225148b399"
+    }
+  },
+  "sourceSha256": "a77b4eba64fcfc462502e58c79f07c708dc39bbe244e79b41fcb84d687c08568",
+  "passed": true,
+  "recovered": {
+    "schemaVersion": "message_regeneration_v1",
+    "sourceMessageId": "856433d2-0893-4708-95b4-9d07bcbe1459",
+    "requestMessageId": "9aee6101-0105-482c-b6b8-a002ff6529c2",
+    "operationId": "e2bb09b6-806f-46fd-ab4f-8d59faf13bc5",
+    "kind": "request",
+    "state": "failed",
+    "attachmentSourceMessageId": "9aee6101-0105-482c-b6b8-a002ff6529c2",
+    "errorCode": "REGENERATION_PREPARATION_INTERRUPTED"
+  },
+  "noTasksCreatedForInterruptedPreparation": true
+}

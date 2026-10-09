@@ -1,0 +1,20 @@
+{
+  "phase": "upgraded",
+  "preserved": {
+    "session": 32,
+    "message": 98,
+    "task": 63,
+    "taskrun": 46,
+    "diff": 37,
+    "messageattachment": 9
+  },
+  "messageAddedColumnIgnored": "regeneration_json",
+  "existingSchedulerTimestampChanges": [
+    {
+      "taskId": "d9e6e037-46d1-42ef-984e-a473b6bb9e2b",
+      "before": "2026-10-09 05:25:49.683305",
+      "after": "2026-10-09 05:30:33.652155",
+      "unchangedOtherFields": true
+    }
+  ]
+}

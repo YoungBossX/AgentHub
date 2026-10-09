@@ -1,0 +1,2121 @@
+{
+  "sessionId": "ac5dccd4-55ed-4c4a-b0be-bd33ff94636d",
+  "switches": [
+    {
+      "theme": "dark",
+      "frames": [
+        {
+          "theme": "dark",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "frames": [
+        {
+          "theme": "light",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "frames": [
+        {
+          "theme": "dark",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "crossTab": [
+    {
+      "theme": "dark",
+      "frames": [
+        {
+          "theme": "dark",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "dark",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "rgb(167, 181, 201)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 8.040986170007184,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "rgb(137, 154, 178)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 5.836996888271482,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(16, 24, 46)",
+              "background": "rgb(141, 162, 255)",
+              "contrast": 7.335296217777046,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(23, 30, 42)",
+              "contrast": 14.193785141842948,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "rgb(230, 237, 247)",
+              "background": "rgb(20, 27, 38)",
+              "contrast": 14.673749318078245,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "frames": [
+        {
+          "theme": "light",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": true,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "none",
+              "duration": "0s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "none",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        },
+        {
+          "theme": "light",
+          "paused": false,
+          "pairs": {
+            "resultTitle": {
+              "color": "lab(16.132 -0.318021 -14.6672)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 14.615794797908471,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultDetail": {
+              "color": "lab(48.0876 -2.03595 -16.5814)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 4.76396879012936,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "resultMetadata": {
+              "color": "lab(65.5349 -2.25151 -14.5072)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 2.6301410763976873,
+              "transition": "all",
+              "duration": "0s"
+            },
+            "primary": {
+              "color": "rgb(255, 255, 255)",
+              "background": "rgb(66, 99, 235)",
+              "contrast": 4.981003501162388,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "secondary": {
+              "color": "rgb(21, 26, 35)",
+              "background": "rgb(255, 255, 255)",
+              "contrast": 17.44311330585287,
+              "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+              "duration": "0.15s"
+            },
+            "inspectorTitle": {
+              "color": "lab(1.76974 1.32743 -9.28855)",
+              "background": "rgb(247, 248, 250)",
+              "contrast": 18.968924349099883,
+              "transition": "all",
+              "duration": "0s"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "immediate and six animation frames use identical foreground/background pairs in both directions",
+    "rapid switching cannot resume old transitions",
+    "actual second-tab UI updates synchronize without contrast dip",
+    "reload restores dark; narrow light/dark fit viewport",
+    "hover feedback resumes",
+    "real Preview document and source button unchanged",
+    "Session/Message/TaskRun metadata unchanged; no mutation requests"
+  ],
+  "initial": {
+    "theme": "light",
+    "paused": false,
+    "pairs": {
+      "resultTitle": {
+        "color": "lab(16.132 -0.318021 -14.6672)",
+        "background": "rgb(255, 255, 255)",
+        "contrast": 14.615794797908471,
+        "transition": "all",
+        "duration": "0s"
+      },
+      "resultDetail": {
+        "color": "lab(48.0876 -2.03595 -16.5814)",
+        "background": "rgb(255, 255, 255)",
+        "contrast": 4.76396879012936,
+        "transition": "all",
+        "duration": "0s"
+      },
+      "resultMetadata": {
+        "color": "lab(65.5349 -2.25151 -14.5072)",
+        "background": "rgb(255, 255, 255)",
+        "contrast": 2.6301410763976873,
+        "transition": "all",
+        "duration": "0s"
+      },
+      "primary": {
+        "color": "rgb(255, 255, 255)",
+        "background": "rgb(66, 99, 235)",
+        "contrast": 4.981003501162388,
+        "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+        "duration": "0.15s"
+      },
+      "secondary": {
+        "color": "rgb(21, 26, 35)",
+        "background": "rgb(255, 255, 255)",
+        "contrast": 17.44311330585287,
+        "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+        "duration": "0.15s"
+      },
+      "inspectorTitle": {
+        "color": "lab(1.76974 1.32743 -9.28855)",
+        "background": "rgb(247, 248, 250)",
+        "contrast": 18.968924349099883,
+        "transition": "all",
+        "duration": "0s"
+      }
+    }
+  },
+  "rapid": [
+    {
+      "theme": "light",
+      "paused": true,
+      "pairs": {
+        "resultTitle": {
+          "color": "lab(16.132 -0.318021 -14.6672)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 14.615794797908471,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "resultDetail": {
+          "color": "lab(48.0876 -2.03595 -16.5814)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 4.76396879012936,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "resultMetadata": {
+          "color": "lab(65.5349 -2.25151 -14.5072)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 2.6301410763976873,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "primary": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(66, 99, 235)",
+          "contrast": 4.981003501162388,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "secondary": {
+          "color": "rgb(21, 26, 35)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 17.44311330585287,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "inspectorTitle": {
+          "color": "lab(1.76974 1.32743 -9.28855)",
+          "background": "rgb(247, 248, 250)",
+          "contrast": 18.968924349099883,
+          "transition": "none",
+          "duration": "0s"
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "paused": true,
+      "pairs": {
+        "resultTitle": {
+          "color": "lab(16.132 -0.318021 -14.6672)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 14.615794797908471,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "resultDetail": {
+          "color": "lab(48.0876 -2.03595 -16.5814)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 4.76396879012936,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "resultMetadata": {
+          "color": "lab(65.5349 -2.25151 -14.5072)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 2.6301410763976873,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "primary": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(66, 99, 235)",
+          "contrast": 4.981003501162388,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "secondary": {
+          "color": "rgb(21, 26, 35)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 17.44311330585287,
+          "transition": "none",
+          "duration": "0s"
+        },
+        "inspectorTitle": {
+          "color": "lab(1.76974 1.32743 -9.28855)",
+          "background": "rgb(247, 248, 250)",
+          "contrast": 18.968924349099883,
+          "transition": "none",
+          "duration": "0s"
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "paused": false,
+      "pairs": {
+        "resultTitle": {
+          "color": "lab(16.132 -0.318021 -14.6672)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 14.615794797908471,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultDetail": {
+          "color": "lab(48.0876 -2.03595 -16.5814)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 4.76396879012936,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultMetadata": {
+          "color": "lab(65.5349 -2.25151 -14.5072)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 2.6301410763976873,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "primary": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(66, 99, 235)",
+          "contrast": 4.981003501162388,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "secondary": {
+          "color": "rgb(21, 26, 35)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 17.44311330585287,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "inspectorTitle": {
+          "color": "lab(1.76974 1.32743 -9.28855)",
+          "background": "rgb(247, 248, 250)",
+          "contrast": 18.968924349099883,
+          "transition": "all",
+          "duration": "0s"
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "paused": false,
+      "pairs": {
+        "resultTitle": {
+          "color": "lab(16.132 -0.318021 -14.6672)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 14.615794797908471,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultDetail": {
+          "color": "lab(48.0876 -2.03595 -16.5814)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 4.76396879012936,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultMetadata": {
+          "color": "lab(65.5349 -2.25151 -14.5072)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 2.6301410763976873,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "primary": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(66, 99, 235)",
+          "contrast": 4.981003501162388,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "secondary": {
+          "color": "rgb(21, 26, 35)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 17.44311330585287,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "inspectorTitle": {
+          "color": "lab(1.76974 1.32743 -9.28855)",
+          "background": "rgb(247, 248, 250)",
+          "contrast": 18.968924349099883,
+          "transition": "all",
+          "duration": "0s"
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "paused": false,
+      "pairs": {
+        "resultTitle": {
+          "color": "lab(16.132 -0.318021 -14.6672)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 14.615794797908471,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultDetail": {
+          "color": "lab(48.0876 -2.03595 -16.5814)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 4.76396879012936,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultMetadata": {
+          "color": "lab(65.5349 -2.25151 -14.5072)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 2.6301410763976873,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "primary": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(66, 99, 235)",
+          "contrast": 4.981003501162388,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "secondary": {
+          "color": "rgb(21, 26, 35)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 17.44311330585287,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "inspectorTitle": {
+          "color": "lab(1.76974 1.32743 -9.28855)",
+          "background": "rgb(247, 248, 250)",
+          "contrast": 18.968924349099883,
+          "transition": "all",
+          "duration": "0s"
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "paused": false,
+      "pairs": {
+        "resultTitle": {
+          "color": "lab(16.132 -0.318021 -14.6672)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 14.615794797908471,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultDetail": {
+          "color": "lab(48.0876 -2.03595 -16.5814)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 4.76396879012936,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultMetadata": {
+          "color": "lab(65.5349 -2.25151 -14.5072)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 2.6301410763976873,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "primary": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(66, 99, 235)",
+          "contrast": 4.981003501162388,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "secondary": {
+          "color": "rgb(21, 26, 35)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 17.44311330585287,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "inspectorTitle": {
+          "color": "lab(1.76974 1.32743 -9.28855)",
+          "background": "rgb(247, 248, 250)",
+          "contrast": 18.968924349099883,
+          "transition": "all",
+          "duration": "0s"
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "paused": false,
+      "pairs": {
+        "resultTitle": {
+          "color": "lab(16.132 -0.318021 -14.6672)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 14.615794797908471,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultDetail": {
+          "color": "lab(48.0876 -2.03595 -16.5814)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 4.76396879012936,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "resultMetadata": {
+          "color": "lab(65.5349 -2.25151 -14.5072)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 2.6301410763976873,
+          "transition": "all",
+          "duration": "0s"
+        },
+        "primary": {
+          "color": "rgb(255, 255, 255)",
+          "background": "rgb(66, 99, 235)",
+          "contrast": 4.981003501162388,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "secondary": {
+          "color": "rgb(21, 26, 35)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 17.44311330585287,
+          "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+          "duration": "0.15s"
+        },
+        "inspectorTitle": {
+          "color": "lab(1.76974 1.32743 -9.28855)",
+          "background": "rgb(247, 248, 250)",
+          "contrast": 18.968924349099883,
+          "transition": "all",
+          "duration": "0s"
+        }
+      }
+    }
+  ],
+  "reloadDark": true,
+  "hoverTransition": {
+    "background": "lab(98.1434 -0.369549 -1.05968)",
+    "transition": "color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to",
+    "duration": "0.15s"
+  },
+  "pageErrors": [],
+  "mutations": 0,
+  "iframe": {
+    "beforeSha256": "70085def28c272a72717f2ad8347fa665ebed9c3bb021894e3f1c6cce2be1a53",
+    "afterSha256": "70085def28c272a72717f2ad8347fa665ebed9c3bb021894e3f1c6cce2be1a53",
+    "unchanged": true,
+    "sourceButton": "Organization Native 20261008"
+  }
+}

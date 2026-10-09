@@ -4,6 +4,7 @@ import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Optional
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy.pool import StaticPool
@@ -92,6 +93,8 @@ def test_subprocess_codex_runner_decodes_jsonl_as_utf8(
 
     SubprocessCodexRunner().start(["codex", "exec"], tmp_path)
 
+    assert captured["stdin"] == codex_adapter_module.subprocess.DEVNULL
+
     assert captured["encoding"] == "utf-8"
     assert captured["errors"] == "replace"
     assert captured["text"] is True
@@ -172,7 +175,14 @@ def request_for(task_run: TaskRun, session: Session) -> AgentRunRequest:
 
 
 @pytest.mark.anyio
-async def test_codex_adapter_builds_documented_command_shape(tmp_path: Path) -> None:
+@pytest.mark.parametrize("runtime_platform", ["win32", "linux", "darwin"])
+async def test_codex_adapter_builds_documented_command_shape(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runtime_platform: str,
+) -> None:
+    import app.guardrails as guardrails_module
+
+    monkeypatch.setattr(codex_adapter_module, "sys", SimpleNamespace(platform=runtime_platform), raising=False)
+    monkeypatch.setattr(guardrails_module, "sys", SimpleNamespace(platform=runtime_platform), raising=False)
     process = FakeCodexProcess(stdout='{"type":"turn.completed"}\n')
     runner = FakeCodexRunner(process)
     adapter = CodexAdapter(process_runner=runner, codex_binary="codex")
@@ -190,6 +200,7 @@ async def test_codex_adapter_builds_documented_command_shape(tmp_path: Path) -> 
 
     assert runner.command == [
         "codex",
+        *(["-c", 'windows.sandbox="unelevated"'] if runtime_platform == "win32" else []),
         "--ask-for-approval",
         "never",
         "exec",
@@ -506,6 +517,45 @@ def test_codex_adapter_default_binary_is_macos_codex_app_path() -> None:
     from app.codex_adapter import DEFAULT_CODEX_BINARY
 
     assert DEFAULT_CODEX_BINARY == "/Applications/Codex.app/Contents/Resources/codex"
+
+
+@pytest.mark.anyio
+async def test_completed_turn_waits_for_exit_and_retains_tool_diagnostics(db, tmp_path):
+    session, run = create_task_run(db, str(tmp_path))
+    waiting = asyncio.Event()
+    release = asyncio.Event()
+    class WaitingProcess(FakeCodexProcess):
+        async def wait(self):
+            waiting.set()
+            await release.wait()
+            return await super().wait()
+    process = WaitingProcess(stdout='{"type":"turn.completed"}\n', stderr="exec_command rejected: blocked by policy")
+    adapter = CodexAdapter(process_runner=FakeCodexRunner(process), codex_binary="codex")
+    execution = asyncio.create_task(run_adapter_event_stream(db, adapter, request_for(run, session)))
+    try:
+        await asyncio.wait_for(waiting.wait(), timeout=1)
+        db.refresh(run)
+        assert run.state == "running"
+        assert db.exec(select(TaskRunEvent).where(TaskRunEvent.task_run_id == run.id)).all() == []
+    finally:
+        release.set()
+        events = await execution
+    assert process.waited is True
+    payload = json.loads(events[-1].payload_json)
+    assert events[-1].event_type == "completed"
+    assert payload["exitCode"] == 0
+    assert "blocked by policy" in payload["stderr"]
+
+
+@pytest.mark.anyio
+async def test_nonzero_exit_after_completed_turn_is_failure(db, tmp_path):
+    session, run = create_task_run(db, str(tmp_path))
+    process = FakeCodexProcess(stdout='{"type":"turn.completed"}\n', stderr="runtime failed", returncode=1)
+    adapter = CodexAdapter(process_runner=FakeCodexRunner(process), codex_binary="codex")
+    events = await run_adapter_event_stream(db, adapter, request_for(run, session))
+    assert [event.event_type for event in events] == ["error"]
+    db.refresh(run)
+    assert run.state == "failed"
 
 
 def test_codex_adapter_respects_codex_cli_path_env_var(

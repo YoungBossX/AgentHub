@@ -1,0 +1,8 @@
+{
+  "sessionId": "c1b9feb0-10cc-48fe-9e23-0595b6d39c0d",
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "noteId": "2d597bae-6e56-4651-95a7-c2b4f6f1dfa0",
+  "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\c1b9feb0-10cc-48fe-9e23-0595b6d39c0d",
+  "marker": "Pinned Reference 20261008",
+  "request": "@native-group-20261008 @claude-code-20261008 请根据当前会话的置顶产品约定，把演示应用 apps/demo/src/App.tsx 中主按钮文案修改为约定里的原文。只改这一处文本，保留页面和逻辑。在计划验收标准中写出该文案，然后执行。"
+}

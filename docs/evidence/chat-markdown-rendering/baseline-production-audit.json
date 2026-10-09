@@ -1,0 +1,480 @@
+{
+  "actions": [],
+  "advisories": {
+    "1193686": {
+      "findings": [
+        {
+          "version": "2.10.29",
+          "paths": [
+            "apps__web>next>baseline-browser-mapping"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2026-45819\n- https://github.com/web-platform-dx/baseline-browser-mapping/pull/137/changes#diff-7ae45ad102eab3b6d7e7896acd08c427a9b25b346470d7bc6507b6481575d519\n- https://github.com/web-platform-dx/baseline-browser-mapping/blob/b7881aa61c8a057e24468ab5ee18c5ecedbbf691/src/index.ts#L142\n- https://www.npmjs.com/package/baseline-browser-mapping\n- https://github.com/web-platform-dx/baseline-browser-mapping/pull/137\n- https://github.com/web-platform-dx/baseline-browser-mapping/commit/de733e2d8959559f7bb255d5927f3afcb6f31589\n- https://github.com/web-platform-dx/baseline-browser-mapping/releases/tag/v2.11.0\n- https://github.com/advisories/GHSA-w5vr-8v7q-w6rv",
+      "created": "2026-08-13T12:31:09.000Z",
+      "id": 1193686,
+      "npm_advisory_id": null,
+      "overview": "baseline-browser-mapping 2.x before 2.11.0 calls process.exit() instead of throwing on invalid or conflicting input parameters, and can trigger immediate process termination, causing denial of service.",
+      "reported_by": null,
+      "title": "baseline-browser-mapping process termination on invalid input causes denial of service",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-45819"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "baseline-browser-mapping",
+      "vulnerable_versions": ">=2.0.0 <2.11.0",
+      "github_advisory_id": "GHSA-w5vr-8v7q-w6rv",
+      "recommendation": "Upgrade to version 2.11.0 or later",
+      "patched_versions": ">=2.11.0",
+      "updated": "2026-09-08T20:41:23.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-705"
+      ],
+      "url": "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv"
+    },
+    "1240609": {
+      "findings": [
+        {
+          "version": "16.3.4",
+          "paths": [
+            "apps__web>next"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-vcvr-r3jv-pc5j\n- https://github.com/vercel/satori/security/advisories/GHSA-wx4j-mvgx-mqwp\n- https://github.com/vercel/next.js/commit/868fad38690d72088868f299fa2bef339b26838e\n- https://github.com/vercel/next.js/releases/tag/v16.3.6\n- https://github.com/advisories/GHSA-vcvr-r3jv-pc5j",
+      "created": "2026-09-30T14:48:30.000Z",
+      "id": 1240609,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nThe Node.js `ImageResponse` implementation from `next/og` is affected by an upstream vulnerability. This can lead to remote code execution.\n\nAffected applications pass attacker-controlled values into SVG content, attributes, or styles during image generation:\n\n```tsx\nimport { ImageResponse } from 'next/og'\n\nexport async function GET(request: Request) {\n  const value = new URL(request.url).searchParams.get('value') ?? ''\n\n  return new ImageResponse(\n    <svg width=\"1200\" height=\"630\">\n      <title>{value}</title>\n    </svg>\n  )\n}\n```\n\nApplications using the Edge `ImageResponse` implementation, or applications that do not pass attacker-controlled values into SVG content, attributes, or styles, are not affected.\n\n## Workaround\n\nIf upgrading is not immediately possible, do not pass attacker-controlled values into SVG content, attributes, or styles rendered by the Node.js `ImageResponse` implementation from `next/og`.",
+      "reported_by": null,
+      "title": "Next.js: Remote Code Execution in next/og ImageResponse",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "critical",
+      "module_name": "next",
+      "vulnerable_versions": ">=16.2.0 <16.3.6",
+      "github_advisory_id": "GHSA-vcvr-r3jv-pc5j",
+      "recommendation": "Upgrade to version 16.3.6 or later",
+      "patched_versions": ">=16.3.6",
+      "updated": "2026-09-30T14:48:31.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-1395"
+      ],
+      "url": "https://github.com/advisories/GHSA-vcvr-r3jv-pc5j"
+    },
+    "1240621": {
+      "findings": [
+        {
+          "version": "3.4.13",
+          "paths": [
+            "apps__web>monaco-editor>dompurify"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/cure53/DOMPurify/security/advisories/GHSA-p98j-92pf-mc4p\n- https://github.com/cure53/DOMPurify/pull/1636\n- https://github.com/cure53/DOMPurify/commit/b9b9d80f7e401771c2ccaef5f45def7eec8f27d7\n- https://github.com/cure53/DOMPurify/releases/tag/3.4.16\n- https://github.com/advisories/GHSA-p98j-92pf-mc4p",
+      "created": "2026-09-30T15:37:57.000Z",
+      "id": 1240621,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nIn `IN_PLACE` mode DOMPurify sanitizes the caller's live DOM subtree directly. To close a known hazard (GHSA-55q2-fjhq-7xh7), the library neutralizes any node a hook detaches during sanitization by stripping its subtree's non-allow-listed attributes, but this neutralization is wired only into the `beforeSanitizeElements` and `uponSanitizeElement` hook sites. An `afterSanitizeElements` or `afterSanitizeAttributes` hook that removes a non-root element (a documented, supported pattern) detaches that element's subtree with no neutralization, so descendant `on*` handlers remain armed on the caller's live tree after `sanitize()` returns, yielding DOM XSS. No special privilege is required beyond supplying markup to an application that uses `IN_PLACE` together with a node-removing afterSanitize hook.\n\n## Root Cause\n\n`IN_PLACE` sanitization mutates the caller's live document, so any element a hook detaches from that tree must have its subtree neutralized before `sanitize()` returns; otherwise a queued resource-event handler (for example an `<img onerror>` that began loading when the caller built the tree) fires in page scope even though the handler never reached the sanitized output. The guard helper `_handleHookDetachedNode` (which calls `_neutralizeSubtree` in `IN_PLACE`) is invoked only after `beforeSanitizeElements` and after `uponSanitizeElement`. It is never invoked from the afterSanitize return paths, and `_sanitizeAttributes` never calls it at all. The post-walk `IN_PLACE` neutralization pass iterates only `DOMPurify.removed`, and hook-detached nodes are intentionally not recorded there, so that pass cannot reach them either.\n\n```text\nsrc/purify.ts\n  _sanitizeElements: _handleHookDetachedNode present at lines 2142 and 2175\n    (before/upon), absent after afterSanitizeElements at lines 2208 and 2249.\n  _sanitizeAttributes: afterSanitizeAttributes fires at line 2670 with no\n    detach re-check; the function never calls _handleHookDetachedNode.\n  Post-walk IN_PLACE pass (lines 3081-3090) iterates DOMPurify.removed only,\n    which by design (comment at lines 2096-2099) excludes hook-detached nodes.\n```\n\n## Impact\n\nAn attacker who supplies markup processed by a victim application that runs `DOMPurify.sanitize(node, { IN_PLACE: true })` and registers a node-removing `afterSanitizeElements` or `afterSanitizeAttributes` hook can retain arbitrary `on*` event handlers on descendants of a removed non-root element. Because `IN_PLACE` operates on the caller's live document, a queued resource-event handler on such a descendant fires in the page origin after the synchronous `sanitize()` call returns, giving script execution in the victim's session (DOM XSS). This defeats DOMPurify's `IN_PLACE` contract to neutralize handlers on subtrees removed from the live tree. The capability is script execution in the victim origin; exact confidentiality and integrity effects depend on the hosting application's session.\n\n## Proof of Concept\n\n```text\nDependencies: Node.js and jsdom. The harness builds a live tree, registers a\nremoval hook, runs IN_PLACE sanitize(), then inspects whether the attacker\nonerror handler survives on the detached descendant. jsdom does not perform\nreal image loads, so the retained handler (rather than an actual fired event)\nis the observed hazard; the retained on* attribute on a live detached node\nafter a synchronous sanitize() return is the neutralization failure.\n```\n\nReproduction steps:\n1. Build a live subtree `#root > section#wrap > img[onerror]` where `#root` is the walk root and `section#wrap` is a non-root wrapper.\n2. Register an `afterSanitizeElements` (or `afterSanitizeAttributes`) hook that calls `node.remove()` on the wrapper.\n3. Call `DOMPurify.sanitize(root, { IN_PLACE: true })`.\n4. Observe that the descendant `<img>` retains its `onerror` handler, whereas the same removal performed in a `beforeSanitizeElements`/`uponSanitizeElement` hook strips it.\n\n```javascript\nconst { JSDOM } = require('jsdom');\nconst createDOMPurify = require('dompurify');\nconst { window } = new JSDOM('<!DOCTYPE html><body></body>');\nconst DOMPurify = createDOMPurify(window);\n\nconst root = window.document.createElement('div');\nroot.id = 'root';\nroot.innerHTML = '<section id=\"wrap\"><img src=\"x\" onerror=\"ATTACKER()\"></section>';\nwindow.document.body.appendChild(root);\n\nDOMPurify.addHook('afterSanitizeElements', (node) => {\n  if (node.id === 'wrap') node.remove();\n});\nDOMPurify.sanitize(root, { IN_PLACE: true });\n\n// The detached <img> still carries its onerror handler:\nconsole.log(root.querySelector('#wrap') === null,               // true (removed from live tree)\n            !!window.document.querySelector('img[onerror]') ||  // handler survives on the detached node\n            root.innerHTML);\n```\n\n```text\nPASS: beforeSanitizeElements detach neutralizes descendant onerror (control)\nPASS: uponSanitizeElement detach neutralizes descendant onerror (control)\nPASS: without a removal hook the descendant onerror is stripped normally\nPASS: afterSanitizeElements detach LEAVES descendant onerror armed (GAP)\nPASS: afterSanitizeAttributes detach LEAVES descendant onerror armed (GAP)\nPASS: kept custom element removed in afterSanitizeElements leaves descendant onerror armed (GAP)\n```\n\n## Attack Chain\n\n1. **Exposure:** The victim application calls `DOMPurify.sanitize(liveNode, { IN_PLACE: true })` on attacker-influenced markup and has registered a node-removing `afterSanitizeElements` or `afterSanitizeAttributes` hook per an application policy (`src/purify.ts:3026` walk, `2136` element pass, `2522` attribute pass).\n2. **Control:** The attacker controls the markup, including a non-root wrapper element and, inside it, a descendant carrying an `on*` resource-event handler such as `<img src=x onerror=...>`.\n3. **Path:** The pre-order walk visits the wrapper before its descendants. During the wrapper's element or attribute pass the application hook detaches the wrapper from the live tree.\n4. **Guard:** The detach-neutralization guard `_handleHookDetachedNode` runs only after `beforeSanitizeElements` (`2142`) and `uponSanitizeElement` (`2175`); it is absent after `afterSanitizeElements` (`2208`, `2249`) and is never called by `_sanitizeAttributes` (afterSanitizeAttributes at `2670`). The NodeIterator advances past the detached subtree, so the descendants are never revisited, and the post-walk pass iterates only `DOMPurify.removed`, which excludes hook-detached nodes.\n5. **Primitive:** The descendant retains its `on*` handler on the caller's live document after `sanitize()` returns.\n6. **Result:** The queued resource event fires the attacker handler in the victim page origin, achieving DOM XSS despite `IN_PLACE` sanitization.\n\n## Bypass Evidence\n\nThe relevant prior fix is GHSA-55q2-fjhq-7xh7 (\"IN_PLACE hook removal leaves a detached subtree executable, causing XSS\"), whose change (`#1557`) added `_neutralizeSubtree` at the `beforeSanitizeElements` and `uponSanitizeElement` detach sites. Inspection of that change shows it touches no afterSanitize site: the diff adds the neutralization only at the before/upon locations, later refactored into `_handleHookDetachedNode` at `src/purify.ts:2142` and `2175`. A subsequent hardening change (`#1616`) added a `rootWasRemoved` throw and a neutralization sweep over `DOMPurify.removed`, but that sweep still iterates only `DOMPurify.removed`, which by design excludes hook-detached non-root nodes, so it does not close this gap. The `afterSanitizeElements`-on-kept-custom-element site at `2208` was itself introduced by the fix for GHSA-c2j3-45gr-mqc4 (`#1527`), adding another uncovered hook site.\n\nDisproof attempts, all failed: (a) that a later release closed the afterSanitize gap, refuted by inspecting the published 3.4.13, 3.4.14, and 3.4.15 artifacts; (b) that detached descendants are revisited or re-sanitized, refuted at runtime (the `onerror` is retained only at the afterSanitize sites and stripped at the before/upon sites and with no removal hook); (c) that the post-walk pass catches hook-detached nodes, refuted by the design that excludes them from `DOMPurify.removed`; (d) that the precondition is contrived, refuted by parity with the accepted GHSA-55q2 threat model and the library's own supported pattern of removing a node inside `afterSanitizeElements`. The only edge not directly executed is the browser resource-event dispatch (jsdom performs no real image load); it is established by the proven retention of the live handler after a synchronous return, the library's own comments describing exactly this hazard, and parity with the accepted GHSA-55q2 mechanism.\n\n## Affected Versions\n\n- `Ecosystem: npm`\n- `Package: dompurify`\n- `Confirmed affected range: >= 3.4.13, <= 3.4.15`\n- `Latest release checked: 3.4.15 (npm registry)`\n- `Fix status: fixed in 3.4.16`\n\nThe before/upon detach neutralization introduced for GHSA-55q2-fjhq-7xh7 first shipped in 3.4.13; the residual afterSanitize gap was verified by reproducing it against the published npm artifacts for 3.4.13, 3.4.14, and 3.4.15. The 3.4.12 artifact predates that neutralization and behaves differently at the before/upon sites, so it is outside this specific incomplete-fix range. No release through 3.4.15 neutralizes detached subtrees at the afterSanitize sites, so no fixed version is established.\n\n## Suggested Fix\n\nEnforce the same `IN_PLACE` detach-neutralization invariant at every hook site that can detach a node, not only the before/upon sites. Concretely, apply a `_handleHookDetachedNode(currentNode, root)` re-check after `afterSanitizeElements` at both `src/purify.ts:2208` and `2249` (returning as removed when the node was detached), and add an equivalent `IN_PLACE` detach check plus `_neutralizeSubtree` after `afterSanitizeAttributes` at `2670`. As an interim mitigation without a code change, applications using `IN_PLACE` can avoid removing nodes inside `afterSanitizeElements`/`afterSanitizeAttributes` hooks and instead perform such removals in `beforeSanitizeElements`/`uponSanitizeElement`, or avoid `IN_PLACE` for attacker-influenced content.\n\nReported by zx (GitHub: @manus-pi).",
+      "reported_by": null,
+      "title": "DOMPurify: IN_PLACE: node-removing afterSanitize hook leaves detached subtree event handlers armed, causing DOM XSS",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "low",
+      "module_name": "dompurify",
+      "vulnerable_versions": ">=3.4.13 <=3.4.15",
+      "github_advisory_id": "GHSA-p98j-92pf-mc4p",
+      "recommendation": "Upgrade to version 3.4.16 or later",
+      "patched_versions": ">=3.4.16",
+      "updated": "2026-09-30T15:37:59.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-79"
+      ],
+      "url": "https://github.com/advisories/GHSA-p98j-92pf-mc4p"
+    },
+    "1241204": {
+      "findings": [
+        {
+          "version": "3.4.13",
+          "paths": [
+            "apps__web>monaco-editor>dompurify"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/cure53/DOMPurify/security/advisories/GHSA-6688-9rhm-gjv2\n- https://github.com/cure53/DOMPurify/pull/1636\n- https://github.com/cure53/DOMPurify/commit/b9b9d80f7e401771c2ccaef5f45def7eec8f27d7\n- https://github.com/cure53/DOMPurify/releases/tag/3.4.16\n- https://github.com/advisories/GHSA-6688-9rhm-gjv2",
+      "created": "2026-10-05T23:43:53.000Z",
+      "id": 1241204,
+      "npm_advisory_id": null,
+      "overview": "## Environment\n\n- dompurify 3.4.15 (current npm release); reproduced independently on jsdom 30.0.1 and 29.1.1 (Node.js 20.x / 26.x)\n- Config: `DOMPurify.sanitize(node, { IN_PLACE: true })` on a Node input; `SAFE_FOR_XML` at its default (`true`)\n\n## Summary\n\nThe 3.4.9 fix for the IN_PLACE detached-root class added two protections on the IN_PLACE return path: a fail-closed `TypeError` in `_forceRemove` when a node selected for removal cannot be detached, and a `_neutralizeSubtree` pass (`dist/purify.js` line 1336) that strips non-allowlisted **attributes** from removed subtrees.\n\nBoth miss the rawtext **text-content** form. When the force-removed root is a rawtext element (`<style>`), the payload lives in the node's *text*: the node detaches fine (the `TypeError` guard is not reached), `_neutralizeSubtree` strips nothing (there are no attributes), and the IN_PLACE exit returns the detached, never-sanitized `<style>` whose text still carries live markup. Serializing that node and re-parsing it in **plain HTML context** materializes the payload — no foreign-content context required.\n\nThe same Node input sanitized **without** `IN_PLACE` returns an empty result: the only difference is the IN_PLACE return path handing the killed node back.\n\n## Steps to reproduce\n\n```js\nconst { JSDOM } = require('jsdom');\nconst createDOMPurify = require('dompurify');   // 3.4.15\n\nconst window = new JSDOM('').window;\nconst DOMPurify = createDOMPurify(window);\n\nconst styleRoot = window.document.createElement('style');\nstyleRoot.setAttribute('onclick', 'alert(1)');    // attribute payload\nstyleRoot.textContent = '</style><img src=x onerror=1>';  // text payload\nwindow.document.body.appendChild(styleRoot);\n\nconst returned = DOMPurify.sanitize(styleRoot, { IN_PLACE: true });\n\nconsole.log(returned === styleRoot);                       // true (same node)\nconsole.log(styleRoot.parentNode === null);                // true (detached)\nconsole.log(styleRoot.outerHTML);\n// <style></style><img src=x onerror=1></style>\nconsole.log(styleRoot.getAttribute('onclick'));            // null  (attribute neutralized)\nconsole.log(styleRoot.textContent);                        // '</style><img src=x onerror=1>' (text survives)\n\n// plain HTML reparse (no foreign-content context involved):\nconst probe = window.document.createElement('div');\nprobe.innerHTML = returned.outerHTML || styleRoot.outerHTML;\nconsole.log(probe.querySelectorAll('img').length);         // 1\nconsole.log(probe.querySelector('img').getAttribute('onerror')); // \"1\"\n```\n\nObserved on 3.4.15: one node, one call — the `onclick` **attribute** is neutralized while the **text** payload (`</style><img src=x onerror=1>`) survives verbatim; serializing and re-parsing the returned node in plain HTML context materializes the `img` with the live `onerror` handler.\n\nContrast on the same Node input without `IN_PLACE`: `RETURN_DOM: true` → `<body></body>`; `RETURN_DOM_FRAGMENT: true` → 0 children — the payload is fully sanitized away. The only difference is the IN_PLACE return path.\n\nContrast on the removal trigger: `SAFE_FOR_XML: false` → the node is not removed (detached stays false); plain CSS text → not removed. The removal is gated by the mXSS text probes and happens *specifically because* the serialized node would re-open tags on reparse.\n\n## Root cause\n\n`_isUnsafeNode` (`dist/purify.js` 3.4.15, lines 1700–1714) removes nodes whose literal text would re-open tags on reparse — shape (b) in the source comment is \"text-only content that already carries the element's OWN end tag\", detected by the `LITERAL_TEXT_CLOSE` probe (line 385) alongside the `ELEMENT_MARKUP_PROBE` (line 339) rules. `_forceRemove` (line 1122) records the node in `DOMPurify.removed` (`{element}`) and detaches it. The removal is intentional: the upstream comment states these shapes are removed **because the literal serializer emits them verbatim for the HTML parser to re-open**.\n\nThe IN_PLACE exit then hands the force-removed root back to the caller — the very node whose removal `DOMPurify.removed` just recorded (verified: `DOMPurify.removed.some(e => e.element === root)` is `true` on the returned instance). The 3.4.9 `_neutralizeSubtree` pass (line 1336) addresses only the attribute form — its own docstring: \"walks a removed subtree and strips every attribute\" (purpose: cancel queued resource events). Rawtext text content is out of its scope, so the removal that was performed *specifically to prevent reparse* is undone by returning the node: you removed it to stop the reparse, then returned it.\n\nDifferential (one node, one call, same removal path): the `onclick` attribute is neutralized by the existing pass while the text payload survives verbatim — the attribute axis is covered, the text axis is the gap.\n\n## Impact\n\nIdentical blast radius to the published IN_PLACE family: an application that sanitizes a Node in `IN_PLACE` mode and re-inserts (or serializes and then re-inserts) the result materializes attacker markup in plain HTML context: script execution in the page. Moving the returned node via `appendChild` alone is safe; the round trip through serialization is what fires the payload. No foreign-content context is required with the close-tag payload.\n\n## Affected versions\n\n- Verified live: 3.4.15 (current).\n- Source-verified: the attribute-only `_neutralizeSubtree` and the IN_PLACE return path are present in 3.4.9–3.4.14; releases before 3.4.9 predate the fix entirely (unconditional return; individual pre-3.4.9 releases not dynamically tested).\n- Per cure53 advisory convention the affected range is reported as `<= 3.4.15` (current at time of writing).\n\n## Suggested remediation\n\n**Primary (root-cause, covers every form):** at the IN_PLACE exit, check whether the returned root was recorded during sanitization — `DOMPurify.removed.some(e => e.element === root)` — and fail closed: throw the same `TypeError` style used by the 3.4.9 detach guard (\"a node selected for removal could not be safely returned; refusing to sanitize in place\"), or return `null`. This is consistent with the existing fail-closed design and covers all present and future root-kill reasons in one check.\n\n**Secondary (form-specific):** extend `_neutralizeSubtree` to neutralize **text content of rawtext descendants** — the elements in `LITERAL_TEXT_ELEMENT_NAMES` (`style`, `script`, `xmp`, `iframe`, `noembed`, `noframes`, `plaintext`, `noscript`) — by rewriting `textContent` to a defanged form, matching the probe coverage of `_isUnsafeNode`/`LITERAL_TEXT_CLOSE`.\n\nA regression test asserting that a force-removed rawtext root comes back with no `/<[/\\w!]/` match in `textContent` (and is not returned at all under the primary fix) prevents re-introduction.\n\n## Prior art / differentiation\n\n- GHSA-r47g-fvhr-h676 (fixed 3.4.6): clobbered-form **root** removal — different trigger; this report's root is a normal allowlisted `style` element killed by the text probe.\n- GHSA-55q2-fjhq-7xh7 (low): IN_PLACE **hook removal** leaves a detached subtree executable — the attribute-form twin (hook-stripped subtree retains onload-class handlers). This report's rawtext **text** form is not covered by `_neutralizeSubtree`'s attribute stripping and is not that advisory.\n- GHSA-h8r8-wccr-v5f2 (medium): mXSS via re-contextualization in the standard (non-IN_PLACE) serialize path — different mechanism; IN_PLACE is not involved.\n- The 3.4.9 release notes credit @mozfreedyb for the IN_PLACE handling improvements that this residual escapes on the text axis.\n\n## Applicability scope (stated up front)\n\nThe payload materializes when the application **serializes and re-parses** the sanitizer output (`innerHTML` assignment, template rendering, markdown/HTML round trips) or otherwise consumes the returned node's markup. Moving the returned node via `appendChild` alone does not trigger it. Applications that pass **live, connected attacker trees** into `IN_PLACE` are explicitly warned against by upstream's own source comment; this report concerns the serialize-and-reinsert consumption pattern that the IN_PLACE mode exists to serve.",
+      "reported_by": null,
+      "title": "DOMPurify: IN_PLACE returns a force-removed rawtext root whose text carries attacker markup — pure HTML reparse executes",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "low",
+      "module_name": "dompurify",
+      "vulnerable_versions": "<=3.4.15",
+      "github_advisory_id": "GHSA-6688-9rhm-gjv2",
+      "recommendation": "Upgrade to version 3.4.16 or later",
+      "patched_versions": ">=3.4.16",
+      "updated": "2026-10-05T23:43:54.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-79"
+      ],
+      "url": "https://github.com/advisories/GHSA-6688-9rhm-gjv2"
+    },
+    "1241209": {
+      "findings": [
+        {
+          "version": "1.2.1",
+          "paths": [
+            "apps__web>next>postcss>source-map-js"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2026-93749\n- https://github.com/7rulnik/source-map-js/issues/76\n- https://github.com/7rulnik/source-map-js\n- https://github.com/7rulnik/source-map-js/blob/c1cd8904bb7bd0c7fb5879fcda48134d82a27934/lib/source-node.js#L115-L118\n- https://www.vulncheck.com/advisories/source-map-js-through-1.2.1-event-loop-denial-of-service\n- https://github.com/7rulnik/source-map-js/pull/79\n- https://github.com/7rulnik/source-map-js/commit/cf7658058ceeaa8619d5ae0ec90be6905209d016\n- https://github.com/7rulnik/source-map-js/releases/tag/v1.2.2\n- https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+      "created": "2026-09-18T18:31:44.000Z",
+      "id": 1241209,
+      "npm_advisory_id": null,
+      "overview": "source-map-js through 1.2.1 fails to validate the per-section offset line value in indexed source maps, allowing attackers to specify arbitrary numeric values. Attackers can supply extremely large offset line values that cause synchronous event loop blocking for extended periods, preventing the service from handling other requests.",
+      "reported_by": null,
+      "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-93749"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "source-map-js",
+      "vulnerable_versions": ">=1.0.0 <1.2.2",
+      "github_advisory_id": "GHSA-68fv-2mgg-jv7q",
+      "recommendation": "Upgrade to version 1.2.2 or later",
+      "patched_versions": ">=1.2.2",
+      "updated": "2026-10-05T23:31:22.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-1284"
+      ],
+      "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q"
+    },
+    "1241331": {
+      "findings": [
+        {
+          "version": "0.35.4",
+          "paths": [
+            "apps__web>next>sharp"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/lovell/sharp/security/advisories/GHSA-wq5f-xc86-pv6w\n- https://github.com/lovell/sharp/commit/96de105d9d36ab04c76c2b78b97255171630d236\n- https://github.com/lovell/sharp/releases/tag/v0.35.5\n- https://gitlab.gnome.org/GNOME/librsvg/-/work_items/1241\n- https://www.cve.org/CVERecord?id=CVE-2026-96889\n- https://github.com/advisories/GHSA-wq5f-xc86-pv6w",
+      "created": "2026-10-06T13:43:57.000Z",
+      "id": 1241331,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nA memory-related vulnerability has been discovered and fixed in the upstream librsvg dependency. When certain runtime-specific conditions apply, this vulnerability can lead to possible remote code execution (RCE) on glibc-based Linux.\n\n### Patches\n\n#### Using prebuilt binaries provided by sharp?\n\nMost people rely on the prebuilt binaries provided by sharp.\n\nPlease upgrade sharp to the latest version, currently 0.35.5, which provides librsvg 2.63.2.\n\n#### Using a globally-installed librsvg?\n\nPlease ensure you are using the latest librsvg 2.63.2.\n\n### Workarounds\n\nAdd the following to your code to prevent sharp from decoding SVG images.\n```js\nsharp.block({ operation: [\"VipsForeignLoadSvg\"] });\n```\n\nTo avoid RCE, ensure you are using a `node` executable binary compiled as a Position Independent Executable (PIE). Most Linux package managers already use this security-hardening feature however be warned that the \"official\" Node.js binaries do not.\n1",
+      "reported_by": null,
+      "title": "sharp : Vulnerability in librsvg dependency CVE-2026-96889",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "high",
+      "module_name": "sharp",
+      "vulnerable_versions": "<0.35.5",
+      "github_advisory_id": "GHSA-wq5f-xc86-pv6w",
+      "recommendation": "Upgrade to version 0.35.5 or later",
+      "patched_versions": ">=0.35.5",
+      "updated": "2026-10-06T13:43:58.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-416",
+        "CWE-1395"
+      ],
+      "url": "https://github.com/advisories/GHSA-wq5f-xc86-pv6w"
+    },
+    "1241489": {
+      "findings": [
+        {
+          "version": "16.3.4",
+          "paths": [
+            "apps__web>next"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-3w37-wq28-93x7\n- https://nvd.nist.gov/vuln/detail/CVE-2026-94544\n- https://github.com/vercel/next.js/commit/bd9214f9a32854a011bf5fe58e481dffe1bbf598\n- https://github.com/vercel/next.js/releases/tag/v16.3.8\n- https://github.com/advisories/GHSA-3w37-wq28-93x7",
+      "created": "2026-10-07T20:32:13.000Z",
+      "id": 1241489,
+      "npm_advisory_id": null,
+      "overview": "Pending `use cache` fills are shared across requests for the same key without distinguishing Draft Mode requests from regular requests. When two such requests overlap, the second request receives the first request's fill:\n\n- A regular request that overlaps an editor's Draft Mode request receives unpublished content, without any authentication.\n- A Draft Mode request that overlaps a regular request receives published content instead of the draft.\n\nIf the overlapping regular request prerenders a page — for example an on-demand prerender of a route that was not prerendered at build time — the unpublished content can be persisted into the generated page and served to all later visitors of that route until the page is revalidated. Since cached functions can be shared across routes, the poisoned page does not need to be the page the editor is previewing.\n\nSites are affected if they enable Cache Components (or `experimental.useCache`) and serve Draft Mode previews whose cached functions return draft-dependent content.",
+      "reported_by": null,
+      "title": "Next.js: Pending `use cache` fill can leak Draft Mode content into regular responses and persisted pages",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-94544"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "next",
+      "vulnerable_versions": ">=16.3.0 <16.3.8",
+      "github_advisory_id": "GHSA-3w37-wq28-93x7",
+      "recommendation": "Upgrade to version 16.3.8 or later",
+      "patched_versions": ">=16.3.8",
+      "updated": "2026-10-07T20:32:15.000Z",
+      "cvss": {
+        "score": 4.2,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-524"
+      ],
+      "url": "https://github.com/advisories/GHSA-3w37-wq28-93x7"
+    },
+    "1241490": {
+      "findings": [
+        {
+          "version": "16.3.4",
+          "paths": [
+            "apps__web>next"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-4jqv-mc3x-m676\n- https://nvd.nist.gov/vuln/detail/CVE-2026-94543\n- https://github.com/vercel/next.js/commit/52c94abdd2ea5f416f5e8353ea8a2edd3fe311b8\n- https://github.com/vercel/next.js/commit/719e4c67d6e92df60246f95e1d96e2dd60789a52\n- https://github.com/vercel/next.js/releases/tag/v15.5.27\n- https://github.com/vercel/next.js/releases/tag/v16.3.8\n- https://github.com/advisories/GHSA-4jqv-mc3x-m676",
+      "created": "2026-10-07T20:32:06.000Z",
+      "id": 1241490,
+      "npm_advisory_id": null,
+      "overview": "Self-hosted Next.js applications that use the Pages Router with statically generated (SSG) or incrementally regenerated (ISR) pages can have a page's cache entry replaced with content from a different route, causing the affected page to serve wrong content to every visitor until the entry is revalidated. Applications deployed on Vercel are not affected.",
+      "reported_by": null,
+      "title": "Next.js has cache poisoning of SSG and ISR pages in self-hosted applications",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-94543"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "next",
+      "vulnerable_versions": ">=16.0.0 <16.3.8",
+      "github_advisory_id": "GHSA-4jqv-mc3x-m676",
+      "recommendation": "Upgrade to version 16.3.8 or later",
+      "patched_versions": ">=16.3.8",
+      "updated": "2026-10-07T20:32:07.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-524"
+      ],
+      "url": "https://github.com/advisories/GHSA-4jqv-mc3x-m676"
+    },
+    "1241492": {
+      "findings": [
+        {
+          "version": "16.3.4",
+          "paths": [
+            "apps__web>next"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-39w2-rjm5-chcv\n- https://nvd.nist.gov/vuln/detail/CVE-2026-94486\n- https://github.com/vercel/next.js/commit/2d9f50a409312696145b82b3157aadb6b1fef476\n- https://github.com/vercel/next.js/releases/tag/v16.3.8\n- https://github.com/advisories/GHSA-39w2-rjm5-chcv",
+      "created": "2026-10-07T20:31:51.000Z",
+      "id": 1241492,
+      "npm_advisory_id": null,
+      "overview": "The Next.js development server (`next dev`) exposes a Model Context Protocol endpoint that does not verify which website a request originates from, allowing a malicious website visited by the developer to read sensitive development data — including the project's location on disk, source code snippets from error reports, the route inventory, and development logs. Only applications run with `next dev` are affected. Production deployments do not serve this endpoint.",
+      "reported_by": null,
+      "title": "Next.js has information disclosure in development server's Model Context Protocol endpoint",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-94486"
+      ],
+      "access": "public",
+      "severity": "low",
+      "module_name": "next",
+      "vulnerable_versions": ">=16.0.0 <16.3.8",
+      "github_advisory_id": "GHSA-39w2-rjm5-chcv",
+      "recommendation": "Upgrade to version 16.3.8 or later",
+      "patched_versions": ">=16.3.8",
+      "updated": "2026-10-07T20:31:52.000Z",
+      "cvss": {
+        "score": 5.4,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-346"
+      ],
+      "url": "https://github.com/advisories/GHSA-39w2-rjm5-chcv"
+    },
+    "1241493": {
+      "findings": [
+        {
+          "version": "16.3.4",
+          "paths": [
+            "apps__web>next"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-f87g-xv8r-7p7x\n- https://nvd.nist.gov/vuln/detail/CVE-2026-94485\n- https://github.com/vercel/next.js/commit/2d9f50a409312696145b82b3157aadb6b1fef476\n- https://github.com/vercel/next.js/releases/tag/v16.3.8\n- https://github.com/advisories/GHSA-f87g-xv8r-7p7x",
+      "created": "2026-10-07T20:31:33.000Z",
+      "id": 1241493,
+      "npm_advisory_id": null,
+      "overview": "In Next.js App Router applications built with webpack, metadata image routes such as opengraph-image and twitter-image ignore the `dynamicParams` route segment option. An attacker can request metadata image URLs for dynamic segments that were deliberately excluded from `generateStaticParams()`.",
+      "reported_by": null,
+      "title": "Next.js has information disclosure in App Router metadata image routes via dynamicParams bypass",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-94485"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "next",
+      "vulnerable_versions": ">=16.0.0 <16.3.8",
+      "github_advisory_id": "GHSA-f87g-xv8r-7p7x",
+      "recommendation": "Upgrade to version 16.3.8 or later",
+      "patched_versions": ">=16.3.8",
+      "updated": "2026-10-07T20:31:35.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+      },
+      "cwe": [
+        "CWE-346"
+      ],
+      "url": "https://github.com/advisories/GHSA-f87g-xv8r-7p7x"
+    },
+    "1241495": {
+      "findings": [
+        {
+          "version": "16.3.4",
+          "paths": [
+            "apps__web>next"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-mcj8-r9mp-w47p\n- https://nvd.nist.gov/vuln/detail/CVE-2026-94484\n- https://github.com/vercel/next.js/commit/52c94abdd2ea5f416f5e8353ea8a2edd3fe311b8\n- https://github.com/vercel/next.js/commit/719e4c67d6e92df60246f95e1d96e2dd60789a52\n- https://github.com/vercel/next.js/releases/tag/v15.5.27\n- https://github.com/vercel/next.js/releases/tag/v16.3.8\n- https://github.com/advisories/GHSA-mcj8-r9mp-w47p",
+      "created": "2026-10-07T20:31:13.000Z",
+      "id": 1241495,
+      "npm_advisory_id": null,
+      "overview": "Next.js applications that use a root-level catch-all page together with statically generated or Incremental Static Regeneration routes can have their shared response cache poisoned by a single unauthenticated crafted request.",
+      "reported_by": null,
+      "title": "Next.js has cache poisoning in SSG/ISR rendering that leads to cross-user content substitution and persistent denial of service",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-94484"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "next",
+      "vulnerable_versions": ">=16.0.0 <16.3.8",
+      "github_advisory_id": "GHSA-mcj8-r9mp-w47p",
+      "recommendation": "Upgrade to version 16.3.8 or later",
+      "patched_versions": ">=16.3.8",
+      "updated": "2026-10-07T20:31:15.000Z",
+      "cvss": {
+        "score": 4.8,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:L"
+      },
+      "cwe": [
+        "CWE-524"
+      ],
+      "url": "https://github.com/advisories/GHSA-mcj8-r9mp-w47p"
+    },
+    "1241496": {
+      "findings": [
+        {
+          "version": "16.3.4",
+          "paths": [
+            "apps__web>next"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-cjq9-62q9-8jv4\n- https://nvd.nist.gov/vuln/detail/CVE-2026-94483\n- https://github.com/vercel/next.js/commit/e002ad68bd676bb0ed0c87bb22e3590304763e0b\n- https://github.com/vercel/next.js/releases/tag/v16.3.8\n- https://github.com/advisories/GHSA-cjq9-62q9-8jv4",
+      "created": "2026-10-07T20:30:55.000Z",
+      "id": 1241496,
+      "npm_advisory_id": null,
+      "overview": "## Impact\n\nAn attacker-controlled, allow-listed remote URL can lead to server-side request forgery (e.g. to private IPs) during Image Optimization. \n\n## Workaround\n\nAudit allow-listed remote URLs in `images.remotePatterns` (see https://nextjs.org/docs/app/getting-started/images#remote-images) for hosts that may not be trusted with their DNS entries. If no `images.remotePatterns` are configured, your app is not affected.",
+      "reported_by": null,
+      "title": "Next.js has Server-Side Request Forgery in Image Optimization",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-94483"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "next",
+      "vulnerable_versions": ">=16.0.0 <16.3.8",
+      "github_advisory_id": "GHSA-cjq9-62q9-8jv4",
+      "recommendation": "Upgrade to version 16.3.8 or later",
+      "patched_versions": ">=16.3.8",
+      "updated": "2026-10-07T20:30:56.000Z",
+      "cvss": {
+        "score": 6.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-918"
+      ],
+      "url": "https://github.com/advisories/GHSA-cjq9-62q9-8jv4"
+    }
+  },
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 3,
+      "moderate": 5,
+      "high": 3,
+      "critical": 1
+    },
+    "dependencies": 74,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 74
+  }
+}

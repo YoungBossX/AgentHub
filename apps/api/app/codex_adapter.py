@@ -3,6 +3,8 @@ import json
 import os
 import re
 import subprocess
+import sys
+import tempfile
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +22,7 @@ from app.adapters import (
 )
 from app.guardrails import evaluate_command
 from app.process_environment import adapter_process_env
+from app.process_input import private_stdin
 
 DEFAULT_CODEX_BINARY = "/Applications/Codex.app/Contents/Resources/codex"
 STDERR_LIMIT = 1200
@@ -43,7 +46,7 @@ class CodexProcess(Protocol):
 
 
 class CodexProcessRunner(Protocol):
-    def start(self, command: list[str], cwd: Path) -> CodexProcess:
+    def start(self, command: list[str], cwd: Path, *, input_text: str | None = None) -> CodexProcess:
         ...
 
 
@@ -78,17 +81,19 @@ class SubprocessCodexProcess:
 
 
 class SubprocessCodexRunner:
-    def start(self, command: list[str], cwd: Path) -> CodexProcess:
-        process = subprocess.Popen(
-            command,
-            cwd=str(cwd),
-            env=adapter_process_env("codex"),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
+    def start(self, command: list[str], cwd: Path, *, input_text: str | None = None) -> CodexProcess:
+        with private_stdin(input_text) as stdin:
+            process = subprocess.Popen(
+                command,
+                cwd=str(cwd),
+                env=adapter_process_env("codex"),
+                stdin=stdin,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
         return SubprocessCodexProcess(process)
 
 
@@ -100,6 +105,7 @@ class CodexRunState:
     process: Optional[CodexProcess] = None
     start_error: Optional[Exception] = None
     interrupted: bool = False
+    image_directory: Optional[tempfile.TemporaryDirectory] = None
 
 
 class CodexForcedFailure(RuntimeError):
@@ -145,7 +151,23 @@ class CodexAdapter(AgentAdapter):
             self._runs[run_id] = state
             return AdapterRun(adapterRunId=run_id)
 
-        guardrail_decision = evaluate_command(command, expected_cwd=cwd)
+        image_paths: list[str] = []
+        try:
+            if request.images:
+                state.image_directory = tempfile.TemporaryDirectory(prefix="agenthub-image-input-")
+                for index, image in enumerate(request.images):
+                    path = Path(state.image_directory.name) / f"image-{index}.jpg"
+                    path.write_bytes(image.data)
+                    image_paths.append(str(path))
+                command[-2:-2] = [part for path in image_paths for part in ("--image", path)]
+        except Exception as exc:
+            state.start_error = exc
+            if state.image_directory:
+                state.image_directory.cleanup()
+            self._runs[run_id] = state
+            return AdapterRun(adapterRunId=run_id)
+
+        guardrail_decision = evaluate_command(command, expected_cwd=cwd, expected_image_paths=image_paths)
         if not guardrail_decision.allowed:
             state.start_error = PermissionError(
                 guardrail_decision.approval.reason
@@ -153,12 +175,19 @@ class CodexAdapter(AgentAdapter):
                 else "Codex command blocked by guardrails."
             )
             self._runs[run_id] = state
+            if state.image_directory:
+                state.image_directory.cleanup()
             return AdapterRun(adapterRunId=run_id)
 
         try:
-            state.process = self._process_runner.start(command, cwd)
+            state.process = (
+                self._process_runner.start(command, cwd, input_text=request.instruction)
+                if request.has_attachments else self._process_runner.start(command, cwd)
+            )
         except Exception as exc:
             state.start_error = exc
+            if state.image_directory:
+                state.image_directory.cleanup()
 
         self._runs[run_id] = state
         return AdapterRun(adapterRunId=run_id)
@@ -189,6 +218,8 @@ class CodexAdapter(AgentAdapter):
         stderr_excerpt = ""
         terminal_event_seen = False
         specific_error_seen = False
+        pending_completion: Optional[AgentEvent] = None
+        error_event_seen = False
 
         index = 0
         async for line in state.process.stdout_lines():
@@ -222,11 +253,17 @@ class CodexAdapter(AgentAdapter):
                 continue
 
             if event.type == "error":
+                error_event_seen = True
+                pending_completion = None
                 if _is_generic_failure_event(event) and specific_error_seen:
                     continue
                 specific_error_seen = not _is_generic_failure_event(event)
             if event.type in {"completed", "error"}:
                 terminal_event_seen = True
+            if event.type == "completed":
+                if not error_event_seen:
+                    pending_completion = event
+                continue
             yield event
 
         stderr_excerpt = await _finish_process(state.process, stderr_task)
@@ -242,7 +279,7 @@ class CodexAdapter(AgentAdapter):
             )
             return
 
-        if state.process.returncode != 0 and not terminal_event_seen:
+        if state.process.returncode != 0 and (pending_completion is not None or not terminal_event_seen):
             code = _error_code_for_exit(state.process.returncode, stderr_excerpt)
             yield _error_event(
                 request.task_run_id,
@@ -251,6 +288,13 @@ class CodexAdapter(AgentAdapter):
                 command=state.command,
                 exitCode=state.process.returncode,
                 stderr=stderr_excerpt,
+            )
+            return
+
+        if state.process.returncode == 0 and pending_completion is not None:
+            yield _event(
+                "completed", request.task_run_id,
+                {**pending_completion.payload, "exitCode": 0, "stderr": stderr_excerpt},
             )
             return
 
@@ -270,6 +314,9 @@ class CodexAdapter(AgentAdapter):
         state.interrupted = True
         if state.process is not None:
             state.process.terminate()
+            if state.image_directory:
+                await state.process.wait()
+                state.image_directory.cleanup()
 
     async def approve(self, run_id: str, approval: AdapterApproval) -> None:
         return None
@@ -278,11 +325,14 @@ class CodexAdapter(AgentAdapter):
         return []
 
     async def cleanup(self, run_id: str) -> None:
-        self._runs.pop(run_id, None)
+        state = self._runs.pop(run_id, None)
+        if state and state.image_directory:
+            state.image_directory.cleanup()
 
     def _build_command(self, request: AgentRunRequest, cwd: Path) -> list[str]:
         return [
             self._codex_binary,
+            *(["-c", 'windows.sandbox="unelevated"'] if sys.platform == "win32" else []),
             "--ask-for-approval",
             "never",
             "exec",
@@ -296,7 +346,7 @@ class CodexAdapter(AgentAdapter):
             "--ignore-user-config",
             "--ignore-rules",
             "--",
-            request.instruction,
+            "-" if request.has_attachments else request.instruction,
         ]
 
     def _state_for(self, run_id: str) -> CodexRunState:

@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Any, Optional
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class HealthResponse(BaseModel):
@@ -170,6 +171,7 @@ class ExternalProjectTargetResponse(ApiModel):
 
 
 class AgentContactResponse(ApiModel):
+    mention_alias: Optional[str] = Field(default=None, alias="mentionAlias")
     id: str
     display_name: str = Field(alias="displayName")
     avatar_initials: str = Field(alias="avatarInitials")
@@ -187,6 +189,10 @@ class AgentContactResponse(ApiModel):
 
 
 class AgentProfileResponse(ApiModel):
+    origin: str = "built_in"
+    system_prompt: str = Field(default="", alias="systemPrompt")
+    mention_alias: Optional[str] = Field(default=None, alias="mentionAlias")
+    tool_policy: Optional[str] = Field(default=None, alias="toolPolicy")
     id: str
     display_name: str = Field(alias="displayName")
     avatar_initials: str = Field(alias="avatarInitials")
@@ -241,6 +247,9 @@ class ProviderConfigResponse(ApiModel):
 
 
 class AgentDirectoryEntryResponse(ApiModel):
+    system_prompt: str = Field(default="", alias="systemPrompt")
+    mention_alias: Optional[str] = Field(default=None, alias="mentionAlias")
+    tool_policy: Optional[str] = Field(default=None, alias="toolPolicy")
     id: str
     entry_type: str = Field(alias="entryType")
     display_name: str = Field(alias="displayName")
@@ -290,6 +299,7 @@ class AgentCompatibilityResponse(ApiModel):
 
 
 class RuntimeRoleConfigRequest(BaseModel):
+    system_prompt: Optional[str] = Field(default=None, alias="systemPrompt", max_length=8000)
     role: Optional[str] = None
     agent_profile_id: Optional[str] = Field(default=None, alias="agentProfileId")
     provider_id: Optional[str] = Field(default=None, alias="providerId")
@@ -339,6 +349,7 @@ class RuntimeProviderCheckResponse(ApiModel):
 
 
 class RuntimeRoleConfigResponse(ApiModel):
+    system_prompt: Optional[str] = Field(default=None, alias="systemPrompt")
     role: str
     agent_profile_id: Optional[str] = Field(alias="agentProfileId")
     provider_id: Optional[str] = Field(alias="providerId")
@@ -408,6 +419,8 @@ class SessionResponse(ApiModel):
     active_backend_target_id: Optional[str] = Field(alias="activeBackendTargetId")
     memory_snapshot_id: Optional[str] = Field(default=None, alias="memorySnapshotId")
     status: str
+    pinned_at: Optional[datetime] = Field(default=None, alias="pinnedAt")
+    archived_at: Optional[datetime] = Field(default=None, alias="archivedAt")
     last_message_at: Optional[datetime] = Field(alias="lastMessageAt")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
@@ -428,6 +441,23 @@ class SessionUpdateRequest(BaseModel):
     status: Optional[str] = None
 
 
+class SessionOrganizationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    pinned: Optional[bool] = Field(default=None, strict=True)
+    archived: Optional[bool] = Field(default=None, strict=True)
+
+    @model_validator(mode="after")
+    def explicit_boolean_changes(self):
+        if not self.model_fields_set or any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("Supply at least one explicit boolean organization change.")
+        return self
+
+
+class MessagePinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    pinned: bool = Field(strict=True)
+
+
 class SessionTargetSelectionRequest(BaseModel):
     frontend_target_id: Optional[str] = Field(default=None, alias="frontendTargetId")
     backend_target_id: Optional[str] = Field(default=None, alias="backendTargetId")
@@ -445,9 +475,20 @@ class MessageResponse(ApiModel):
     parent_message_id: Optional[str] = Field(alias="parentMessageId")
     stream_state: str = Field(alias="streamState")
     created_at: datetime = Field(alias="createdAt")
+    pinned_at: Optional[datetime] = Field(default=None, alias="pinnedAt")
+    group_summary: Optional[dict[str, Any]] = Field(default=None, alias="groupSummary")
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
+    regeneration: Optional[dict[str, Any]] = None
+    regeneration_action: Optional[dict[str, Any]] = Field(default=None, alias="regenerationAction")
+
+
+class MessageRegenerateRequest(BaseModel):
+    request_id: UUID = Field(alias="requestId")
+    model_config = ConfigDict(extra="forbid")
 
 
 class MessageCreateRequest(BaseModel):
+    attachment_ids: list[str] = Field(default_factory=list, alias="attachmentIds", max_length=4)
     content_md: str = Field(alias="contentMd")
     sender_type: str = Field(default="user", alias="senderType")
     sender_id: Optional[str] = Field(default=None, alias="senderId")
@@ -772,6 +813,7 @@ class ReviewArtifactResponse(ApiModel):
     findings: list[dict[str, Any]]
     suggested_changes: list[str] = Field(alias="suggestedChanges")
     adapter_type: str = Field(alias="adapterType")
+    native_receipt: Optional[dict[str, Any]] = Field(default=None, alias="nativeReceipt")
 
 
 class PreviewResponse(ApiModel):

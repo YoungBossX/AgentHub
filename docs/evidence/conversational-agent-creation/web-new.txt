@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 X:/Git_Clone/AgentHub/apps/web
+
+
+ Test Files  2 passed (2)
+      Tests  10 passed (10)
+   Start at  14:43:16
+   Duration  1.93s (transform 218ms, setup 0ms, import 887ms, tests 551ms, environment 1.60s)
+

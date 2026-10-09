@@ -1,0 +1,49 @@
+{
+  "sessionId": "fa77822b-e385-4f88-9012-c90d0f5496ca",
+  "messageId": "bb630d3b-c11b-4b89-a492-1299e4a110ce",
+  "measurements": [
+    {
+      "viewport": 1440,
+      "documentWidth": 1440,
+      "codeWidth": 636,
+      "codeScrollWidth": 6463,
+      "tableWidth": 638,
+      "tableScrollWidth": 1497
+    },
+    {
+      "viewport": 390,
+      "documentWidth": 390,
+      "codeWidth": 266,
+      "codeScrollWidth": 6463,
+      "tableWidth": 268,
+      "tableScrollWidth": 1497
+    },
+    {
+      "viewport": 320,
+      "documentWidth": 320,
+      "codeWidth": 196,
+      "codeScrollWidth": 6463,
+      "tableWidth": 198,
+      "tableScrollWidth": 1497
+    }
+  ],
+  "imageRequests": 1,
+  "errors": [],
+  "checks": [
+    "actual persisted ordinary API messages render Markdown",
+    "literal code clipboard matches DOM",
+    "whole-message copy retains raw Markdown",
+    "quote and pin controls usable",
+    "HTML and unsafe link inert",
+    "light dark and 1440/390/320 widths",
+    "code and table scroll locally",
+    "image fetched only on explicit click, reset on reload",
+    "clipboard rejection visible without unhandled error",
+    "reload preserves exact source and pin"
+  ],
+  "boundaries": [
+    "fixtures are not real model output",
+    "remote image response controlled in browser test",
+    "no file upload or model attachment claim"
+  ]
+}

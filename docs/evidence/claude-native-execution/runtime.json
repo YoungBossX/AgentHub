@@ -1,0 +1,164 @@
+{
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "sessionId": "eeec9afc-6511-4ca8-80ac-3468abf4b348",
+  "profileIds": [
+    "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+    "8771ab62-6240-4ccb-8879-eee68fcb432e"
+  ],
+  "writeRunId": "418591c4-1353-4032-a045-1f9c6c1d7c85",
+  "reviewRunId": "1688109b-1246-4027-bde3-9c74b8287699",
+  "taskIds": [
+    "75930997-117e-4a80-8fb4-6a5a69dff97b",
+    "488d1044-06d5-492d-9e1e-bef8e5668cea"
+  ],
+  "diffIds": [
+    "6ba098a3-8043-4d3b-8e4e-7e44c0b453a1"
+  ],
+  "reviewIds": [
+    "8f4c576e-7f13-4825-87a8-56c58a51b874"
+  ],
+  "writeMarkerCount": 1,
+  "reviewMarkerCount": 1,
+  "beforeReviewFiles": {
+    "apps\\demo\\src\\App.tsx": "55a616bef82f083db84be53391515e95eadf7b31e02470d09b3dde41a2205c81",
+    "apps\\demo\\src\\main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+    "apps\\demo\\src\\styles.css": "b68831f283f8f98f9cabdbd5517767a89e2a9356842a78a536c5a4927f690317"
+  },
+  "afterReviewFiles": {
+    "apps\\demo\\src\\App.tsx": "55a616bef82f083db84be53391515e95eadf7b31e02470d09b3dde41a2205c81",
+    "apps\\demo\\src\\main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+    "apps\\demo\\src\\styles.css": "b68831f283f8f98f9cabdbd5517767a89e2a9356842a78a536c5a4927f690317"
+  },
+  "checks": [
+    "real Claude coding completed",
+    "real nonempty matching Diff",
+    "own real read-only Claude response",
+    "source bytes unchanged by review",
+    "prompt markers occur once after stream reconciliation"
+  ],
+  "boundaries": [
+    "Review artifacts remain separately labelled scripted_mock",
+    "CLI transport does not prove model vendor",
+    "no new Preview or deployment acceptance"
+  ],
+  "runs": [
+    {
+      "id": "418591c4-1353-4032-a045-1f9c6c1d7c85",
+      "state": "completed",
+      "adapterType": "claude_code",
+      "startedAt": "2026-10-08T00:56:32.903441",
+      "endedAt": "2026-10-08T00:57:27.711558",
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "claude_code",
+        "providerId": "local-claude-code-cli",
+        "source": "runtime_config",
+        "targetId": "demo-frontend",
+        "supportedMode": "write",
+        "fallbackPolicy": "environment_default"
+      },
+      "agentInstruction": {
+        "version": 1,
+        "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+        "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+        "role": "frontend",
+        "source": "custom_profile",
+        "sha256": "3029dce50e120a028798118695608087c8fbd839a50db0226b9a675b088f7482",
+        "characters": 79,
+        "profileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f"
+      },
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "418591c4-1353-4032-a045-1f9c6c1d7c85",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "6ba098a3-8043-4d3b-8e4e-7e44c0b453a1",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "providerCapacityReleased": true
+    },
+    {
+      "id": "1688109b-1246-4027-bde3-9c74b8287699",
+      "state": "completed",
+      "adapterType": "claude_code",
+      "startedAt": "2026-10-08T00:57:28.532413",
+      "endedAt": "2026-10-08T00:57:47.319337",
+      "providerAssignment": {
+        "role": "review",
+        "adapterType": "claude_code",
+        "providerId": "local-claude-code-cli",
+        "source": "runtime_config",
+        "targetId": "demo-frontend",
+        "supportedMode": "review",
+        "fallbackPolicy": "environment_default"
+      },
+      "agentInstruction": {
+        "version": 1,
+        "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+        "agentId": "ef29cecd-80bc-4d9e-aa11-4770773ea980",
+        "role": "review",
+        "source": "custom_profile",
+        "sha256": "07b042e23510477c3516f3338bc83d2c1a74f757d13efd0147bea28411a7f0c6",
+        "characters": 119,
+        "profileId": "8771ab62-6240-4ccb-8879-eee68fcb432e"
+      },
+      "completionValidation": null,
+      "providerCapacityReleased": true
+    }
+  ],
+  "cliVersion": "2.1.289",
+  "terminalEvents": [
+    {
+      "taskRunId": "418591c4-1353-4032-a045-1f9c6c1d7c85",
+      "completedAdapterEvents": 1,
+      "exitCode": 0
+    },
+    {
+      "taskRunId": "1688109b-1246-4027-bde3-9c74b8287699",
+      "completedAdapterEvents": 1,
+      "exitCode": 0
+    }
+  ],
+  "nativeOutputReceipts": [
+    {
+      "taskRunId": "418591c4-1353-4032-a045-1f9c6c1d7c85",
+      "textSha256": "e39270eb837e3b112e560031989eb07c582a6219c9e2aa2596001ed7d7d319ba",
+      "characters": 8591
+    },
+    {
+      "taskRunId": "1688109b-1246-4027-bde3-9c74b8287699",
+      "textSha256": "d986cfefbd79e06b04a6c572d161beb88192fa6eda40e21c0c814bbdd1a4b2f6",
+      "characters": 5567
+    }
+  ],
+  "browser": {
+    "sessionId": "eeec9afc-6511-4ca8-80ac-3468abf4b348",
+    "checks": [
+      "actual Claude TaskRuns visible",
+      "scripted report remains labelled separately",
+      "reload preserves completed runs without new execution"
+    ]
+  },
+  "sseReplay": {
+    "sessionId": "eeec9afc-6511-4ca8-80ac-3468abf4b348",
+    "events": 900,
+    "checks": [
+      "finite SSE replay reconstructs native outputs once",
+      "per-run sequence order preserved",
+      "Last-Event-ID at high-water replays no old events"
+    ]
+  },
+  "sourceSha256": {
+    "apps/api/app/claude_executable.py": "4f1da61673ab3998fd2c6ccde2c0d47a39fb68fdb11e9524a39203f05b571fa0",
+    "apps/api/app/claude_code_adapter.py": "6dd8d15d94fd2e5be6c82402db875c3853bb0e8132b5d6cbff43bf82342a8e1a",
+    "apps/api/app/process_environment.py": "570850d21799053195fcc3cb553c9daa31a84f2e490a1d07e8a3c4bb1a38f4f4",
+    "apps/api/app/planner_providers.py": "1c3576a63eafa2c0a9d7786598d1a70171c48da8736e64205116cf2b32864ab4",
+    "apps/api/app/provider_gateway.py": "cd29c3bcc7ead2a2d4f003db93fc60715558f1e53899f8eab9f3824adc739d27",
+    "apps/api/app/provider_health.py": "ce3dc8a1d389e1d7d69cb462a92abc50f46960add7bb3ea5b25c0adba8abcab2",
+    "apps/api/tests/test_claude_native_execution.py": "9894e1d4bf5056b7164c1eac0bd0b7dbe75d73038b0d15e3940699fdcdcab6c0",
+    "apps/api/tests/test_claude_code_adapter.py": "0b61dbd68654b5d6b27da949d5fb03873365e2fc40ce72b04e436a3692b65b03",
+    "apps/api/tests/test_planner_providers.py": "00fcc5d779162778f40d0122f5f1e6e5ecfc2cf0a5fe6d1875f02752b3c104ba"
+  }
+}

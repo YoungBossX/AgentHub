@@ -1,0 +1,11 @@
+{
+  "ownedProcessId": 10448,
+  "ownedProcessGone": true,
+  "ownedPort": 21480,
+  "ownedPortClosed": true,
+  "gracefulShutdown": true,
+  "untrackedPortStillHealthy": true,
+  "untrackedTestProcessCleanedSeparately": true,
+  "untrackedProcessUnchanged": true,
+  "ownedPreviewId": "c83fdbe8-e16e-4421-bb73-7273fdb31e24"
+}

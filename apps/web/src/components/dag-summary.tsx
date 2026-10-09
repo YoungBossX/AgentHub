@@ -1,4 +1,6 @@
-import type { SessionTask, TaskRun } from "@/lib/api"
+import { TaskDependencyGraph } from "./task-dependency-graph"
+import type { AgentContact, SessionTask, TaskRun } from "@/lib/api"
+import { apiTimestampEpoch } from "@/lib/date-format"
 
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -9,12 +11,6 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null
 }
 
-// API timestamps without an offset are UTC, not the browser's local time.
-function timestamp(value: string | null) {
-  if (!value) return NaN
-  return Date.parse(/[zZ]|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`)
-}
-
 export function overlappingRuns(tasks: SessionTask[]) {
   const runs = tasks.flatMap((task) => task.taskRuns)
   const pairs: Array<[TaskRun, TaskRun]> = []
@@ -22,15 +18,15 @@ export function overlappingRuns(tasks: SessionTask[]) {
     for (const right of runs.slice(i + 1)) {
       const left = runs[i]
       if (left.taskId === right.taskId) continue
-      const start = Math.max(timestamp(left.startedAt), timestamp(right.startedAt))
-      const end = Math.min(timestamp(left.endedAt), timestamp(right.endedAt))
+      const start = Math.max(apiTimestampEpoch(left.startedAt), apiTimestampEpoch(right.startedAt))
+      const end = Math.min(apiTimestampEpoch(left.endedAt), apiTimestampEpoch(right.endedAt))
       if (Number.isFinite(start) && Number.isFinite(end) && start < end) pairs.push([left, right])
     }
   }
   return pairs
 }
 
-export function DagSummary({ tasks }: { tasks: SessionTask[] }) {
+export function DagSummary({ tasks, agents = [] }: { tasks: SessionTask[]; agents?: AgentContact[] }) {
   const children = (id: string) => tasks.filter((task) => task.dependsOnTaskIds.includes(id))
   const hasFork = tasks.some((task) => children(task.id).length > 1) ||
     tasks.filter((task) => task.dependsOnTaskIds.length === 0).length > 1
@@ -42,6 +38,8 @@ export function DagSummary({ tasks }: { tasks: SessionTask[] }) {
     <section aria-label="DAG execution summary" className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
       <h3 className="font-semibold text-slate-900">任务依赖图 · {hasFork || hasJoin ? "Fork / Join" : "串行依赖链"}</h3>
       <p className="mt-1 text-slate-600">依赖就绪不等于已并发；并行组仅为提示，执行仍受队列、锁、审批和 provider 容量约束。</p>
+      <TaskDependencyGraph tasks={tasks} agents={agents} />
+      <details className="mt-3"><summary className="cursor-pointer font-medium text-slate-600">依赖与集成详情</summary>
       <ul className="mt-2 grid gap-2">
         {tasks.map((task, index) => {
           const run = task.taskRuns.at(-1)
@@ -92,6 +90,7 @@ export function DagSummary({ tasks }: { tasks: SessionTask[] }) {
           )
         })}
       </ul>
+      </details>
       <p className="mt-2 text-slate-600">
         {overlaps.length ? `已记录 TaskRun 生命周期重叠：${overlaps.map(([a, b]) => `${a.id.slice(0, 8)} / ${b.id.slice(0, 8)}`).join("；")}`
           : "尚无完整时间区间可证明运行重叠。"}

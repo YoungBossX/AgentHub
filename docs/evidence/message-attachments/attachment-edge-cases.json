@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "actual delayed upload completes only in original Session; return and delete work",
+    "actual text-free PDF reports no extracted text without OCR claims",
+    "real text-only Claude model rejects image; actionable UI error; one saved message/attachment, cleared draft, no fake tasks"
+  ],
+  "errors": [],
+  "imageRejected": {
+    "sessionId": "918945d0-8986-4698-b2a5-96111eab66d8",
+    "status": 400,
+    "detail": "当前模型仅支持文本输入，无法读取图片。请选择支持图片的模型或原生 Agent，或改用文字附件。",
+    "messageId": "1eee7ec0-a44a-4615-a40e-448d2a0caaee"
+  }
+}

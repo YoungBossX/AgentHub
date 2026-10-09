@@ -1,0 +1,19 @@
+{
+  "accepted": false,
+  "firstWebRun": {
+    "failed": 1,
+    "passed": 207,
+    "reason": "legacy concatenated-text assertion was updated to semantic time/source/status/action verification"
+  },
+  "initialHydrationMismatch": {
+    "serverOffsetLabel": "UTC",
+    "browserOffsetLabel": "UTC+00:00",
+    "fix": "normalize zero offset before SSR/hydration title rendering"
+  },
+  "earlyBrowserHelperRuns": [
+    "wrong narrow toggle name",
+    "unanchored result-tab match selected a sidebar session",
+    "unbounded response-body collection was replaced with a bounded wait for the matching actual Preview response"
+  ],
+  "earlyRunsCountAsPassed": false
+}

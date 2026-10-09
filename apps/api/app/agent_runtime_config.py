@@ -40,6 +40,7 @@ class RuntimeRoleConfig:
     base_url: Optional[str] = None
     timeout_seconds: Optional[int] = None
     api_key_env: Optional[str] = None
+    system_prompt: Optional[str] = None
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -56,6 +57,7 @@ class RuntimeRoleConfig:
             "baseUrl": self.base_url,
             "timeoutSeconds": self.timeout_seconds,
             "apiKeyEnv": self.api_key_env,
+            "systemPrompt": self.system_prompt,
         }
 
 
@@ -231,6 +233,10 @@ def validate_runtime_config(
         if not role_config.enabled:
             continue
         if role == "planner" and role_config.provider_preset_id:
+            selected = profiles_by_id.get(role_config.agent_profile_id or "")
+            if selected is not None and selected.origin == "custom":
+                errors.append("Custom Planner tool policy requires its declared CLI provider.")
+                continue
             _validate_planner_api_runtime_role(role_config, errors, warnings)
             continue
 
@@ -258,6 +264,13 @@ def validate_runtime_config(
             continue
 
         provider = providers_by_id.get(role_config.provider_id or "")
+        if profile.origin == "custom" and (
+            profile.status != "available"
+            or role_config.provider_id != profile.provider_id
+            or role_config.adapter_type != profile.adapter_type
+        ):
+            errors.append(f"Runtime config role `{role}` must use the enabled custom profile's declared provider and tool policy.")
+            continue
         if provider is None:
             errors.append(
                 f"Runtime config role `{role}` references unknown provider `{role_config.provider_id}`."
@@ -445,6 +458,7 @@ def _roles_from_json(value: str) -> dict[str, RuntimeRoleConfig]:
             base_url=_optional_string(payload.get("baseUrl")),
             timeout_seconds=_optional_int(payload.get("timeoutSeconds")),
             api_key_env=_optional_string(payload.get("apiKeyEnv")),
+            system_prompt=_optional_string(payload.get("systemPrompt")),
         )
     return roles
 
@@ -465,6 +479,14 @@ def _normalize_roles(
                 f"Runtime config role `{role}` apiKeyEnv must be an uppercase environment variable name."
             )
         normalized[role] = role_config
+        if role_config.system_prompt is not None and (
+            not isinstance(role_config.system_prompt, str)
+            or len(role_config.system_prompt) > 8000
+            or "\x00" in role_config.system_prompt
+        ):
+            raise AgentRuntimeConfigError(
+                f"Runtime config role `{role}` systemPrompt must be text without NUL, at most 8000 characters."
+            )
     return normalized
 
 

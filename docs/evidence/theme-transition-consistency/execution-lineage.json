@@ -1,0 +1,19 @@
+{
+  "sessionId": "ac5dccd4-55ed-4c4a-b0be-bd33ff94636d",
+  "taskRunIds": [
+    "5542f62c-70cf-45d5-a6dd-419e175c5b3c",
+    "4bf14747-bf1a-4179-956f-8fce35f9e5c3"
+  ],
+  "messageIds": [
+    "0da1a27e-a8c2-4b5f-bfce-06682c5474e3",
+    "0cd5c79c-f906-4875-9f34-47af8d37656e",
+    "5917b281-7ea6-4e6a-abbc-7c9e6382490d"
+  ],
+  "metadataSha256Before": "7dd3ede936515a1c4c5d2f3707b237361155aa6c3304d6b2e243e19b1139142b",
+  "metadataSha256After": "7dd3ede936515a1c4c5d2f3707b237361155aa6c3304d6b2e243e19b1139142b",
+  "noNewTaskRuns": true,
+  "sourceSha256": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5",
+  "sameAsPriorPreviewSource": true,
+  "mutationRequests": 0,
+  "boundary": "Existing Preview GET reconciles health; no full database immutability claim"
+}

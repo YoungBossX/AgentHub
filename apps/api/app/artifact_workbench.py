@@ -144,7 +144,9 @@ def list_session_artifact_workbench(
         return []
     artifacts = db.exec(
         select(Artifact)
-        .where(Artifact.task_run_id.in_(task_run_ids))
+        # User code edits have their own bounded history API; do not transfer
+        # recovery snapshots through the document workbench on every refresh.
+        .where(Artifact.task_run_id.in_(task_run_ids), Artifact.artifact_type != "user_code_edit")
         .order_by(Artifact.created_at, Artifact.id)
     ).all()
     return [artifact_workbench_metadata_for_id(db, artifact.id) for artifact in artifacts]

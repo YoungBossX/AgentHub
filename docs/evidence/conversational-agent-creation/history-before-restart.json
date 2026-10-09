@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "phase": "before-restart",
+  "preserved": {
+    "workspace": 1,
+    "session": 35,
+    "message": 109,
+    "task": 65,
+    "taskrun": 48,
+    "diff": 39,
+    "messageattachment": 11,
+    "agentprofiledraft": 5,
+    "agentruntimeconfig": 1
+  },
+  "allowedTimestampChanges": [
+    {
+      "table": "task",
+      "id": "d9e6e037-46d1-42ef-984e-a473b6bb9e2b",
+      "field": "updated_at",
+      "before": "2026-10-09 06:47:28.480225",
+      "after": "2026-10-09 07:05:11.373063"
+    },
+    {
+      "table": "agentruntimeconfig",
+      "id": "b928b1e0-6451-4445-9a61-776e712dde48",
+      "field": "updated_at",
+      "before": "2026-10-07 16:29:16.745911",
+      "after": "2026-10-09 06:58:04.865543"
+    }
+  ]
+}

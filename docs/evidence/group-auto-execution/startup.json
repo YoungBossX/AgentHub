@@ -1,0 +1,2614 @@
+{
+  "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+  "messageId": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+  "taskIds": [
+    "798def32-662b-4496-aaac-5e52930cc1ee",
+    "88f9bf3e-c421-4c49-99aa-0eae9bd95e13"
+  ],
+  "scenario": "service stopped after automatic plan commit before first run creation; no execution/start request",
+  "tasks": [
+    {
+      "id": "798def32-662b-4496-aaac-5e52930cc1ee",
+      "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+      "createdByMessageId": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+      "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+      "intentType": "frontend_change",
+      "status": "completed",
+      "priority": 0,
+      "planJson": {
+        "planner": "explicit_group_v1",
+        "routing": "multiple_mentions",
+        "assignedRole": "frontend",
+        "target": "demo_frontend_request",
+        "targetId": "demo-frontend",
+        "frontendTargetId": "demo-frontend",
+        "safeTarget": "apps/demo/src",
+        "files": [
+          "apps/demo/src/App.tsx",
+          "apps/demo/src/styles.css"
+        ],
+        "originalRequest": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+        "expectedArtifactTypes": [
+          "diff",
+          "review"
+        ],
+        "autoStart": true,
+        "plannerSource": "deterministic",
+        "agentProfileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+        "agentProfileDisplayName": "原生 Claude 编码师",
+        "agentMentionAlias": "claude-code-20261008",
+        "taskGraph": {
+          "goal": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+          "intent": "explicit_group",
+          "planner": "explicit_group_v1",
+          "tasks": [
+            {
+              "key": "1-frontend-frontend_change",
+              "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+              "assignedAgentRole": "frontend",
+              "priority": 0,
+              "dependsOn": [],
+              "parallelGroup": null,
+              "expectedArtifactTypes": [
+                "diff",
+                "review"
+              ],
+              "targetId": "demo-frontend"
+            },
+            {
+              "key": "2-qa-qa_review",
+              "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+              "assignedAgentRole": "qa",
+              "priority": 1,
+              "dependsOn": [
+                "1-frontend-frontend_change"
+              ],
+              "parallelGroup": null,
+              "expectedArtifactTypes": [
+                "review"
+              ],
+              "targetId": "demo-frontend"
+            }
+          ]
+        },
+        "taskKey": "1-frontend-frontend_change",
+        "groupAssignment": {
+          "id": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+          "participants": [
+            {
+              "role": "frontend",
+              "profileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+              "mentionAlias": "claude-code-20261008",
+              "displayName": "原生 Claude 编码师"
+            },
+            {
+              "role": "qa",
+              "profileId": null,
+              "mentionAlias": "qa",
+              "displayName": "QA Agent"
+            }
+          ],
+          "coordinationSource": "deterministic",
+          "execution": "automatic"
+        },
+        "scheduler": {
+          "state": "completed",
+          "runnable": false,
+          "reason": "TaskRun completed.",
+          "dependencyIds": [],
+          "blockingDependencyIds": [],
+          "targetId": "demo-frontend",
+          "writeLockRequired": true,
+          "lockHolderTaskRunIds": [],
+          "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+          "adapterType": "claude_code",
+          "providerId": "local-claude-code-cli",
+          "providerAssignment": {
+            "role": "frontend",
+            "adapterType": "claude_code",
+            "providerId": "local-claude-code-cli",
+            "source": "runtime_config",
+            "targetId": "demo-frontend",
+            "supportedMode": "write",
+            "fallbackPolicy": "environment_default"
+          },
+          "retryable": false,
+          "fallbackAvailable": false
+        }
+      },
+      "planReviewMetadata": {
+        "plannerMode": "explicit_group_v1",
+        "rationale": "",
+        "assignedRole": "frontend",
+        "targetId": "demo-frontend",
+        "dependencies": [],
+        "plannedFiles": [
+          "apps/demo/src/App.tsx",
+          "apps/demo/src/styles.css"
+        ],
+        "acceptanceCriteria": [],
+        "validationExpectations": [],
+        "taskBreakdown": [
+          {
+            "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+            "role": "frontend",
+            "targetId": "demo-frontend",
+            "dependsOn": [],
+            "plannedFiles": []
+          },
+          {
+            "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+            "role": "qa",
+            "targetId": "demo-frontend",
+            "dependsOn": [
+              "1-frontend-frontend_change"
+            ],
+            "plannedFiles": []
+          }
+        ],
+        "readOnly": true,
+        "sourceTaskId": "798def32-662b-4496-aaac-5e52930cc1ee"
+      },
+      "dependsOnTaskIds": [],
+      "assignedAgentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+      "assignedAgentRole": "frontend",
+      "taskRuns": [
+        {
+          "id": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+          "taskId": "798def32-662b-4496-aaac-5e52930cc1ee",
+          "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+          "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+          "adapterType": "claude_code",
+          "adapterRunId": "claude-code-6940e04d-6eb7-447f-bed9-6db514e10c96",
+          "state": "completed",
+          "startedAt": "2026-10-08T03:36:17.051464",
+          "endedAt": "2026-10-08T03:37:13.238248",
+          "runnerId": "dispatcher:ac337694-2701-4595-bc98-c8434dd7ca81:slot:1",
+          "lastHeartbeatAt": "2026-10-08T03:36:03.716780",
+          "leaseExpiresAt": "2026-10-08T03:41:03.716780",
+          "staleDetectedAt": null,
+          "staleReason": null,
+          "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+          "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+          "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+          "errorCode": null,
+          "errorMessage": null,
+          "metricsJson": {
+            "adapterType": "claude_code",
+            "providerAssignment": {
+              "role": "frontend",
+              "adapterType": "claude_code",
+              "providerId": "local-claude-code-cli",
+              "source": "runtime_config",
+              "targetId": "demo-frontend",
+              "supportedMode": "write",
+              "fallbackPolicy": "environment_default"
+            },
+            "agentSelection": {
+              "role": "frontend",
+              "targetId": "demo-frontend",
+              "requiredMode": "frontend",
+              "requiredCapabilities": [
+                "code_write"
+              ],
+              "safeForWrite": true,
+              "safeForReview": false,
+              "customProfile": {
+                "id": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+                "displayName": "原生 Claude 编码师",
+                "mentionAlias": "claude-code-20261008",
+                "role": "frontend",
+                "providerId": "local-claude-code-cli",
+                "adapterType": "claude_code",
+                "toolPolicy": "claude_file_edit",
+                "supportedTargets": [
+                  "demo-frontend"
+                ],
+                "supportedModes": [
+                  "frontend"
+                ],
+                "capabilityTags": [
+                  "code_write",
+                  "diff_analysis"
+                ]
+              }
+            },
+            "memorySnapshot": {
+              "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+              "schemaVersion": "memory_snapshot_v2",
+              "contentStatus": "frozen",
+              "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "retrievalAsOf": "2026-10-08T03:35:41.340299",
+              "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+              "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+              "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+              "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+              "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+              "createdAt": "2026-10-08T03:35:41.340299"
+            },
+            "runtimeConfigResolution": {
+              "role": "frontend",
+              "agentProfileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+              "providerId": "local-claude-code-cli",
+              "adapterType": "claude_code",
+              "mode": "frontend",
+              "enabled": true,
+              "fallbackPolicy": "environment_default",
+              "providerPresetId": null,
+              "protocol": null,
+              "model": null,
+              "baseUrl": null,
+              "timeoutSeconds": null,
+              "apiKeyEnv": null,
+              "configSource": "explicit_profile"
+            },
+            "agentInstruction": {
+              "version": 1,
+              "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+              "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+              "role": "frontend",
+              "source": "custom_profile",
+              "sha256": "3029dce50e120a028798118695608087c8fbd839a50db0226b9a675b088f7482",
+              "characters": 79,
+              "profileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f"
+            },
+            "preRunCheckpoint": {
+              "targetId": "demo-frontend",
+              "allowedPaths": [
+                "apps/demo/src"
+              ],
+              "deniedPaths": [
+                "apps/api",
+                "apps/demo-api",
+                ".env*",
+                "node_modules",
+                ".git",
+                "secrets"
+              ],
+              "plannedFiles": [
+                "apps/demo/src/App.tsx",
+                "apps/demo/src/styles.css"
+              ],
+              "dirtyFiles": [],
+              "baseCommit": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+              "gitStatus": {
+                "available": true,
+                "dirtyFiles": []
+              },
+              "createdAt": "2026-10-08T03:36:03.258439",
+              "scopeBaseline": {
+                "schema_version": "agenthub.task_run_scope.v2",
+                "available": true,
+                "reason": null,
+                "protected_categories": [
+                  ".git",
+                  "node_modules"
+                ],
+                "protected_entry_count": 12
+              }
+            },
+            "providerGateway": {
+              "resolution": {
+                "selectedProviderId": "local-claude-code-cli",
+                "selectedAdapterType": "claude_code",
+                "selectionReason": "Runtime coding provider configuration is compatible.",
+                "selectedIsRealProvider": true,
+                "shouldWait": false,
+                "shouldFail": false,
+                "candidates": [
+                  {
+                    "providerId": "local-claude-code-cli",
+                    "adapterType": "claude_code",
+                    "accepted": true,
+                    "reason": "Runtime coding provider configuration is compatible."
+                  }
+                ],
+                "fallbackCandidates": [],
+                "rejectedCandidates": []
+              },
+              "health": {
+                "providerId": "local-claude-code-cli",
+                "adapterType": "claude_code",
+                "status": "healthy",
+                "available": true,
+                "reason": "CLI executable and startup probe are available.",
+                "checkedAt": "2026-10-08T03:36:03.792782",
+                "safeDetails": {
+                  "command": "claude",
+                  "probe": "version",
+                  "executable": "claude.exe",
+                  "exitCode": 0,
+                  "output": "2.1.289 (Claude Code)",
+                  "rawRedacted": true
+                }
+              },
+              "capacity": {
+                "providerId": "local-claude-code-cli",
+                "status": "available",
+                "acquired": false,
+                "providerRunning": 0,
+                "providerLimit": 1,
+                "globalRunning": 0,
+                "globalLimit": 2,
+                "leaseId": "provider-lease:9fc4a17f-a640-4231-9b60-faea4330ebc6:local-claude-code-cli",
+                "reason": "Provider capacity released."
+              }
+            },
+            "canonicalContextSnapshot": {
+              "version": "canonical_shared_context_v1",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "fields": {
+                "session": {
+                  "value": {
+                    "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+                    "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+                    "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459"
+                  },
+                  "source": "session",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "memorySnapshot": {
+                  "value": {
+                    "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+                    "schemaVersion": "memory_snapshot_v2",
+                    "contentStatus": "frozen",
+                    "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "retrievalAsOf": "2026-10-08T03:35:41.340299",
+                    "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+                    "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+                    "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+                    "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+                    "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+                    "createdAt": "2026-10-08T03:35:41.340299"
+                  },
+                  "source": "memory_snapshot",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "userGoal": {
+                  "value": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                  "source": "session_ledger",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "user"
+                },
+                "currentTask": {
+                  "value": {
+                    "id": "798def32-662b-4496-aaac-5e52930cc1ee",
+                    "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+                    "intentType": "frontend_change",
+                    "description": "demo_frontend_request"
+                  },
+                  "source": "task",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "taskGraph": {
+                  "value": {
+                    "goal": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                    "intent": "explicit_group",
+                    "planner": "explicit_group_v1",
+                    "tasks": [
+                      {
+                        "key": "1-frontend-frontend_change",
+                        "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+                        "assignedAgentRole": "frontend",
+                        "priority": 0,
+                        "dependsOn": [],
+                        "parallelGroup": null,
+                        "expectedArtifactTypes": [
+                          "diff",
+                          "review"
+                        ],
+                        "targetId": "demo-frontend"
+                      },
+                      {
+                        "key": "2-qa-qa_review",
+                        "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+                        "assignedAgentRole": "qa",
+                        "priority": 1,
+                        "dependsOn": [
+                          "1-frontend-frontend_change"
+                        ],
+                        "parallelGroup": null,
+                        "expectedArtifactTypes": [
+                          "review"
+                        ],
+                        "targetId": "demo-frontend"
+                      }
+                    ]
+                  },
+                  "source": "plan_draft",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "targetContext": {
+                  "value": {
+                    "targetProject": {
+                      "targetId": "demo-frontend",
+                      "name": "Demo Frontend",
+                      "type": "frontend",
+                      "root": "apps/demo",
+                      "allowedPaths": [
+                        "apps/demo/src"
+                      ],
+                      "deniedPaths": [
+                        "apps/api",
+                        "apps/demo-api",
+                        "secrets"
+                      ],
+                      "devCommand": "pnpm demo:dev",
+                      "testCommand": null,
+                      "checkCommand": null,
+                      "buildCommand": "pnpm build",
+                      "previewCommand": "pnpm dev --host 127.0.0.1 --port <port>",
+                      "baseUrl": null,
+                      "packageManager": null,
+                      "detectedFramework": null,
+                      "projectType": null,
+                      "analysisStatus": null,
+                      "allowedAgents": [
+                        "frontend",
+                        "qa",
+                        "review"
+                      ],
+                      "requiresPlatformMode": false,
+                      "requiresApproval": false,
+                      "relatedTargetIds": [
+                        "demo-backend"
+                      ]
+                    },
+                    "relatedTargetProjects": [
+                      {
+                        "targetId": "demo-backend",
+                        "name": "Demo Backend",
+                        "type": "backend",
+                        "root": "apps/demo-api",
+                        "allowedPaths": [
+                          "apps/demo-api"
+                        ],
+                        "deniedPaths": [
+                          "apps/api",
+                          "apps/demo",
+                          "secrets"
+                        ],
+                        "devCommand": "pnpm demo:api:dev",
+                        "testCommand": "pnpm demo:api:test",
+                        "checkCommand": null,
+                        "buildCommand": null,
+                        "previewCommand": null,
+                        "baseUrl": "http://127.0.0.1:5174",
+                        "packageManager": null,
+                        "detectedFramework": null,
+                        "projectType": null,
+                        "analysisStatus": null,
+                        "allowedAgents": [
+                          "backend",
+                          "qa",
+                          "review"
+                        ],
+                        "requiresPlatformMode": false,
+                        "requiresApproval": false,
+                        "relatedTargetIds": []
+                      }
+                    ]
+                  },
+                  "source": "target_registry",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "safePaths": {
+                  "value": [
+                    "apps/demo/src",
+                    "apps/demo/src/App.tsx",
+                    "apps/demo/src/styles.css"
+                  ],
+                  "source": "target_registry",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "recentMessages": {
+                  "value": [
+                    {
+                      "id": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+                      "senderType": "user",
+                      "senderId": null,
+                      "messageKind": "chat",
+                      "contentMd": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                      "createdAt": "2026-10-08T03:35:42.730132"
+                    },
+                    {
+                      "id": "17c4da5b-4ef5-4741-927b-e453f6b792f2",
+                      "senderType": "orchestrator",
+                      "senderId": "26143942-7005-496b-a17f-c404a2981f23",
+                      "messageKind": "plan",
+                      "contentMd": "已为 原生 Claude 编码师 (@claude-code-20261008)、QA Agent (@qa) 创建 2 个任务。使用确定性协调。写任务依次执行，评审等待全部写任务完成，并分别绑定对应目标。就绪任务将自动启动；失败、中断或审批阻塞时暂停后续任务，重试成功后继续。",
+                      "createdAt": "2026-10-08T03:35:42.752129"
+                    }
+                  ],
+                  "source": "messages",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "user"
+                },
+                "relevantArtifacts": {
+                  "value": {
+                    "selectedArtifact": null,
+                    "contextItems": [],
+                    "artifactReferences": [],
+                    "latestCommandEvidence": null
+                  },
+                  "source": "artifacts",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "relevantMemories": {
+                  "value": [],
+                  "source": "memory_retrieval",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "missionTrace": {
+                  "value": null,
+                  "source": "mission_trace",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "latestDiff": {
+                  "value": null,
+                  "source": "artifact.diff",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "latestReview": {
+                  "value": null,
+                  "source": "artifact.review",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "latestPreview": {
+                  "value": null,
+                  "source": "artifact.preview",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "latestDeployment": {
+                  "value": null,
+                  "source": "artifact.deployment",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "handoffNotes": {
+                  "value": [],
+                  "source": "handoff",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "guardrails": {
+                  "value": {
+                    "protectedPaths": [],
+                    "validationExpectations": [
+                      "Keep the existing P4/P5 diff, review, preview, and mock deploy flow intact.",
+                      "Produce a focused git diff in the assigned safe target.",
+                      "The Vite React demo preview should remain startable."
+                    ]
+                  },
+                  "source": "guardrails",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                },
+                "memorySelection": {
+                  "value": {
+                    "policyVersion": "memory_rule_budget_v1",
+                    "budgetUnit": "serialized_json_characters",
+                    "maxChars": 16000,
+                    "usedChars": 2,
+                    "experienceLimit": 5,
+                    "selectedCounts": {
+                      "rule": 0,
+                      "preference": 0,
+                      "experience": 0
+                    },
+                    "omittedByBudget": {
+                      "preference": 0,
+                      "experience": 0
+                    },
+                    "omittedByExperienceLimit": 0
+                  },
+                  "source": "memory_selection",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:36:03.898780",
+                  "trustLevel": "system"
+                }
+              }
+            },
+            "memoryUsage": {
+              "schemaVersion": "memory_usage_v1",
+              "evidenceType": "prepared_provider_request",
+              "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+              "snapshotContentStatus": "frozen",
+              "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "items": [],
+              "selection": {
+                "policyVersion": "memory_rule_budget_v1",
+                "budgetUnit": "serialized_json_characters",
+                "maxChars": 16000,
+                "usedChars": 2,
+                "experienceLimit": 5,
+                "selectedCounts": {
+                  "rule": 0,
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByBudget": {
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByExperienceLimit": 0
+              },
+              "visibleChars": 2
+            },
+            "taskRunScopeDecision": {
+              "schemaVersion": "agenthub.task_run_scope_validation.v2",
+              "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+              "targetId": "demo-frontend",
+              "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+              "status": "passed",
+              "changedPathCount": 1,
+              "timestamp": "2026-10-08T03:37:12.739256+00:00",
+              "errorCode": null,
+              "reason": null
+            },
+            "taskRunScopeGuard": {
+              "schemaVersion": "agenthub.task_run_scope_validation.v2",
+              "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+              "targetId": "demo-frontend",
+              "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+              "status": "passed",
+              "changedPathCount": 1,
+              "timestamp": "2026-10-08T03:37:12.739256+00:00"
+            },
+            "completionValidation": {
+              "schemaVersion": "agenthub.write_completion.v1",
+              "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+              "status": "passed",
+              "accessMode": "write",
+              "changedPathCount": 1,
+              "diffId": "39de2cca-ff88-4410-99ef-9b5e11661314",
+              "errorCode": null,
+              "functionalAcceptance": "not_evaluated"
+            }
+          },
+          "providerAssignment": {
+            "role": "frontend",
+            "adapterType": "claude_code",
+            "providerId": "local-claude-code-cli",
+            "source": "runtime_config",
+            "targetId": "demo-frontend",
+            "supportedMode": "write",
+            "fallbackPolicy": "environment_default"
+          },
+          "runtimeConfigResolution": {
+            "role": "frontend",
+            "agentProfileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+            "providerId": "local-claude-code-cli",
+            "adapterType": "claude_code",
+            "mode": "frontend",
+            "enabled": true,
+            "fallbackPolicy": "environment_default",
+            "providerPresetId": null,
+            "protocol": null,
+            "model": null,
+            "baseUrl": null,
+            "timeoutSeconds": null,
+            "apiKeyEnv": null,
+            "configSource": "explicit_profile"
+          },
+          "memorySnapshot": {
+            "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+            "schemaVersion": "memory_snapshot_v2",
+            "contentStatus": "frozen",
+            "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "retrievalAsOf": "2026-10-08T03:35:41.340299",
+            "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+            "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+            "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+            "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+            "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+            "createdAt": "2026-10-08T03:35:41.340299"
+          },
+          "sessionQueue": {
+            "queueEntryId": "cc89131d-eaf6-4bcf-b09b-6527a1710920",
+            "queueKind": "main",
+            "position": 1,
+            "accessMode": "write",
+            "targetId": "demo-frontend",
+            "targetLockKey": "target:demo-frontend:write",
+            "state": "completed",
+            "waitReason": "TaskRun finalized as completed.",
+            "startedAt": "2026-10-08T03:36:03.700784",
+            "finishedAt": "2026-10-08T03:37:13.290249"
+          },
+          "targetLock": {
+            "lockKey": "target:demo-frontend:write",
+            "targetId": "demo-frontend",
+            "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+            "holderTaskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+            "workerId": null,
+            "mode": "write",
+            "state": "released",
+            "leaseExpiresAt": null,
+            "acquiredAt": "2026-10-08T03:36:03.688781",
+            "releasedAt": "2026-10-08T03:37:13.272258",
+            "releaseReason": "task_run_completed"
+          },
+          "previewDeployJobs": [],
+          "approvalRequest": null,
+          "createdAt": "2026-10-08T03:36:03.258439",
+          "updatedAt": "2026-10-08T03:37:13.509275"
+        }
+      ],
+      "integrationArtifacts": [],
+      "createdAt": "2026-10-08T03:35:42.745130",
+      "updatedAt": "2026-10-08T03:37:13.355779"
+    },
+    {
+      "id": "88f9bf3e-c421-4c49-99aa-0eae9bd95e13",
+      "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+      "createdByMessageId": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+      "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+      "intentType": "qa_review",
+      "status": "completed",
+      "priority": 1,
+      "planJson": {
+        "planner": "explicit_group_v1",
+        "routing": "multiple_mentions",
+        "assignedRole": "qa",
+        "target": "explicit_group_review",
+        "originalRequest": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+        "expectedArtifactTypes": [
+          "review"
+        ],
+        "autoStart": true,
+        "targetId": "demo-frontend",
+        "safeTarget": "apps/demo/src",
+        "readOnly": true,
+        "allowedPaths": [
+          "apps/demo/src"
+        ],
+        "deniedPaths": [
+          "apps/api",
+          "apps/demo-api",
+          ".env*",
+          "node_modules",
+          ".git",
+          "secrets"
+        ],
+        "files": [],
+        "plannerSource": "deterministic",
+        "taskGraph": {
+          "goal": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+          "intent": "explicit_group",
+          "planner": "explicit_group_v1",
+          "tasks": [
+            {
+              "key": "1-frontend-frontend_change",
+              "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+              "assignedAgentRole": "frontend",
+              "priority": 0,
+              "dependsOn": [],
+              "parallelGroup": null,
+              "expectedArtifactTypes": [
+                "diff",
+                "review"
+              ],
+              "targetId": "demo-frontend"
+            },
+            {
+              "key": "2-qa-qa_review",
+              "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+              "assignedAgentRole": "qa",
+              "priority": 1,
+              "dependsOn": [
+                "1-frontend-frontend_change"
+              ],
+              "parallelGroup": null,
+              "expectedArtifactTypes": [
+                "review"
+              ],
+              "targetId": "demo-frontend"
+            }
+          ]
+        },
+        "taskKey": "2-qa-qa_review",
+        "groupAssignment": {
+          "id": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+          "participants": [
+            {
+              "role": "frontend",
+              "profileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+              "mentionAlias": "claude-code-20261008",
+              "displayName": "原生 Claude 编码师"
+            },
+            {
+              "role": "qa",
+              "profileId": null,
+              "mentionAlias": "qa",
+              "displayName": "QA Agent"
+            }
+          ],
+          "coordinationSource": "deterministic",
+          "execution": "automatic"
+        },
+        "scheduler": {
+          "state": "completed",
+          "runnable": false,
+          "reason": "TaskRun completed.",
+          "dependencyIds": [
+            "798def32-662b-4496-aaac-5e52930cc1ee"
+          ],
+          "blockingDependencyIds": [],
+          "targetId": "demo-frontend",
+          "writeLockRequired": false,
+          "lockHolderTaskRunIds": [],
+          "taskRunId": "5c3a940e-9918-437e-beae-a0eb06327e9f",
+          "adapterType": "scripted_mock",
+          "providerId": "local",
+          "providerAssignment": {
+            "role": "qa",
+            "adapterType": "scripted_mock",
+            "providerId": "local",
+            "source": "legacy_default",
+            "targetId": "demo-frontend",
+            "supportedMode": "review",
+            "fallbackPolicy": "legacy_default_adapter"
+          },
+          "retryable": false,
+          "fallbackAvailable": false
+        }
+      },
+      "planReviewMetadata": {
+        "plannerMode": "explicit_group_v1",
+        "rationale": "",
+        "assignedRole": "qa",
+        "targetId": "demo-frontend",
+        "dependencies": [
+          "798def32-662b-4496-aaac-5e52930cc1ee"
+        ],
+        "plannedFiles": [],
+        "acceptanceCriteria": [],
+        "validationExpectations": [],
+        "taskBreakdown": [
+          {
+            "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+            "role": "frontend",
+            "targetId": "demo-frontend",
+            "dependsOn": [],
+            "plannedFiles": []
+          },
+          {
+            "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+            "role": "qa",
+            "targetId": "demo-frontend",
+            "dependsOn": [
+              "1-frontend-frontend_change"
+            ],
+            "plannedFiles": []
+          }
+        ],
+        "readOnly": true,
+        "sourceTaskId": "88f9bf3e-c421-4c49-99aa-0eae9bd95e13"
+      },
+      "dependsOnTaskIds": [
+        "798def32-662b-4496-aaac-5e52930cc1ee"
+      ],
+      "assignedAgentId": "ef29cecd-80bc-4d9e-aa11-4770773ea980",
+      "assignedAgentRole": "qa",
+      "taskRuns": [
+        {
+          "id": "5c3a940e-9918-437e-beae-a0eb06327e9f",
+          "taskId": "88f9bf3e-c421-4c49-99aa-0eae9bd95e13",
+          "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+          "agentId": "ef29cecd-80bc-4d9e-aa11-4770773ea980",
+          "adapterType": "scripted_mock",
+          "adapterRunId": "scripted-mock-ca652e02-570d-4872-907e-142cfd2d58d9",
+          "state": "completed",
+          "startedAt": "2026-10-08T03:37:13.894396",
+          "endedAt": "2026-10-08T03:37:13.976404",
+          "runnerId": "dispatcher:ac337694-2701-4595-bc98-c8434dd7ca81:slot:1",
+          "lastHeartbeatAt": "2026-10-08T03:37:13.779405",
+          "leaseExpiresAt": "2026-10-08T03:42:13.779405",
+          "staleDetectedAt": null,
+          "staleReason": null,
+          "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+          "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+          "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+          "errorCode": null,
+          "errorMessage": null,
+          "metricsJson": {
+            "adapterType": "scripted_mock",
+            "providerAssignment": {
+              "role": "qa",
+              "adapterType": "scripted_mock",
+              "providerId": "local",
+              "source": "legacy_default",
+              "targetId": "demo-frontend",
+              "supportedMode": "review",
+              "fallbackPolicy": "legacy_default_adapter"
+            },
+            "agentSelection": {
+              "role": "qa",
+              "targetId": "demo-frontend",
+              "requiredMode": "qa",
+              "requiredCapabilities": [
+                "code_review"
+              ],
+              "safeForWrite": false,
+              "safeForReview": true
+            },
+            "memorySnapshot": {
+              "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+              "schemaVersion": "memory_snapshot_v2",
+              "contentStatus": "frozen",
+              "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "retrievalAsOf": "2026-10-08T03:35:41.340299",
+              "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+              "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+              "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+              "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+              "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+              "createdAt": "2026-10-08T03:35:41.340299"
+            },
+            "agentInstruction": {
+              "version": 1,
+              "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+              "agentId": "ef29cecd-80bc-4d9e-aa11-4770773ea980",
+              "role": "review",
+              "source": "agent_default",
+              "sha256": "583abb71a3bc52eab81cd3c2d1390061cf17a634bd4ab139e8760836e2deed29",
+              "characters": 49,
+              "profileId": null
+            },
+            "canonicalContextSnapshot": {
+              "version": "canonical_shared_context_v1",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "fields": {
+                "session": {
+                  "value": {
+                    "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+                    "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+                    "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459"
+                  },
+                  "source": "session",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "memorySnapshot": {
+                  "value": {
+                    "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+                    "schemaVersion": "memory_snapshot_v2",
+                    "contentStatus": "frozen",
+                    "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "retrievalAsOf": "2026-10-08T03:35:41.340299",
+                    "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+                    "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+                    "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                    "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+                    "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+                    "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+                    "createdAt": "2026-10-08T03:35:41.340299"
+                  },
+                  "source": "memory_snapshot",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "userGoal": {
+                  "value": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                  "source": "session_ledger",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "user"
+                },
+                "currentTask": {
+                  "value": {
+                    "id": "88f9bf3e-c421-4c49-99aa-0eae9bd95e13",
+                    "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+                    "intentType": "qa_review",
+                    "description": "explicit_group_review"
+                  },
+                  "source": "task",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "taskGraph": {
+                  "value": {
+                    "goal": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                    "intent": "explicit_group",
+                    "planner": "explicit_group_v1",
+                    "tasks": [
+                      {
+                        "key": "1-frontend-frontend_change",
+                        "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+                        "assignedAgentRole": "frontend",
+                        "priority": 0,
+                        "dependsOn": [],
+                        "parallelGroup": null,
+                        "expectedArtifactTypes": [
+                          "diff",
+                          "review"
+                        ],
+                        "targetId": "demo-frontend"
+                      },
+                      {
+                        "key": "2-qa-qa_review",
+                        "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+                        "assignedAgentRole": "qa",
+                        "priority": 1,
+                        "dependsOn": [
+                          "1-frontend-frontend_change"
+                        ],
+                        "parallelGroup": null,
+                        "expectedArtifactTypes": [
+                          "review"
+                        ],
+                        "targetId": "demo-frontend"
+                      }
+                    ]
+                  },
+                  "source": "plan_draft",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "targetContext": {
+                  "value": {
+                    "targetProject": {
+                      "targetId": "demo-frontend",
+                      "name": "Demo Frontend",
+                      "type": "frontend",
+                      "root": "apps/demo",
+                      "allowedPaths": [
+                        "apps/demo/src"
+                      ],
+                      "deniedPaths": [
+                        "apps/api",
+                        "apps/demo-api",
+                        "secrets"
+                      ],
+                      "devCommand": "pnpm demo:dev",
+                      "testCommand": null,
+                      "checkCommand": null,
+                      "buildCommand": "pnpm build",
+                      "previewCommand": "pnpm dev --host 127.0.0.1 --port <port>",
+                      "baseUrl": null,
+                      "packageManager": null,
+                      "detectedFramework": null,
+                      "projectType": null,
+                      "analysisStatus": null,
+                      "allowedAgents": [
+                        "frontend",
+                        "qa",
+                        "review"
+                      ],
+                      "requiresPlatformMode": false,
+                      "requiresApproval": false,
+                      "relatedTargetIds": [
+                        "demo-backend"
+                      ]
+                    },
+                    "relatedTargetProjects": [
+                      {
+                        "targetId": "demo-backend",
+                        "name": "Demo Backend",
+                        "type": "backend",
+                        "root": "apps/demo-api",
+                        "allowedPaths": [
+                          "apps/demo-api"
+                        ],
+                        "deniedPaths": [
+                          "apps/api",
+                          "apps/demo",
+                          "secrets"
+                        ],
+                        "devCommand": "pnpm demo:api:dev",
+                        "testCommand": "pnpm demo:api:test",
+                        "checkCommand": null,
+                        "buildCommand": null,
+                        "previewCommand": null,
+                        "baseUrl": "http://127.0.0.1:5174",
+                        "packageManager": null,
+                        "detectedFramework": null,
+                        "projectType": null,
+                        "analysisStatus": null,
+                        "allowedAgents": [
+                          "backend",
+                          "qa",
+                          "review"
+                        ],
+                        "requiresPlatformMode": false,
+                        "requiresApproval": false,
+                        "relatedTargetIds": []
+                      }
+                    ]
+                  },
+                  "source": "target_registry",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "safePaths": {
+                  "value": [
+                    "apps/demo/src",
+                    "read-only current session artifacts"
+                  ],
+                  "source": "target_registry",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "recentMessages": {
+                  "value": [
+                    {
+                      "id": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+                      "senderType": "user",
+                      "senderId": null,
+                      "messageKind": "chat",
+                      "contentMd": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                      "createdAt": "2026-10-08T03:35:42.730132"
+                    },
+                    {
+                      "id": "17c4da5b-4ef5-4741-927b-e453f6b792f2",
+                      "senderType": "orchestrator",
+                      "senderId": "26143942-7005-496b-a17f-c404a2981f23",
+                      "messageKind": "plan",
+                      "contentMd": "已为 原生 Claude 编码师 (@claude-code-20261008)、QA Agent (@qa) 创建 2 个任务。使用确定性协调。写任务依次执行，评审等待全部写任务完成，并分别绑定对应目标。就绪任务将自动启动；失败、中断或审批阻塞时暂停后续任务，重试成功后继续。",
+                      "createdAt": "2026-10-08T03:35:42.752129"
+                    }
+                  ],
+                  "source": "messages",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "user"
+                },
+                "relevantArtifacts": {
+                  "value": {
+                    "selectedArtifact": null,
+                    "contextItems": [],
+                    "artifactReferences": [],
+                    "latestCommandEvidence": null
+                  },
+                  "source": "artifacts",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "relevantMemories": {
+                  "value": [],
+                  "source": "memory_retrieval",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "missionTrace": {
+                  "value": null,
+                  "source": "mission_trace",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "latestDiff": {
+                  "value": {
+                    "artifactId": "a0f81a07-f0c7-4298-acac-89fc79ef0452",
+                    "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+                    "status": "ready",
+                    "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+                    "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+                    "changedFiles": [
+                      "apps/demo/src/App.tsx"
+                    ],
+                    "stats": {
+                      "filesChanged": 1,
+                      "additions": 1,
+                      "deletions": 1,
+                      "files": [
+                        {
+                          "path": "apps/demo/src/App.tsx",
+                          "additions": 1,
+                          "deletions": 1
+                        }
+                      ]
+                    }
+                  },
+                  "source": "artifact.diff",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "latestReview": {
+                  "value": {
+                    "artifactId": "4f7b31e4-3243-4c3a-a69a-78d711f7168e",
+                    "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+                    "status": "passed",
+                    "riskLevel": "low",
+                    "summary": "Scripted Review Agent passed 1 changed file with low risk.",
+                    "filesReviewed": [
+                      "apps/demo/src/App.tsx"
+                    ],
+                    "findings": [],
+                    "suggestedChanges": [],
+                    "adapterType": "scripted_mock",
+                    "reviewedDiffArtifactId": "a0f81a07-f0c7-4298-acac-89fc79ef0452"
+                  },
+                  "source": "artifact.review",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "latestPreview": {
+                  "value": null,
+                  "source": "artifact.preview",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "latestDeployment": {
+                  "value": null,
+                  "source": "artifact.deployment",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "handoffNotes": {
+                  "value": [
+                    {
+                      "artifactId": "4f90d06d-18f6-422c-b426-54ad8c89d96e",
+                      "status": "ready",
+                      "fromTaskId": "798def32-662b-4496-aaac-5e52930cc1ee",
+                      "fromTaskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+                      "fromAgentRole": "frontend",
+                      "fromProviderId": "local-claude-code-cli",
+                      "fromAdapterType": "claude_code",
+                      "toTaskId": "88f9bf3e-c421-4c49-99aa-0eae9bd95e13",
+                      "toAgentRole": "qa",
+                      "toProviderId": "local-scripted-review",
+                      "toAdapterType": "scripted_mock",
+                      "summary": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... completed and handed context to QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend].",
+                      "changedFiles": [
+                        "apps/demo/src/App.tsx"
+                      ],
+                      "implementedRoutes": [],
+                      "implementedComponents": [
+                        "apps/demo/src/App.tsx"
+                      ],
+                      "artifactRefs": [
+                        {
+                          "artifactId": "a0f81a07-f0c7-4298-acac-89fc79ef0452",
+                          "artifactType": "diff",
+                          "status": "ready"
+                        },
+                        {
+                          "artifactId": "4f7b31e4-3243-4c3a-a69a-78d711f7168e",
+                          "artifactType": "review",
+                          "status": "passed"
+                        }
+                      ],
+                      "openQuestions": [],
+                      "warnings": [],
+                      "suggestedFollowUpScope": [],
+                      "verificationStatus": "completed",
+                      "riskNotes": [],
+                      "createdAt": "2026-10-08T03:37:13.319248"
+                    }
+                  ],
+                  "source": "handoff",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "guardrails": {
+                  "value": {
+                    "protectedPaths": [],
+                    "validationExpectations": [
+                      "Keep the existing P4/P5 diff, review, preview, and mock deploy flow intact.",
+                      "Review is advisory and read-oriented by default."
+                    ]
+                  },
+                  "source": "guardrails",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                },
+                "memorySelection": {
+                  "value": {
+                    "policyVersion": "memory_rule_budget_v1",
+                    "budgetUnit": "serialized_json_characters",
+                    "maxChars": 16000,
+                    "usedChars": 2,
+                    "experienceLimit": 5,
+                    "selectedCounts": {
+                      "rule": 0,
+                      "preference": 0,
+                      "experience": 0
+                    },
+                    "omittedByBudget": {
+                      "preference": 0,
+                      "experience": 0
+                    },
+                    "omittedByExperienceLimit": 0
+                  },
+                  "source": "memory_selection",
+                  "visibility": "provider",
+                  "createdAt": "2026-10-08T03:37:13.841396",
+                  "trustLevel": "system"
+                }
+              }
+            },
+            "memoryUsage": {
+              "schemaVersion": "memory_usage_v1",
+              "evidenceType": "prepared_provider_request",
+              "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+              "snapshotContentStatus": "frozen",
+              "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "items": [],
+              "selection": {
+                "policyVersion": "memory_rule_budget_v1",
+                "budgetUnit": "serialized_json_characters",
+                "maxChars": 16000,
+                "usedChars": 2,
+                "experienceLimit": 5,
+                "selectedCounts": {
+                  "rule": 0,
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByBudget": {
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByExperienceLimit": 0
+              },
+              "visibleChars": 2
+            }
+          },
+          "providerAssignment": {
+            "role": "qa",
+            "adapterType": "scripted_mock",
+            "providerId": "local",
+            "source": "legacy_default",
+            "targetId": "demo-frontend",
+            "supportedMode": "review",
+            "fallbackPolicy": "legacy_default_adapter"
+          },
+          "runtimeConfigResolution": null,
+          "memorySnapshot": {
+            "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+            "schemaVersion": "memory_snapshot_v2",
+            "contentStatus": "frozen",
+            "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "retrievalAsOf": "2026-10-08T03:35:41.340299",
+            "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+            "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+            "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+            "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+            "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+            "createdAt": "2026-10-08T03:35:41.340299"
+          },
+          "sessionQueue": {
+            "queueEntryId": "85acae37-095c-4240-b8f0-e5dda47cba4a",
+            "queueKind": "main",
+            "position": 2,
+            "accessMode": "readonly",
+            "targetId": "demo-frontend",
+            "targetLockKey": null,
+            "state": "completed",
+            "waitReason": "TaskRun finalized as completed.",
+            "startedAt": "2026-10-08T03:37:13.763396",
+            "finishedAt": "2026-10-08T03:37:14.004404"
+          },
+          "targetLock": null,
+          "previewDeployJobs": [],
+          "approvalRequest": null,
+          "createdAt": "2026-10-08T03:37:13.568396",
+          "updatedAt": "2026-10-08T03:37:14.224399"
+        }
+      ],
+      "integrationArtifacts": [],
+      "createdAt": "2026-10-08T03:35:42.745130",
+      "updatedAt": "2026-10-08T03:37:14.016404"
+    }
+  ],
+  "runs": [
+    {
+      "id": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+      "taskId": "798def32-662b-4496-aaac-5e52930cc1ee",
+      "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+      "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+      "adapterType": "claude_code",
+      "adapterRunId": "claude-code-6940e04d-6eb7-447f-bed9-6db514e10c96",
+      "state": "completed",
+      "startedAt": "2026-10-08T03:36:17.051464",
+      "endedAt": "2026-10-08T03:37:13.238248",
+      "runnerId": "dispatcher:ac337694-2701-4595-bc98-c8434dd7ca81:slot:1",
+      "lastHeartbeatAt": "2026-10-08T03:36:03.716780",
+      "leaseExpiresAt": "2026-10-08T03:41:03.716780",
+      "staleDetectedAt": null,
+      "staleReason": null,
+      "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+      "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+      "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+      "errorCode": null,
+      "errorMessage": null,
+      "metricsJson": {
+        "adapterType": "claude_code",
+        "providerAssignment": {
+          "role": "frontend",
+          "adapterType": "claude_code",
+          "providerId": "local-claude-code-cli",
+          "source": "runtime_config",
+          "targetId": "demo-frontend",
+          "supportedMode": "write",
+          "fallbackPolicy": "environment_default"
+        },
+        "agentSelection": {
+          "role": "frontend",
+          "targetId": "demo-frontend",
+          "requiredMode": "frontend",
+          "requiredCapabilities": [
+            "code_write"
+          ],
+          "safeForWrite": true,
+          "safeForReview": false,
+          "customProfile": {
+            "id": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+            "displayName": "原生 Claude 编码师",
+            "mentionAlias": "claude-code-20261008",
+            "role": "frontend",
+            "providerId": "local-claude-code-cli",
+            "adapterType": "claude_code",
+            "toolPolicy": "claude_file_edit",
+            "supportedTargets": [
+              "demo-frontend"
+            ],
+            "supportedModes": [
+              "frontend"
+            ],
+            "capabilityTags": [
+              "code_write",
+              "diff_analysis"
+            ]
+          }
+        },
+        "memorySnapshot": {
+          "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+          "schemaVersion": "memory_snapshot_v2",
+          "contentStatus": "frozen",
+          "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "retrievalAsOf": "2026-10-08T03:35:41.340299",
+          "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+          "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+          "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+          "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+          "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+          "createdAt": "2026-10-08T03:35:41.340299"
+        },
+        "runtimeConfigResolution": {
+          "role": "frontend",
+          "agentProfileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+          "providerId": "local-claude-code-cli",
+          "adapterType": "claude_code",
+          "mode": "frontend",
+          "enabled": true,
+          "fallbackPolicy": "environment_default",
+          "providerPresetId": null,
+          "protocol": null,
+          "model": null,
+          "baseUrl": null,
+          "timeoutSeconds": null,
+          "apiKeyEnv": null,
+          "configSource": "explicit_profile"
+        },
+        "agentInstruction": {
+          "version": 1,
+          "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+          "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+          "role": "frontend",
+          "source": "custom_profile",
+          "sha256": "3029dce50e120a028798118695608087c8fbd839a50db0226b9a675b088f7482",
+          "characters": 79,
+          "profileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f"
+        },
+        "preRunCheckpoint": {
+          "targetId": "demo-frontend",
+          "allowedPaths": [
+            "apps/demo/src"
+          ],
+          "deniedPaths": [
+            "apps/api",
+            "apps/demo-api",
+            ".env*",
+            "node_modules",
+            ".git",
+            "secrets"
+          ],
+          "plannedFiles": [
+            "apps/demo/src/App.tsx",
+            "apps/demo/src/styles.css"
+          ],
+          "dirtyFiles": [],
+          "baseCommit": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+          "gitStatus": {
+            "available": true,
+            "dirtyFiles": []
+          },
+          "createdAt": "2026-10-08T03:36:03.258439",
+          "scopeBaseline": {
+            "schema_version": "agenthub.task_run_scope.v2",
+            "available": true,
+            "reason": null,
+            "protected_categories": [
+              ".git",
+              "node_modules"
+            ],
+            "protected_entry_count": 12
+          }
+        },
+        "providerGateway": {
+          "resolution": {
+            "selectedProviderId": "local-claude-code-cli",
+            "selectedAdapterType": "claude_code",
+            "selectionReason": "Runtime coding provider configuration is compatible.",
+            "selectedIsRealProvider": true,
+            "shouldWait": false,
+            "shouldFail": false,
+            "candidates": [
+              {
+                "providerId": "local-claude-code-cli",
+                "adapterType": "claude_code",
+                "accepted": true,
+                "reason": "Runtime coding provider configuration is compatible."
+              }
+            ],
+            "fallbackCandidates": [],
+            "rejectedCandidates": []
+          },
+          "health": {
+            "providerId": "local-claude-code-cli",
+            "adapterType": "claude_code",
+            "status": "healthy",
+            "available": true,
+            "reason": "CLI executable and startup probe are available.",
+            "checkedAt": "2026-10-08T03:36:03.792782",
+            "safeDetails": {
+              "command": "claude",
+              "probe": "version",
+              "executable": "claude.exe",
+              "exitCode": 0,
+              "output": "2.1.289 (Claude Code)",
+              "rawRedacted": true
+            }
+          },
+          "capacity": {
+            "providerId": "local-claude-code-cli",
+            "status": "available",
+            "acquired": false,
+            "providerRunning": 0,
+            "providerLimit": 1,
+            "globalRunning": 0,
+            "globalLimit": 2,
+            "leaseId": "provider-lease:9fc4a17f-a640-4231-9b60-faea4330ebc6:local-claude-code-cli",
+            "reason": "Provider capacity released."
+          }
+        },
+        "canonicalContextSnapshot": {
+          "version": "canonical_shared_context_v1",
+          "createdAt": "2026-10-08T03:36:03.898780",
+          "fields": {
+            "session": {
+              "value": {
+                "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+                "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+                "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459"
+              },
+              "source": "session",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "memorySnapshot": {
+              "value": {
+                "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+                "schemaVersion": "memory_snapshot_v2",
+                "contentStatus": "frozen",
+                "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "retrievalAsOf": "2026-10-08T03:35:41.340299",
+                "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+                "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+                "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+                "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+                "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+                "createdAt": "2026-10-08T03:35:41.340299"
+              },
+              "source": "memory_snapshot",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "userGoal": {
+              "value": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+              "source": "session_ledger",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "user"
+            },
+            "currentTask": {
+              "value": {
+                "id": "798def32-662b-4496-aaac-5e52930cc1ee",
+                "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+                "intentType": "frontend_change",
+                "description": "demo_frontend_request"
+              },
+              "source": "task",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "taskGraph": {
+              "value": {
+                "goal": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                "intent": "explicit_group",
+                "planner": "explicit_group_v1",
+                "tasks": [
+                  {
+                    "key": "1-frontend-frontend_change",
+                    "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+                    "assignedAgentRole": "frontend",
+                    "priority": 0,
+                    "dependsOn": [],
+                    "parallelGroup": null,
+                    "expectedArtifactTypes": [
+                      "diff",
+                      "review"
+                    ],
+                    "targetId": "demo-frontend"
+                  },
+                  {
+                    "key": "2-qa-qa_review",
+                    "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+                    "assignedAgentRole": "qa",
+                    "priority": 1,
+                    "dependsOn": [
+                      "1-frontend-frontend_change"
+                    ],
+                    "parallelGroup": null,
+                    "expectedArtifactTypes": [
+                      "review"
+                    ],
+                    "targetId": "demo-frontend"
+                  }
+                ]
+              },
+              "source": "plan_draft",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "targetContext": {
+              "value": {
+                "targetProject": {
+                  "targetId": "demo-frontend",
+                  "name": "Demo Frontend",
+                  "type": "frontend",
+                  "root": "apps/demo",
+                  "allowedPaths": [
+                    "apps/demo/src"
+                  ],
+                  "deniedPaths": [
+                    "apps/api",
+                    "apps/demo-api",
+                    "secrets"
+                  ],
+                  "devCommand": "pnpm demo:dev",
+                  "testCommand": null,
+                  "checkCommand": null,
+                  "buildCommand": "pnpm build",
+                  "previewCommand": "pnpm dev --host 127.0.0.1 --port <port>",
+                  "baseUrl": null,
+                  "packageManager": null,
+                  "detectedFramework": null,
+                  "projectType": null,
+                  "analysisStatus": null,
+                  "allowedAgents": [
+                    "frontend",
+                    "qa",
+                    "review"
+                  ],
+                  "requiresPlatformMode": false,
+                  "requiresApproval": false,
+                  "relatedTargetIds": [
+                    "demo-backend"
+                  ]
+                },
+                "relatedTargetProjects": [
+                  {
+                    "targetId": "demo-backend",
+                    "name": "Demo Backend",
+                    "type": "backend",
+                    "root": "apps/demo-api",
+                    "allowedPaths": [
+                      "apps/demo-api"
+                    ],
+                    "deniedPaths": [
+                      "apps/api",
+                      "apps/demo",
+                      "secrets"
+                    ],
+                    "devCommand": "pnpm demo:api:dev",
+                    "testCommand": "pnpm demo:api:test",
+                    "checkCommand": null,
+                    "buildCommand": null,
+                    "previewCommand": null,
+                    "baseUrl": "http://127.0.0.1:5174",
+                    "packageManager": null,
+                    "detectedFramework": null,
+                    "projectType": null,
+                    "analysisStatus": null,
+                    "allowedAgents": [
+                      "backend",
+                      "qa",
+                      "review"
+                    ],
+                    "requiresPlatformMode": false,
+                    "requiresApproval": false,
+                    "relatedTargetIds": []
+                  }
+                ]
+              },
+              "source": "target_registry",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "safePaths": {
+              "value": [
+                "apps/demo/src",
+                "apps/demo/src/App.tsx",
+                "apps/demo/src/styles.css"
+              ],
+              "source": "target_registry",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "recentMessages": {
+              "value": [
+                {
+                  "id": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+                  "senderType": "user",
+                  "senderId": null,
+                  "messageKind": "chat",
+                  "contentMd": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                  "createdAt": "2026-10-08T03:35:42.730132"
+                },
+                {
+                  "id": "17c4da5b-4ef5-4741-927b-e453f6b792f2",
+                  "senderType": "orchestrator",
+                  "senderId": "26143942-7005-496b-a17f-c404a2981f23",
+                  "messageKind": "plan",
+                  "contentMd": "已为 原生 Claude 编码师 (@claude-code-20261008)、QA Agent (@qa) 创建 2 个任务。使用确定性协调。写任务依次执行，评审等待全部写任务完成，并分别绑定对应目标。就绪任务将自动启动；失败、中断或审批阻塞时暂停后续任务，重试成功后继续。",
+                  "createdAt": "2026-10-08T03:35:42.752129"
+                }
+              ],
+              "source": "messages",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "user"
+            },
+            "relevantArtifacts": {
+              "value": {
+                "selectedArtifact": null,
+                "contextItems": [],
+                "artifactReferences": [],
+                "latestCommandEvidence": null
+              },
+              "source": "artifacts",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "relevantMemories": {
+              "value": [],
+              "source": "memory_retrieval",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "missionTrace": {
+              "value": null,
+              "source": "mission_trace",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "latestDiff": {
+              "value": null,
+              "source": "artifact.diff",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "latestReview": {
+              "value": null,
+              "source": "artifact.review",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "latestPreview": {
+              "value": null,
+              "source": "artifact.preview",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "latestDeployment": {
+              "value": null,
+              "source": "artifact.deployment",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "handoffNotes": {
+              "value": [],
+              "source": "handoff",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "guardrails": {
+              "value": {
+                "protectedPaths": [],
+                "validationExpectations": [
+                  "Keep the existing P4/P5 diff, review, preview, and mock deploy flow intact.",
+                  "Produce a focused git diff in the assigned safe target.",
+                  "The Vite React demo preview should remain startable."
+                ]
+              },
+              "source": "guardrails",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            },
+            "memorySelection": {
+              "value": {
+                "policyVersion": "memory_rule_budget_v1",
+                "budgetUnit": "serialized_json_characters",
+                "maxChars": 16000,
+                "usedChars": 2,
+                "experienceLimit": 5,
+                "selectedCounts": {
+                  "rule": 0,
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByBudget": {
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByExperienceLimit": 0
+              },
+              "source": "memory_selection",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:36:03.898780",
+              "trustLevel": "system"
+            }
+          }
+        },
+        "memoryUsage": {
+          "schemaVersion": "memory_usage_v1",
+          "evidenceType": "prepared_provider_request",
+          "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+          "snapshotContentStatus": "frozen",
+          "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "items": [],
+          "selection": {
+            "policyVersion": "memory_rule_budget_v1",
+            "budgetUnit": "serialized_json_characters",
+            "maxChars": 16000,
+            "usedChars": 2,
+            "experienceLimit": 5,
+            "selectedCounts": {
+              "rule": 0,
+              "preference": 0,
+              "experience": 0
+            },
+            "omittedByBudget": {
+              "preference": 0,
+              "experience": 0
+            },
+            "omittedByExperienceLimit": 0
+          },
+          "visibleChars": 2
+        },
+        "taskRunScopeDecision": {
+          "schemaVersion": "agenthub.task_run_scope_validation.v2",
+          "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+          "targetId": "demo-frontend",
+          "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+          "status": "passed",
+          "changedPathCount": 1,
+          "timestamp": "2026-10-08T03:37:12.739256+00:00",
+          "errorCode": null,
+          "reason": null
+        },
+        "taskRunScopeGuard": {
+          "schemaVersion": "agenthub.task_run_scope_validation.v2",
+          "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+          "targetId": "demo-frontend",
+          "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+          "status": "passed",
+          "changedPathCount": 1,
+          "timestamp": "2026-10-08T03:37:12.739256+00:00"
+        },
+        "completionValidation": {
+          "schemaVersion": "agenthub.write_completion.v1",
+          "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+          "status": "passed",
+          "accessMode": "write",
+          "changedPathCount": 1,
+          "diffId": "39de2cca-ff88-4410-99ef-9b5e11661314",
+          "errorCode": null,
+          "functionalAcceptance": "not_evaluated"
+        }
+      },
+      "providerAssignment": {
+        "role": "frontend",
+        "adapterType": "claude_code",
+        "providerId": "local-claude-code-cli",
+        "source": "runtime_config",
+        "targetId": "demo-frontend",
+        "supportedMode": "write",
+        "fallbackPolicy": "environment_default"
+      },
+      "runtimeConfigResolution": {
+        "role": "frontend",
+        "agentProfileId": "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+        "providerId": "local-claude-code-cli",
+        "adapterType": "claude_code",
+        "mode": "frontend",
+        "enabled": true,
+        "fallbackPolicy": "environment_default",
+        "providerPresetId": null,
+        "protocol": null,
+        "model": null,
+        "baseUrl": null,
+        "timeoutSeconds": null,
+        "apiKeyEnv": null,
+        "configSource": "explicit_profile"
+      },
+      "memorySnapshot": {
+        "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "retrievalAsOf": "2026-10-08T03:35:41.340299",
+        "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+        "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+        "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+        "createdAt": "2026-10-08T03:35:41.340299"
+      },
+      "sessionQueue": {
+        "queueEntryId": "cc89131d-eaf6-4bcf-b09b-6527a1710920",
+        "queueKind": "main",
+        "position": 1,
+        "accessMode": "write",
+        "targetId": "demo-frontend",
+        "targetLockKey": "target:demo-frontend:write",
+        "state": "completed",
+        "waitReason": "TaskRun finalized as completed.",
+        "startedAt": "2026-10-08T03:36:03.700784",
+        "finishedAt": "2026-10-08T03:37:13.290249"
+      },
+      "targetLock": {
+        "lockKey": "target:demo-frontend:write",
+        "targetId": "demo-frontend",
+        "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+        "holderTaskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+        "workerId": null,
+        "mode": "write",
+        "state": "released",
+        "leaseExpiresAt": null,
+        "acquiredAt": "2026-10-08T03:36:03.688781",
+        "releasedAt": "2026-10-08T03:37:13.272258",
+        "releaseReason": "task_run_completed"
+      },
+      "previewDeployJobs": [],
+      "approvalRequest": null,
+      "createdAt": "2026-10-08T03:36:03.258439",
+      "updatedAt": "2026-10-08T03:37:13.509275"
+    },
+    {
+      "id": "5c3a940e-9918-437e-beae-a0eb06327e9f",
+      "taskId": "88f9bf3e-c421-4c49-99aa-0eae9bd95e13",
+      "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+      "agentId": "ef29cecd-80bc-4d9e-aa11-4770773ea980",
+      "adapterType": "scripted_mock",
+      "adapterRunId": "scripted-mock-ca652e02-570d-4872-907e-142cfd2d58d9",
+      "state": "completed",
+      "startedAt": "2026-10-08T03:37:13.894396",
+      "endedAt": "2026-10-08T03:37:13.976404",
+      "runnerId": "dispatcher:ac337694-2701-4595-bc98-c8434dd7ca81:slot:1",
+      "lastHeartbeatAt": "2026-10-08T03:37:13.779405",
+      "leaseExpiresAt": "2026-10-08T03:42:13.779405",
+      "staleDetectedAt": null,
+      "staleReason": null,
+      "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+      "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+      "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+      "errorCode": null,
+      "errorMessage": null,
+      "metricsJson": {
+        "adapterType": "scripted_mock",
+        "providerAssignment": {
+          "role": "qa",
+          "adapterType": "scripted_mock",
+          "providerId": "local",
+          "source": "legacy_default",
+          "targetId": "demo-frontend",
+          "supportedMode": "review",
+          "fallbackPolicy": "legacy_default_adapter"
+        },
+        "agentSelection": {
+          "role": "qa",
+          "targetId": "demo-frontend",
+          "requiredMode": "qa",
+          "requiredCapabilities": [
+            "code_review"
+          ],
+          "safeForWrite": false,
+          "safeForReview": true
+        },
+        "memorySnapshot": {
+          "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+          "schemaVersion": "memory_snapshot_v2",
+          "contentStatus": "frozen",
+          "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "retrievalAsOf": "2026-10-08T03:35:41.340299",
+          "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+          "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+          "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+          "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+          "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+          "createdAt": "2026-10-08T03:35:41.340299"
+        },
+        "agentInstruction": {
+          "version": 1,
+          "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+          "agentId": "ef29cecd-80bc-4d9e-aa11-4770773ea980",
+          "role": "review",
+          "source": "agent_default",
+          "sha256": "583abb71a3bc52eab81cd3c2d1390061cf17a634bd4ab139e8760836e2deed29",
+          "characters": 49,
+          "profileId": null
+        },
+        "canonicalContextSnapshot": {
+          "version": "canonical_shared_context_v1",
+          "createdAt": "2026-10-08T03:37:13.841396",
+          "fields": {
+            "session": {
+              "value": {
+                "sessionId": "b73f3e52-8694-4cd6-8231-ed6e2e44b9fa",
+                "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+                "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459"
+              },
+              "source": "session",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "memorySnapshot": {
+              "value": {
+                "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+                "schemaVersion": "memory_snapshot_v2",
+                "contentStatus": "frozen",
+                "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "retrievalAsOf": "2026-10-08T03:35:41.340299",
+                "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+                "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+                "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+                "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+                "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+                "createdAt": "2026-10-08T03:35:41.340299"
+              },
+              "source": "memory_snapshot",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "userGoal": {
+              "value": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+              "source": "session_ledger",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "user"
+            },
+            "currentTask": {
+              "value": {
+                "id": "88f9bf3e-c421-4c49-99aa-0eae9bd95e13",
+                "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+                "intentType": "qa_review",
+                "description": "explicit_group_review"
+              },
+              "source": "task",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "taskGraph": {
+              "value": {
+                "goal": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                "intent": "explicit_group",
+                "planner": "explicit_group_v1",
+                "tasks": [
+                  {
+                    "key": "1-frontend-frontend_change",
+                    "title": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group...",
+                    "assignedAgentRole": "frontend",
+                    "priority": 0,
+                    "dependsOn": [],
+                    "parallelGroup": null,
+                    "expectedArtifactTypes": [
+                      "diff",
+                      "review"
+                    ],
+                    "targetId": "demo-frontend"
+                  },
+                  {
+                    "key": "2-qa-qa_review",
+                    "title": "QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend]",
+                    "assignedAgentRole": "qa",
+                    "priority": 1,
+                    "dependsOn": [
+                      "1-frontend-frontend_change"
+                    ],
+                    "parallelGroup": null,
+                    "expectedArtifactTypes": [
+                      "review"
+                    ],
+                    "targetId": "demo-frontend"
+                  }
+                ]
+              },
+              "source": "plan_draft",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "targetContext": {
+              "value": {
+                "targetProject": {
+                  "targetId": "demo-frontend",
+                  "name": "Demo Frontend",
+                  "type": "frontend",
+                  "root": "apps/demo",
+                  "allowedPaths": [
+                    "apps/demo/src"
+                  ],
+                  "deniedPaths": [
+                    "apps/api",
+                    "apps/demo-api",
+                    "secrets"
+                  ],
+                  "devCommand": "pnpm demo:dev",
+                  "testCommand": null,
+                  "checkCommand": null,
+                  "buildCommand": "pnpm build",
+                  "previewCommand": "pnpm dev --host 127.0.0.1 --port <port>",
+                  "baseUrl": null,
+                  "packageManager": null,
+                  "detectedFramework": null,
+                  "projectType": null,
+                  "analysisStatus": null,
+                  "allowedAgents": [
+                    "frontend",
+                    "qa",
+                    "review"
+                  ],
+                  "requiresPlatformMode": false,
+                  "requiresApproval": false,
+                  "relatedTargetIds": [
+                    "demo-backend"
+                  ]
+                },
+                "relatedTargetProjects": [
+                  {
+                    "targetId": "demo-backend",
+                    "name": "Demo Backend",
+                    "type": "backend",
+                    "root": "apps/demo-api",
+                    "allowedPaths": [
+                      "apps/demo-api"
+                    ],
+                    "deniedPaths": [
+                      "apps/api",
+                      "apps/demo",
+                      "secrets"
+                    ],
+                    "devCommand": "pnpm demo:api:dev",
+                    "testCommand": "pnpm demo:api:test",
+                    "checkCommand": null,
+                    "buildCommand": null,
+                    "previewCommand": null,
+                    "baseUrl": "http://127.0.0.1:5174",
+                    "packageManager": null,
+                    "detectedFramework": null,
+                    "projectType": null,
+                    "analysisStatus": null,
+                    "allowedAgents": [
+                      "backend",
+                      "qa",
+                      "review"
+                    ],
+                    "requiresPlatformMode": false,
+                    "requiresApproval": false,
+                    "relatedTargetIds": []
+                  }
+                ]
+              },
+              "source": "target_registry",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "safePaths": {
+              "value": [
+                "apps/demo/src",
+                "read-only current session artifacts"
+              ],
+              "source": "target_registry",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "recentMessages": {
+              "value": [
+                {
+                  "id": "d2f023d6-9daf-4cdc-ab9b-4f06804894d2",
+                  "senderType": "user",
+                  "senderId": null,
+                  "messageKind": "chat",
+                  "contentMd": "@claude-code-20261008 @qa for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group 20261008. Edit only that source file; QA independently reviews the final code without modifying files.",
+                  "createdAt": "2026-10-08T03:35:42.730132"
+                },
+                {
+                  "id": "17c4da5b-4ef5-4741-927b-e453f6b792f2",
+                  "senderType": "orchestrator",
+                  "senderId": "26143942-7005-496b-a17f-c404a2981f23",
+                  "messageKind": "plan",
+                  "contentMd": "已为 原生 Claude 编码师 (@claude-code-20261008)、QA Agent (@qa) 创建 2 个任务。使用确定性协调。写任务依次执行，评审等待全部写任务完成，并分别绑定对应目标。就绪任务将自动启动；失败、中断或审批阻塞时暂停后续任务，重试成功后继续。",
+                  "createdAt": "2026-10-08T03:35:42.752129"
+                }
+              ],
+              "source": "messages",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "user"
+            },
+            "relevantArtifacts": {
+              "value": {
+                "selectedArtifact": null,
+                "contextItems": [],
+                "artifactReferences": [],
+                "latestCommandEvidence": null
+              },
+              "source": "artifacts",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "relevantMemories": {
+              "value": [],
+              "source": "memory_retrieval",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "missionTrace": {
+              "value": null,
+              "source": "mission_trace",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "latestDiff": {
+              "value": {
+                "artifactId": "a0f81a07-f0c7-4298-acac-89fc79ef0452",
+                "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+                "status": "ready",
+                "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+                "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+                "changedFiles": [
+                  "apps/demo/src/App.tsx"
+                ],
+                "stats": {
+                  "filesChanged": 1,
+                  "additions": 1,
+                  "deletions": 1,
+                  "files": [
+                    {
+                      "path": "apps/demo/src/App.tsx",
+                      "additions": 1,
+                      "deletions": 1
+                    }
+                  ]
+                }
+              },
+              "source": "artifact.diff",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "latestReview": {
+              "value": {
+                "artifactId": "4f7b31e4-3243-4c3a-a69a-78d711f7168e",
+                "taskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+                "status": "passed",
+                "riskLevel": "low",
+                "summary": "Scripted Review Agent passed 1 changed file with low risk.",
+                "filesReviewed": [
+                  "apps/demo/src/App.tsx"
+                ],
+                "findings": [],
+                "suggestedChanges": [],
+                "adapterType": "scripted_mock",
+                "reviewedDiffArtifactId": "a0f81a07-f0c7-4298-acac-89fc79ef0452"
+              },
+              "source": "artifact.review",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "latestPreview": {
+              "value": null,
+              "source": "artifact.preview",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "latestDeployment": {
+              "value": null,
+              "source": "artifact.deployment",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "handoffNotes": {
+              "value": [
+                {
+                  "artifactId": "4f90d06d-18f6-422c-b426-54ad8c89d96e",
+                  "status": "ready",
+                  "fromTaskId": "798def32-662b-4496-aaac-5e52930cc1ee",
+                  "fromTaskRunId": "9fc4a17f-a640-4231-9b60-faea4330ebc6",
+                  "fromAgentRole": "frontend",
+                  "fromProviderId": "local-claude-code-cli",
+                  "fromAdapterType": "claude_code",
+                  "toTaskId": "88f9bf3e-c421-4c49-99aa-0eae9bd95e13",
+                  "toAgentRole": "qa",
+                  "toProviderId": "local-scripted-review",
+                  "toAdapterType": "scripted_mock",
+                  "summary": "Frontend: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... completed and handed context to QA: for demo app change the existing button text in apps/demo/src/App.tsx to Restart Group... [Demo Frontend].",
+                  "changedFiles": [
+                    "apps/demo/src/App.tsx"
+                  ],
+                  "implementedRoutes": [],
+                  "implementedComponents": [
+                    "apps/demo/src/App.tsx"
+                  ],
+                  "artifactRefs": [
+                    {
+                      "artifactId": "a0f81a07-f0c7-4298-acac-89fc79ef0452",
+                      "artifactType": "diff",
+                      "status": "ready"
+                    },
+                    {
+                      "artifactId": "4f7b31e4-3243-4c3a-a69a-78d711f7168e",
+                      "artifactType": "review",
+                      "status": "passed"
+                    }
+                  ],
+                  "openQuestions": [],
+                  "warnings": [],
+                  "suggestedFollowUpScope": [],
+                  "verificationStatus": "completed",
+                  "riskNotes": [],
+                  "createdAt": "2026-10-08T03:37:13.319248"
+                }
+              ],
+              "source": "handoff",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "guardrails": {
+              "value": {
+                "protectedPaths": [],
+                "validationExpectations": [
+                  "Keep the existing P4/P5 diff, review, preview, and mock deploy flow intact.",
+                  "Review is advisory and read-oriented by default."
+                ]
+              },
+              "source": "guardrails",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            },
+            "memorySelection": {
+              "value": {
+                "policyVersion": "memory_rule_budget_v1",
+                "budgetUnit": "serialized_json_characters",
+                "maxChars": 16000,
+                "usedChars": 2,
+                "experienceLimit": 5,
+                "selectedCounts": {
+                  "rule": 0,
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByBudget": {
+                  "preference": 0,
+                  "experience": 0
+                },
+                "omittedByExperienceLimit": 0
+              },
+              "source": "memory_selection",
+              "visibility": "provider",
+              "createdAt": "2026-10-08T03:37:13.841396",
+              "trustLevel": "system"
+            }
+          }
+        },
+        "memoryUsage": {
+          "schemaVersion": "memory_usage_v1",
+          "evidenceType": "prepared_provider_request",
+          "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+          "snapshotContentStatus": "frozen",
+          "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "items": [],
+          "selection": {
+            "policyVersion": "memory_rule_budget_v1",
+            "budgetUnit": "serialized_json_characters",
+            "maxChars": 16000,
+            "usedChars": 2,
+            "experienceLimit": 5,
+            "selectedCounts": {
+              "rule": 0,
+              "preference": 0,
+              "experience": 0
+            },
+            "omittedByBudget": {
+              "preference": 0,
+              "experience": 0
+            },
+            "omittedByExperienceLimit": 0
+          },
+          "visibleChars": 2
+        }
+      },
+      "providerAssignment": {
+        "role": "qa",
+        "adapterType": "scripted_mock",
+        "providerId": "local",
+        "source": "legacy_default",
+        "targetId": "demo-frontend",
+        "supportedMode": "review",
+        "fallbackPolicy": "legacy_default_adapter"
+      },
+      "runtimeConfigResolution": null,
+      "memorySnapshot": {
+        "memorySnapshotId": "e26f1303-b9f7-4529-add9-a599f33f2459",
+        "schemaVersion": "memory_snapshot_v2",
+        "contentStatus": "frozen",
+        "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "retrievalAsOf": "2026-10-08T03:35:41.340299",
+        "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+        "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+        "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+        "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+        "contextPackHash": "86fc547a13badf9162408091c27c4a6320fc56ab6c4d81812154b28668309e6d",
+        "createdAt": "2026-10-08T03:35:41.340299"
+      },
+      "sessionQueue": {
+        "queueEntryId": "85acae37-095c-4240-b8f0-e5dda47cba4a",
+        "queueKind": "main",
+        "position": 2,
+        "accessMode": "readonly",
+        "targetId": "demo-frontend",
+        "targetLockKey": null,
+        "state": "completed",
+        "waitReason": "TaskRun finalized as completed.",
+        "startedAt": "2026-10-08T03:37:13.763396",
+        "finishedAt": "2026-10-08T03:37:14.004404"
+      },
+      "targetLock": null,
+      "previewDeployJobs": [],
+      "approvalRequest": null,
+      "createdAt": "2026-10-08T03:37:13.568396",
+      "updatedAt": "2026-10-08T03:37:14.224399"
+    }
+  ],
+  "review": {
+    "id": "22d65e73-ace9-4cb1-9984-935d7664572b",
+    "artifactId": "1dcceba8-64f2-4015-9502-3c2cb2d27201",
+    "taskRunId": "5c3a940e-9918-437e-beae-a0eb06327e9f",
+    "reviewedDiffArtifactId": "6c969ca0-4a26-4be1-b60a-c734f87e6249",
+    "artifactType": "review",
+    "title": "Review Agent report",
+    "status": "passed",
+    "riskLevel": "low",
+    "summary": "Scripted Review Agent passed 1 changed file with low risk.",
+    "filesReviewed": [
+      "apps/demo/src/App.tsx"
+    ],
+    "findings": [],
+    "suggestedChanges": [],
+    "adapterType": "scripted_mock",
+    "nativeReceipt": null
+  },
+  "fileSha256": "0cb082dc98e0811a167be1e66e5d33dc6d15901c2fde8ca877255d7ca9d2bbde",
+  "checks": [
+    "startup resumed persisted plan without a task-run start request",
+    "real Claude edit followed by separate scripted readonly QA",
+    "exactly one run per task"
+  ],
+  "boundaries": [
+    "scripted QA is not native model evaluation",
+    "no restart of active CLI or failed attempt"
+  ]
+}

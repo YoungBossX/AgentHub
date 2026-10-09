@@ -1,0 +1,111 @@
+{
+  "mode": "claude",
+  "sessionId": "3b371f7a-184d-49d3-b6b4-94df3ca5733f",
+  "messageId": "cd947e18-dab2-469b-bbf4-1259b7354ebe",
+  "taskId": "94d5ab9d-e123-4326-8cf1-2d1e7a40ab62",
+  "runId": "a9d723ac-4a05-40ec-b52b-70f3a5cc429f",
+  "adapter": "claude_code",
+  "attachmentIds": [
+    "d9e27d3b-9be1-48ce-8290-1c37f484fc5f"
+  ],
+  "appSha256": "27a4f62eb8a3b83b3336ef23977697abc654bafb1999094686e37d67b7e879ba",
+  "plannerEvidence": {
+    "providerId": "claude-cli-planner",
+    "providerType": "claude_cli",
+    "plannerSource": "real_llm",
+    "status": "succeeded",
+    "durationMs": 20187,
+    "validationResult": "passed",
+    "planId": "plan-demo-frontend-h1-title-20261008",
+    "rationale": "本组仅选择 frontend，按 explicitGroupAssignments 只生成一个 frontend_change 任务，目标范围为 demo-frontend，仅修改主标题文本，忽略附件中关于按钮的说明并保留现有布局、交互与样式，属于低风险的目标范围内变更。NATIVE_GROUP_PROMPT_20261008",
+    "createdTaskIds": [
+      "94d5ab9d-e123-4326-8cf1-2d1e7a40ab62"
+    ],
+    "runtimeConfig": {
+      "role": "planner",
+      "agentProfileId": "0adf48ff-6952-4b95-93f1-0d564391a315",
+      "providerId": "claude-cli-planner",
+      "adapterType": "claude_cli",
+      "mode": "read_only",
+      "enabled": true,
+      "fallbackPolicy": "environment_default",
+      "providerPresetId": null,
+      "protocol": null,
+      "model": null,
+      "baseUrl": null,
+      "timeoutSeconds": null,
+      "apiKeyEnv": null,
+      "configSource": "explicit_profile"
+    },
+    "agentProfileSelection": {
+      "id": "0adf48ff-6952-4b95-93f1-0d564391a315",
+      "displayName": "原生群聊规划师",
+      "mentionAlias": "native-group-20261008",
+      "providerId": "claude-cli-planner",
+      "toolPolicy": "planner_no_tools",
+      "supportedTargets": [
+        "demo-frontend"
+      ]
+    },
+    "agentInstruction": {
+      "sha256": "5b06bfe2e468f04f9c7f7594c9859d1e279621be62f8c20cadc4226e177af791",
+      "characters": 241,
+      "profileId": "0adf48ff-6952-4b95-93f1-0d564391a315"
+    },
+    "outputSha256": "5b1418f5ce4847be55b316bb69b264b1a61ab1baaae4667da714b0adca64af8e",
+    "cliEffort": "low",
+    "memorySnapshot": {
+      "memorySnapshotId": "6f1808e4-f6ab-4453-b84f-6dcb2b6aacaa",
+      "schemaVersion": "memory_snapshot_v2",
+      "contentStatus": "frozen",
+      "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "retrievalAsOf": "2026-10-08T17:05:21.996252",
+      "agentsMdHash": "6b9b9ec06d1efae4f801541798101c386e76da2854da90b2a7983692f0652f01",
+      "claudeMdHash": "73fe70bd9bc5e556730f6a4bf257a43ab92052a91df1de30ac1b766cba24da8c",
+      "projectMemoryVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "userPreferenceVersion": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "targetRegistryVersion": "78c7a1ba38381808d1b33c8fd755a218c36d5467be310671e582265651ada3ac",
+      "runtimeConfigVersion": "5fb0a981fa70cb9a9da5069ee1d2b93ae08d6f9a3c55360de96e3929d40eb715",
+      "contextPackHash": "119fc11962919b7cde63153274fde3a8afadb751c1e9fe4f459d40dd62ae8136",
+      "createdAt": "2026-10-08T17:05:21.996252"
+    },
+    "memoryUsage": {
+      "schemaVersion": "memory_usage_v1",
+      "evidenceType": "prepared_provider_request",
+      "memorySnapshotId": "6f1808e4-f6ab-4453-b84f-6dcb2b6aacaa",
+      "snapshotContentStatus": "frozen",
+      "snapshotItemsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "visibleMemoriesHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "items": [],
+      "selection": {
+        "policyVersion": "memory_rule_budget_v1",
+        "budgetUnit": "serialized_json_characters",
+        "maxChars": 16000,
+        "usedChars": 2,
+        "experienceLimit": 5,
+        "selectedCounts": {
+          "rule": 0,
+          "preference": 0,
+          "experience": 0
+        },
+        "omittedByBudget": {
+          "preference": 0,
+          "experience": 0
+        },
+        "omittedByExperienceLimit": 0
+      },
+      "visibleChars": 2
+    }
+  },
+  "diffIds": [
+    "1461f647-d3b1-4829-b68f-6fd71d4354ff"
+  ],
+  "errors": [],
+  "checks": [
+    "actual browser upload and send",
+    "request contains neither literal",
+    "real Claude planner and writer used text file",
+    "download SHA matches original",
+    "history survives reload"
+  ]
+}

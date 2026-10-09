@@ -29,7 +29,10 @@ describe("PreviewCard", () => {
     expect(screen.getByText("健康")).toBeTruthy()
     expect(screen.getByText("http://127.0.0.1:5173")).toBeTruthy()
     expect(screen.getByText("5173")).toBeTruthy()
-    expect(screen.getByText("最近检查：5月15日 10:30")).toBeTruthy()
+    const checkTime = document.querySelector("time")!
+    expect(checkTime.dateTime).toBe("2026-05-15T10:30:00.000Z")
+    expect(checkTime.title).toContain("原始值：2026-05-15T10:30:00Z")
+    expect(checkTime.closest("dd")?.textContent).toContain("最近检查：")
 
     fireEvent.click(screen.getByRole("button", { name: "打开预览" }))
     fireEvent.click(screen.getByRole("button", { name: "刷新预览" }))
@@ -150,6 +153,37 @@ describe("PreviewCard", () => {
       screen.getByText("脚本评审通过 1 个变更文件，风险较低。"),
     ).toBeTruthy()
     expect(screen.getAllByText("通过").length).toBeGreaterThan(0)
+  })
+
+  it("keeps the actual native assessment, provenance and test boundary after rerender", () => {
+    const props = {
+      artifactItems: [{
+        artifact: {
+          ...sampleReviewArtifact, adapterType: "claude_code", title: "Native model review",
+          status: "warning", riskLevel: "low", summary: "发现一个模型评审问题。",
+          findings: [{ severity: "low", file: "apps/demo/src/App.tsx", line: 7, message: "按钮需要可访问性说明。" }],
+          suggestedChanges: ["补充按钮说明。"],
+          nativeReceipt: {
+            schemaVersion: "agenthub.native_review.v1", taskRunId: "run-1", adapterRunId: "claude-1",
+            targetId: "demo-frontend", inputFingerprint: "a".repeat(64), outputSha256: "b".repeat(64),
+            validation: "not_run" as const, assessmentKind: "advisory_static_review", boundFileCount: 3,
+            files: { "apps/demo/src/App.tsx": { sha256: "c".repeat(64), bytes: 200 } },
+          },
+        },
+        id: "native-asset", kind: "review" as const, taskRunId: "run-1", taskTitle: "Read-only native review",
+      }],
+      frameKey: 1, selectedArtifactId: "native-asset",
+    }
+    const view = render(createElement(PreviewPanel, props))
+    view.rerender(createElement(PreviewPanel, { ...props, frameKey: 2 }))
+    expect(screen.getByText("模型评审 · claude_code · 仅供参考")).toBeTruthy()
+    expect(screen.getByText("只读静态评审 · 未运行测试，结论不代表功能验收通过。")).toBeTruthy()
+    expect(screen.getByText("发现一个模型评审问题。")).toBeTruthy()
+    expect(screen.getByText("按钮需要可访问性说明。")).toBeTruthy()
+    expect(screen.getByText("补充按钮说明。")).toBeTruthy()
+    expect(screen.getByText("低 · apps/demo/src/App.tsx:7")).toBeTruthy()
+    expect(screen.getByText(/文件版本 aaaaaaaaaaaa · 原生输出 bbbbbbbbbbbb/)).toBeTruthy()
+    expect(screen.queryByText("仅供参考 · scripted_mock")).toBeNull()
   })
 
   it("translates review findings and suggestions in the right-side panel", () => {
@@ -387,4 +421,16 @@ describe("PreviewCard", () => {
     expect(screen.getByText("尚无版本记录")).toBeTruthy()
     expect(screen.queryByRole("button", { name: "编辑版本" })).toBeNull()
   })
+  it("allows closing an empty inspector and toggles the expanded layout", () => {
+    const onClose = vi.fn(), onToggleExpand = vi.fn()
+    const view = render(<PreviewPanel artifactItems={[]} frameKey={0} selectedArtifactId={null} onClose={onClose} onToggleExpand={onToggleExpand} />)
+    fireEvent.click(screen.getByRole("button", { name: "关闭产物" }))
+    fireEvent.click(screen.getByRole("button", { name: "展开成果" }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onToggleExpand).toHaveBeenCalledTimes(1)
+    view.rerender(<PreviewPanel artifactItems={[]} frameKey={0} selectedArtifactId={null} expanded onClose={onClose} onToggleExpand={onToggleExpand} />)
+    fireEvent.click(screen.getByRole("button", { name: "恢复布局" }))
+    expect(onToggleExpand).toHaveBeenCalledTimes(2)
+  })
+
 })

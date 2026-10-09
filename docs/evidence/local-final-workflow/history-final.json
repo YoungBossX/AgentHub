@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "preserved": {
+    "workspace": 1,
+    "session": 37,
+    "message": 119,
+    "task": 68,
+    "taskrun": 51,
+    "diff": 42,
+    "review": 42,
+    "messageattachment": 11,
+    "agentprofiledraft": 6,
+    "agentruntimeconfig": 1
+  },
+  "timestampChanges": [
+    {
+      "table": "task",
+      "id": "d9e6e037-46d1-42ef-984e-a473b6bb9e2b",
+      "fields": [
+        "updated_at"
+      ]
+    }
+  ]
+}

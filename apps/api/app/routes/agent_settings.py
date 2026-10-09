@@ -35,6 +35,10 @@ from app.memory_store import (
     transition_memory_item,
 )
 from app.models import Agent, MemoryItem
+from app.custom_agents import CustomAgentError, CustomAgentInput, save_custom_agent
+from app.custom_agent_schemas import CustomAgentRequest
+from app.agent_creation import AgentCreationRequest, generate_agent_configuration
+from app.agent_profiles import profile_for_draft
 from app.provider_configs import ProviderConfig, list_provider_configs
 from app.provider_health import ProviderHealthCheckResult, check_runtime_role_provider
 from app.repositories import get_enabled_agents, get_workspace
@@ -118,6 +122,10 @@ def agent_contact_response(agent: Agent) -> AgentContactResponse:
 
 def agent_profile_response(profile: AgentProfile) -> AgentProfileResponse:
     return AgentProfileResponse(
+        origin=profile.origin,
+        systemPrompt=profile.system_prompt,
+        mentionAlias=profile.mention_alias,
+        toolPolicy=profile.tool_policy,
         id=profile.id,
         displayName=profile.display_name,
         avatarInitials=profile.avatar_initials,
@@ -157,6 +165,9 @@ def draft_input_from_request(request: AgentProfileDraftCreateRequest) -> AgentPr
 
 def agent_directory_entry_response(entry: AgentDirectoryEntry) -> AgentDirectoryEntryResponse:
     return AgentDirectoryEntryResponse(
+        systemPrompt=entry.system_prompt,
+        mentionAlias=entry.mention_alias,
+        toolPolicy=entry.tool_policy,
         id=entry.id,
         entryType=entry.entry_type,
         displayName=entry.display_name,
@@ -214,6 +225,7 @@ def agent_directory_response(
 
 def runtime_role_config_response(role_config: RuntimeRoleConfig) -> RuntimeRoleConfigResponse:
     return RuntimeRoleConfigResponse(
+        systemPrompt=role_config.system_prompt,
         role=role_config.role,
         agentProfileId=role_config.agent_profile_id,
         providerId=role_config.provider_id,
@@ -260,6 +272,7 @@ def runtime_role_config_from_request(
     request: Any,
 ) -> RuntimeRoleConfig:
     return RuntimeRoleConfig(
+        system_prompt=request.system_prompt,
         role=role,
         agent_profile_id=request.agent_profile_id,
         provider_id=request.provider_id,
@@ -348,7 +361,20 @@ def read_workspace_agents(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
 
     agents = _ordered_enabled_agents(db)
-    return [agent_contact_response(agent) for agent in agents] + list(
+    custom_contacts = [
+        AgentContactResponse(
+            id=profile.id, displayName=profile.display_name, avatarInitials=profile.avatar_initials,
+            role=profile.role, adapterType=profile.adapter_type, providerId=profile.provider_id,
+            capabilityTags=profile.capability_tags, supportedTargets=profile.supported_targets,
+            supportedModes=profile.supported_modes, status=profile.status,
+            safeForWrite=profile.safe_for_write, safeForReview=profile.safe_for_review,
+            description=profile.description, contactType="custom", mentionAlias=profile.mention_alias,
+        )
+        for draft in list_agent_profile_drafts(db, workspace_id=workspace_id)
+        if draft.tool_policy and draft.status == "available"
+        for profile in [profile_for_draft(draft)]
+    ]
+    return [agent_contact_response(agent) for agent in agents] + custom_contacts + list(
         VIRTUAL_AGENT_CONTACTS
     )
 
@@ -610,6 +636,50 @@ def create_profile_draft(
     return agent_profile_response(
         list_agent_profile_registry([], drafts=[draft], include_virtual=False)[0]
     )
+
+
+@router.post("/workspaces/{workspace_id}/agent-creation")
+def create_agent_configuration(
+    workspace_id: str, request: AgentCreationRequest, db: DbSession = Depends(get_db),
+) -> dict:
+    return generate_agent_configuration(db, workspace_id, request)
+
+
+@router.post(
+    "/workspaces/{workspace_id}/custom-agents",
+    response_model=AgentProfileResponse, status_code=status.HTTP_201_CREATED,
+)
+def create_custom_agent(
+    workspace_id: str, request: CustomAgentRequest, db: DbSession = Depends(get_db),
+) -> AgentProfileResponse:
+    return _save_custom_agent_response(db, workspace_id, request)
+
+
+@router.put(
+    "/workspaces/{workspace_id}/custom-agents/{profile_id}",
+    response_model=AgentProfileResponse,
+)
+def update_custom_agent(
+    workspace_id: str, profile_id: str, request: CustomAgentRequest,
+    db: DbSession = Depends(get_db),
+) -> AgentProfileResponse:
+    return _save_custom_agent_response(db, workspace_id, request, profile_id)
+
+
+def _save_custom_agent_response(
+    db: DbSession, workspace_id: str, request: CustomAgentRequest,
+    profile_id: Optional[str] = None,
+) -> AgentProfileResponse:
+    if get_workspace(db, workspace_id) is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    try:
+        profile = save_custom_agent(
+            db, workspace_id=workspace_id,
+            value=CustomAgentInput(**request.model_dump()), profile_id=profile_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return agent_profile_response(profile_for_draft(profile))
 
 
 def _ordered_enabled_agents(db: DbSession) -> list[Agent]:

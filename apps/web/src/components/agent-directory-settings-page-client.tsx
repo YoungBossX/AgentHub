@@ -5,17 +5,22 @@ import { Search, ShieldCheck } from "lucide-react"
 
 import {
   createAgentProfileDraft,
+  getWorkspaceAgentDirectory,
   type AgentDirectory,
   type AgentDirectoryEntry,
   type AgentProfile,
   type Workspace,
+  type TargetProject,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { CustomAgentEditor } from "@/components/custom-agent-editor"
+import { AgentCreationChat } from "@/components/agent-creation-chat"
 
 type AgentDirectorySettingsPageClientProps = {
   backendUrl?: string
   directory: AgentDirectory | null
   workspace: Workspace | null
+  targets?: TargetProject[]
 }
 
 type FilterKey = "role" | "provider" | "capability" | "target" | "status"
@@ -32,11 +37,15 @@ export function AgentDirectorySettingsPageClient({
   backendUrl = "http://127.0.0.1:8000",
   directory,
   workspace,
+  targets = [],
 }: AgentDirectorySettingsPageClientProps) {
   const [entries, setEntries] = useState<AgentDirectoryEntry[]>(
     directory?.entries ?? [],
   )
   const [query, setQuery] = useState("")
+  const [editing, setEditing] = useState<AgentDirectoryEntry | null>(null)
+  const [editorVersion, setEditorVersion] = useState(0)
+  const [customStatus, setCustomStatus] = useState<string | null>(null)
   const [draftName, setDraftName] = useState("")
   const [draftRole, setDraftRole] = useState("")
   const [draftDescription, setDraftDescription] = useState("")
@@ -56,6 +65,17 @@ export function AgentDirectorySettingsPageClient({
 
   return (
     <section className="grid gap-4">
+      <AgentCreationChat backendUrl={backendUrl} workspaceId={workspace?.id} targets={targets} onSaved={async () => {
+        const updated = workspace ? await getWorkspaceAgentDirectory(backendUrl, workspace.id) : null
+        if (!updated) throw new Error("目录刷新失败")
+        setEntries(updated.entries)
+      }} />
+      <CustomAgentEditor key={`${editing?.id ?? "new"}:${editorVersion}`} backendUrl={backendUrl} workspaceId={workspace?.id} targets={targets} editing={editing} onCancel={() => { setEditing(null); setEditorVersion((value) => value + 1); setCustomStatus(null) }} onSaved={async () => {
+        const updated = workspace ? await getWorkspaceAgentDirectory(backendUrl, workspace.id) : null
+        if (!updated) throw new Error("档案已保存，目录刷新失败，请重新加载页面核对。")
+        setEntries(updated.entries); setEditing(null); setEditorVersion((value) => value + 1); setCustomStatus("自定义 Agent 已保存。可在运行设置中选择，或通过 @ 别名指派。")
+      }} />
+      {customStatus ? <p role="status" className="text-sm text-emerald-700">{customStatus}</p> : null}
       <div className="grid gap-3 rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm">
         <label className="grid gap-1 text-xs font-semibold text-slate-700">
           搜索 Agent
@@ -202,7 +222,7 @@ export function AgentDirectorySettingsPageClient({
 
       <div className="grid gap-3 lg:grid-cols-2">
         {filteredEntries.map((entry) => (
-          <AgentDirectoryCard entry={entry} key={entry.id} />
+          <AgentDirectoryCard entry={entry} key={entry.id} onEdit={() => { setEditing(entry); setCustomStatus(null) }} />
         ))}
       </div>
 
@@ -222,7 +242,7 @@ export function AgentDirectorySettingsPageClient({
   }
 }
 
-function AgentDirectoryCard({ entry }: { entry: AgentDirectoryEntry }) {
+function AgentDirectoryCard({ entry, onEdit }: { entry: AgentDirectoryEntry; onEdit: () => void }) {
   return (
     <article className="grid gap-3 rounded-lg border border-[var(--border)] bg-white p-4 shadow-sm">
       <div className="flex min-w-0 items-start gap-3">
@@ -241,7 +261,7 @@ function AgentDirectoryCard({ entry }: { entry: AgentDirectoryEntry }) {
             />
           </div>
           <p className="mt-1 font-mono text-xs text-[var(--muted-foreground)]">
-            @{entry.role} · {entry.adapterType}
+            @{entry.mentionAlias ?? entry.role} · {entry.adapterType}
           </p>
         </div>
       </div>
@@ -266,7 +286,9 @@ function AgentDirectoryCard({ entry }: { entry: AgentDirectoryEntry }) {
       <div className="flex flex-wrap gap-1.5">
         <DirectoryPill label={entry.safeForWrite ? "可写" : "只读"} tone={entry.safeForWrite ? "ok" : "status"} />
         <DirectoryPill label={entry.safeForReview ? "可评审" : "不可评审"} tone={entry.safeForReview ? "ok" : "status"} />
-        <DirectoryPill label={entry.entryType === "draft" ? "草稿" : "内置"} tone="status" />
+        <DirectoryPill label={entry.entryType === "draft" ? "草稿" : entry.entryType === "custom" ? "自定义" : "内置"} tone="status" />
+        {entry.toolPolicy ? <DirectoryPill label={entry.toolPolicy} tone="status" /> : null}
+        {entry.entryType === "custom" ? <button type="button" className="ml-auto rounded-md border border-[var(--border)] px-3 py-1 text-xs font-semibold" onClick={onEdit}>编辑 {entry.displayName}</button> : null}
       </div>
 
       {entry.compatibility.reasons.length > 0 || entry.compatibility.warnings.length > 0 ? (

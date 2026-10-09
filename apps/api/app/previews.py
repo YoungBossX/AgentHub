@@ -1,6 +1,7 @@
 import http.client
 import json
 import os
+import secrets
 import shutil
 import socket
 import subprocess
@@ -11,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
+from threading import RLock
 from typing import Optional, Protocol
 
 from sqlmodel import Session as DbSession
@@ -47,6 +49,7 @@ class PreviewProcessDiagnostics:
     exit_code: Optional[int] = None
     output_tail: str = ""
     log_path: Optional[Path] = None
+    tracked: bool = True
 
 
 @dataclass(frozen=True)
@@ -88,8 +91,38 @@ class SubprocessPreviewRunner:
         self._processes: dict[int, subprocess.Popen] = {}
         self._log_paths: dict[int, Path] = {}
         self._log_files: dict[int, object] = {}
+        self._lock = RLock()
+        self._closed = False
+
+    @property
+    def closed(self) -> bool:
+        with self._lock:
+            return self._closed
+
+    @property
+    def has_owned_processes(self) -> bool:
+        with self._lock:
+            return bool(self._processes)
+
+    def close(self) -> None:
+        with self._lock:
+            self._closed = True
+            failures = []
+            for process_id in list(self._processes):
+                try:
+                    self.stop(process_id)
+                except (OSError, subprocess.SubprocessError):
+                    failures.append(process_id)
+            if failures:
+                raise PreviewError(f"Could not stop {len(failures)} owned preview process(es).")
 
     def start(self, command: list[str], cwd: Path) -> PreviewProcess:
+        with self._lock:
+            if self._closed:
+                raise PreviewError("Preview runner is shutting down; restart the API before launching a preview.")
+            return self._start(command, cwd)
+
+    def _start(self, command: list[str], cwd: Path) -> PreviewProcess:
         log_file = tempfile.NamedTemporaryFile(
             mode="w+",
             encoding="utf-8",
@@ -129,20 +162,25 @@ class SubprocessPreviewRunner:
         return PreviewProcess(pid=process.pid, log_path=log_path)
 
     def stop(self, process_id: int) -> None:
-        process = self._processes.pop(process_id, None)
-        try:
+        with self._lock:
+            process = self._processes.get(process_id)
             if process is not None:
                 _stop_preview_process(process)
-        finally:
+                self._processes.pop(process_id, None)
             self._close_log_file(process_id)
 
     def diagnostics(self, process_id: int) -> PreviewProcessDiagnostics:
+        with self._lock:
+            return self._diagnostics(process_id)
+
+    def _diagnostics(self, process_id: int) -> PreviewProcessDiagnostics:
         process = self._processes.get(process_id)
         self._flush_log_file(process_id)
         log_path = self._log_paths.get(process_id)
         if process is None:
             return PreviewProcessDiagnostics(
                 running=False,
+                tracked=False,
                 output_tail=_read_log_tail(log_path),
                 log_path=log_path,
             )
@@ -213,6 +251,16 @@ class PreviewService:
         self.health_attempts = health_attempts
         self.health_interval_seconds = health_interval_seconds
 
+    def startup(self) -> None:
+        if isinstance(self.process_runner, SubprocessPreviewRunner) and self.process_runner.closed:
+            if self.process_runner.has_owned_processes:
+                raise PreviewError("Previous preview process cleanup is incomplete.")
+            self.process_runner = SubprocessPreviewRunner()
+
+    def shutdown(self) -> None:
+        if isinstance(self.process_runner, SubprocessPreviewRunner):
+            self.process_runner.close()
+
     def start_task_run_preview(self, db: DbSession, task_run_id: str) -> StoredPreviewArtifact:
         task_run = db.get(TaskRun, task_run_id)
         if task_run is None:
@@ -255,6 +303,14 @@ class PreviewService:
             task_run,
             logs=_preview_evidence_logs(health_status, diagnostics),
         )
+        from app.user_edit_fences import user_revision_after_run
+
+        user_revision = user_revision_after_run(db, task_run)
+        if user_revision:
+            provider_evidence = {
+                "actor": "user", "userEditId": user_revision.id,
+                "sourceTaskRunId": task_run.id, "validation": "preview_process_health_only",
+            }
 
         artifact = Artifact(
             task_run_id=task_run.id,
@@ -420,10 +476,11 @@ class PreviewService:
         checked_at = utc_now()
         diagnostics = self.process_runner.diagnostics(preview.process_id)
         if not diagnostics.running:
-            self.process_runner.stop(preview.process_id)
+            if diagnostics.tracked:
+                self.process_runner.stop(preview.process_id)
             preview.process_id = None
             preview.health_status = "unhealthy"
-            preview.status_reason = _preview_failure_reason(diagnostics)
+            preview.status_reason = _preview_failure_reason(diagnostics, startup=False)
             preview.last_checked_at = checked_at
             preview.updated_at = checked_at
             artifact.status = "failed"
@@ -629,9 +686,17 @@ def _is_codex_bundled_runtime_path(path: str) -> bool:
 
 
 def reserve_preview_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
+    # Windows can allocate low ephemeral ports such as Chromium-blocked 1719.
+    # Bind high candidates directly; the host's ephemeral range may stay low.
+    for _ in range(64):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            port = 16384 + secrets.randbelow(65536 - 16384)
+            try:
+                sock.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+            return port
+    raise PreviewError("Could not allocate a browser-compatible local preview port; retry the preview.")
 
 
 def _read_log_tail(log_path: Optional[Path], limit: int = 2000) -> str:
@@ -643,11 +708,14 @@ def _read_log_tail(log_path: Optional[Path], limit: int = 2000) -> str:
         return ""
 
 
-def _preview_failure_reason(diagnostics: PreviewProcessDiagnostics) -> str:
+def _preview_failure_reason(diagnostics: PreviewProcessDiagnostics, *, startup: bool = True) -> str:
+    if not diagnostics.tracked:
+        return "Preview process ownership is unavailable after API restart. The old process cannot be verified or stopped by this instance; explicitly restart the preview."
+    phase = " before becoming healthy" if startup else ""
     if diagnostics.exit_code is not None:
-        base = f"Preview process exited before becoming healthy (exit code {diagnostics.exit_code})."
+        base = f"Preview process exited{phase} (exit code {diagnostics.exit_code})."
     elif not diagnostics.running:
-        base = "Preview process exited before becoming healthy."
+        base = f"Preview process exited{phase}."
     else:
         base = "Preview did not respond to the health check."
     output = _compact_log_excerpt(diagnostics.output_tail)
@@ -669,6 +737,7 @@ def _preview_evidence_logs(
 
 def _diagnostics_metadata(diagnostics: PreviewProcessDiagnostics) -> dict[str, object]:
     return {
+        "tracked": diagnostics.tracked,
         "running": diagnostics.running,
         "exitCode": diagnostics.exit_code,
         "outputTail": _compact_log_excerpt(diagnostics.output_tail),
@@ -736,6 +805,11 @@ def _target_root_for_preview(target: TargetProject, task_run: TaskRun) -> Path:
 
 
 def _ensure_preview_prerequisites(db: DbSession, task_run: TaskRun) -> None:
+    from app.user_edit_fences import pending_user_edit
+
+    owner = db.get(Task, task_run.task_id)
+    if owner and pending_user_edit(db, owner.session_id):
+        raise PreviewError("Resolve the interrupted user edit before starting a preview.")
     from app.dag_integration import IntegrationError, delivery_worktree_path
 
     try:

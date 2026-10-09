@@ -1,0 +1,41 @@
+{
+  "sessionId": "ac5dccd4-55ed-4c4a-b0be-bd33ff94636d",
+  "storedSession": {
+    "id": "ac5dccd4-55ed-4c4a-b0be-bd33ff94636d",
+    "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+    "title": "会话整理原生执行验收",
+    "sessionType": "demo",
+    "boundBranch": "main",
+    "worktreePath": "X:\\Git_Clone\\AgentHub\\.worktrees\\275e5741-c9eb-4dd1-b827-97cdc814d96e\\ac5dccd4-55ed-4c4a-b0be-bd33ff94636d",
+    "activeFrontendTargetId": null,
+    "activeBackendTargetId": null,
+    "memorySnapshotId": "44461818-fc66-4cd2-b9a9-4e0db27975c4",
+    "status": "active",
+    "pinnedAt": "2026-10-08T05:55:48.069867",
+    "archivedAt": "2026-10-08T05:55:48.136867",
+    "lastMessageAt": "2026-10-08T05:25:18.739767",
+    "createdAt": "2026-10-08T05:23:32.854299",
+    "updatedAt": "2026-10-08T05:23:54.684481"
+  },
+  "pinnedMessage": {
+    "id": "0da1a27e-a8c2-4b5f-bfce-06682c5474e3",
+    "sessionId": "ac5dccd4-55ed-4c4a-b0be-bd33ff94636d",
+    "senderType": "user",
+    "senderId": null,
+    "contentMd": "@native-group-20261008 @claude-code-20261008 @claude-review-20261008 for demo app, change the existing button text in apps/demo/src/App.tsx to Organization Native 20261008. Frontend only edits that file; reviewer independently reads it without writing or running tests; coordinator summarizes actual completion.",
+    "messageKind": "chat",
+    "parentMessageId": null,
+    "streamState": "complete",
+    "createdAt": "2026-10-08T05:23:33.152300",
+    "pinnedAt": "2026-10-08T05:55:47.738868",
+    "groupSummary": null
+  },
+  "checks": [
+    "explicit archived URL and archive tab",
+    "key-message pin/unpin/jump",
+    "browser restore/rearchive and session pin/unpin",
+    "pinned row before recents",
+    "reload persists backend metadata",
+    "desktop dark and narrow actions remain available without horizontal overflow or nested buttons"
+  ]
+}

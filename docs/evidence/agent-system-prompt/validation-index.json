@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-07",
+  "change": "agenthub-agent-system-prompt",
+  "task": "1.1",
+  "verification": {
+    "api": {
+      "passed": 1465,
+      "skipped": 1,
+      "scope": "full post-change API suite",
+      "seconds": 441.65
+    },
+    "web": {
+      "passed": 160,
+      "files": 18
+    },
+    "projectCheck": "passed",
+    "strictOpenSpec": "passed",
+    "diffWhitespace": "passed",
+    "realProvider": "codex",
+    "temporaryRuntimeOverrideRestored": true,
+    "gitCommitOrPush": false
+  },
+  "files": [
+    {
+      "name": "real-run.png",
+      "sha256": "3b84c286d4daa014762037b40b79c5f6dc6322dbfc92a6a5bbed0e8c68934df3"
+    },
+    {
+      "name": "runtime.json",
+      "sha256": "055f4fda086e7c11de14dad3bed71df20b13de2ae495ff4b53b7c1048248a501"
+    },
+    {
+      "name": "settings.png",
+      "sha256": "330dce76c0d095c4e03809f00a9cc80677cc1c5919f663c1734e126c81ac9fec"
+    }
+  ]
+}

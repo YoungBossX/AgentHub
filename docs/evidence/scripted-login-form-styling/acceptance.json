@@ -1,0 +1,874 @@
+{
+  "checks": [
+    "direct login: real computed form spacing, label/font/full-width fields, keyboard focus/autocomplete and 1440/390/320px without overflow",
+    "direct copy: real computed form spacing, label/font/full-width fields, keyboard focus/autocomplete and 390px without overflow",
+    "direct: UI message -> failed Codex -> UI explicit ScriptedMock recovery -> matching real login Diff/healthy iframe; same-Session button-only change",
+    "group login: real computed form spacing, label/font/full-width fields, keyboard focus/autocomplete and 1440/390/320px without overflow",
+    "group copy: real computed form spacing, label/font/full-width fields, keyboard focus/autocomplete and 390px without overflow",
+    "group: UI message -> failed Codex -> UI explicit ScriptedMock recovery -> matching real login Diff/healthy iframe; same-Session button-only change",
+    "orchestrator login: real computed form spacing, label/font/full-width fields, keyboard focus/autocomplete and 1440/390/320px without overflow",
+    "orchestrator copy: real computed form spacing, label/font/full-width fields, keyboard focus/autocomplete and 390px without overflow",
+    "orchestrator: UI message -> failed Codex -> UI explicit ScriptedMock recovery -> matching real login Diff/healthy iframe; same-Session button-only change",
+    "All three routes reject unsupported OAuth compound fallback without source changes or Diff",
+    "API/Web restart preserves all three full Session/Message/TaskRun histories; explicit real Preview recovery matches group source",
+    "Separate existing API8006, accepted history and native-written source unchanged"
+  ],
+  "routes": [
+    {
+      "route": "direct",
+      "sessionId": "02c40c30-ab0e-4eec-b714-b684061fe83f",
+      "loginTaskId": "da0b0889-24f4-43d6-9655-24307e3055eb",
+      "failedRunId": "7b90bd37-2d61-4cc4-8665-2a554966f8ee",
+      "errorCode": "CODEX_DEMO_FORCED_FAILURE",
+      "scriptedRunId": "f40d1f7d-fc6a-47af-ae8e-bdba033f494c",
+      "followupTaskId": "08791d07-7219-4a0c-a47b-19a3f05d8f37",
+      "followupRunId": "75afc94f-a455-499f-9056-164454ab27ce",
+      "firstPreviewId": "14862394-bc2a-4dba-880b-31b1e9c36777",
+      "finalPreviewId": "5553747d-2115-4861-a679-0ff798cf7b44",
+      "diffIds": [
+        "b04ed9e4-b625-4b21-a509-fd34f461b76a"
+      ],
+      "followupDiffIds": [
+        "0ff61acb-bb73-48d4-9127-340c5065795a"
+      ],
+      "sourceSha256": "3671e26c2ff7720c0838cf033bdd27c2d582f9f3f8069a80b1125404fdede940",
+      "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb",
+      "failedHistorySha256": "d0af38d77ddef6431f222ab4d1d65a819608bebfbe57f9531912dad5939b4cb6",
+      "liveDiagnosticsChanged": [
+        "targetLock"
+      ]
+    },
+    {
+      "route": "group",
+      "sessionId": "9a668eb0-71d9-4c81-92d8-6fe505a99d51",
+      "loginTaskId": "97098c4c-493f-4d9d-ae63-533e6b532fe0",
+      "failedRunId": "51780060-ca49-4cee-920d-8f66f1f9c831",
+      "errorCode": "PROVIDER_UNAVAILABLE",
+      "scriptedRunId": "6f9b4b5d-2a7e-42a5-aa2c-edc84879fc1c",
+      "followupTaskId": "b53af99e-f82a-470e-9022-95f10d7a51a1",
+      "followupRunId": "6f75f33e-1c74-4742-a160-d2828c776635",
+      "firstPreviewId": "d6b8d9c3-8461-417c-84ca-3fef9e6e297b",
+      "finalPreviewId": "007e894b-5ea8-4e9e-a678-0059a26bc0bc",
+      "diffIds": [
+        "8807ed0f-e026-4586-b0dc-d2f78f962574"
+      ],
+      "followupDiffIds": [
+        "e56eeff5-6500-4402-9c65-11ce10394310"
+      ],
+      "sourceSha256": "d0a916ecab0a2211ddd64ef782f05a27e8317765d853e078a0f78f6d550011fd",
+      "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb",
+      "failedHistorySha256": "53446c6ef512d0851dd91e745b1e3af36e1259f1d9a6f6e6837f8aced5c13466",
+      "liveDiagnosticsChanged": [
+        "targetLock"
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "sessionId": "5e69d337-3fda-4a5c-bae1-fb99a5da73f2",
+      "loginTaskId": "722319ac-9396-4e88-9bda-21aaef5669fc",
+      "failedRunId": "10c5918a-8fdb-4ce1-abde-5917ae5a5f5c",
+      "errorCode": "CODEX_DEMO_FORCED_FAILURE",
+      "scriptedRunId": "e0b40a0d-406b-4f32-80b5-c5a23931134b",
+      "followupTaskId": "2fea61a6-1946-400b-8790-90e0e1979d7d",
+      "followupRunId": "9af8999c-bbfb-4516-b45e-80689adaf50d",
+      "firstPreviewId": "7f7d8bfb-3cf5-4ae3-8c7e-c19992c2662c",
+      "finalPreviewId": "6371e2c9-9f49-413b-b1c5-7f6d5c403009",
+      "diffIds": [
+        "b8b5e7cc-7471-4902-961f-a214ba76aace"
+      ],
+      "followupDiffIds": [
+        "113fe63b-48fc-4621-a3b2-a3ab3f1ed137"
+      ],
+      "sourceSha256": "88d395830998493b6ad444f18e5ca5ef752ee76434bb596ccf2374dac0ba1812",
+      "stylesSha256": "cfff97dace3baa59e59fc471f1bbbfccac7d5101153979c7ea71b84d4199afeb",
+      "failedHistorySha256": "d7dce77ed765f60f6b92215d8eb2d795f9d8793eb78318cdd6c5b082fd30a1ca",
+      "liveDiagnosticsChanged": [
+        "targetLock"
+      ]
+    }
+  ],
+  "boundaries": [
+    "Fresh isolated SQLite; deterministic planner; no model invocation",
+    "Direct/Orchestrator initial failures deliberately simulated; automatic group and follow-up CLI deliberately unavailable",
+    "All recovered writes are explicitly ScriptedMock; independent group review is scripted"
+  ],
+  "formMeasurements": [
+    {
+      "route": "direct",
+      "stage": "login iframe",
+      "width": null,
+      "viewport": 325,
+      "scrollWidth": 325,
+      "bodyScrollWidth": 325,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        }
+      ]
+    },
+    {
+      "route": "direct",
+      "stage": "login",
+      "width": 1440,
+      "viewport": 1440,
+      "scrollWidth": 1440,
+      "bodyScrollWidth": 1440,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 327.203125,
+          "height": 50,
+          "left": 879.796875,
+          "right": 1207,
+          "labelWidth": 327.203125
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 327.203125,
+          "height": 50,
+          "left": 879.796875,
+          "right": 1207,
+          "labelWidth": 327.203125
+        }
+      ]
+    },
+    {
+      "route": "direct",
+      "stage": "login",
+      "width": 390,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "bodyScrollWidth": 390,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        }
+      ]
+    },
+    {
+      "route": "direct",
+      "stage": "login",
+      "width": 320,
+      "viewport": 320,
+      "scrollWidth": 320,
+      "bodyScrollWidth": 320,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 162,
+          "height": 50,
+          "left": 79,
+          "right": 241,
+          "labelWidth": 162
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 162,
+          "height": 50,
+          "left": 79,
+          "right": 241,
+          "labelWidth": 162
+        }
+      ]
+    },
+    {
+      "route": "direct",
+      "stage": "copy iframe",
+      "width": null,
+      "viewport": 325,
+      "scrollWidth": 325,
+      "bodyScrollWidth": 325,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        }
+      ]
+    },
+    {
+      "route": "direct",
+      "stage": "copy",
+      "width": 390,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "bodyScrollWidth": 390,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        }
+      ]
+    },
+    {
+      "route": "group",
+      "stage": "login iframe",
+      "width": null,
+      "viewport": 325,
+      "scrollWidth": 325,
+      "bodyScrollWidth": 325,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        }
+      ]
+    },
+    {
+      "route": "group",
+      "stage": "login",
+      "width": 1440,
+      "viewport": 1440,
+      "scrollWidth": 1440,
+      "bodyScrollWidth": 1440,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 327.203125,
+          "height": 50,
+          "left": 879.796875,
+          "right": 1207,
+          "labelWidth": 327.203125
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 327.203125,
+          "height": 50,
+          "left": 879.796875,
+          "right": 1207,
+          "labelWidth": 327.203125
+        }
+      ]
+    },
+    {
+      "route": "group",
+      "stage": "login",
+      "width": 390,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "bodyScrollWidth": 390,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        }
+      ]
+    },
+    {
+      "route": "group",
+      "stage": "login",
+      "width": 320,
+      "viewport": 320,
+      "scrollWidth": 320,
+      "bodyScrollWidth": 320,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 162,
+          "height": 50,
+          "left": 79,
+          "right": 241,
+          "labelWidth": 162
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 162,
+          "height": 50,
+          "left": 79,
+          "right": 241,
+          "labelWidth": 162
+        }
+      ]
+    },
+    {
+      "route": "group",
+      "stage": "copy iframe",
+      "width": null,
+      "viewport": 325,
+      "scrollWidth": 325,
+      "bodyScrollWidth": 325,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        }
+      ]
+    },
+    {
+      "route": "group",
+      "stage": "copy",
+      "width": 390,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "bodyScrollWidth": 390,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        }
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "stage": "login iframe",
+      "width": null,
+      "viewport": 325,
+      "scrollWidth": 325,
+      "bodyScrollWidth": 325,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        }
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "stage": "login",
+      "width": 1440,
+      "viewport": 1440,
+      "scrollWidth": 1440,
+      "bodyScrollWidth": 1440,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 327.203125,
+          "height": 50,
+          "left": 879.796875,
+          "right": 1207,
+          "labelWidth": 327.203125
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 327.203125,
+          "height": 50,
+          "left": 879.796875,
+          "right": 1207,
+          "labelWidth": 327.203125
+        }
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "stage": "login",
+      "width": 390,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "bodyScrollWidth": 390,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        }
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "stage": "login",
+      "width": 320,
+      "viewport": 320,
+      "scrollWidth": 320,
+      "bodyScrollWidth": 320,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 162,
+          "height": 50,
+          "left": 79,
+          "right": 241,
+          "labelWidth": 162
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 162,
+          "height": 50,
+          "left": 79,
+          "right": 241,
+          "labelWidth": 162
+        }
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "stage": "copy iframe",
+      "width": null,
+      "viewport": 325,
+      "scrollWidth": 325,
+      "bodyScrollWidth": 325,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 167,
+          "height": 50,
+          "left": 79,
+          "right": 246,
+          "labelWidth": 167
+        }
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "stage": "copy",
+      "width": 390,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "bodyScrollWidth": 390,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 232,
+          "height": 50,
+          "left": 79,
+          "right": 311,
+          "labelWidth": 232
+        }
+      ]
+    },
+    {
+      "route": "group",
+      "stage": "restart",
+      "width": null,
+      "viewport": 1280,
+      "scrollWidth": 1280,
+      "bodyScrollWidth": 1280,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 327.203125,
+          "height": 50,
+          "left": 799.796875,
+          "right": 1127,
+          "labelWidth": 327.203125
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 327.203125,
+          "height": 50,
+          "left": 799.796875,
+          "right": 1127,
+          "labelWidth": 327.203125
+        }
+      ]
+    },
+    {
+      "route": "group",
+      "stage": "restart",
+      "width": 320,
+      "viewport": 320,
+      "scrollWidth": 320,
+      "bodyScrollWidth": 320,
+      "display": "grid",
+      "gap": "20px",
+      "labelGap": "8px",
+      "fields": [
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 162,
+          "height": 50,
+          "left": 79,
+          "right": 241,
+          "labelWidth": 162
+        },
+        {
+          "fontSize": "16px",
+          "boxSizing": "border-box",
+          "borderRadius": "6px",
+          "borderWidth": "1px",
+          "minHeight": "48px",
+          "width": 162,
+          "height": 50,
+          "left": 79,
+          "right": 241,
+          "labelWidth": 162
+        }
+      ]
+    }
+  ],
+  "executedSourceSha256": {
+    "apps/api/app/scripted_mock.py": "809c70701632d1b23c327f805e52794be37e7b2264a2c39cec56aa19fdf141df",
+    "apps/api/app/planning.py": "e4f5ce7f27298d08814d2afe7a739057bc333d14eede8c71d3a1769a7037400b",
+    "apps/api/app/planning_intents.py": "a1c2d45ee0d4fb5e1381cf40c0d56cab923728d2e8f369614d4dd95283d4ffb4",
+    "apps/api/app/planning_tasks.py": "918daf358e15226b4726e39453294561c9ff9300ecd1b7a10721ae74cffedadd",
+    "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28"
+  },
+  "acceptanceScriptSha256": "9a218cec5921c2624d65b3d6cea401120efe635ade7b1769d05ab7edc45f9883",
+  "negative": [
+    {
+      "mentions": "@frontend",
+      "sessionId": "13ef9158-adb6-429a-91df-c5dd19d4f0f6",
+      "failedFallbackId": "a31f19bb-aba2-4905-a662-638bd2184b2b",
+      "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+      "sourceSha256": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297"
+    },
+    {
+      "mentions": "@frontend @qa",
+      "sessionId": "4896f6c5-0371-49dd-b78f-3d65229061e1",
+      "failedFallbackId": "396466d3-b385-4640-b4c2-f367d8bd5754",
+      "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+      "sourceSha256": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297"
+    },
+    {
+      "mentions": "@orchestrator",
+      "sessionId": "a8441e20-fe18-4a42-920e-9565a469889d",
+      "failedFallbackId": "517df7b6-b139-4063-b49c-07e18016967e",
+      "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+      "sourceSha256": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297"
+    }
+  ],
+  "recoveredPreviewId": "dfeb6f24-60e6-4619-9346-23364111251d",
+  "historySha256Before": "8caac9f45d42fd4a303795a323a171837fdffe3c8ae4bc1af99b06bf601dc8af",
+  "historySha256After": "8caac9f45d42fd4a303795a323a171837fdffe3c8ae4bc1af99b06bf601dc8af",
+  "browserErrors": [],
+  "existingSessionSha256": "c8ecf6b8257c68b2c2d6162c50a3a6d0abfdde852f72bf436687a1292b735201",
+  "existingSourceSha256": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5"
+}

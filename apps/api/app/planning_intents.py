@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
@@ -56,6 +56,24 @@ LAYOUT_COPY_PATTERN = re.compile(
     r"(?P<value>.+)",
     re.IGNORECASE,
 )
+DEMO_LOGIN_CREATION_PATTERN = re.compile(
+    r"(?:please\s+)?(?:build|create|implement|make|add)\s+"
+    r"(?:(?:a|the|simple|demo)\s+)*(?:login|sign[- ]in)\s+(?:page|form)\s+"
+    r"(?:for|in)\s+(?:the\s+)?(?:demo app|current demo|apps/demo)|"
+    r"(?:请)?(?:为|在)(?:当前\s*demo|演示应用|apps/demo)\s*(?:中|里)?\s*"
+    r"(?:构建|创建|实现|添加|新增|做)(?:一个|一张)?(?:登录页面?|登录表单)|"
+    r"(?:请)?(?:构建|创建|实现|添加|新增|做)(?:一个|一张)?(?:登录页面?|登录表单)"
+    r"(?:用于|为)(?:当前\s*demo|演示应用|apps/demo)",
+    re.IGNORECASE,
+)
+DEMO_LOGIN_PROCESS_NOTE_PATTERN = re.compile(
+    r"(?:请)?用(?:简洁)?中文总结|"
+    r"(?:代码改动必须)?更新\s+docs/change-log\.md(?:\s+并运行项目验证)?|"
+    r"(?:请)?运行项目验证|"
+    r"(?:please\s+)?summarize\s+in\s+(?:concise\s+)?Chinese|"
+    r"(?:please\s+)?run\s+project\s+checks",
+    re.IGNORECASE,
+)
 
 
 class MentionParseError(ValueError):
@@ -67,6 +85,7 @@ class MentionParseError(ValueError):
 
 class ParsedMentions:
     roles: list[str]
+    profile_ids: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -97,10 +116,27 @@ class AppContractIntent:
     summary: str
 
 
-def parse_mentions(db: DbSession, content: str) -> ParsedMentions:
+def parse_mentions(db: DbSession, content: str, workspace_id: str | None = None) -> ParsedMentions:
+    from app.custom_agents import CustomAgentError, custom_agent_mentions
+
     roles: list[str] = []
+    profile_ids: dict[str, str] = {}
+    selected_actors: dict[str, str] = {}
+    try:
+        custom = custom_agent_mentions(db, workspace_id, content) if workspace_id else {}
+    except CustomAgentError as exc:
+        raise MentionParseError(str(exc)) from exc
+    aliases = {profile.mention_alias: profile for profile in custom.values()}
     for raw_role in MENTION_PATTERN.findall(content):
         role = raw_role.lower()
+        profile = aliases.get(role)
+        if profile is not None:
+            role = profile.role
+            profile_ids[role] = profile.id
+        actor = profile.id if profile is not None else role
+        if role in selected_actors and selected_actors[role] != actor:
+            raise MentionParseError(f"Multiple Agents for role {role} are ambiguous; select one alias per role.")
+        selected_actors[role] = actor
         mention = f"@{raw_role}"
         if role not in SUPPORTED_MENTION_ROLES:
             raise MentionParseError(f"Unknown mention {mention}. Supported mentions are @orchestrator, @frontend, @backend, @qa, and @review.")
@@ -113,10 +149,12 @@ def parse_mentions(db: DbSession, content: str) -> ParsedMentions:
         if role not in roles:
             roles.append(role)
 
-    return ParsedMentions(roles=roles)
+    return ParsedMentions(roles=roles, profile_ids=profile_ids)
 
 
-def parse_frontend_intent(content: str) -> Optional[FrontendIntent]:
+def parse_frontend_intent(
+    content: str, *, include_login_creation: bool = False,
+) -> Optional[FrontendIntent]:
     followup = parse_followup_change(content)
     if followup is not None:
         target_label = (
@@ -128,7 +166,9 @@ def parse_frontend_intent(content: str) -> Optional[FrontendIntent]:
             intent="copy_change",
             target=followup.target,
             target_text=followup.target_text,
-            files=["apps/demo/src/App.tsx"],
+            # Existing styled login output stays dirty in the Session worktree.
+            # Include its stylesheet as context; copy mutations still edit App only.
+            files=["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
             summary=f"Change only the {target_label}.",
         )
 
@@ -183,6 +223,22 @@ def parse_frontend_intent(content: str) -> Optional[FrontendIntent]:
                 files=["apps/demo/src/App.tsx"],
                 summary="Adjust a small layout copy block without broader layout changes.",
             )
+
+    # Direct/group assignments opt in; Orchestrator retains its existing
+    # three-step creation plan and active/external-target routing.
+    creation_clauses = re.split(r"[;；,，]", normalized.rstrip(".!。！ ").strip())
+    if (
+        include_login_creation
+        and DEMO_LOGIN_CREATION_PATTERN.fullmatch(creation_clauses[0].strip())
+        and all(DEMO_LOGIN_PROCESS_NOTE_PATTERN.fullmatch(clause.strip()) for clause in creation_clauses[1:])
+    ):
+        return FrontendIntent(
+            intent="login_page_creation",
+            target="login_page",
+            target_text="",
+            files=["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+            summary="Create the built-in demo login form.",
+        )
 
     return None
 

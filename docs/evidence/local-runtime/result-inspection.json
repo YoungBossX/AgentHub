@@ -1,0 +1,76 @@
+{
+  "sessionId": "ae8d7c9b-5e5c-44bc-a2e9-705af9715c9a",
+  "runId": "3ed4caed-378e-4440-8670-47b54b849719",
+  "checks": [
+    "fixed role metadata matches assigned roles",
+    "generated task breakdown role labels present",
+    "actual Diff inspector renders email input patch",
+    "expanded Preview inspector renders actual login form",
+    "browser creates backend mock deployment card; no online deployment"
+  ],
+  "taskRoles": [
+    {
+      "taskId": "7033c2fa-5f1f-47ee-8cc8-fd74845c0ac2",
+      "role": "orchestrator",
+      "graphRoles": [
+        "orchestrator",
+        "frontend",
+        "qa"
+      ]
+    },
+    {
+      "taskId": "519acc69-ccc3-4e44-84a0-9c2210802201",
+      "role": "frontend",
+      "graphRoles": [
+        "orchestrator",
+        "frontend",
+        "qa"
+      ]
+    },
+    {
+      "taskId": "bc675582-9efc-49d3-b441-cefb2125056f",
+      "role": "qa",
+      "graphRoles": [
+        "orchestrator",
+        "frontend",
+        "qa"
+      ]
+    }
+  ],
+  "deployments": [
+    {
+      "id": "c366f2ba-40e8-43b5-a121-4640c2a18e6a",
+      "artifactId": "405e1994-c111-490a-b46a-a6e4939a8042",
+      "taskRunId": "3ed4caed-378e-4440-8670-47b54b849719",
+      "artifactType": "deployment",
+      "title": "Mock deploy",
+      "status": "ready",
+      "provider": "mock",
+      "environment": "preview",
+      "commitSha": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+      "url": "https://mock.agenthub.local/deployments/c366f2ba-40e8-43b5-a121-4640c2a18e6a",
+      "deployLogUri": "mock://deployments/c366f2ba-40e8-43b5-a121-4640c2a18e6a/logs",
+      "providerType": "mock",
+      "targetId": "demo-frontend",
+      "sourcePreviewId": "ecc5b346-e158-4fc5-be6f-4d1bf1a6ce59",
+      "sourceDiffArtifactId": "2c451934-df26-4c02-acde-46d491774f0c",
+      "sourceReviewArtifactId": "ff722ed8-1d8e-4db1-8ce5-8ff661d56ea5",
+      "logs": [
+        "Mock deploy accepted healthy preview ecc5b346-e158-4fc5-be6f-4d1bf1a6ce59.",
+        "Source TaskRun 3ed4caed-378e-4440-8670-47b54b849719 was completed."
+      ],
+      "statusHistory": [
+        {
+          "status": "queued",
+          "message": "Mock deploy request queued."
+        },
+        {
+          "status": "ready",
+          "message": "Mock deployment is ready."
+        }
+      ],
+      "createdAt": "2026-10-07T15:27:46.343433",
+      "updatedAt": "2026-10-07T15:27:46.343433"
+    }
+  ]
+}

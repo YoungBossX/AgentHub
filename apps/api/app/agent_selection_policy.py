@@ -29,7 +29,7 @@ class AgentSelectionDecision:
     safe_for_review: bool
 
     def to_metadata(self) -> dict[str, Any]:
-        return {
+        metadata = {
             "role": self.profile.role,
             "targetId": self.target_id,
             "requiredMode": self.required_mode,
@@ -37,6 +37,17 @@ class AgentSelectionDecision:
             "safeForWrite": self.safe_for_write,
             "safeForReview": self.safe_for_review,
         }
+        if self.profile.origin == "custom":
+            metadata["customProfile"] = {
+                "id": self.profile.id, "displayName": self.profile.display_name,
+                "mentionAlias": self.profile.mention_alias, "role": self.profile.role,
+                "providerId": self.profile.provider_id, "adapterType": self.profile.adapter_type,
+                "toolPolicy": self.profile.tool_policy,
+                "supportedTargets": self.profile.supported_targets,
+                "supportedModes": self.profile.supported_modes,
+                "capabilityTags": self.profile.capability_tags,
+            }
+        return metadata
 
 
 def validate_agent_selection(
@@ -45,6 +56,7 @@ def validate_agent_selection(
     agent: Agent,
     *,
     explicit_adapter_type: Optional[str] = None,
+    selected_profile: Optional[AgentProfile] = None,
 ) -> AgentSelectionDecision:
     plan = _json_dict(task.plan_json)
     profile_agent = _effective_agent_for_selection(
@@ -54,8 +66,14 @@ def validate_agent_selection(
         plan=plan,
         explicit_adapter_type=explicit_adapter_type,
     )
-    profile = profile_for_agent(profile_agent)
+    profile = selected_profile or profile_for_agent(profile_agent)
+    if selected_profile is not None and profile.status != "available":
+        raise AgentSelectionError("Selected custom Agent profile is disabled.")
     target_id = _target_id_for_plan(plan)
+    if selected_profile is not None and target_id is None:
+        from app.scheduler import target_id_for_task
+
+        target_id = target_id_for_task(task, db)
     required_mode = _required_mode_for_task(task, plan)
     required_capabilities = _required_capabilities_for_task(task, plan)
     validate_capability_tags(required_capabilities, source=f"Task:{task.id}")

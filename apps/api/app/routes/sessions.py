@@ -1,4 +1,7 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, update
 from sqlmodel import Session as DbSession
 
 from app.dependencies import get_db, get_worktree_service
@@ -22,6 +25,7 @@ from app.schemas import (
     SessionResponse,
     SessionTargetSelectionRequest,
     SessionUpdateRequest,
+    SessionOrganizationRequest,
 )
 from app.target_registry import TargetRegistryError, get_target_for_workspace
 from app.worktrees import WorktreeError, WorktreeService
@@ -35,11 +39,12 @@ router = APIRouter()
 )
 def read_workspace_sessions(
     workspace_id: str,
+    view: Literal["active", "archived", "all"] = "active",
     db: DbSession = Depends(get_db),
 ) -> list[AgentHubSession]:
     if get_workspace(db, workspace_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
-    return list_workspace_sessions(db, workspace_id)
+    return list_workspace_sessions(db, workspace_id, view=view)
 
 
 @router.post(
@@ -132,6 +137,23 @@ def update_session(
         session.status = request.status
 
     return persist_session(db, session)
+
+
+@router.patch("/sessions/{session_id}/organization", response_model=SessionResponse)
+def organize_session(session_id: str, request: SessionOrganizationRequest, db: DbSession = Depends(get_db)) -> AgentHubSession:
+    session = get_session(db, session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    now = utc_now()
+    changes = {}
+    for field, column in [("pinned", AgentHubSession.pinned_at), ("archived", AgentHubSession.archived_at)]:
+        if field in request.model_fields_set:
+            changes[column.key] = func.coalesce(column, now) if getattr(request, field) else None
+    # Column updates avoid overwriting a concurrent execution or organization edit.
+    db.execute(update(AgentHubSession).where(AgentHubSession.id == session_id).values(**changes).execution_options(synchronize_session=False))
+    db.commit()
+    db.refresh(session)
+    return session
 
 
 @router.patch("/sessions/{session_id}/target-selection", response_model=SessionResponse)

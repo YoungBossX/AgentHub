@@ -148,7 +148,6 @@ export function useTaskArtifactActions({
       )
       const shouldRestartSelectedPreview =
         selectedPreview?.taskRunId === taskRunId &&
-        selectedPreview.healthStatus !== "healthy" &&
         !hasHealthyPreview
       const latestPreview = shouldRestartSelectedPreview
         ? await startTaskRunPreview(backendUrl, taskRunId)

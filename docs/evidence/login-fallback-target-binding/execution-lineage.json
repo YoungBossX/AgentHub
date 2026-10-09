@@ -1,0 +1,142 @@
+{
+  "scope": "new task binding; actual ScriptedMock only",
+  "routes": [
+    {
+      "route": "direct",
+      "sessionId": "4efe70ea-875d-4f1f-a0de-369239de18bf",
+      "taskId": "a1943c78-7f98-488f-ba94-54c74828ac5d",
+      "target": "login_page",
+      "targetId": "demo-frontend",
+      "safeTarget": "apps/demo/src",
+      "originalRequest": "@frontend build a login page for the demo app; please run project checks",
+      "sourceSha256": "d4dd29495987db626c21a4bbf533d69ad2345e30752e06eb4aef70f65e583bc6",
+      "failedRunId": "391df9fb-0b82-48f3-a486-75ca7967a4d0",
+      "failedErrorCode": "CODEX_DEMO_FORCED_FAILURE",
+      "runs": [
+        {
+          "runId": "a422e0a9-b528-4563-a8c3-7113e192af81",
+          "state": "completed",
+          "fallbackFromRunId": "391df9fb-0b82-48f3-a486-75ca7967a4d0",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "cedf3761-6c76-4455-9253-c357ea71fa0a",
+          "diffSha256": "4cc952536657f8c39be42efacf756888085ca6795778d363f769c796f4034ca8",
+          "changedFiles": [
+            "apps/demo/src/App.tsx"
+          ]
+        },
+        {
+          "runId": "b52eb658-793a-475e-a597-cf0e3acc09b6",
+          "state": "completed",
+          "fallbackFromRunId": "fdd56c0a-e687-498b-b8b5-f1218fe163bf",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "b8b31004-5616-4feb-86b1-a8a3cafe66ef",
+          "diffSha256": "0ce6e434d82556cb608547473131b0550023642554b957e7b90d18943d7cca8d",
+          "changedFiles": [
+            "apps/demo/src/App.tsx"
+          ]
+        }
+      ],
+      "independentReviews": []
+    },
+    {
+      "route": "group",
+      "sessionId": "e4757e21-fa23-4dbd-910e-d193db6ca170",
+      "taskId": "61acb0a1-5bab-424f-a222-509f39aec066",
+      "target": "login_page",
+      "targetId": "demo-frontend",
+      "safeTarget": "apps/demo/src",
+      "originalRequest": "@frontend @qa build a login page for the demo app",
+      "sourceSha256": "8fcb0b32ec12b565e1f5a61ca5576623bf27b027f3a9ccbec04a2ad311164226",
+      "failedRunId": "57ce4ca9-e5d6-4e02-a276-dcf927220a74",
+      "failedErrorCode": "PROVIDER_UNAVAILABLE",
+      "runs": [
+        {
+          "runId": "86071df1-ad1f-48c3-93b6-ce19dc5811fa",
+          "state": "completed",
+          "fallbackFromRunId": "57ce4ca9-e5d6-4e02-a276-dcf927220a74",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "d7a5d4cc-4ae4-4c1c-a911-c150c7c587dc",
+          "diffSha256": "4cc952536657f8c39be42efacf756888085ca6795778d363f769c796f4034ca8",
+          "changedFiles": [
+            "apps/demo/src/App.tsx"
+          ]
+        },
+        {
+          "runId": "588cb978-e643-4983-91b9-56563b6ebfa5",
+          "state": "completed",
+          "fallbackFromRunId": "7a52e464-90fc-453f-b3aa-be992b69acf7",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "23ff58aa-ddf4-4549-84e4-8914d60e02e1",
+          "diffSha256": "27f7aa632222ccc62b3e2aa4d3e202d334b79fa4cc6cbe3d54e48d3d1cee8635",
+          "changedFiles": [
+            "apps/demo/src/App.tsx"
+          ]
+        }
+      ],
+      "independentReviews": [
+        {
+          "runId": "da115b97-364f-4ae9-b72c-be5b63a930d8",
+          "state": "completed",
+          "accessMode": "readonly",
+          "targetLockKey": null,
+          "artifactId": "ec275c1b-cbb0-42db-90ee-2fb0b72cc464",
+          "artifactStatus": "passed",
+          "source": "scripted_mock"
+        },
+        {
+          "runId": "8cb16676-6aac-482c-b857-b82a2fb0d1b3",
+          "state": "completed",
+          "accessMode": "readonly",
+          "targetLockKey": null,
+          "artifactId": "19d3fbe6-84d5-46fc-a58e-5f3511d91e9e",
+          "artifactStatus": "passed",
+          "source": "scripted_mock"
+        }
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "sessionId": "713c9ed3-d447-4270-98ce-44f10ab794bb",
+      "taskId": "dbd6262e-7114-45a5-82fa-df39f906e2c2",
+      "target": "login_page",
+      "targetId": "demo-frontend",
+      "safeTarget": "apps/demo/src",
+      "originalRequest": "@orchestrator 为演示应用创建登录页",
+      "sourceSha256": "a44878715613bb6927fc06755aaf0b2b3a884e7f18b3a8cda0c43e1a16a48ffb",
+      "failedRunId": "307fcc59-01bf-40a8-8d9e-d86fc6f2027f",
+      "failedErrorCode": "CODEX_DEMO_FORCED_FAILURE",
+      "runs": [
+        {
+          "runId": "d535f4e2-7d1b-4f46-9b91-589d604a5e35",
+          "state": "completed",
+          "fallbackFromRunId": "307fcc59-01bf-40a8-8d9e-d86fc6f2027f",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "77ebfacf-777d-46f3-be16-c6ea309cc8a6",
+          "diffSha256": "4cc952536657f8c39be42efacf756888085ca6795778d363f769c796f4034ca8",
+          "changedFiles": [
+            "apps/demo/src/App.tsx"
+          ]
+        },
+        {
+          "runId": "8db83654-2308-4adf-8640-39b5502e0364",
+          "state": "completed",
+          "fallbackFromRunId": "5160aef4-d67d-47cd-bc3a-b279f87f53fb",
+          "scopeStatus": "passed",
+          "completionStatus": "passed",
+          "diffId": "e42a36a7-e0b6-41c6-98b6-da8828ac595f",
+          "diffSha256": "d5f1d1567580fd8c629808986000bea69f2801598cc7e8c036829e4ca8ea7b39",
+          "changedFiles": [
+            "apps/demo/src/App.tsx"
+          ]
+        }
+      ],
+      "independentReviews": []
+    }
+  ],
+  "boundary": "Diff artifacts are cumulative Session changes; exact button-only behavior is checked against source before/after in acceptance"
+}

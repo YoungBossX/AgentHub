@@ -7,14 +7,17 @@
   },
   "scripts": {
     "dev": "pnpm --parallel dev",
+    "dev:local": "node scripts/local-dev.mjs",
+    "doctor:local": "node scripts/local-dev.mjs --doctor",
+    "test:local": "node --test scripts/local-dev.test.mjs scripts/dependency-security.test.mjs",
     "dev:web": "pnpm --filter @agenthub/web dev",
     "dev:api": "bash scripts/dev-api.sh",
-    "check": "pnpm check:web && pnpm check:api && pnpm check:demo && pnpm check:demo-api",
+    "check": "node --check scripts/local-dev.mjs && pnpm check:web && pnpm check:api && pnpm check:demo && pnpm check:demo-api",
     "check:web": "pnpm --filter @agenthub/web check",
     "check:api": "bash scripts/check-api.sh",
     "check:demo": "pnpm --filter @agenthub/demo check",
     "check:demo-api": "bash scripts/check-demo-api.sh",
-    "test": "pnpm test:web && pnpm test:api && pnpm demo:api:test",
+    "test": "pnpm test:local && pnpm test:web && pnpm test:api && pnpm demo:api:test",
     "test:web": "pnpm --filter @agenthub/web test",
     "test:api": "bash scripts/test-api.sh",
     "db:init": "bash scripts/init-db.sh",
@@ -32,12 +35,20 @@
     "overrides": {
       "@babel/core": "7.29.6",
       "@vitest/mocker@4.1.11>vite": "8.0.16",
-      "brace-expansion@5.0.6": "5.0.9",
+      "baseline-browser-mapping@<2.11.0": "2.11.0",
+      "brace-expansion@>=1.0.0 <1.1.21": "1.1.21",
+      "brace-expansion@>=5.0.0 <5.0.12": "5.0.12",
       "browserslist@<=4.28.6": "4.28.7",
-      "dompurify": "3.4.13",
+      "dompurify": "3.4.16",
       "nanoid@3.3.12": "3.3.18",
       "postcss@8.5.14": "8.5.26",
+      "sharp@>=0.35.0 <0.35.5": "0.35.5",
+      "source-map-js@>=1.0.0 <1.2.2": "1.2.2",
       "vitest@4.1.11>vite": "8.0.16"
+    },
+    "patchedDependencies": {
+      "braces@3.0.3": "patches/braces@3.0.3.patch",
+      "monaco-editor@0.56.0": "patches/monaco-editor@0.56.0.patch"
     }
   }
 }

@@ -1,0 +1,60 @@
+{
+  "status": "verified",
+  "task": "agenthub-group-auto-execution 1.1",
+  "runtimeSessionId": "21afb96a-37c3-47b5-8f39-8d5f5d8d1984",
+  "checks": [
+    "fresh real native planning/coding/review",
+    "actual file and report hashes",
+    "browser/reload",
+    "startup continuation",
+    "SSE history"
+  ],
+  "codeSha256": {
+    "apps/api/app/group_execution.py": "218a13753da837cf89ad3afe1cc61c840b6291cc155538e58d49532e000c7a63",
+    "apps/api/app/group_planning.py": "5e77942a170446a2025af571edd7e0058c367d4cbe23d53782a8118f46dfa40c",
+    "apps/api/app/main.py": "5a4ff39e2d3d0eae9937504e79d6f9053d4e07f0072028f5358865f6ad0162c7",
+    "apps/api/app/routes/messages.py": "6b4b206e42aa73073d46a736fcbd6c4367c093d31cdb39439ae34b1af3743d7c",
+    "apps/api/app/run_engine.py": "88ebdde981b24a6ecdb4aab3745c267afee75dea69146104f030645e1ab03e05",
+    "apps/api/app/task_runs.py": "4de400569677022f2b1ffd6d81079c978d590b70b778c39920a7acabb5ff7777",
+    "apps/api/app/native_reviews.py": "126a04676a5af5b8a448c67f9b55fa3bb310c7ee1f3825c7d333cdadddfc6811",
+    "apps/api/tests/test_group_auto_execution.py": "541ec94a35cafccb174f545ad8e213d32e3df30f155d5202b81d2d61f08378d8",
+    "apps/api/tests/test_group_planning.py": "aaadb4dbdf0a96599da4f18c876968e9d86684475cadc7d36329c924753f0259",
+    "apps/api/tests/test_native_review_artifacts.py": "d85ba36737c654ba1ca00b583e2ea7ff71238bc667a4273570aee3d24714db11"
+  },
+  "evidenceSha256": {
+    "api-tests.txt": "871f1d2c7c47583c4e731d48a3c65e2403401b87d879adac0c7cbc36e3e4bdcc",
+    "browser.json": "275531b071265397717b63f90869d42b9c096b214ae84fc69b7b3cf919992fb9",
+    "chat.png": "2bd71ea531d1f9a2544c491c5f64c49c3a443be5ef4f8a08ad8650ce3febc6dc",
+    "execution.png": "7e5b7893875a8300bd53b53761d6b6944ed10b06d111d3675547bb660bfa4124",
+    "focused-api-tests.txt": "f2baa2e701004d74637980fc6774594eca0a2b59140fda62e4f2dfdaba7ab194",
+    "history.json": "b163d1d3f3e0ba2087b123517e2764fa452fbc6a18c728449ab65e0890cb8eb4",
+    "review.png": "0f82ff355e6b402a649cd8a641d01c1657905123054a3a7c5d4a7c6073b734f8",
+    "runtime.json": "57a7eaa6bf34936e41a53fbaaccfb43e455a71a9b5278c8254e0aff4ede84c06",
+    "startup.json": "93f61697e886053d869f07623720e16c849f1a007e8a8c4fb1985b7ef0336c0a",
+    "static-checks.txt": "2d6de0041eba8d5c953025835ea699eb746e2d42cd19bb3da3312f8c2c50dc2d",
+    "web-tests.txt": "d51ae358bb42031cdad790c9f80c1a8f4a714a29d77070573e9bcee16b07fa46"
+  },
+  "verifiedAt": "2026-10-08T03:49:08.920967+00:00",
+  "verification": {
+    "api": {
+      "passed": 1620,
+      "skipped": 1,
+      "seconds": 933.83,
+      "exitCode": 0
+    },
+    "web": {
+      "passed": 168,
+      "files": 20,
+      "exitCode": 0
+    },
+    "focusedApi": {
+      "passed": 106,
+      "exitCode": 0
+    },
+    "staticChecks": {
+      "exitCode": 0
+    },
+    "openSpec": "strict passed",
+    "gitWhitespace": "passed"
+  }
+}

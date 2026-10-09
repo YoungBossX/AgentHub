@@ -1,0 +1,136 @@
+{
+  "runtime": {
+    "sessionId": "f59b4979-51d1-4a55-95f3-25585a9becab",
+    "taskId": "5c2e3e7a-3325-4ae5-9c02-676e92871e4d",
+    "taskTitle": "Review: 只读评审 apps/demo/src/App.tsx 中 Claude native workspace 按钮的实际代码；给出真实检查结论与必要改进建议，不运行测试。",
+    "runId": "de74f9e9-610d-473b-b6f2-dae28212ad2a",
+    "review": {
+      "id": "a4b43681-5b6d-4fd9-a29d-b47c20b532ce",
+      "artifactId": "3929f946-e644-4c62-b8f1-db0cd2049e73",
+      "taskRunId": "de74f9e9-610d-473b-b6f2-dae28212ad2a",
+      "reviewedDiffArtifactId": "1e0ca41e-1913-4d56-8305-5d23e92558dc",
+      "artifactType": "review",
+      "title": "Native model review",
+      "status": "warning",
+      "riskLevel": "low",
+      "summary": "检查结果：apps/demo/src/App.tsx 中不存在文案为“Claude native workspace”的按钮。实际代码中仅有一个按钮（第44-50行），其文案为“Continue”，类名为 primary-action，并带 data-agenthub-target=\"primary-action-button\" 属性。第2-5行 checklistItems 第4项提到“follow-up button copy change”，表明按钮文案计划后续更新，但当前尚未发生。代码本身结构清晰、可访问性良好（aria-label、aria-labelledby 使用得当），未发现明显缺陷。标记：CLAUDE_NATIVE_20261008_REVIEW",
+      "filesReviewed": [
+        "apps/demo/src/App.tsx"
+      ],
+      "findings": [
+        {
+          "severity": "low",
+          "file": "apps/demo/src/App.tsx",
+          "line": 49,
+          "message": "按钮实际文案为“Continue”，与预期检查的“Claude native workspace”不符；该文案更新尚未在代码中落地。"
+        },
+        {
+          "severity": "low",
+          "file": "apps/demo/src/App.tsx",
+          "line": 4,
+          "message": "checklistItems 第4项描述了待做的按钮文案变更，说明当前为计划中的后续任务而非已完成状态。"
+        }
+      ],
+      "suggestedChanges": [
+        "若需要按钮显示“Claude native workspace”，请将第49行的 Continue 替换为目标文案。",
+        "确认 checklist 中“follow-up button copy change”任务的验收文案标准，避免文案漂移。"
+      ],
+      "adapterType": "claude_code",
+      "nativeReceipt": {
+        "schemaVersion": "agenthub.native_review.v1",
+        "taskRunId": "de74f9e9-610d-473b-b6f2-dae28212ad2a",
+        "adapterRunId": "claude-code-582f3b92-be83-4959-8b8a-4ab6a6df821a",
+        "targetId": "demo-frontend",
+        "inputFingerprint": "19255e9d5e35f94b5c8eeb2ad3f2c4c7284112a194aa345d218bf0b7df7d3081",
+        "outputSha256": "84c6fadead70c2b3977ca2f40e61bdba9f9dfa70d61a1fb9c5748dc11dd59e0b",
+        "validation": "not_run",
+        "assessmentKind": "advisory_static_review",
+        "boundFileCount": 3,
+        "files": {
+          "apps/demo/src/App.tsx": {
+            "sha256": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297",
+            "bytes": 1893,
+            "textSha256": "200acb264bd24c26d040cf038e03c34610a7dde903a21acacdd5f10e214b9e87",
+            "lines": 55
+          }
+        }
+      }
+    },
+    "diffs": [
+      {
+        "id": "2532b064-56ef-4095-8b33-23813c33b47e",
+        "artifactId": "1e0ca41e-1913-4d56-8305-5d23e92558dc",
+        "taskRunId": "de74f9e9-610d-473b-b6f2-dae28212ad2a",
+        "artifactType": "diff",
+        "title": "Git diff",
+        "status": "ready",
+        "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+        "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+        "patchText": "",
+        "changedFiles": [],
+        "stats": {
+          "filesChanged": 0,
+          "additions": 0,
+          "deletions": 0,
+          "files": []
+        }
+      }
+    ],
+    "beforeFiles": {
+      "apps/demo/src/App.tsx": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297",
+      "apps/demo/src/main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+      "apps/demo/src/styles.css": "b68831f283f8f98f9cabdbd5517767a89e2a9356842a78a536c5a4927f690317"
+    },
+    "afterFiles": {
+      "apps/demo/src/App.tsx": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297",
+      "apps/demo/src/main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+      "apps/demo/src/styles.css": "b68831f283f8f98f9cabdbd5517767a89e2a9356842a78a536c5a4927f690317"
+    },
+    "resultReadEvidence": {
+      "apps/demo/src/App.tsx": "200acb264bd24c26d040cf038e03c34610a7dde903a21acacdd5f10e214b9e87"
+    },
+    "boundFileCount": 3,
+    "checks": [
+      "actual native CLI exit 0 and bound JSON",
+      "actual native full-file Read hashes match",
+      "source bytes unchanged",
+      "native model assessment is persisted, not scripted",
+      "same native report on explicit retrieval",
+      "Diff lineage and artifact version match this run"
+    ],
+    "boundaries": [
+      "advisory static assessment; no test execution",
+      "CLI platform does not establish underlying model vendor",
+      "no Preview/deploy acceptance"
+    ]
+  },
+  "browser": {
+    "sessionId": "f59b4979-51d1-4a55-95f3-25585a9becab",
+    "runId": "de74f9e9-610d-473b-b6f2-dae28212ad2a",
+    "checks": [
+      "native model source badge in execution card",
+      "actual summary/findings and file receipts in expanded report",
+      "dark theme renders report",
+      "reload preserves one native artifact and one completed execution"
+    ]
+  },
+  "replay": {
+    "sessionId": "f59b4979-51d1-4a55-95f3-25585a9becab",
+    "events": 503,
+    "checks": [
+      "one persisted native report receipt",
+      "actual assessment retained in completed event",
+      "per-run sequence order",
+      "Last-Event-ID high-water does not replay old frames"
+    ]
+  },
+  "restart": {
+    "runId": "de74f9e9-610d-473b-b6f2-dae28212ad2a",
+    "sessionId": "f59b4979-51d1-4a55-95f3-25585a9becab",
+    "checks": [
+      "dedicated API restarted on existing SQLite",
+      "exact native report and receipt survived restart",
+      "one completed execution; no new native CLI invocation"
+    ]
+  }
+}

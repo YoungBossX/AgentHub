@@ -1,0 +1,20 @@
+{
+  "ownershipDiagnosis": {
+    "id": "e3c4956c-97ab-4ec0-8f16-daea8aa679e3",
+    "artifactId": "7a1fed53-9e19-475f-bbf4-6b4bf809c41e",
+    "taskRunId": "5542f62c-70cf-45d5-a6dd-419e175c5b3c",
+    "artifactType": "preview",
+    "title": "Vite React preview",
+    "status": "failed",
+    "port": 51261,
+    "url": "http://127.0.0.1:51261",
+    "command": "pnpm dev --host 127.0.0.1 --port 51261",
+    "processId": null,
+    "healthStatus": "unhealthy",
+    "statusReason": "Preview process ownership is unavailable after API restart. The old process cannot be verified or stopped by this instance; explicitly restart the preview.",
+    "expiresAt": "2026-10-08T10:28:00.462925",
+    "lastCheckedAt": "2026-10-08T08:30:10.129772"
+  },
+  "apiRestarted": true,
+  "oldProcessAlive": true
+}

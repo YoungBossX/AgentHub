@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from app.models import utc_now
+from app.planner_contracts import SECRET_VALUE_PATTERN
 
 CANONICAL_CONTEXT_VERSION = "canonical_shared_context_v1"
 PROVIDER_VISIBLE_CONTEXT_VERSION = "provider_visible_context_v1"
@@ -108,7 +109,7 @@ def build_canonical_shared_context(
             filter_protected_values(relevant_artifacts),
             source="artifacts",
             created_at=timestamp,
-            trust_level="system",
+            trust_level="conversation_reference",
         ),
         "relevantMemories": _field(
             filter_protected_values(session_context_pack.get("relevantMemories", [])),
@@ -175,6 +176,18 @@ def build_canonical_shared_context(
             trust_level="system",
         ),
     }
+    if session_context_pack.get("attachmentContext"):
+        fields["attachmentContext"] = _field(
+            filter_protected_values(session_context_pack["attachmentContext"]),
+            source="message_attachments", created_at=timestamp, trust_level="conversation_reference",
+        )
+    if "pinnedMessageContext" in session_context_pack:
+        fields["pinnedMessageContext"] = _field(
+            filter_protected_values(session_context_pack["pinnedMessageContext"]),
+            source="pinned_messages",
+            created_at=timestamp,
+            trust_level="conversation_reference",
+        )
     if "memorySelection" in session_context_pack:
         fields["memorySelection"] = _field(
             filter_protected_values(session_context_pack["memorySelection"]),
@@ -218,8 +231,12 @@ def filter_protected_values(value: Any) -> Any:
             if filtered is not _Redacted:
                 filtered_items.append(filtered)
         return filtered_items
-    if isinstance(value, str) and _is_protected_string(value):
-        return _Redacted
+    if isinstance(value, str):
+        if _is_protected_string(value):
+            return _Redacted
+        # Preserve the existing artifact-log convention: redact the whole
+        # string, including any surrounding credential-related details.
+        return "[redacted]" if SECRET_VALUE_PATTERN.search(value) else value
     return copy.deepcopy(value)
 
 

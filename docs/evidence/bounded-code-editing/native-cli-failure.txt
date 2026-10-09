@@ -1,0 +1,10 @@
+AssertionError [ERR_ASSERTION]: {"detail":"Claude CLI planner executable was not found."}
+    at send (file:///C:/Users/XCC/AppData/Local/Temp/agenthub-edit-native.mjs:19:21)
+    at async file:///C:/Users/XCC/AppData/Local/Temp/agenthub-edit-native.mjs:80:23 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

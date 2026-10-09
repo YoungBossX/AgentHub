@@ -1,0 +1,13 @@
+
+> agenthub@ demo:api:test X:\Git_Clone\AgentHub
+> bash scripts/test-demo-api.sh
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.7, pytest-8.4.2, pluggy-1.6.0
+rootdir: X:\Git_Clone\AgentHub\apps\demo-api
+plugins: anyio-4.14.1
+collected 5 items
+
+tests\test_contacts.py .....                                             [100%]
+
+============================== 5 passed in 0.27s ==============================

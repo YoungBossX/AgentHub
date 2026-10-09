@@ -1,0 +1,26 @@
+{
+  "errors": [],
+  "historicalDiffRefusal": {
+    "status": 400,
+    "body": {
+      "detail": "Current files include later user edits; preserve the historical Agent Diff and start a new run for further changes."
+    }
+  },
+  "preview": {
+    "id": "6c0c64a0-a140-4edf-a3d2-55fc2c8aefde",
+    "artifactId": "92a98a70-bc0f-4412-99a3-76ef811913a6",
+    "taskRunId": "f742f005-ca9c-4281-a3ad-f0e9a3f6f07f",
+    "artifactType": "preview",
+    "title": "Vite React preview",
+    "status": "ready",
+    "port": 65238,
+    "url": "http://127.0.0.1:65238",
+    "command": "pnpm dev --host 127.0.0.1 --port 65238",
+    "processId": 69104,
+    "healthStatus": "healthy",
+    "statusReason": null,
+    "expiresAt": "2026-10-09T10:32:43.826149",
+    "lastCheckedAt": "2026-10-09T08:32:42.718773"
+  },
+  "passed": true
+}

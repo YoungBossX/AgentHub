@@ -1,0 +1,177 @@
+{
+  "sessionId": "cb667e1e-fe2a-4761-bcdc-9ece7d8edc77",
+  "sourceUrl": "http://127.0.0.1:3000/?session=cb667e1e-fe2a-4761-bcdc-9ece7d8edc77",
+  "browser": "Edge via bundled Playwright",
+  "checks": [
+    "fresh login and ordinary chat follow-up completed via real Codex; matching Diff and scripted Review persisted",
+    "second run has its own healthy Preview; rendered email/password form and updated button",
+    "Preview refresh, page reload, chat persistence, dark theme and column width persistence passed",
+    "390px viewport has no document horizontal overflow"
+  ],
+  "runs": [
+    {
+      "taskId": "e2c8fe8f-c9d0-49ac-8af6-2df4a0af71d3",
+      "runId": "2b171a6a-4667-47a0-bd91-8b67a6d14ce6",
+      "adapter": "codex",
+      "state": "completed",
+      "diffs": [
+        {
+          "id": "61621f12-be43-4de3-b906-ac68e4d83c49",
+          "artifactId": "89e897c0-d32f-4c97-9439-cf7ef8abcd16",
+          "taskRunId": "2b171a6a-4667-47a0-bd91-8b67a6d14ce6",
+          "artifactType": "diff",
+          "title": "Git diff",
+          "status": "ready",
+          "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+          "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+          "patchText": "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\nindex bd27649..d4b81d9 100644\n--- a/apps/demo/src/App.tsx\n+++ b/apps/demo/src/App.tsx\n@@ -35,10 +35,36 @@ export default function App() {\n             data-agenthub-target=\"login-page-slot\"\n             aria-label=\"Login page insertion target\"\n           >\n-            <p className=\"slot-label\">Login page target</p>\n-            <p className=\"slot-copy\">\n-              Build the login page here during the first demo request.\n-            </p>\n+            <p className=\"slot-label\">Welcome back</p>\n+            <p className=\"slot-copy\">Sign in to your workspace.</p>\n+            <form\n+              aria-label=\"Login\"\n+              onSubmit={(event) => event.preventDefault()}\n+              style={{ display: \"grid\", gap: 12, marginTop: 20 }}\n+            >\n+              <label style={{ display: \"grid\", gap: 6 }}>\n+                Email\n+                <input\n+                  name=\"email\"\n+                  type=\"email\"\n+                  autoComplete=\"username\"\n+                  placeholder=\"you@example.com\"\n+                  required\n+                  style={{ width: \"100%\", minHeight: 40, padding: \"8px 10px\", font: \"inherit\" }}\n+                />\n+              </label>\n+              <label style={{ display: \"grid\", gap: 6 }}>\n+                Password\n+                <input\n+                  name=\"password\"\n+                  type=\"password\"\n+                  autoComplete=\"current-password\"\n+                  required\n+                  style={{ width: \"100%\", minHeight: 40, padding: \"8px 10px\", font: \"inherit\" }}\n+                />\n+              </label>\n+              <button className=\"primary-action\" type=\"submit\">Sign in</button>\n+            </form>\n           </div>\n \n           <button\n",
+          "changedFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "stats": {
+            "filesChanged": 1,
+            "additions": 30,
+            "deletions": 4,
+            "files": [
+              {
+                "path": "apps/demo/src/App.tsx",
+                "additions": 30,
+                "deletions": 4
+              }
+            ]
+          }
+        }
+      ],
+      "reviews": [
+        {
+          "id": "f24d8097-c45d-4dab-9ae0-b1091d969f23",
+          "artifactId": "c3865fdc-736c-45c2-910f-b7885adec108",
+          "taskRunId": "2b171a6a-4667-47a0-bd91-8b67a6d14ce6",
+          "reviewedDiffArtifactId": "89e897c0-d32f-4c97-9439-cf7ef8abcd16",
+          "artifactType": "review",
+          "title": "Review Agent report",
+          "status": "passed",
+          "riskLevel": "low",
+          "summary": "Scripted Review Agent passed 1 changed file with low risk.",
+          "filesReviewed": [
+            "apps/demo/src/App.tsx"
+          ],
+          "findings": [],
+          "suggestedChanges": [],
+          "adapterType": "scripted_mock"
+        }
+      ],
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "2b171a6a-4667-47a0-bd91-8b67a6d14ce6",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "61621f12-be43-4de3-b906-ac68e4d83c49",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "scope": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "2b171a6a-4667-47a0-bd91-8b67a6d14ce6",
+        "targetId": "demo-frontend",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "status": "passed",
+        "changedPathCount": 1,
+        "timestamp": "2026-10-07T14:58:22.950877+00:00"
+      }
+    },
+    {
+      "taskId": "421f9891-8d52-4465-82b2-f6845eab348c",
+      "runId": "4cc400c7-6ad1-40b3-a065-e008f1a99956",
+      "adapter": "codex",
+      "state": "completed",
+      "diffs": [
+        {
+          "id": "9f0348be-a42f-4a32-a47e-c0bd237f8501",
+          "artifactId": "8188d94b-6b29-47a5-b0dc-3fe4d5242be9",
+          "taskRunId": "4cc400c7-6ad1-40b3-a065-e008f1a99956",
+          "artifactType": "diff",
+          "title": "Git diff",
+          "status": "ready",
+          "baseRef": "78e90f44490c7d98b05ef033560daabf5649bb8a",
+          "headRef": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+          "patchText": "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\nindex bd27649..1c28c34 100644\n--- a/apps/demo/src/App.tsx\n+++ b/apps/demo/src/App.tsx\n@@ -35,10 +35,36 @@ export default function App() {\n             data-agenthub-target=\"login-page-slot\"\n             aria-label=\"Login page insertion target\"\n           >\n-            <p className=\"slot-label\">Login page target</p>\n-            <p className=\"slot-copy\">\n-              Build the login page here during the first demo request.\n-            </p>\n+            <p className=\"slot-label\">Welcome back</p>\n+            <p className=\"slot-copy\">Sign in to your workspace.</p>\n+            <form\n+              aria-label=\"Login\"\n+              onSubmit={(event) => event.preventDefault()}\n+              style={{ display: \"grid\", gap: 12, marginTop: 20 }}\n+            >\n+              <label style={{ display: \"grid\", gap: 6 }}>\n+                Email\n+                <input\n+                  name=\"email\"\n+                  type=\"email\"\n+                  autoComplete=\"username\"\n+                  placeholder=\"you@example.com\"\n+                  required\n+                  style={{ width: \"100%\", minHeight: 40, padding: \"8px 10px\", font: \"inherit\" }}\n+                />\n+              </label>\n+              <label style={{ display: \"grid\", gap: 6 }}>\n+                Password\n+                <input\n+                  name=\"password\"\n+                  type=\"password\"\n+                  autoComplete=\"current-password\"\n+                  required\n+                  style={{ width: \"100%\", minHeight: 40, padding: \"8px 10px\", font: \"inherit\" }}\n+                />\n+              </label>\n+              <button className=\"primary-action\" type=\"submit\">Sign in</button>\n+            </form>\n           </div>\n \n           <button\n@@ -46,7 +72,7 @@ export default function App() {\n             data-agenthub-target=\"primary-action-button\"\n             type=\"button\"\n           >\n-            Continue\n+            Enter workspace\n           </button>\n         </aside>\n       </section>\n",
+          "changedFiles": [
+            "apps/demo/src/App.tsx"
+          ],
+          "stats": {
+            "filesChanged": 1,
+            "additions": 31,
+            "deletions": 5,
+            "files": [
+              {
+                "path": "apps/demo/src/App.tsx",
+                "additions": 31,
+                "deletions": 5
+              }
+            ]
+          }
+        }
+      ],
+      "reviews": [
+        {
+          "id": "2bce308c-5ca9-460a-a3f6-f8c85672f2fb",
+          "artifactId": "d0ee8ed2-6968-4017-ade0-8d804d9a3acd",
+          "taskRunId": "4cc400c7-6ad1-40b3-a065-e008f1a99956",
+          "reviewedDiffArtifactId": "8188d94b-6b29-47a5-b0dc-3fe4d5242be9",
+          "artifactType": "review",
+          "title": "Review Agent report",
+          "status": "passed",
+          "riskLevel": "low",
+          "summary": "Scripted Review Agent passed 1 changed file with low risk.",
+          "filesReviewed": [
+            "apps/demo/src/App.tsx"
+          ],
+          "findings": [],
+          "suggestedChanges": [],
+          "adapterType": "scripted_mock"
+        }
+      ],
+      "completionValidation": {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": "4cc400c7-6ad1-40b3-a065-e008f1a99956",
+        "status": "passed",
+        "accessMode": "write",
+        "changedPathCount": 1,
+        "diffId": "9f0348be-a42f-4a32-a47e-c0bd237f8501",
+        "errorCode": null,
+        "functionalAcceptance": "not_evaluated"
+      },
+      "scope": {
+        "schemaVersion": "agenthub.task_run_scope_validation.v2",
+        "taskRunId": "4cc400c7-6ad1-40b3-a065-e008f1a99956",
+        "targetId": "demo-frontend",
+        "baselineSchemaVersion": "agenthub.task_run_scope.v2",
+        "status": "passed",
+        "changedPathCount": 1,
+        "timestamp": "2026-10-07T15:02:41.678961+00:00"
+      }
+    }
+  ],
+  "previewBody": "AGENTHUB DEMO WORKSPACE\n\nLaunchpad for a visible coding-agent change\n\nThis baseline Vite React app gives future agents a stable place to add a login page and then adjust button copy without changing the rest of the product scaffold.\n\nCreate a focused login page in the empty slot\nKeep the change small enough for a readable diff\nRefresh the preview after the follow-up button copy change\nReady for adapter changes\n\nWELCOME BACK\n\nSign in to your workspace.\n\nEmail\nPassword\nSign in\nEnter workspace",
+  "previews": [
+    {
+      "id": "b15d507e-4b7e-4e6e-a502-3b0575418128",
+      "artifactId": "4fc9dedd-3942-45fd-81a1-e296f5af59a8",
+      "taskRunId": "4cc400c7-6ad1-40b3-a065-e008f1a99956",
+      "artifactType": "preview",
+      "title": "Vite React preview",
+      "status": "ready",
+      "port": 8943,
+      "url": "http://127.0.0.1:8943",
+      "command": "pnpm dev --host 127.0.0.1 --port 8943",
+      "processId": 45752,
+      "healthStatus": "healthy",
+      "statusReason": null,
+      "expiresAt": "2026-10-07T17:06:54.840626",
+      "lastCheckedAt": "2026-10-07T15:06:53.780351"
+    }
+  ],
+  "pageErrors": []
+}

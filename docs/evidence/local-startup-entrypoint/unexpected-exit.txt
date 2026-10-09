@@ -1,0 +1,41 @@
+
+> agenthub@ dev:local X:\Git_Clone\AgentHub
+> node scripts/local-dev.mjs "--api-port" "8007" "--web-port" "3001" "--demo-api"
+
+[local] Dependencies and ports OK: Node 22.19.0, Python 3.12.7.
+[local] Starting API.
+INFO:     Started server process [52996]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8007 (Press CTRL+C to quit)
+[agenthub-ready:fc550537-6293-4e33-aa6f-4c0aafc2f352]
+INFO:     127.0.0.1:9419 - "GET /health HTTP/1.1" 200 OK
+[local] Starting Demo API.
+INFO:     Started server process [34436]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:5174 (Press CTRL+C to quit)
+[agenthub-ready:fc550537-6293-4e33-aa6f-4c0aafc2f352]
+INFO:     127.0.0.1:9422 - "GET /health HTTP/1.1" 200 OK
+[local] Starting Web.
+▲ Next.js 16.3.4 (Turbopack)
+- Local:         http://127.0.0.1:3001
+- Network:       http://127.0.0.1:3001
+✓ Ready in 333ms
+✓ Running next.config.ts took 26ms
+
+INFO:     127.0.0.1:9426 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9427 - "GET /workspaces/demo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9426 - "GET /workspaces/9758b2e6-9794-4c0e-817e-7a56aff0c976/agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:9427 - "GET /workspaces/9758b2e6-9794-4c0e-817e-7a56aff0c976/sessions?view=all HTTP/1.1" 200 OK
+[local] Ready: http://127.0.0.1:3001/ (API http://127.0.0.1:8007)
+[local] Demo API: http://127.0.0.1:5174
+[local] Ctrl+C to stop. API source changes require a restart; dev:api retains reload mode.
+ GET / 200 in 559ms (next.js: 306ms, application-code: 253ms)
+[local] API exited (1).
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [34436]
+[local] Owned services stopped. Sessions and worktrees retained.
+ ELIFECYCLE  Command failed with exit code 1.

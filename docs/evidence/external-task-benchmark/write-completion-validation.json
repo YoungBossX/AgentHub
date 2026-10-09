@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "agenthub.write_completion_validation.v1",
+  "apiFull": {
+    "passed": 1352,
+    "skipped": 1,
+    "elapsedSeconds": 763.03,
+    "exitCode": 0,
+    "stdoutSha256": "ff711af511c5408f5f94f0efb0329685cb3a1c27456aa2f52a1aa1ac16b66079"
+  },
+  "codexAdapterFinalTests": {
+    "passed": 21,
+    "exitCode": 0,
+    "note": "Stronger exit-order assertion rerun after full suite collection"
+  },
+  "generationReplacementTest": {
+    "passed": 1,
+    "exitCode": 0
+  },
+  "web": {
+    "passed": 128,
+    "exitCode": 0
+  },
+  "demoApi": {
+    "passed": 5,
+    "exitCode": 0
+  },
+  "checks": {
+    "pnpmCheck": true,
+    "openSpecStrict": true,
+    "gitDiffWhitespace": true
+  },
+  "liveBenchmark": {
+    "selectedCases": 3,
+    "passedCases": 0,
+    "failedCases": 3,
+    "taskRunErrorCode": "TASK_RUN_NO_CHANGES",
+    "reportSha256": "08169cdcc2467d6fe1f8b6588bb2e23242ccca3e71a800cd031d4621abc18f6a"
+  },
+  "committed": false,
+  "pushed": false
+}

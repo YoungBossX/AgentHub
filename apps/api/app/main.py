@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from typing import AsyncIterator
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -7,7 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session as DbSession
 
 from app.config import get_settings
-from app.db import init_database
+from app.db import engine, init_database
+from app.message_regeneration import recover_interrupted_requests
+from app.user_code_edits import recover_user_edits
 from app.dependencies import get_db, get_deploy_service, get_preview_service
 from app.diffs import collect_task_run_diff
 from app.events import list_session_events
@@ -27,6 +30,8 @@ from app.routes import session_events as session_event_routes
 from app.routes import task_artifacts as task_artifact_routes
 from app.routes import task_runs as task_run_routes
 from app.routes.agent_settings import router as agent_settings_router
+from app.routes.attachments import router as attachments_router
+from app.routes.user_code_edits import router as user_code_edits_router
 from app.routes.health import router as health_router
 from app.routes.messages import router as messages_router
 from app.routes.registries import router as registries_router
@@ -48,12 +53,31 @@ from app.schemas import (
     SessionRunDiagnosticsSummaryResponse,
 )
 from app.task_runs import require_task_run_artifact_scope_passed
+from app.windows_connection_cleanup import install_windows_connection_cleanup
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    init_database(seed=True)
-    yield
+    restore_connection_handler = install_windows_connection_cleanup(asyncio.get_running_loop())
+    try:
+        init_database(seed=True)
+        recover_interrupted_requests(engine)
+        recover_user_edits(engine)
+        get_preview_service().startup()
+        from app.group_execution import group_execution_loop
+
+        group_worker = asyncio.create_task(group_execution_loop())
+        try:
+            yield
+        finally:
+            group_worker.cancel()
+            try:
+                with suppress(asyncio.CancelledError):
+                    await group_worker
+            finally:
+                await asyncio.to_thread(get_preview_service().shutdown)
+    finally:
+        restore_connection_handler()
 
 
 settings = get_settings()
@@ -129,13 +153,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(LOCAL_FRONTEND_ORIGINS),
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 app.include_router(health_router)
 app.include_router(agent_settings_router)
 app.include_router(registries_router)
 app.include_router(messages_router)
+app.include_router(attachments_router)
+app.include_router(user_code_edits_router)
 app.include_router(sessions_router)
 app.include_router(targets_router)
 app.include_router(workspaces_router)

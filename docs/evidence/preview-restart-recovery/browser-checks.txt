@@ -1,0 +1,2 @@
+Cached healthy Preview loaded; waiting for controlled API restart
+Actual Preview one-click recovery, history and browser checks passed

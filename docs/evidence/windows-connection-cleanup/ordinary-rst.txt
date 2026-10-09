@@ -1,0 +1,9 @@
+INFO:     Started server process [73280]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8011 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [73280]
+{"mode": "baseline", "requests": {"/health": 100, "/sessions/40dea5a9-4bd6-40f5-b91f-a0c40e658291/events?stream=true": 100}, "errors": [], "beforeShutdown": {"activeCounts": [0], "uvicornConnections": 0, "uvicornTasks": 0}, "afterShutdown": {"activeCounts": [0]}, "shutdownSeconds": 0.22}

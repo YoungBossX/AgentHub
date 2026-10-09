@@ -1,0 +1,8 @@
+{
+  "blocked": 2,
+  "errors": [],
+  "checks": [
+    "local chunk unavailable retains patch",
+    "explicit retry loads editor after network recovers"
+  ]
+}

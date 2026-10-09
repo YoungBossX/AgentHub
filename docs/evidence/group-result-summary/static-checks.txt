@@ -1,0 +1,35 @@
+
+> agenthub@ check X:\Git_Clone\AgentHub
+> pnpm check:web && pnpm check:api && pnpm check:demo && pnpm check:demo-api
+
+
+> agenthub@ check:web X:\Git_Clone\AgentHub
+> pnpm --filter @agenthub/web check
+
+
+> @agenthub/web@ check X:\Git_Clone\AgentHub\apps\web
+> eslint . && tsc --noEmit
+
+
+> agenthub@ check:api X:\Git_Clone\AgentHub
+> bash scripts/check-api.sh
+
+Listing 'app'...
+Listing 'app\\instruction_adapters'...
+Listing 'app\\routes'...
+Listing 'tests'...
+Compiling 'tests\\test_group_result_summary.py'...
+
+> agenthub@ check:demo X:\Git_Clone\AgentHub
+> pnpm --filter @agenthub/demo check
+
+
+> @agenthub/demo@0.0.0 check X:\Git_Clone\AgentHub\apps\demo
+> tsc -b
+
+
+> agenthub@ check:demo-api X:\Git_Clone\AgentHub
+> bash scripts/check-demo-api.sh
+
+Listing 'app'...
+Listing 'tests'...

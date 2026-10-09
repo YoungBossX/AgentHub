@@ -1,0 +1,106 @@
+{
+  "errors": [],
+  "cases": [
+    {
+      "key": "codex",
+      "sessionId": "3f04f344-8c98-47eb-8fcf-cc9eae627721",
+      "runId": "24e19657-d5ae-43ad-a67b-784289742b43",
+      "preview": {
+        "id": "c85a65f1-11de-4c02-b35f-af21206371fd",
+        "artifactId": "d9e27292-91ba-4ab2-ba96-27a06328a25a",
+        "taskRunId": "24e19657-d5ae-43ad-a67b-784289742b43",
+        "artifactType": "preview",
+        "title": "Vite React preview",
+        "status": "ready",
+        "port": 63659,
+        "url": "http://127.0.0.1:63659",
+        "command": "pnpm dev --host 127.0.0.1 --port 63659",
+        "processId": 52608,
+        "healthStatus": "healthy",
+        "statusReason": null,
+        "expiresAt": "2026-10-09T11:45:40.436120",
+        "lastCheckedAt": "2026-10-09T09:45:39.395921"
+      },
+      "reselectPreservesPreview": true
+    },
+    {
+      "key": "claude",
+      "sessionId": "1a387b1a-e045-4660-a398-9533330ff4df",
+      "runId": "f5f453c5-11d0-4367-b3be-1e8fc79b5f0a",
+      "preview": {
+        "id": "19005e8f-81b2-48c8-a2d4-25fa963ba723",
+        "artifactId": "853f0fd0-c88d-4219-a918-2b2737b68f01",
+        "taskRunId": "f5f453c5-11d0-4367-b3be-1e8fc79b5f0a",
+        "artifactType": "preview",
+        "title": "Vite React preview",
+        "status": "ready",
+        "port": 47539,
+        "url": "http://127.0.0.1:47539",
+        "command": "pnpm dev --host 127.0.0.1 --port 47539",
+        "processId": 79356,
+        "healthStatus": "healthy",
+        "statusReason": null,
+        "expiresAt": "2026-10-09T11:45:43.699218",
+        "lastCheckedAt": "2026-10-09T09:45:42.673132"
+      },
+      "reselectPreservesPreview": true
+    },
+    {
+      "key": "fallback",
+      "sessionId": "e48f8a54-f591-480c-a27a-7fae337c26bf",
+      "runId": "4a56318f-21c5-4a18-9b84-1980c57f854c",
+      "preview": {
+        "id": "97763374-ce93-41e7-a814-c535e6101982",
+        "artifactId": "883d879d-6028-4f53-ae13-16887433f248",
+        "taskRunId": "4a56318f-21c5-4a18-9b84-1980c57f854c",
+        "artifactType": "preview",
+        "title": "Vite React preview",
+        "status": "ready",
+        "port": 24119,
+        "url": "http://127.0.0.1:24119",
+        "command": "pnpm dev --host 127.0.0.1 --port 24119",
+        "processId": 69020,
+        "healthStatus": "healthy",
+        "statusReason": null,
+        "expiresAt": "2026-10-09T11:45:47.948367",
+        "lastCheckedAt": "2026-10-09T09:45:46.913762"
+      },
+      "deployment": {
+        "id": "c5932a04-70fd-4794-993e-92ab2ccb47ab",
+        "artifactId": "6f62b783-c938-40ad-8c1b-a77f73cfeb38",
+        "taskRunId": "4a56318f-21c5-4a18-9b84-1980c57f854c",
+        "artifactType": "deployment",
+        "title": "Mock deploy",
+        "status": "ready",
+        "provider": "mock",
+        "environment": "preview",
+        "commitSha": "78e90f44490c7d98b05ef033560daabf5649bb8a+worktree",
+        "url": "https://mock.agenthub.local/deployments/c5932a04-70fd-4794-993e-92ab2ccb47ab",
+        "deployLogUri": "mock://deployments/c5932a04-70fd-4794-993e-92ab2ccb47ab/logs",
+        "providerType": "mock",
+        "targetId": "demo-frontend",
+        "sourcePreviewId": "97763374-ce93-41e7-a814-c535e6101982",
+        "sourceDiffArtifactId": "efc89983-4262-4cf4-bff0-a067a0e6e01b",
+        "sourceReviewArtifactId": "24605979-3f1f-4ad9-9dad-913b8c5d9d88",
+        "logs": [
+          "Mock deploy accepted healthy preview 97763374-ce93-41e7-a814-c535e6101982.",
+          "Source TaskRun 4a56318f-21c5-4a18-9b84-1980c57f854c was completed."
+        ],
+        "statusHistory": [
+          {
+            "status": "queued",
+            "message": "Mock deploy request queued."
+          },
+          {
+            "status": "ready",
+            "message": "Mock deployment is ready."
+          }
+        ],
+        "createdAt": "2026-10-09T09:45:50.338071",
+        "updatedAt": "2026-10-09T09:45:50.338071"
+      },
+      "reselectPreservesPreview": true
+    }
+  ],
+  "passed": true
+}

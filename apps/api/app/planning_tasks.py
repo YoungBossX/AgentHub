@@ -46,6 +46,7 @@ from app.planning_intents import (
     _primary_allowed_path,
     _requires_backend_target,
     _session_for_message,
+    parse_frontend_intent,
 )
 
 
@@ -68,6 +69,8 @@ def _create_login_page_plan(
     if missing:
         raise MentionParseError(f"Planning requires enabled agents: {', '.join(missing)}.")
 
+    frontend_target = get_target(DEMO_FRONTEND_TARGET_ID)
+    frontend_allowed_path = _primary_allowed_path(frontend_target)
     task_specs = [
         TaskSpec(
             title="Plan the login page change",
@@ -88,7 +91,12 @@ def _create_login_page_plan(
             priority=1,
             plan={
                 "target": "login_page",
-                "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"],
+                "targetId": frontend_target.target_id,
+                "safeTarget": frontend_allowed_path,
+                "files": [
+                    f"{frontend_allowed_path}/App.tsx",
+                    f"{frontend_allowed_path}/styles.css",
+                ],
                 "parallelGroup": None,
             },
             expected_artifact_types=["diff", "review"],
@@ -100,6 +108,8 @@ def _create_login_page_plan(
             priority=2,
             plan={
                 "target": "login_page",
+                "targetId": frontend_target.target_id,
+                "safeTarget": frontend_allowed_path,
                 "checks": ["page renders", "button target remains deterministic"],
                 "parallelGroup": None,
             },
@@ -579,6 +589,7 @@ def _create_direct_assignment_tasks(
     role: str,
     *,
     existing_tasks: list[Task],
+    persist: bool = True,
 ) -> list[Task]:
     if role == "backend":
         active_backend_target = _active_external_target_for_role(db, message, "backend")
@@ -592,6 +603,7 @@ def _create_direct_assignment_tasks(
                     role="backend",
                     target=active_backend_target,
                     intent_type="backend_change",
+                    persist=persist,
                     priority=_next_priority(existing_tasks),
                     depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
                 )
@@ -619,6 +631,7 @@ def _create_direct_assignment_tasks(
                 agent=backend,
                 title=_task_title("Backend", message.content_md),
                 intent_type="backend_change",
+                persist=persist,
                 priority=_next_priority(existing_tasks),
                 depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
                 plan={
@@ -652,6 +665,7 @@ def _create_direct_assignment_tasks(
                     role="frontend",
                     target=active_frontend_target,
                     intent_type="frontend_change",
+                    persist=persist,
                     priority=_next_priority(existing_tasks),
                     depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
                 )
@@ -665,6 +679,7 @@ def _create_direct_assignment_tasks(
             return []
         frontend = _enabled_agent_or_raise(db, "frontend")
         frontend_target = get_target(DEMO_FRONTEND_TARGET_ID)
+        intent = parse_frontend_intent(message.content_md, include_login_creation=True)
         return [
             _create_single_task(
                 db,
@@ -672,13 +687,15 @@ def _create_direct_assignment_tasks(
                 agent=frontend,
                 title=_task_title("Frontend", message.content_md),
                 intent_type="frontend_change",
+                persist=persist,
                 priority=_next_priority(existing_tasks),
                 depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
                 plan={
                     "planner": "direct_assignment_v1",
                     "routing": "direct_mention",
                     "assignedRole": "frontend",
-                    "target": "demo_frontend_request",
+                    "target": intent.target if intent else "demo_frontend_request",
+                    **({"targetText": intent.target_text} if intent else {}),
                     "targetId": frontend_target.target_id,
                     "frontendTargetId": frontend_target.target_id,
                     "safeTarget": _primary_allowed_path(frontend_target),
@@ -710,6 +727,7 @@ def _create_direct_assignment_tasks(
             agent=qa,
             title=_task_title("Review" if review_role == "review" else "QA", message.content_md),
             intent_type="review" if review_role == "review" else "qa_review",
+            persist=persist,
             priority=_next_priority(existing_tasks),
             depends_on=[] if not existing_tasks else [existing_tasks[-1].id],
             plan={
@@ -885,6 +903,7 @@ def _create_external_assignment_task(
     planner: str = "direct_assignment_v1",
     routing: str = "direct_mention",
     extra_plan: Optional[dict] = None,
+    persist: bool = True,
 ) -> Task:
     allowed_path = _primary_allowed_path(target)
     files = _external_task_files(target)
@@ -921,6 +940,7 @@ def _create_external_assignment_task(
         agent=agent,
         title=_task_title(role.title(), message.content_md),
         intent_type=intent_type,
+        persist=persist,
         priority=priority,
         depends_on=depends_on,
         plan=plan,
@@ -981,6 +1001,7 @@ def _create_single_task(
     priority: int,
     depends_on: list[str],
     plan: dict,
+    persist: bool = True,
 ) -> Task:
     task = Task(
         session_id=message.session_id,
@@ -993,9 +1014,10 @@ def _create_single_task(
         depends_on_task_ids=json.dumps(depends_on, separators=(",", ":")),
         assigned_agent_id=agent.id,
     )
-    db.add(task)
-    db.commit()
-    db.refresh(task)
+    if persist:
+        db.add(task)
+        db.commit()
+        db.refresh(task)
     return task
 
 

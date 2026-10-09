@@ -1,0 +1,5 @@
+
+> agenthub@ doctor:local X:\Git_Clone\AgentHub
+> node scripts/local-dev.mjs --doctor "--api-port" "8011" "--web-port" "3011"
+
+[local] Dependencies and ports OK: Node 22.19.0, Python 3.12.7.

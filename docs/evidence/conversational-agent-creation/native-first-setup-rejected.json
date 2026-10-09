@@ -1,0 +1,26 @@
+{
+  "errors": [],
+  "generations": [],
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "beforeProfileIds": [
+    "26143942-7005-496b-a17f-c404a2981f23",
+    "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+    "b5c59dbc-13c4-43e3-bad5-efcc477607eb",
+    "ef29cecd-80bc-4d9e-aa11-4770773ea980",
+    "virtual-review-agent",
+    "virtual-fallback-agent",
+    "6c880742-065f-40df-9eb3-deedb2083cda",
+    "0adf48ff-6952-4b95-93f1-0d564391a315",
+    "5378e161-9fda-401e-bdfe-1cfeb13bca4f",
+    "8771ab62-6240-4ccb-8879-eee68fcb432e",
+    "034c1236-8b29-421c-ba86-d62da4d7bacf"
+  ],
+  "disabledProvider": {
+    "status": 409,
+    "detail": {
+      "detail": "规划 Agent 未启用。请先在运行设置中配置并启用 Planner，或使用手动配置。"
+    }
+  },
+  "failure": "AssertionError [ERR_ASSERTION]: {\"detail\":{\"errors\":[\"Runtime config role `planner` is enabled but missing agentProfileId.\"],\"warnings\":[]}}",
+  "runtimeRestored": true
+}

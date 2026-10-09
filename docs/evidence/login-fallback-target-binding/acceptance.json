@@ -1,0 +1,122 @@
+{
+  "checks": [
+    "direct: UI message -> failed Codex -> UI explicit ScriptedMock recovery -> matching real login Diff/healthy iframe; same-Session button-only change",
+    "group: UI message -> failed Codex -> UI explicit ScriptedMock recovery -> matching real login Diff/healthy iframe; same-Session button-only change",
+    "orchestrator: UI message -> failed Codex -> UI explicit ScriptedMock recovery -> matching real login Diff/healthy iframe; same-Session button-only change",
+    "All three routes reject unsupported OAuth compound fallback without source changes or Diff",
+    "API/Web restart preserves all three full Session/Message/TaskRun histories; explicit real Preview recovery matches group source",
+    "Separate existing API8006, accepted history and native-written source unchanged"
+  ],
+  "routes": [
+    {
+      "route": "direct",
+      "sessionId": "4efe70ea-875d-4f1f-a0de-369239de18bf",
+      "loginTaskId": "a1943c78-7f98-488f-ba94-54c74828ac5d",
+      "failedRunId": "391df9fb-0b82-48f3-a486-75ca7967a4d0",
+      "errorCode": "CODEX_DEMO_FORCED_FAILURE",
+      "scriptedRunId": "a422e0a9-b528-4563-a8c3-7113e192af81",
+      "followupTaskId": "9647f342-f488-4cdf-9de6-1aa754c86cf1",
+      "followupRunId": "b52eb658-793a-475e-a597-cf0e3acc09b6",
+      "firstPreviewId": "781e9e0e-d9e2-406f-8187-2aa5bca9accc",
+      "finalPreviewId": "d602a3d6-8d43-416c-bb35-eab49f0f4d8c",
+      "diffIds": [
+        "cedf3761-6c76-4455-9253-c357ea71fa0a"
+      ],
+      "followupDiffIds": [
+        "b8b31004-5616-4feb-86b1-a8a3cafe66ef"
+      ],
+      "sourceSha256": "d4dd29495987db626c21a4bbf533d69ad2345e30752e06eb4aef70f65e583bc6",
+      "failedHistorySha256": "63b347c886cc3324ebb35ddcfbba257fb058eeb21d53384339c8ab470286c0c5",
+      "liveDiagnosticsChanged": [
+        "targetLock"
+      ]
+    },
+    {
+      "route": "group",
+      "sessionId": "e4757e21-fa23-4dbd-910e-d193db6ca170",
+      "loginTaskId": "61acb0a1-5bab-424f-a222-509f39aec066",
+      "failedRunId": "57ce4ca9-e5d6-4e02-a276-dcf927220a74",
+      "errorCode": "PROVIDER_UNAVAILABLE",
+      "scriptedRunId": "86071df1-ad1f-48c3-93b6-ce19dc5811fa",
+      "followupTaskId": "f79512ac-ad89-41d0-8c85-3de50085d95e",
+      "followupRunId": "588cb978-e643-4983-91b9-56563b6ebfa5",
+      "firstPreviewId": "db56dd30-9698-4c36-8a9b-7ca1bdc3f773",
+      "finalPreviewId": "63698491-b100-4dd9-83ea-ca1bc95b7192",
+      "diffIds": [
+        "d7a5d4cc-4ae4-4c1c-a911-c150c7c587dc"
+      ],
+      "followupDiffIds": [
+        "23ff58aa-ddf4-4549-84e4-8914d60e02e1"
+      ],
+      "sourceSha256": "8fcb0b32ec12b565e1f5a61ca5576623bf27b027f3a9ccbec04a2ad311164226",
+      "failedHistorySha256": "1368b9c187858a11f3de18ab37720aa3513aba48b0d0105a0db94ffe6fb3dc3f",
+      "liveDiagnosticsChanged": [
+        "targetLock"
+      ]
+    },
+    {
+      "route": "orchestrator",
+      "sessionId": "713c9ed3-d447-4270-98ce-44f10ab794bb",
+      "loginTaskId": "dbd6262e-7114-45a5-82fa-df39f906e2c2",
+      "failedRunId": "307fcc59-01bf-40a8-8d9e-d86fc6f2027f",
+      "errorCode": "CODEX_DEMO_FORCED_FAILURE",
+      "scriptedRunId": "d535f4e2-7d1b-4f46-9b91-589d604a5e35",
+      "followupTaskId": "5f6b57db-afc9-4b5d-9120-8856e0c5374b",
+      "followupRunId": "8db83654-2308-4adf-8640-39b5502e0364",
+      "firstPreviewId": "39a34a69-3fcc-43c5-b1b2-5d7ebc8e8c8c",
+      "finalPreviewId": "349b67bf-40d5-4a2d-b2ad-328fc368b735",
+      "diffIds": [
+        "77ebfacf-777d-46f3-be16-c6ea309cc8a6"
+      ],
+      "followupDiffIds": [
+        "e42a36a7-e0b6-41c6-98b6-da8828ac595f"
+      ],
+      "sourceSha256": "a44878715613bb6927fc06755aaf0b2b3a884e7f18b3a8cda0c43e1a16a48ffb",
+      "failedHistorySha256": "ad0164b6bc0f1a05c8faad358663dc8ecd1df9ede1c1c1c4b1a019ae597cb2d8",
+      "liveDiagnosticsChanged": [
+        "targetLock"
+      ]
+    }
+  ],
+  "boundaries": [
+    "Fresh isolated SQLite; deterministic planner; no model invocation",
+    "Direct/Orchestrator initial failures deliberately simulated; automatic group and follow-up CLI deliberately unavailable",
+    "All recovered writes are explicitly ScriptedMock; independent group review is scripted"
+  ],
+  "executedSourceSha256": {
+    "apps/api/app/planning.py": "e4f5ce7f27298d08814d2afe7a739057bc333d14eede8c71d3a1769a7037400b",
+    "apps/api/app/planning_intents.py": "2c74a1b1d63ae15f99b11f8db6e0a7261b2c54468264f8380ca57b971eb482d4",
+    "apps/api/app/planning_tasks.py": "918daf358e15226b4726e39453294561c9ff9300ecd1b7a10721ae74cffedadd",
+    "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28"
+  },
+  "acceptanceScriptSha256": "6ffe12887c89156328d5379bf0eb0b72ff3e41c8d540e3155603b93511e5e42c",
+  "negative": [
+    {
+      "mentions": "@frontend",
+      "sessionId": "ccc5802c-5400-49da-8702-fb2b77048192",
+      "failedFallbackId": "01b97813-7468-4d96-ae60-0e73eaca0d5a",
+      "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+      "sourceSha256": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297"
+    },
+    {
+      "mentions": "@frontend @qa",
+      "sessionId": "3ff6aaf3-6bcb-4a92-9be4-53f91ea7f4a2",
+      "failedFallbackId": "cb3f9ddd-7a50-4486-8bd9-a46368359afd",
+      "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+      "sourceSha256": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297"
+    },
+    {
+      "mentions": "@orchestrator",
+      "sessionId": "887dbea6-6354-4e11-b102-31027aef0387",
+      "failedFallbackId": "3c168be1-6357-441e-a419-0a09ff6f0b80",
+      "errorCode": "SCRIPTED_MOCK_MUTATION_FAILED",
+      "sourceSha256": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297"
+    }
+  ],
+  "recoveredPreviewId": "45eaf321-18af-48c1-8be0-77c1812694c8",
+  "historySha256Before": "cd4b3e873fc02cfa9f4981c17edf0e8707ffc68f2a56bda0d7510808f3874f5b",
+  "historySha256After": "cd4b3e873fc02cfa9f4981c17edf0e8707ffc68f2a56bda0d7510808f3874f5b",
+  "browserErrors": [],
+  "existingSessionSha256": "c8ecf6b8257c68b2c2d6162c50a3a6d0abfdde852f72bf436687a1292b735201",
+  "existingSourceSha256": "e95c2b2e4c58ab54f1eb695483cdd18631dab57822ea11e0cdac821770c0cbf5"
+}

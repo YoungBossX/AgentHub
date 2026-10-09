@@ -1,11 +1,11 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { createElement } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ChatThread } from "./chat-thread"
 import type { ChatMessage, WorkspaceSession } from "@/lib/api"
 
-afterEach(() => cleanup())
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 const session: WorkspaceSession = {
   boundBranch: "main",
@@ -33,7 +33,7 @@ const message: ChatMessage = {
 }
 
 describe("ChatThread", () => {
-  it("supports copy and quote message actions", () => {
+  it("supports copy and quote message actions", async () => {
     const writeText = vi.fn()
     const onQuoteMessage = vi.fn()
     vi.stubGlobal("navigator", { clipboard: { writeText } })
@@ -52,5 +52,6 @@ describe("ChatThread", () => {
 
     expect(writeText).toHaveBeenCalledWith("Build a dashboard")
     expect(onQuoteMessage).toHaveBeenCalledWith(message)
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("已复制"))
   })
 })

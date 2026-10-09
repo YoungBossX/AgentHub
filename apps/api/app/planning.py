@@ -4,6 +4,7 @@ from typing import Any
 from sqlmodel import Session as DbSession
 
 from app.agent_runtime_config import resolve_runtime_role_config
+from app.custom_agents import CustomAgentError, custom_agent_mentions, custom_runtime_resolution, require_custom_agent, selected_custom_planner
 from app.config import get_settings
 from app.context_items import normalize_context_items
 from app.llm_planner import (
@@ -94,6 +95,13 @@ def _planner_runtime_resolution(db: DbSession, message: Message):
     session = db.get(AgentHubSession, message.session_id)
     if session is None:
         return None
+    try:
+        selected_custom_planner(db, session.workspace_id, message.content_md)
+        profile = custom_agent_mentions(db, session.workspace_id, message.content_md).get("orchestrator")
+    except CustomAgentError as exc:
+        raise MentionParseError(str(exc)) from exc
+    if profile is not None:
+        return custom_runtime_resolution(profile)
     return resolve_runtime_role_config(db, session.workspace_id, "planner")
 
 
@@ -179,7 +187,8 @@ def plan_for_message(
     message: Message,
     content: str,
 ) -> list[Task]:
-    parsed = parse_mentions(db, content)
+    session = db.get(AgentHubSession, message.session_id)
+    parsed = parse_mentions(db, content, session.workspace_id if session else None)
     existing_tasks = list_session_tasks(db, message.session_id)
     active_tasks = _active_planning_tasks(existing_tasks)
     routed_role = parsed.roles[0] if parsed.roles else "orchestrator"
@@ -191,6 +200,10 @@ def plan_for_message(
     if session is not None:
         # Reject invalid memory before persisting any direct or fallback tasks.
         ensure_session_memory_snapshot(db, session)
+    if len(parsed.roles) > 1:
+        from app.group_planning import create_explicit_group_tasks
+
+        return create_explicit_group_tasks(db, message, parsed, existing_tasks=existing_tasks)
     llm_fallback = None
     if routed_role == "orchestrator":
         try:
@@ -330,12 +343,38 @@ def plan_for_message(
             }
 
     if routed_role in {"frontend", "backend", "qa", "review"}:
-        return _create_direct_assignment_tasks(
+        custom_id = parsed.profile_ids.get(routed_role)
+        profile = require_custom_agent(db, session.workspace_id, custom_id) if custom_id and session else None
+        if profile is not None:
+            from app.agent_profile_drafts import supported_targets_for_draft
+            from app.target_registry import DEMO_FRONTEND_TARGET_ID, DEMO_BACKEND_TARGET_ID
+
+            active = _active_external_target_for_role(db, message, "backend" if routed_role == "backend" else "frontend")
+            if routed_role == "review" and active is None:
+                active = _active_external_target_for_role(db, message, "backend")
+            target_id = active.target_id if active else (DEMO_BACKEND_TARGET_ID if routed_role == "backend" else DEMO_FRONTEND_TARGET_ID)
+            if target_id not in supported_targets_for_draft(profile) or _is_explicit_platform_mode_request(content):
+                raise MentionParseError("Custom Agent does not support the selected task target.")
+        tasks = _create_direct_assignment_tasks(
             db,
             message,
             routed_role,
             existing_tasks=existing_tasks,
         )
+        if profile is not None:
+            for task in tasks:
+                plan = json.loads(task.plan_json)
+                plan.update({"agentProfileId": profile.id, "agentProfileDisplayName": profile.display_name, "agentMentionAlias": profile.mention_alias})
+                if profile.tool_policy == "claude_read_only":
+                    from app.target_registry import get_target_for_workspace
+
+                    selected_target = get_target_for_workspace(db, session.workspace_id, target_id)
+                    plan.update({"targetId": selected_target.target_id,
+                                 "safeTarget": _primary_allowed_path(selected_target), "readOnly": True})
+                task.plan_json = json.dumps(plan)
+                db.add(task)
+            db.commit()
+        return tasks
 
     if routed_role == "orchestrator" and llm_fallback is not None and _is_pure_chat_request(content):
         _create_orchestrator_boundary_message(
@@ -390,7 +429,8 @@ def plan_for_message(
     if active_tasks:
         return []
 
-    if "login page" not in content.lower() or "demo app" not in content.lower():
+    login_creation = parse_frontend_intent(content, include_login_creation=True)
+    if login_creation is None or login_creation.target != "login_page":
         if bounded_intent is None:
             external_fallback_tasks = _create_external_fallback_tasks_for_request(
                 db,

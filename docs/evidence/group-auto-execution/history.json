@@ -1,0 +1,11 @@
+{
+  "sessionId": "21afb96a-37c3-47b5-8f39-8d5f5d8d1984",
+  "eventCount": 645,
+  "checks": [
+    "API restart preserves exactly two runs and the same native review",
+    "source hashes unchanged after restart",
+    "one completed/claim event per participant",
+    "native receipt survives persisted SSE replay",
+    "Last-Event-ID skips prior frames"
+  ]
+}

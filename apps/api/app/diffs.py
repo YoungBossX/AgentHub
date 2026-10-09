@@ -138,6 +138,11 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
     if task_run is None:
         raise DiffCollectionError(f"TaskRun not found: {task_run_id}")
 
+    from app.user_edit_fences import user_revision_after_run
+
+    if user_revision_after_run(db, task_run):
+        raise DiffCollectionError("Current files include later user edits; preserve the historical Agent Diff and start a new run for further changes.")
+
     execution_worktree = None
     if requires_integration(task_run):
         try:
@@ -153,7 +158,8 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
     policy = _target_diff_policy(db, task_run)
     pathspec = git_diff_pathspec(**policy)
     snapshot_result = None
-    if base_ref is None:
+    user_baseline = _pre_run_checkpoint(task_run).get("userEditBaseline")
+    if base_ref is None or user_baseline:
         snapshot_result = _snapshot_diff_result(db, task_run, policy=policy)
         if snapshot_result is None:
             raise DiffCollectionError("TaskRun does not have a usable baseRef or file snapshot.")
@@ -176,7 +182,10 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
         head_ref = _head_ref(worktree_path, has_worktree_changes=bool(changed_files))
 
     now = utc_now()
-    task_run.base_ref = base_ref
+    # The execution scope stays bound to the real Git baseline. Only this Diff
+    # references the actual source snapshot taken after prior user revisions.
+    if not user_baseline:
+        task_run.base_ref = base_ref
     task_run.head_ref = head_ref
     task_run.updated_at = now
     provider_evidence = provider_evidence_for_task_run(
@@ -198,6 +207,7 @@ def collect_task_run_diff(db: DbSession, task_run_id: str) -> StoredDiffArtifact
                 "providerEvidence": provider_evidence,
                 **({"executionWorktree": execution_worktree} if execution_worktree else {}),
                 **({"snapshotDiff": snapshot_result["metadata"]} if snapshot_result else {}),
+                **({"userEditBaseline": user_baseline} if user_baseline else {}),
             },
             separators=(",", ":"),
         ),

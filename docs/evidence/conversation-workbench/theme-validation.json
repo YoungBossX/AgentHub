@@ -1,0 +1,79 @@
+{
+  "recordedAt": "2026-10-07T11:42:36.853680+00:00",
+  "change": "agenthub-workbench-theme-toggle",
+  "task": "1.1",
+  "sourceHashes": {
+    "apps/web/src/lib/theme.ts": "b9c479185e67cd063f775c611e99101f42319a764499a42b0573d5be3da2edd8",
+    "apps/web/src/components/theme-toggle.tsx": "3debb43584dd56a18a1fd22913b746d7637b29e5041f9b174c7122db736871ee",
+    "apps/web/src/components/theme-toggle.test.tsx": "8c0d447329725c5d85e4f2e07cf9de7680c5677e2193183b642a0f741477ccdd",
+    "apps/web/src/app/layout.tsx": "be3de9984a82ad69f6286d422a6a0829b44234f9213e7caafaae97736f4ea548",
+    "apps/web/src/app/globals.css": "bdc85fb4c9412d32ec89a5abc3345b0e5e548f508a8dc0ca258991b3da3ab555",
+    "apps/web/src/components/workspace-shell-header.tsx": "b9f09620b7de81c939810f564d5d3cd1f0b4fbe3ac5ae9dee4fb5c1f523f8e7d",
+    "apps/web/src/components/diff-card.tsx": "b4d68496d37d19bcf4192877b0fc404e0cc530b47bc2c02564134f433799e757",
+    "apps/web/src/components/diff-card.test.tsx": "d13622a1e8f0589665ab09bc6b183d29a64b7f313183812c923bc9689f07f9d1",
+    "apps/web/src/components/task-dependency-graph.tsx": "3264728347980a230caa00a661187f4b31971ce86ee789f3d930150c66578a3b",
+    "apps/web/src/components/session-sidebar.tsx": "42aaa13eeaffb1ff7ada1a0d05d4253137ca7eb7954d62a838f61dfafcd17771",
+    "apps/web/src/components/preview-card.tsx": "ae3d2d14491d6d73e2187e1446c671292e3f3e46a06a0d7216a053b6071b3e20",
+    "apps/web/src/components/chat-thread.tsx": "eff09c5508bbaed25ba3af6fc6a0c556fef8daaed1df447a07879e5c3e80eb32",
+    "apps/web/src/components/task-card-list.tsx": "cb7cd296bcf9c360c4df48aea546d145224eb4856b044afaa6aef16ef30fc765",
+    "apps/web/src/components/contact-settings-page-client.tsx": "239fec1529fd089428734e582da5b7e1f2741950b171e3d49a6f7bf9bb4f27b3"
+  },
+  "screenshots": [
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-theme-dark.jpg",
+      "sha256": "a721950681effbb4f3cec79f9d80c5d0f350041631a48b40da6342e57771f2d2",
+      "dimensions": [
+        1145,
+        1244
+      ]
+    },
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-theme-diff.jpg",
+      "sha256": "56478130a40e92cf9517397d1e69a7414dcb8ff52d009ed45630b4fa704201b7",
+      "dimensions": [
+        390,
+        844
+      ]
+    },
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-theme-light.jpg",
+      "sha256": "10e869050e79fec133bf84e62b1184205b23cd68c97afaa60dd4c9b8be5362da",
+      "dimensions": [
+        1145,
+        1244
+      ]
+    },
+    {
+      "path": "docs/evidence/conversation-workbench/agenthub-theme-mobile.jpg",
+      "sha256": "b2a4fd35e00d147fe491038e4682f905e4c3046b746bf6a2d28d7ba198e2f634",
+      "dimensions": [
+        390,
+        844
+      ]
+    }
+  ],
+  "verification": {
+    "webTestFiles": 17,
+    "webTestsPassed": 151,
+    "pnpmCheck": "passed",
+    "strictOpenSpec": "passed",
+    "gitDiffCheck": "passed"
+  },
+  "browser": {
+    "lightSwitchAndReload": true,
+    "darkSwitchAndReload": true,
+    "taskGraphInspected": true,
+    "darkPatchInspected": true,
+    "mobileViewport": [
+      390,
+      844
+    ],
+    "mobileDocumentWidth": 390
+  },
+  "boundaries": [
+    "Historical benchmark copy only; no new provider run",
+    "Storage failures and cross-tab changes verified in regression tests",
+    "Preview iframe content and policy unchanged",
+    "No dependencies installed, backend code modified, commit or push"
+  ]
+}

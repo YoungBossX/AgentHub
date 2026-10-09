@@ -55,6 +55,7 @@ def test_default_runtime_config_preserves_existing_behavior(db: DbSession) -> No
         "baseUrl": None,
         "timeoutSeconds": None,
         "apiKeyEnv": None,
+        "systemPrompt": None,
     }
     assert payload["roles"]["frontend"]["enabled"] is False
     assert payload["roles"]["backend"]["mode"] == "backend"
@@ -209,6 +210,25 @@ def test_runtime_config_validate_does_not_persist_candidate() -> None:
         assert response.json()["warnings"] == []
         assert persisted.json()["configSource"] == "default"
         assert persisted.json()["roles"]["frontend"]["enabled"] is False
+
+
+@pytest.mark.parametrize("prompt,status", [("中文行为\nKeep edits bounded.", 200), ("x" * 8001, 422), (123, 422), ("bad\x00prompt", 400)])
+def test_runtime_config_api_prompt_save_reload_or_rejection(prompt, status):
+    with _client() as client:
+        workspace_id = _workspace_id(client)
+        profiles = _profiles_by_role(client, workspace_id)
+        url = f"/workspaces/{workspace_id}/runtime-config"
+        response = client.put(url, json={"roles": {"frontend": {
+            "agentProfileId": profiles["frontend"]["id"],
+            "providerId": "local-codex-cli", "adapterType": "codex",
+            "mode": "frontend", "enabled": True, "systemPrompt": prompt,
+        }}})
+        assert response.status_code == status
+        current = client.get(url).json()
+        if status == 200:
+            assert current["roles"]["frontend"]["systemPrompt"] == prompt
+        else:
+            assert current["configSource"] == "default"
 
 
 def test_runtime_config_api_persists_valid_workspace_config() -> None:

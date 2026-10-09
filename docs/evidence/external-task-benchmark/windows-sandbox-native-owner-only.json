@@ -1,0 +1,24 @@
+{
+  "root": "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-sandbox-diagnostic-qcewh48f",
+  "command": [
+    "C:\\Users\\XCC\\AppData\\Local\\OpenAI\\Codex\\bin\\979a96ce184041d1\\codex.exe",
+    "sandbox",
+    "-P",
+    ":workspace",
+    "--include-managed-config",
+    "-C",
+    "C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-sandbox-diagnostic-qcewh48f",
+    "-c",
+    "windows.sandbox=\"unelevated\"",
+    "--",
+    "C:\\Users\\XCC\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+    "-NoProfile",
+    "-NonInteractive",
+    "-Command",
+    "$ErrorActionPreference='Stop'; Write-Output ('cwd=' + (Get-Location).Path); $p=Join-Path (Get-Location) 'probe.txt'; Write-Output ([System.IO.File]::ReadAllText($p)); [System.IO.File]::AppendAllText($p, 'after' + [Environment]::NewLine); Write-Output ([System.IO.File]::ReadAllText($p))"
+  ],
+  "exitCode": 1,
+  "stdout": "cwd=C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-sandbox-diagnostic-qcewh48f\n",
+  "stderr": "ParentContainsErrorRecordException: Exception calling \"ReadAllText\" with \"1\" argument(s): \"Access to the path 'C:\\Users\\XCC\\AppData\\Local\\Temp\\agenthub-sandbox-diagnostic-qcewh48f\\probe.txt' is denied.\"\n",
+  "content": "before\n"
+}

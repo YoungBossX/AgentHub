@@ -1,0 +1,21 @@
+{
+  "ProcessId": 4940,
+  "ParentProcessId": 52908,
+  "CommandLine": "\"E:\\Anaconda\\python.exe\" -u C:/Users/XCC/AppData/Local/Temp/agenthub-attachment-acceptance.py server"
+}
+SUCCESS: The process with PID 59684 (child process of PID 56092) has been terminated.
+SUCCESS: The process with PID 52824 (child process of PID 63124) has been terminated.
+SUCCESS: The process with PID 32864 (child process of PID 26852) has been terminated.
+SUCCESS: The process with PID 56092 (child process of PID 51032) has been terminated.
+SUCCESS: The process with PID 63124 (child process of PID 49056) has been terminated.
+SUCCESS: The process with PID 26852 (child process of PID 15160) has been terminated.
+SUCCESS: The process with PID 51032 (child process of PID 57140) has been terminated.
+SUCCESS: The process with PID 49056 (child process of PID 65456) has been terminated.
+SUCCESS: The process with PID 15160 (child process of PID 55904) has been terminated.
+SUCCESS: The process with PID 57140 (child process of PID 65620) has been terminated.
+SUCCESS: The process with PID 65456 (child process of PID 20320) has been terminated.
+SUCCESS: The process with PID 55904 (child process of PID 52116) has been terminated.
+SUCCESS: The process with PID 65620 (child process of PID 4940) has been terminated.
+SUCCESS: The process with PID 20320 (child process of PID 4940) has been terminated.
+SUCCESS: The process with PID 52116 (child process of PID 4940) has been terminated.
+SUCCESS: The process with PID 4940 (child process of PID 52908) has been terminated.

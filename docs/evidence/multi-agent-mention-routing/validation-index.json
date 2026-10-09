@@ -1,0 +1,40 @@
+{
+  "sha256": {
+    "runtime.json": "6e123ceac24a1241c072935be3b7f70a94f19d0974df898dd1c50e4f2e0dbf14",
+    "write.png": "1a4b7112c12ded722b5a4f10cd643424d6f3b6e34addf9e717c2bdebf6b7ceb5",
+    "review.png": "589ef3534ff1a5b49f6b3a68ec92bbbab211c1359cca9fc8b06365fdac671226"
+  },
+  "validation": {
+    "api": {
+      "passed": 1511,
+      "skipped": 1,
+      "seconds": 465.11,
+      "logSha256": "7ee520f392c129f36b6cbd2e52efe2d2c85f2c1c6208532a9f67d1ce7fc2f8ba",
+      "command": "python -m pytest -q --tb=short"
+    },
+    "web": {
+      "passed": 167,
+      "files": 20,
+      "command": "pnpm test:web"
+    },
+    "demoApi": {
+      "passed": 5,
+      "command": "pnpm demo:api:test"
+    },
+    "check": "pnpm check passed",
+    "openspec": "agenthub-multi-agent-mention-routing --strict passed",
+    "whitespace": "git diff --check passed"
+  },
+  "sourceSha256": {
+    "apps/api/app/group_planning.py": "44ee210ffcae8aaa94d6ca79161d01840dc9ee1b0226d4e9821ad2c78ad2aa7c",
+    "apps/api/app/planning.py": "fc99a955a1f6a6ee8eba3c9bda9a4ffcfaa7181a2ad2b9d2fe2873a545911018",
+    "apps/api/app/planning_intents.py": "1c46e10e3120011a429bfa8963a6908fcc2b6dafa361a097a38d36e3560380b7",
+    "apps/api/app/planning_tasks.py": "737bdc05ba2613546ac7402e342ab5034074b7abd08efc1f808d5b0c961e68ad",
+    "apps/api/app/task_runs.py": "88489960dc619fcd84eb2bd30d471afa96fa02ab74beb6e3d9e4665eb32b2e77",
+    "apps/api/app/run_engine.py": "ed9831d66e7063301ac93c52a8c11673193c168b10d38768cf3552a3999a6ce3",
+    "apps/api/app/scripted_mock.py": "fae2bdceb1717f63af29bb71047322cf44cd7e162c25ff443c27a44975961cbf",
+    "apps/web/src/components/composer-mentions.ts": "737180458662b04be38f60ef6c6e0fd8387f73d747acde7199643b12a71c1d14",
+    "apps/web/src/components/workspace-shell.tsx": "f3dd19884749f08ace7ac8dbce81ac913988f188343cbb04936cda9e9c3b99dd",
+    "apps/web/src/components/task-card-list.tsx": "74e62f7a05f95bf5b6d948972249eceaacc288cbcce5afd91425e0e47a251381"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "origin": "Actual prior CSS behavior, sampled immediately after dark switch and again after settling; the new transition pause rule was not yet loaded by the dev service",
+  "immediateCard": {
+    "class": "group min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/30",
+    "background": "rgb(255, 255, 255)",
+    "color": "rgb(21, 26, 35)",
+    "surface": "#171e2a",
+    "foreground": "#e6edf7",
+    "inline": null
+  },
+  "immediateTitle": {
+    "class": "mt-3 truncate text-sm font-medium text-slate-800",
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(230, 237, 247)",
+    "surface": "#171e2a",
+    "foreground": "#e6edf7",
+    "inline": null
+  },
+  "settled": {
+    "background": "rgb(23, 30, 42)",
+    "color": "rgb(230, 237, 247)",
+    "title": "rgb(230, 237, 247)"
+  },
+  "diagnosis": "temporary mixed palette, not persistent missing dark styles",
+  "newCssRuleConfirmedAfterOwnedFrontendRestart": true
+}

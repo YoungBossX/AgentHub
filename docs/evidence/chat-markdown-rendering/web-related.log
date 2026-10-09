@@ -1,0 +1,13 @@
+
+> @agenthub/web@ test X:\Git_Clone\AgentHub\apps\web
+> vitest run "src/components/chat-markdown.test.tsx" "src/components/chat-thread.test.tsx"
+
+
+ RUN  v4.1.11 X:/Git_Clone/AgentHub/apps/web
+
+
+ Test Files  2 passed (2)
+      Tests  19 passed (19)
+   Start at  23:24:34
+   Duration  1.32s (transform 155ms, setup 0ms, import 895ms, tests 467ms, environment 858ms)
+

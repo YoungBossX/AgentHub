@@ -5,7 +5,7 @@
 
 ## 当前快照
 
-截至 2026-10-07，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
+截至 2026-10-09，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
 核心闭环为：
 
 ```text
@@ -28,6 +28,44 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
+| `agenthub-local-final-workflow-acceptance` | 1.1 Complete（本地未提交） | 修复小屏输入、选中代码引用及 Planner 缺失引用、同会话重复选择、UTC 弃用；最终原生 Codex/Claude 续改、评审/汇总、真实预览、故障/中断/兜底及重启核对通过。最终 API 1949 passed / 1 skipped，Web 267、本地工具 17、demo-api 5；[记录](local-final-workflow-review.md)。仅本地核心范围，PDF P2 尚有明确未实现项 |
+| `agenthub-bounded-code-editing` | 1.1 Complete（本地未提交） | 完整源码/精确补丁/明确应用、用户记录、执行互斥与部分失败/重启围栏；实际编辑/Vite/Claude 续接，历史 Diff 与新基线归属、窄屏/CRLF/长 stdin 通过；API 全量阶段 1,942 passed / 1 skipped，后续相关 132+1，最终 Web 263；[记录](bounded-code-editing-review.md) |
+| `agenthub-conversational-agent-creation` | 1.1 Complete（本地未提交） | 无工具配置对话、多轮/手工修改/标签页恢复、明确保存/启用与相同权限校验；真实新 Profile 提示词进入 Claude 文件修改，Diff/Vite/亮暗/窄屏/重启通过；API 1,872 passed / 2 skipped、Web 256；[记录](conversational-agent-creation-review.md) |
+| `agenthub-message-regeneration` | 1.1 Complete（本地未提交） | 回复/计划来源、原附件与历史保留、重复/并发/响应丢失/单 API 重启边界；真实 Planner/Claude 生成序号 1→2、匹配 Diff/Vite，原生重新汇总不重跑编码；亮暗/窄屏/切换/重启通过；API 1,845 passed / 1 skipped、Web 249；[记录](message-regeneration-review.md) |
+| `agenthub-windows-connection-cleanup` | 1.1 Complete（本地未提交） | 精确匹配 Windows 10054 后补全 socket/Server 清理，处理器归属和其他错误可见；正式入口故障注入、正常退出/预览释放、SSE/当前工作台重启及历史一致通过；API 1,827 passed / 1 skipped、本地 17；[记录](windows-connection-cleanup-review.md) |
+| `agenthub-message-attachments` | 1.1 Complete（本地未提交） | 不可变会话附件、隔离校验、有界上下文及真实输入；Codex 文件+图片、Claude 规划/编码文本、实际 Diff/Vite/界面通过；API 1,814 passed / 1 skipped、Web 242、本地 17。当前 Claude 模型拒图仍披露；临时 API 退出问题由上方独立任务定位修复；[记录](message-attachments-review.md) |
+| `agenthub-local-dependency-security-refresh` | 1.1 Complete（本地未提交） | 生产审计 12→0、全树 19→1 high（braces 本地深度补丁，原始告警保留）；本地 Monaco/worker 与 DOMPurify 实际绑定，加载失败恢复和模型释放兼容；本地工具 17、Web 237 passed、静态/构建/开发模式浏览器通过；[记录](local-dependency-security-review.md) |
+| `agenthub-chat-markdown-rendering` | 1.1 Complete（本地未提交） | 普通消息 Markdown/GFM、独立代码复制、安全链接/惰性图片、原文与引用/置顶；Web 233 passed、静态与生产构建、实际亮暗/窄屏/剪贴板/刷新通过；[记录](chat-markdown-rendering-review.md)。该项发现的 12 条生产依赖告警已由上方安全更新处理 |
+| `agenthub-pinned-message-context` | 1.1 Complete（本地未提交） | 同 Session 置顶消息接入规划和执行，预算/来源/截断与历史快照边界；实际 UI → 原生 Planner → Claude 编码 → Vite、取消置顶与重启通过；相关 56 passed，全量 API 1,780 passed / 1 POSIX-only skipped；[记录](pinned-message-context-review.md)。后续富消息能力见上方独立任务 |
+| `agenthub-scope-finalization-performance` | 1.1 Complete（本地未提交） | 一次新鲜核验后受限持久化、原采集器/外部判定复验不变；同基线两次脚本任务平均 20.53→14.19 秒，核验阶段 13.09→6.71 秒；实际 Vite 续接/重启历史和原生会话一致通过，API 1,770 passed / 1 POSIX-only skipped；[记录](scope-finalization-performance-review.md)。本地核心终验现见表首任务 |
+| `agenthub-scripted-copy-literal-rendering` | 1.1 Complete（本地未提交） | 真实花括号报错/标签和实体解码复现后修复纯文本编码与续接锚点；16 份严格编译/实际 React DOM、三路 13 个渲染/续接/重启检查、5 次独立 QA、样式/历史/来源一致通过；API 1,752 passed / 1 skipped；[记录](scripted-copy-literal-rendering-review.md)。当时观察到的核验耗时由上方新项定位优化，本地核心终验现见表首任务 |
+| `agenthub-scripted-login-form-styling` | 1.1 Complete（本地未提交） | 固定 CSS 块/输入语义/实际文件事件、危险样式与失败回滚、样式上下文续接；三路实际 Vite、20 份表单测量/1440/390/320px/键盘焦点、App-only 文案、独立 QA/刷新/重启/来源通过；API 1,736 passed / 1 skipped；[记录](scripted-login-form-styling-review.md)。当时的特殊字符文案缺口由上方新项修复，本地核心终验现见表首任务 |
+| `agenthub-login-fallback-target-binding` | 1.1 Complete（本地未提交） | 直接/组/Orchestrator 有界登录与后续目标、中文/旧记忆附注兼容；三路真实脚本文件/Diff/健康 iframe、独立 QA、附加认证无写入拒绝、刷新/重启/来源通过；API 1,723 passed / 1 skipped；[记录](login-fallback-target-binding-review.md)。当时的输入框样式缺口由上方新项补齐，本地核心终验现见表首任务 |
+| `agenthub-local-startup-entrypoint` | 1.1 Complete（本地未提交） | 无 Bash 统一启动/只读诊断、控制输入隔离、端口/CORS/就绪/退出；独立 SQLite、Edge、真实 Vite、冲突回滚/正常/EOF/Ctrl+C/异常清理和历史一致通过；启动器 12、Web 215 passed，API 业务哈希不变；[记录](local-startup-entrypoint-review.md)。当时登录页兜底目标缺口由上方新项修复，本地核心终验现见表首任务 |
+| `agenthub-theme-transition-consistency` | 1.1 Complete（本地未提交） | 主题颜色同步、两帧暂停/旧回调围栏及恢复悬停；实际 42 帧/252 色对、快速/跨标签/刷新/亮暗窄屏和真实 Preview 通过；Web 215 passed、后端冻结哈希不变；[记录](theme-transition-consistency-review.md)。纠正前项持久白底判断，实际为切换瞬态 |
+| `agenthub-preview-restart-recovery` | 1.1 Complete（本地未提交） | 归属/退出诊断、只清理当前进程、一次显式恢复、高端口与异步选择保持；实际 Vite/异常及正常 API 重启、冷启动门禁、来源/历史通过；API 1,676 passed / 1 skipped、Web 212 passed；[记录](preview-restart-recovery-review.md)。当时暗色截图问题由上方新项进一步诊断及修复 |
+| `agenthub-local-time-display` | 1.1 Complete（本地未提交） | 严格 UTC/偏移解析、本地时区/原始值/UTC 展示、SSR/零偏移一致性、排序/搜索/重叠统一；实际上海/纽约/UTC、SSE、刷新/亮暗/窄屏通过；Web 209 passed；[记录](local-time-display-review.md) |
+| `agenthub-session-organization` | 1.1 Complete（本地未提交） | 会话置顶/归档/恢复、关键消息置顶/跳转、增量旧库升级、并发列更新与过期响应保护；真实 CLI 运行中整理、浏览器/亮暗/窄屏/刷新/重启通过；API 1,668 passed / 1 skipped、Web 184 passed；[记录](session-organization-review.md) |
+| `agenthub-group-result-summary` | 1.1 Complete（本地未提交） | 实际原生协调汇总、冻结提示词/配置、最新运行/制品绑定、owner/lease/权限围栏、失败重试与历史展示；真实 Planner → Claude 编码 → 原生评审 → 原生汇总、亮暗/刷新/重启/SSE 通过；API 1,651 passed / 1 skipped、Web 174 passed；[记录](group-result-summary-review.md) |
+| `agenthub-group-auto-execution` | 1.1 Complete（本地未提交） | 默认自动组/独立评审、依赖/重试、重复创建围栏与启动恢复；真实原生 Planner → Claude 编码 → 原生只读评审、浏览器/刷新/重启/SSE 通过；冻结时 API 1,620 passed / 1 skipped、Web 168 passed；[记录](group-auto-execution-review.md)。聚合回复由上方新任务补齐 |
+| `agenthub-native-review-artifacts` | 1.1 Complete（本地未提交） | 真实 Claude Read-only 模型成果、文件版本/完整 Read、单 @ 目标、提交/失败围栏、UI/暗色/刷新/重启/SSE 通过；API 1,603 passed / 1 skipped、Web 168 passed；静态及证据哈希通过；[记录](native-review-artifacts-review.md) |
+| `agenthub-claude-native-execution` | 1.1 Complete（本地未提交） | Windows 原生启动、受限 SDK 配置、UTF-8/流合并/脱敏及退出围栏；真实 Claude 编码/只读、Diff、哈希与 UI/SSE 通过；定向 235、全量 API 1,564 passed / 1 skipped；[记录](claude-native-execution-review.md) |
+| `agenthub-native-group-planner` | 1.1 Complete（本地未提交） | 实际自定义/配置 Planner 整组内容、原子持久化与调用后围栏；真实 Claude CLI Planner → Codex → 独立只读脚本 QA，刷新/提供方/哈希通过；API 1,544 passed / 1 skipped、Web 167 passed；取代上一项自定义 Planner 群聊拒绝边界；[记录](native-group-planner-review.md) |
+| `agenthub-multi-agent-mention-routing` | 1.1 Complete（本地未提交） | 多 @ 完整路由、事务与权限校验、串行写/分目标评审；浏览器新真实 Codex + 独立只读脚本评审通过；API 1,511 passed / 1 skipped、Web 167 passed；[记录](multi-agent-mention-routing-review.md) |
+| `agenthub-custom-agent-execution` | 1.1 Complete（本地未提交） | 受限自定义档案、别名路由、运行选择、冻结身份/提示词/原生工具策略；浏览器、重启恢复和真实 Codex Diff/提示词标记通过；API 1,491 passed / 1 skipped、Web 163 passed；[记录](custom-agent-execution-review.md) |
+| `agenthub-agent-system-prompt` | 1.1 Complete（本地未提交） | 工作区提示词保存/继承、冻结与实际执行；浏览器恢复、真实 Codex 标记及匹配 Diff；API 全量 1,465 passed / 1 skipped、Web 160 passed；[记录](agent-system-prompt-review.md)。自定义 Profile 状态见上方新任务 |
+| `agenthub-local-runtime-acceptance` | 1.1 Complete（本地未提交） | 真实 Codex 登录/后续修改、修复后的第三次真实运行与健康 Preview；同步 scope 阻塞修复和 527 项回归、显式 Mock 恢复与多 Session；[记录](local-runtime-acceptance-review.md) |
+| `agenthub-review-dependency-handoff` | 1.1 Complete（本地未提交） | 普通 HTTP 后续修改、排队依赖续接与旧 pending QA 恢复；真实脚本文件/Diff/门禁和评审来源；相关 API 205 passed；[记录](review-dependency-handoff-review.md)。健康 Preview/浏览器闭环未验收 |
+| `agenthub-scripted-mock-intent-routing` | 1.1 Complete（本地未提交） | 结构化目标路由；登录表单及固定同 Session 按钮后续修改、无写入失败；相关 API 149 passed；[记录](scripted-mock-intent-routing-review.md)。普通第二条聊天/QA/健康 Preview 未验收 |
+| `agenthub-worktree-dependency-ignore` | 1.1 Complete（本地未提交） | 新建/复用依赖链接的 Git 干净状态、脏文件/保护控制；基础回归 230 passed / 1 skipped，最终会话/环境 18 passed（含复验）；[记录](worktree-dependency-ignore-review.md) |
+| `agenthub-login-plan-target-binding` | 1.1 Complete（本地未提交） | 登录页 frontend/QA 显式目标绑定；相关 API 186 passed；隔离 ScriptedMock 非空 Diff/作用域通过，缺失绑定负例失败；[记录](login-plan-target-binding-review.md)。尚非登录页功能/Preview 闭环通过 |
+| `agenthub-resizable-workbench-columns` | 1.1 Complete（本地未提交） | 两侧边界拖动/键盘/复位、本地保存、最小中心空间与响应式兼容；Web 159 passed、真实浏览器拖动；[记录](resizable-workbench-review.md) |
+| `agenthub-workbench-theme-toggle` | 1.1 Complete（本地未提交） | 顶部亮/暗按钮、持久化/跨标签/失败回退、图与 Diff 适配；Web 151 passed、实际刷新与窄屏验收；[记录](workbench-theme-review.md) |
+| `agenthub-conversation-workbench-ui` | 1.1 Complete（UI，本地未提交） | PDF 对应三视图、依赖/进度/SSE/成果可视化；Web 143 passed、桌面/窄屏验收；[记录](conversation-workbench-ui-review.md)。新聊天至健康 Preview 联动仍有两处后端缺口 |
+| `agenthub-windows-codex-sandbox-selection` | 1.1 Complete（本地未提交） | 固定 Windows 原生沙箱选择与精确命令白名单；正式真实三项 3/3、功能 10/10；相关 API 577 passed / 1 skipped；[修复记录](windows-codex-sandbox-review.md) |
+| `agenthub-write-completion-validation` | 1.1 Complete（本地未提交） | 写任务新增输出/Diff 门禁、CLI 退出诊断；API 1,352 passed / 1 skipped；Windows 策略与 ACL 限制已复现，真实三项正确失败为 0/3，详见 [本轮记录](write-completion-validation-review.md) |
+| `agenthub-external-task-benchmark` | 1.1 Complete（工具与失败证据，本地未提交） | 三项固定外部任务、独立功能验收、88 项相关回归；真实 Codex 验收为 0/3，不声明编码成功 |
+| `agenthub-session-memory-snapshot-refresh-ui` | 1.1 Complete（本地工作区，未提交） | 当前会话导航、显式刷新、冲突/过期响应处理；Web 128 passed、后端相关回归 74 passed |
 | `agenthub-memory-rule-layer-budget` | 1.1 Complete | 可信规则/偏好/经验分层、16,000 序列化字符预算、作用域排除与准备请求证据；API 全量 1,324 passed / 1 skipped |
 | `agenthub-memory-snapshot-content-consistency` | 1.1 Complete | v2 内容与评分时间冻结、TaskRun 绑定校验、原始 Planner 请求证据；95 项记忆测试与完整回归，详见下方证据边界 |
 | `agenthub-parallel-dag-execution` | 第 1–5 阶段 Complete | [DAG 冻结审查](parallel-dag-freeze-review.md)、四场景有界预演；不含真实 provider 并行证明 |
@@ -55,6 +93,77 @@ Web 109 passed，demo-api 5 passed。详见
 
 ## 当前证据边界
 
+### Conversation workbench UI
+
+浅色聊天工作台已具备会话/联系人、对话内计划与成果摘要、真实依赖图和 SSE 事件时间线、
+独立成果页与可展开面板；最新失败不能被旧成功掩盖。Web 143 项回归和静态检查通过，
+1440×900 / 390×844 浏览器验收有真实截图。
+
+此前新登录页聊天路径暴露确定性计划缺少目标绑定，以及 Windows `node_modules` 符号链接
+被 Git 报为未跟踪导致队列受阻；当前 UI 如实展示失败/中断。目标绑定已在独立任务中
+修复，相关 API 186 项通过，详见 [修复记录](login-plan-target-binding-review.md)。
+依赖链接造成的 Git 脏状态已在独立任务修复，新建或复用初始化会建立该仓库的局部排除
+规则；临时真实 Git 夹具的干净状态、脏文件阻塞和完整 scope 检查通过，详见
+[验收记录](worktree-dependency-ignore-review.md)。随后本轮新会话浏览器闭环已通过。
+此前 ScriptedMock 关键词路由误选标题变更已修复：优先结构化 target/targetText，
+临时真实 Git/SQLite 中登录表单及固定依赖前端任务的按钮后续修改通过，相关 API
+149 项通过，详见 [修复记录](scripted-mock-intent-routing-review.md)。随后登录 QA 与
+动态任务依赖闭合已修复：普通 HTTP 后续消息在完成后、运行前排队、旧 QA 遗留三种
+场景可继续执行，相关 API 205 项通过，详见 [验收记录](review-dependency-handoff-review.md)。
+初次 UI 验收复用了旧基准 Diff，没有新健康 Preview；历史边界保留在
+[UI 验收记录](conversation-workbench-ui-review.md)。之后的新本地验收已通过真实 Codex
+登录页和普通后续修改、实际健康 Preview/刷新/历史，以及显式 Mock 恢复与 mock 交付卡。
+本轮还修复同步 scope 阻塞 API 和规划角色缺失，相关回归 527 项通过，详见
+[完整记录](local-runtime-acceptance-review.md)。该次验收的 Review 为脚本报告、Planner
+使用 fallback；后续真实 Claude CLI Planner、编码及只读回复已有各自独立证据。
+旧编码任务的 Review artifact 继续标记脚本来源。后续指定 Claude Read-only
+评审已产生独立原生 Review 制品和版本证据，不宣称生产部署完成。
+
+既有 Agent.system_prompt 已进入执行指令，并有工作区覆盖与运行冻结；受限自定义
+Profile、原生工具策略和别名路由已实现并通过全量回归。多个显式执行角色已进入
+整组协调，保留串行写入、分目标只读评审和实际运行来源。自定义 Planner-led group、
+默认自动执行协调、指定原生评审和完成后原生汇总已有独立实际运行证据。
+会话置顶/归档与关键消息置顶已实现，浏览器/原生运行/重启和最终回归通过。
+PDF 对照见
+[本地交付核对](local-project-delivery.md)，不以已勾选任务替代实际功能验收。
+
+### External task benchmark
+
+新增三项固定、小型合成 Vite React 任务，使用独立外部 Git 夹具与 SQLite，冻结原始
+输入及目标之外的 3/4/3 项 Node 验收。执行从固定 Task plan 开始，沿用注册、v2 快照、
+规则 receipt、Worker、Codex、scope、Diff/Review；不验证 Planner、聊天、DAG 或部署。
+准备模式不调用 Provider，真实模式不自动切换 Mock。
+
+早期报告为 **0/3**，包括原始 completed 但无修改的报告，以及完成门禁修复后正确
+失败为 `TASK_RUN_NO_CHANGES` 的报告；均保持原字节，不追溯改写历史。
+
+当前 Windows Codex `0.162.0-alpha.2` 使用固定显式原生沙箱选择，正式适配器在全新
+目录通过三项 **3/3**、独立功能测试 **10/10**。每项有 Provider thread/turn、有效
+规则 receipt、通过的 scope 与新增输出门禁、真实非空匹配 Diff；验收脚本及脚手架
+未改。单项预验收另为 1/1，不计入三项分母。
+
+当前相关 API 回归 **577 passed / 1 POSIX-only skipped**，`pnpm check` 与严格
+OpenSpec 通过；未重复全量 API/Web 测试。这是单次固定合成任务验收，不是通用能力
+或稳定成功率证明；模型/上游身份未知，也不验证 Planner、聊天、Preview 或部署。
+最新报告与隔离边界见 [Windows 修复记录](windows-codex-sandbox-review.md)，历史失败
+见 [基准交付记录](external-task-benchmark-review.md) 和
+[完成判定记录](write-completion-validation-review.md)。相关改动及刷新 UI 仍在本地未提交。
+
+### Session memory snapshot refresh UI
+
+快照一致性与规则预算实现已在 `78e90f4` 推送至 `origin/dev` 并核对远端 ref。
+随后完成的刷新 UI 尚在本地工作区。聊天侧栏进入记忆设置时携带当前会话，页面只显示
+该工作区内所选会话的快照；直接进入或无效选择需要用户显式选择，不展示其他会话的绑定。
+
+“重新加载列表”不刷新快照；“刷新会话快照”使用既有后端 API。更新记忆后需显式
+刷新以便后续请求采用变更，历史 TaskRun 绑定保持不变。操作中禁用冲突操作，409 提供
+等待任务结束后的重试提示，失败保留旧绑定，卸载或切换后端后的过期响应不更新页面。
+UI 只展示 Session 返回的快照 ID，不据此推断快照内容版本或完整性。
+
+本次 Web 全量 **128 passed**、现有后端相关回归 **74 passed**，项目静态检查与
+严格 OpenSpec 校验通过；未进行浏览器人工视觉验收或真实 provider 效果演练。
+详见 [刷新 UI 设计](../openspec/changes/agenthub-session-memory-snapshot-refresh-ui/design.md)。
+
 ### Memory rule layers and serialized budget
 
 当前 Planner 与 coding 请求共用 `memory_rule_budget_v1` 选择策略，继续从既有 v2
@@ -81,7 +190,7 @@ Planner 尚未明确 target 时只选不带 target 限制的适用记忆。
 2026-10-07 的 API 完整回归为 **1,324 passed / 1 POSIX-only skipped**，Web
 **109 passed**，demo-api **5 passed**；项目检查、严格 OpenSpec 与空白检查通过。
 该结果使用测试 provider 与临时 SQLite/Git，不证明真实 provider 的遵守率或加速。
-当前会话刷新 UI、语义检索、重复/冲突治理、Session 所属绑定及 Skill/MCP 尚未推进。
+语义检索、重复/冲突治理、Session 所属绑定及 Skill/MCP 尚未推进。
 具体策略见 [规则层与预算设计](../openspec/changes/agenthub-memory-rule-layer-budget/design.md)。
 
 ### Memory snapshot content consistency
@@ -288,11 +397,14 @@ check/build、Web check/102 tests/build、根 `pnpm check` 以及 Web 102 + API 
 
 ### Production dependency security refresh
 
+下文保留 2026-09-01 的历史验收范围；当前依赖状态由
+[2026-10-09 安全更新记录](local-dependency-security-review.md) 取代，不能沿用旧零告警结果。
+
 2026-09-01 的 fresh `pnpm audit --prod` 在已交付锁文件上发现 34 项 Web 生产依赖
 告警：9 high、21 moderate、4 low、0 critical。路径集中在 Next.js 16.2.6 及其
 PostCSS/nanoid/sharp 依赖，以及 Monaco Editor 0.55.1 的 DOMPurify 依赖。
 
-当前 manifest 将 Next.js 与 `eslint-config-next` 的兼容 floor 同步到 16.3.3、将
+当时 manifest 将 Next.js 与 `eslint-config-next` 的兼容 floor 同步到 16.3.3、将
 Monaco Editor 提升到 0.56.0；锁文件解析 Next 16.3.4、PostCSS 8.5.23、
 nanoid 3.3.18、sharp 0.35.4 和 Monaco 0.56.0。根 pnpm override 固定
 DOMPurify 3.4.13 与 Babel 7.29.6，分别闭合 sanitizer advisories 和升级后暴露的

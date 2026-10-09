@@ -205,11 +205,11 @@ function RuntimeRoleSelector({
   const profileOptions = config.availableProfiles.filter((profile) =>
     profileSupportsRole(profile, role),
   )
-  const providerOptions = config.availableProviders.filter((provider) =>
-    provider.supportedModes.includes(mode),
-  )
   const selectedProfile = config.availableProfiles.find(
     (profile) => profile.id === draftRole.agentProfileId,
+  )
+  const providerOptions = config.availableProviders.filter((provider) =>
+    provider.supportedModes.includes(selectedProfile?.toolPolicy === "claude_read_only" ? "review" : mode) && (selectedProfile?.origin !== "custom" || provider.providerId === selectedProfile.providerId),
   )
   const canCheckProvider =
     role === "planner"
@@ -231,6 +231,7 @@ function RuntimeRoleSelector({
       providerId: draftRole.providerId ?? null,
       providerPresetId: draftRole.providerPresetId ?? null,
       timeoutSeconds: draftRole.timeoutSeconds ?? null,
+      systemPrompt: draftRole.systemPrompt ?? null,
       ...next,
     })
   }
@@ -277,8 +278,9 @@ function RuntimeRoleSelector({
               agentProfileId: profile?.id ?? null,
               availability: null,
               enabled: Boolean(profile),
-              mode,
+              mode: profile?.toolPolicy === "claude_read_only" ? "review" : mode,
               providerId: defaultProvider?.providerId ?? profile?.providerId ?? null,
+              ...(profile?.origin === "custom" ? { providerPresetId: null, protocol: null, model: null, baseUrl: null, apiKeyEnv: null } : {}),
             })
           }}
           value={draftRole.agentProfileId ?? ""}
@@ -319,9 +321,27 @@ function RuntimeRoleSelector({
         </select>
       </label>
 
-      {role === "planner" ? (
+      {role === "planner" && selectedProfile?.origin !== "custom" ? (
         <PlannerProviderControls draftRole={draftRole} onChange={patchRole} />
       ) : null}
+
+      <label className="mt-3 block text-xs font-semibold text-[var(--text-muted)]">
+        System Prompt
+        <textarea
+          aria-label={`${label} System Prompt`}
+          className="mt-1 min-h-28 w-full resize-y rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-2 text-xs font-normal text-[var(--foreground)] disabled:opacity-50"
+          disabled={!draftRole.enabled}
+          maxLength={8000}
+          onChange={(event) => patchRole({ systemPrompt: event.target.value || null })}
+          placeholder={selectedProfile?.origin === "custom" ? "留空使用此自定义 Agent 的提示词" : "留空使用内置 Agent 的默认提示词"}
+          rows={5}
+          value={draftRole.systemPrompt ?? ""}
+        />
+      </label>
+      <p className="mt-1 text-[11px] leading-relaxed text-[var(--muted-foreground)]">
+        启用此角色配置后生效，最多 8000 字符。保存只影响新运行；提示词不能扩大文件或工具权限。
+        {role === "planner" ? "仅 LLM 规划使用；确定性兜底不执行提示词。" : "脚本兜底不执行模型提示词。"}
+      </p>
 
       <div className="mt-2 flex flex-wrap gap-1">
         <RuntimePill label={draftRole.adapterType ?? "未设置适配器"} tone="provider" />
@@ -339,6 +359,7 @@ function RuntimeRoleSelector({
       {selectedProfile ? (
         <div className="mt-2 flex flex-wrap gap-1">
           <RuntimePill label={formatAvailabilityLabel(selectedProfile.status)} tone="ok" />
+          {selectedProfile.toolPolicy ? <RuntimePill label={selectedProfile.toolPolicy} tone="capability" /> : null}
         </div>
       ) : null}
     </div>

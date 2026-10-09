@@ -1,0 +1,26 @@
+{
+  "operation": "Actual exec PTY pnpm dev:local on API8007/Web3001/demo5174; write_stdin Ctrl+C",
+  "terminalExitCode": 1,
+  "productApiPid": 27092,
+  "demoApiPid": 50604,
+  "observedProductApiOutput": [
+    "Shutting down",
+    "Waiting for application shutdown.",
+    "Application shutdown complete.",
+    "Finished server process [27092]"
+  ],
+  "listenersAfterInterrupt": [
+    {
+      "port": 8006,
+      "pid": 22080,
+      "ownership": "pre-existing untouched API"
+    }
+  ],
+  "checkedPortsReleased": [
+    8007,
+    3001,
+    5174
+  ],
+  "demoApiPidAbsent": true,
+  "boundary": "PowerShell interrupt exit 1 is recorded; not a claim that the terminal returned 0"
+}

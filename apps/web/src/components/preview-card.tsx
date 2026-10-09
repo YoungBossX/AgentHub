@@ -2,6 +2,8 @@
 
 import {
   Code2,
+  Maximize2,
+  Minimize2,
   ExternalLink,
   FileText,
   Monitor,
@@ -15,6 +17,7 @@ import { type ChangeEvent, useState } from "react"
 
 import { DeployCard } from "./deploy-card"
 import { DiffCard } from "./diff-card"
+import { UserCodeEditStatus } from "./user-code-edit-context"
 import { Button } from "@/components/ui/button"
 import type {
   ArtifactWorkbenchArtifact,
@@ -23,7 +26,7 @@ import type {
   PreviewArtifact,
   ReviewArtifact,
 } from "@/lib/api"
-import { formatCompactDateTime } from "@/lib/date-format"
+import { LocalTime, TimeZoneLabel } from "./local-time"
 import { cn } from "@/lib/utils"
 
 const PREVIEW_IFRAME_SANDBOX = "allow-forms allow-same-origin allow-scripts"
@@ -40,6 +43,8 @@ type PreviewCardProps = {
 }
 
 type PreviewPanelProps = {
+  expanded?: boolean
+  onToggleExpand?: () => void
   artifactItems: ArtifactPanelItem[]
   busy?: boolean
   frameKey: number
@@ -90,14 +95,6 @@ export type ArtifactPanelItem =
       taskTitle: string
     }
 
-function formatPreviewTime(value: string | null) {
-  if (!value) {
-    return "最近检查：等待中"
-  }
-
-  return `最近检查：${formatCompactDateTime(value)}`
-}
-
 function previewHost(url: string) {
   try {
     return new URL(url).host
@@ -115,6 +112,7 @@ function isPreviewHealthy(preview: PreviewArtifact) {
 }
 
 function reviewTitleLabel(title: string) {
+  if (title === "Native model review") return "模型评审报告"
   return title === "Review Agent report" ? "评审报告" : title
 }
 
@@ -305,7 +303,7 @@ export function PreviewCard({
         </span>
       </div>
 
-      <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+      <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
         <div>
           <dt className="text-[var(--muted-foreground)]">状态</dt>
           <dd className="mt-1 font-medium">{statusLabel(preview.status)}</dd>
@@ -314,11 +312,12 @@ export function PreviewCard({
           <dt className="text-[var(--muted-foreground)]">端口</dt>
           <dd className="mt-1 font-medium">{preview.port}</dd>
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 sm:col-span-2">
           <dt className="text-[var(--muted-foreground)]">检查时间</dt>
           <dd className="mt-1 truncate font-medium">
-            {formatPreviewTime(preview.lastCheckedAt)}
+            最近检查：<LocalTime value={preview.lastCheckedAt} emptyLabel="等待中" />
           </dd>
+          <dd><TimeZoneLabel className="mt-1 block text-[10px] text-[var(--muted-foreground)]" /></dd>
         </div>
       </dl>
 
@@ -346,7 +345,7 @@ export function PreviewCard({
           variant="secondary"
         >
           <RefreshCw aria-hidden="true" size={14} />
-          刷新预览
+          {canOpen ? "刷新预览" : "重新启动预览"}
         </Button>
         <Button
           className="h-8 px-3 text-xs"
@@ -374,6 +373,8 @@ export function PreviewCard({
 }
 
 export function PreviewPanel({
+  expanded = false,
+  onToggleExpand,
   artifactItems,
   busy = false,
   frameKey,
@@ -395,8 +396,8 @@ export function PreviewPanel({
   const activeKind = selectedItem?.kind ?? "empty"
 
   return (
-    <aside className="flex min-h-0 flex-col overflow-hidden border-t border-[var(--border)] bg-[#f7f8f8] lg:border-l lg:border-t-0">
-      <header className="shrink-0 border-b border-[var(--border)] bg-white/95 px-4 py-4">
+    <aside className="h-full flex min-h-0 flex-col overflow-hidden border-t border-[var(--border)] bg-[var(--inspector)] lg:border-l lg:border-t-0">
+      <header className="shrink-0 border-b border-[var(--border)] bg-[var(--surface)] px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-slate-950">
@@ -414,6 +415,7 @@ export function PreviewPanel({
             ) : null}
           </div>
           <div className="flex gap-2 pt-1">
+            {onToggleExpand ? <Button aria-label={expanded ? "恢复布局" : "展开成果"} className="h-8 w-8 rounded-lg p-0" onClick={onToggleExpand} type="button" variant="secondary">{expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</Button> : null}
             <Button
               aria-label="刷新面板"
               className="h-8 w-8 rounded-lg p-0"
@@ -427,7 +429,7 @@ export function PreviewPanel({
             <Button
               aria-label="关闭产物"
               className="h-8 w-8 rounded-lg p-0"
-              disabled={!selectedItem || !onClose}
+              disabled={!onClose}
               onClick={onClose}
               type="button"
               variant="secondary"
@@ -497,11 +499,13 @@ export function PreviewPanel({
       </header>
 
       <div
-        className="grid min-h-0 flex-1 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 overflow-y-auto p-4"
+        className="grid min-h-0 min-w-0 flex-1 grid-cols-1 auto-rows-max gap-3 overflow-y-auto p-4"
         data-region="artifact-scroll"
       >
         {selectedItem ? <ArtifactSummary item={selectedItem} /> : null}
+        <UserCodeEditStatus />
 
+        {selectedPreview ? (
         <section className="rounded-lg border border-[var(--border)] bg-white p-3 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
@@ -522,6 +526,7 @@ export function PreviewPanel({
             </div>
           </div>
         </section>
+        ) : null}
 
         {selectedItem ? (
           <ArtifactDetail
@@ -535,12 +540,12 @@ export function PreviewPanel({
             onStopPreview={onStopPreview}
           />
         ) : (
-          <div className="flex min-h-[360px] w-full items-start justify-center rounded-lg border border-dashed border-[var(--border)] bg-white/60 p-8 pt-20 text-center text-sm text-[var(--muted-foreground)]">
+          <div className="flex min-h-[260px] w-full items-start justify-center rounded-lg border border-dashed border-[var(--border)] bg-white/60 p-8 pt-20 text-center text-sm text-[var(--muted-foreground)]">
             <div className="w-full max-w-64 rounded-lg border border-[var(--border)] bg-white px-6 py-7 shadow-sm">
-              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary)] text-white">
+              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)]">
                 <Monitor aria-hidden="true" size={18} />
               </span>
-              <p className="mt-4 font-semibold text-slate-900">等待产物</p>
+              <p className="mt-4 font-semibold text-slate-900">等待产物</p><p className="mt-2 text-xs leading-5 text-slate-400">从对话中的成果卡片选择内容，在这里查看变更、评审和网页预览。</p>
             </div>
           </div>
         )}
@@ -645,7 +650,7 @@ function ArtifactDetail({
         <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           <h4 className="font-semibold">预览未运行</h4>
           <p className="mt-2 text-xs leading-5">
-            当前预览端口没有通过健康检查，AgentHub 已阻止嵌入这个不可达地址。请查看上方诊断原因，修复后点击刷新预览重新启动。
+            当前预览未通过健康检查，AgentHub 已暂停嵌入。请查看上方诊断原因，点击“重新启动预览”恢复。
           </p>
         </section>
       )}
@@ -976,6 +981,7 @@ function WorkbenchArtifactDetail({
 }
 
 function ReviewCard({ review }: { review: ReviewArtifact }) {
+  const native = review.nativeReceipt?.schemaVersion === "agenthub.native_review.v1"
   return (
     <article className="rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -988,7 +994,7 @@ function ReviewCard({ review }: { review: ReviewArtifact }) {
             {reviewTitleLabel(review.title)}
           </h3>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            仅供参考 · {review.adapterType}
+            {native ? `模型评审 · ${review.adapterType} · 仅供参考` : `仅供参考 · ${review.adapterType}`}
           </p>
         </div>
         <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
@@ -1017,16 +1023,28 @@ function ReviewCard({ review }: { review: ReviewArtifact }) {
         </div>
       </dl>
 
+      {native ? (
+        <div className="mt-3 rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted-foreground)]">
+          <p>只读静态评审 · 未运行测试，结论不代表功能验收通过。</p>
+          <p className="mt-1 font-mono">文件版本 {review.nativeReceipt!.inputFingerprint.slice(0, 12)} · 原生输出 {review.nativeReceipt!.outputSha256.slice(0, 12)}</p>
+          <ul className="mt-2 space-y-1">
+            {review.filesReviewed.map((path) => (
+              <li className="break-all" key={path}>{path} · {review.nativeReceipt!.files[path]?.sha256.slice(0, 12)}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {review.findings.length > 0 ? (
         <div className="mt-3 grid gap-2">
           {review.findings.map((finding, index) => (
             <div
-              className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-950"
+              className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800"
               key={`${String(finding.message)}-${index}`}
             >
               <p className="font-semibold">
                 {severityLabel(String(finding.severity ?? "warning"))}
-                {finding.file ? ` · ${String(finding.file)}` : ""}
+                {finding.file ? ` · ${String(finding.file)}${finding.line ? `:${String(finding.line)}` : ""}` : ""}
               </p>
               <p className="mt-1 leading-5">
                 {reviewTextLabel(String(finding.message ?? ""))}

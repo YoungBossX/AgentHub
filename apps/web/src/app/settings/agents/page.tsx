@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
 import { AgentDirectorySettingsPageClient } from "@/components/agent-directory-settings-page-client"
-import { getDemoWorkspace, getWorkspaceAgentDirectory } from "@/lib/api"
+import { getDemoWorkspace, getWorkspaceAgentDirectory, listWorkspaceTargets } from "@/lib/api"
 
 export default async function AgentDirectorySettingsPage() {
   const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:8000"
@@ -10,6 +10,7 @@ export default async function AgentDirectorySettingsPage() {
   const directory = workspace
     ? await getWorkspaceAgentDirectory(backendUrl, workspace.id)
     : null
+  const targets = workspace ? await listWorkspaceTargets(backendUrl, workspace.id) : []
 
   return (
     <main className="h-screen overflow-y-auto bg-[var(--background)] px-5 py-6">
@@ -36,6 +37,7 @@ export default async function AgentDirectorySettingsPage() {
           backendUrl={backendUrl}
           directory={directory}
           workspace={workspace}
+          targets={targets}
         />
       </div>
     </main>

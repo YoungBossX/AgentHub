@@ -1,0 +1,16 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: 400: {"detail":"Group Planner must preserve every selected assignment exactly once."}
+    at post (file:///C:/Users/XCC/AppData/Local/Temp/agenthub-local-completion-20261007/accept-pinned-context.mjs:14:96)
+    at async file:///C:/Users/XCC/AppData/Local/Temp/agenthub-local-completion-20261007/accept-pinned-context.mjs:30:2 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

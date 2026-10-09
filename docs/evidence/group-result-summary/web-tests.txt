@@ -1,0 +1,13 @@
+
+> @agenthub/web@ test X:\Git_Clone\AgentHub\apps\web
+> vitest run
+
+
+ RUN  v4.1.11 X:/Git_Clone/AgentHub/apps/web
+
+
+ Test Files  22 passed (22)
+      Tests  174 passed (174)
+   Start at  12:37:05
+   Duration  5.48s (transform 4.11s, setup 0ms, import 12.69s, tests 11.21s, environment 20.56s)
+

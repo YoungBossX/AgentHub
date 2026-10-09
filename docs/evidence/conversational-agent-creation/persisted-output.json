@@ -1,0 +1,7 @@
+{
+  "profileId": "faab6604-01ed-492a-9016-fb24162b0cda",
+  "promptSha256": "b78b251e53676fd6508db4d412b0f5ff02ce6ad6c93bdaed60eb5028e4c93904",
+  "runId": "620bfd10-454d-4f3c-a211-6c1bc6eb0b77",
+  "diffId": "d8fba886-576b-495c-a611-ff333bbb0df0",
+  "patchText": "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\nindex bd27649..082098f 100644\n--- a/apps/demo/src/App.tsx\n+++ b/apps/demo/src/App.tsx\n@@ -10,7 +10,7 @@ export default function App() {\n       <section className=\"workspace-panel\" aria-labelledby=\"demo-heading\">\n         <div className=\"workspace-copy\">\n           <p className=\"eyebrow\">AgentHub demo workspace</p>\n-          <h1 id=\"demo-heading\">Launchpad for a visible coding-agent change</h1>\n+          <h1 id=\"demo-heading\">Created Agent 731</h1>\n           <p className=\"lede\">\n             This baseline Vite React app gives future agents a stable place to\n             add a login page and then adjust button copy without changing the\n"
+}

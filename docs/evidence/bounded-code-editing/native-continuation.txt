@@ -1,0 +1,4 @@
+{"stage":"waiting-native","iteration":0,"run":"f742f005-ca9c-4281-a3ad-f0e9a3f6f07f","state":"queued"}
+{"stage":"waiting-native","iteration":15,"run":"f742f005-ca9c-4281-a3ad-f0e9a3f6f07f","state":"streaming"}
+{"stage":"waiting-native","iteration":30,"run":"f742f005-ca9c-4281-a3ad-f0e9a3f6f07f","state":"collecting_diff"}
+{"passed":true,"sessionId":"61107635-b6c9-49e8-99b8-42ad57e7f68e","operationId":"ba1e5adf-d809-43e2-8d6d-ca2441fb0885","runId":"f742f005-ca9c-4281-a3ad-f0e9a3f6f07f"}

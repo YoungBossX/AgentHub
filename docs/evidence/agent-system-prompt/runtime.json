@@ -1,0 +1,42 @@
+{
+  "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+  "sessionId": "cb667e1e-fe2a-4761-bcdc-9ece7d8edc77",
+  "taskId": "4d781bbc-b36f-4a4c-8bc2-e827cd7075d2",
+  "runId": "55ec6ecc-52db-4528-a408-cb0153b6096f",
+  "adapter": "codex",
+  "state": "completed",
+  "prompt": "请使用中文提供最终工作摘要。\nIn the final response include the exact marker AH_SYSTEM_PROMPT_20261007. Preserve all assigned target and safety rules.",
+  "receipt": {
+    "version": 1,
+    "workspaceId": "275e5741-c9eb-4dd1-b827-97cdc814d96e",
+    "agentId": "9efaaf03-8052-4ff6-afdb-44d8331e2590",
+    "role": "frontend",
+    "source": "workspace_override",
+    "sha256": "8f2922edff1f09afc840b54d5a12af0967583680fae716e519f2c833dd8879e6",
+    "characters": 135
+  },
+  "finalResponseMarkerObserved": true,
+  "diffIds": [
+    "9b0e67d8-be36-4603-a886-ad0e2532d563"
+  ],
+  "checks": [
+    "browser save and reload",
+    "cancel restores saved prompt",
+    "new real Codex run uses workspace prompt hash",
+    "public metrics omit raw prompt",
+    "actual button change produces matching diff",
+    "persisted real Codex agent_message final response contains configured marker and Chinese summary"
+  ],
+  "limitations": [
+    "scripted Review is advisory",
+    "no real LLM Planner or Claude execution in this rehearsal"
+  ],
+  "finalResponseEvidence": {
+    "eventId": "74ec440d-616d-4210-af91-ed415d598685",
+    "eventType": "message.delta",
+    "nativeEventType": "item.completed",
+    "itemType": "agent_message",
+    "text": "已将指定按钮文案从 “Enter project” 改为 “Enter workspace”，保留全部目标属性及已有内容，仅修改 App.tsx 的该处文案。\n\n`git diff --check` 通过；未运行预览。\n\nAH_SYSTEM_PROMPT_20261007"
+  },
+  "verificationNote": "RunDiagnostics deliberately omits full message text; final-response compliance was verified against the exact persisted TaskRunEvent, not diagnostic summary."
+}

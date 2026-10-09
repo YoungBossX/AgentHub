@@ -28,6 +28,12 @@ the conflict before coding.
   and fast-forward the assigned clean canonical Session worktree. This does not
   authorize committing/pushing the AgentHub development checkout or letting an
   adapter modify Git control files.
+- Focused user-edit exception under `agenthub-bounded-code-editing`: explicit
+  workbench apply may write bounded, version-checked text changes in the assigned
+  canonical Session target with execution exclusion and durable user provenance.
+  It does not authorize adapters to bypass their controls, write protected paths,
+  create a HumanAgentAdapter, commit/push, or treat user edits as Agent success.
+  Existing P23 document artifact editing remains database-only.
 
 ## Current Demo Stack
 
@@ -97,6 +103,11 @@ Deferred examples:
   SessionExecutionLedger, and Review.
 - `TaskRunEvent`, `SessionExecutionLedger`, and `Review` are the only support
   entities beyond the core model.
+- Focused exception under `agenthub-message-attachments`: `MessageAttachment`
+  stores bounded Session-owned upload bytes, extraction metadata and immutable
+  Message bindings in SQLite. Attachment input does not grant new tool/write
+  scope. Codex may receive only server-created, per-call temporary image files
+  through validated `--image` inputs; never add their directory to sandbox access.
 - Each Session gets exactly one persisted canonical worktree path.
 - By default, TaskRuns reuse that Session worktree and writes remain serial.
 - Focused exception: `executionMode=isolated_write` for built-in demo writes may
@@ -188,6 +199,11 @@ agent execution unless a later focused approval rule explicitly allows it.
 ## Current Project Commands
 
 Use these commands from the repo root:
+
+Local developer startup commands added by `agenthub-local-startup-entrypoint`:
+`pnpm doctor:local`, `pnpm dev:local`, and `pnpm test:local`. These commands
+do not expand adapter command permissions or install dependencies. Existing
+runtime command allowlists above remain unchanged.
 
 ```bash
 pnpm check

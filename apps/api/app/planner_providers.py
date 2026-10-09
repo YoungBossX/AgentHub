@@ -3,14 +3,17 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Mapping, Protocol
 from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 from app.process_environment import adapter_process_env, redact_process_evidence
+from app.claude_executable import resolve_claude_executable
 
 from app.config import Settings, get_settings
 from app.planner_contracts import (
@@ -407,6 +410,7 @@ class PlannerCommandRunner(Protocol):
         command: list[str],
         *,
         timeout: int,
+        input_text: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         ...
 
@@ -452,11 +456,15 @@ class SubprocessPlannerCommandRunner:
         command: list[str],
         *,
         timeout: int,
+        input_text: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             command,
+            input=input_text,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=timeout,
             check=False,
             env=adapter_process_env("claude_code"),
@@ -498,6 +506,12 @@ class FakePlannerProvider:
         )
 
 
+def _default_claude_planner_binary() -> str:
+    return resolve_claude_executable(
+        DEFAULT_CLAUDE_PLANNER_BINARY, windows=os.name == "nt", lookup=shutil.which,
+    )
+
+
 class ClaudeCliPlannerProvider:
     provider_id = "claude-cli-planner"
     provider_type = PLANNER_PROVIDER_CLAUDE_CLI
@@ -511,18 +525,32 @@ class ClaudeCliPlannerProvider:
         timeout_sec: int = 60,
     ) -> None:
         self._command_runner = command_runner or SubprocessPlannerCommandRunner()
-        self._claude_binary = (
+        self._claude_binary = resolve_claude_executable(
             claude_binary
             or os.environ.get("AGENTHUB_LLM_PLANNER_CLAUDE_CLI_PATH")
-            or DEFAULT_CLAUDE_PLANNER_BINARY
+            or _default_claude_planner_binary()
         )
         self._timeout_sec = timeout_sec
 
     def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
         command = self._build_command(planner_input)
         started = time.monotonic()
+        # Windows reports an overlong CreateProcess argument string as
+        # FileNotFoundError (WinError 206), even when the binary exists. A longer
+        # continuation context must use stdin, like attachments/configuration.
+        use_stdin = bool(_has_attachment_context(planner_input) or planner_input.get("agentConfigurationRequest")
+                         or len(subprocess.list2cmdline(command).encode("utf-16-le")) // 2 >= 24000)
         try:
-            completed = self._command_runner.run(command, timeout=self._timeout_sec)
+            if use_stdin:
+                from app.attachment_inputs import claude_input, image_inputs
+
+                prompt = command.pop()
+                command[command.index("--output-format") + 1] = "stream-json"
+                command.extend(["--verbose", "--input-format", "stream-json"])
+                completed = self._command_runner.run(command, timeout=self._timeout_sec,
+                    input_text=claude_input(prompt, image_inputs(planner_input)))
+            else:
+                completed = self._command_runner.run(command, timeout=self._timeout_sec)
         except subprocess.TimeoutExpired:
             return self._error_result(
                 "PLANNER_TIMEOUT",
@@ -545,6 +573,20 @@ class ClaudeCliPlannerProvider:
         duration_ms = _duration_ms(started)
         stderr = _excerpt(redact_process_evidence(completed.stderr or ""))
         stdout = redact_process_evidence(completed.stdout or "")
+        if use_stdin:
+            try:
+                results = [json.loads(line) for line in stdout.splitlines() if line.strip()]
+                terminal = next(item for item in reversed(results) if item.get("type") == "result")
+                if terminal.get("is_error"):
+                    detail = terminal.get("result") or "; ".join(str(error) for error in terminal.get("errors", []))
+                    summary = _excerpt(detail) if isinstance(detail, str) else "Claude attachment planning failed."
+                    if "only support text input" in summary.lower():
+                        return self._error_result("PLANNER_IMAGE_UNSUPPORTED", "当前模型仅支持文本输入，无法读取图片。请选择支持图片的模型或原生 Agent，或改用文字附件。", started)
+                    return self._error_result(_planner_error_code_for_text(summary), summary, started)
+                stdout = str(terminal.get("result") or "")
+            except (ValueError, StopIteration, AttributeError):
+                if completed.returncode == 0:
+                    return self._error_result("PLANNER_INVALID_OUTPUT", "Claude attachment planning returned no valid result.", started)
         if completed.returncode != 0:
             code = _planner_error_code_for_text(stderr or stdout)
             return PlannerProviderResult(
@@ -577,22 +619,27 @@ class ClaudeCliPlannerProvider:
 
     def _build_command(self, planner_input: dict[str, Any]) -> list[str]:
         prompt = (
-            f"{planner_conversation_system_prompt()}\n\n"
+            f"{_request_system_prompt(planner_input)}\n\n"
             "PlannerRequest JSON:\n"
             f"{json.dumps(planner_input, ensure_ascii=False, sort_keys=True)}"
         )
-        return [
-            self._claude_binary,
-            "--print",
-            "--output-format",
-            "text",
-            "--permission-mode",
-            "dontAsk",
-            "--allowedTools",
-            "Read",
-            "--no-session-persistence",
-            prompt,
+        custom_policy = planner_input.get("agentToolPolicy")
+        if custom_policy not in {None, "planner_no_tools"}:
+            raise ValueError("Unsupported custom Planner tool policy.")
+        command = [
+            self._claude_binary, "--print", "--output-format", "text",
+            "--permission-mode", "dontAsk", "--allowedTools",
+            "" if custom_policy else "Read",
         ]
+        if custom_policy:
+            # Explicit no-tool planning must not execute user/project hooks or
+            # auto-discover unrelated instructions, plugins or memories.
+            command.extend(["--tools", "", "--strict-mcp-config", "--safe-mode"])
+        if planner_input.get("explicitGroupAssignments") or planner_input.get("groupCompletionEvidence") or planner_input.get("agentConfigurationRequest"):
+            # Roles/targets/order are already locked by the server. Keep this
+            # small content-planning call inside the configured time budget.
+            command.extend(["--effort", "low"])
+        return [*command, "--no-session-persistence", prompt]
 
     def _error_result(
         self,
@@ -1066,8 +1113,34 @@ def _planner_error_code_for_text(text: str) -> str:
     return "PLANNER_RUNTIME_ERROR"
 
 
+def _request_system_prompt(planner_input: Mapping[str, Any]) -> str:
+    if planner_input.get("agentConfigurationRequest"):
+        from app.agent_creation import creation_system_prompt
+
+        return creation_system_prompt(planner_input.get("agentSystemPrompt"))
+    if planner_input.get("groupCompletionEvidence"):
+        from app.group_summary_contracts import group_summary_prompt
+
+        return group_summary_prompt(planner_input.get("agentSystemPrompt"), planner_input["groupCompletionEvidence"])
+    return planner_conversation_system_prompt(planner_input.get("agentSystemPrompt"), planner_input.get("explicitGroupAssignments"))
+
+
+def _request_json_schema(planner_input: Mapping[str, Any]) -> dict[str, Any]:
+    if planner_input.get("agentConfigurationRequest"):
+        from app.agent_creation import AgentCreationResult
+
+        return AgentCreationResult.model_json_schema()
+    if planner_input.get("groupCompletionEvidence"):
+        from app.group_summary_contracts import GroupSummaryResult
+
+        return GroupSummaryResult.model_json_schema()
+    return conversation_outcome_json_schema()
+
+
 def _openai_responses_payload(model: str, planner_input: Mapping[str, Any]) -> dict[str, Any]:
-    return {
+    from app.attachment_inputs import image_inputs
+
+    payload = {
         "model": model,
         "input": [
             {
@@ -1075,7 +1148,7 @@ def _openai_responses_payload(model: str, planner_input: Mapping[str, Any]) -> d
                 "content": [
                     {
                         "type": "input_text",
-                        "text": planner_conversation_system_prompt(),
+                        "text": _request_system_prompt(planner_input),
                     }
                 ],
             },
@@ -1098,10 +1171,22 @@ def _openai_responses_payload(model: str, planner_input: Mapping[str, Any]) -> d
                 "type": "json_schema",
                 "name": "conversation_outcome",
                 "strict": True,
-                "schema": conversation_outcome_json_schema(),
+                "schema": _request_json_schema(planner_input),
             }
         },
     }
+    for image in image_inputs(planner_input):
+        payload["input"][1]["content"].extend([
+            {"type": "input_text", "text": f"Attachment image {image.attachment_id}:"},
+            {"type": "input_image", "image_url": image.data_url()},
+        ])
+    return payload
+
+
+def _has_attachment_context(planner_input: Mapping[str, Any]) -> bool:
+    from app.attachment_inputs import image_inputs
+
+    return bool(image_inputs(planner_input) or planner_input.get("canonicalSharedContext", {}).get("fields", {}).get("attachmentContext"))
 
 
 def _openai_compatible_chat_payload(
@@ -1113,7 +1198,7 @@ def _openai_compatible_chat_payload(
         "messages": [
             {
                 "role": "system",
-                "content": planner_conversation_system_prompt(),
+                "content": _request_system_prompt(planner_input),
             },
             {
                 "role": "user",
@@ -1126,16 +1211,27 @@ def _openai_compatible_chat_payload(
         ],
     }
     strategy = planner_structured_output_strategy(PLANNER_PROTOCOL_OPENAI_COMPATIBLE_CHAT)
+    from app.attachment_inputs import image_inputs
+
+    images = image_inputs(planner_input)
+    if images:
+        user = payload["messages"][1]
+        user["content"] = [{"type": "text", "text": user["content"]}]
+        for image in images:
+            user["content"].extend([{"type": "text", "text": f"Attachment image {image.attachment_id}:"},
+                                    {"type": "image_url", "image_url": {"url": image.data_url()}}])
     if strategy["strategy"] == "json_object":
         payload["response_format"] = strategy["responseFormat"]
     return payload
 
 
 def _anthropic_messages_payload(model: str, planner_input: Mapping[str, Any]) -> dict[str, Any]:
-    return {
+    from app.attachment_inputs import image_inputs
+
+    payload = {
         "model": model,
         "max_tokens": 4096,
-        "system": planner_conversation_system_prompt(),
+        "system": _request_system_prompt(planner_input),
         "messages": [
             {
                 "role": "user",
@@ -1150,11 +1246,18 @@ def _anthropic_messages_payload(model: str, planner_input: Mapping[str, Any]) ->
             {
                 "name": "emit_conversation_outcome",
                 "description": "Emit one AgentHub ConversationOutcome JSON object.",
-                "input_schema": conversation_outcome_json_schema(),
+                "input_schema": _request_json_schema(planner_input),
             }
         ],
         "tool_choice": {"type": "tool", "name": "emit_conversation_outcome"},
     }
+    images = image_inputs(planner_input)
+    if images:
+        user = payload["messages"][0]
+        user["content"] = [{"type": "text", "text": user["content"]}]
+        for image in images:
+            user["content"].extend([{"type": "text", "text": f"Attachment image {image.attachment_id}:"}, image.anthropic_block()])
+    return payload
 
 
 def _extract_openai_responses_text(response: Mapping[str, Any]) -> str:

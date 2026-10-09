@@ -1,0 +1,2 @@
+Set the main page h1 to exactly: Aurora Workshop 617
+Keep existing interactions and layout. The main button label is provided only in the image.

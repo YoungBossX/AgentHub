@@ -18,6 +18,7 @@ from app.models import Task, TaskRun, TaskRunEvent
 from app.models import utc_now
 from app.task_run_scope import TaskRunScopeError
 from app.process_environment import redact_process_evidence
+from app.attachment_inputs import ImageInput
 
 AgentEventType = Literal[
     "message.delta",
@@ -54,6 +55,8 @@ class AdapterCapabilities(AdapterModel):
 
 
 class AgentRunRequest(AdapterModel):
+    images: tuple[ImageInput, ...] = Field(default=(), exclude=True, repr=False)
+    has_attachments: bool = Field(default=False, exclude=True)
     task_run_id: str = Field(alias="taskRunId")
     session_id: str = Field(alias="sessionId")
     workspace_id: str = Field(alias="workspaceId")

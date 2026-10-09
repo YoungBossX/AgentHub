@@ -1,0 +1,83 @@
+{
+  "checks": [
+    {
+      "width": 1440,
+      "theme": "light",
+      "article": 764,
+      "scroll": 764,
+      "bubble": 672,
+      "bubbleScroll": 672,
+      "imageWidth": 638.3125,
+      "imageReady": true,
+      "viewport": 1440,
+      "right": 1030
+    },
+    {
+      "width": 1440,
+      "theme": "dark",
+      "article": 764,
+      "scroll": 764,
+      "bubble": 672,
+      "bubbleScroll": 672,
+      "imageWidth": 638.3125,
+      "imageReady": true,
+      "viewport": 1440,
+      "right": 1030
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "article": 346,
+      "scroll": 346,
+      "bubble": 318,
+      "bubbleScroll": 318,
+      "imageWidth": 284.3125,
+      "imageReady": true,
+      "viewport": 390,
+      "right": 366
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "article": 346,
+      "scroll": 346,
+      "bubble": 318,
+      "bubbleScroll": 318,
+      "imageWidth": 284.3125,
+      "imageReady": true,
+      "viewport": 390,
+      "right": 366
+    },
+    {
+      "width": 320,
+      "theme": "light",
+      "article": 276,
+      "scroll": 276,
+      "bubble": 254,
+      "bubbleScroll": 254,
+      "imageWidth": 219.90625,
+      "imageReady": true,
+      "viewport": 320,
+      "right": 296
+    },
+    {
+      "width": 320,
+      "theme": "dark",
+      "article": 276,
+      "scroll": 276,
+      "bubble": 254,
+      "bubbleScroll": 254,
+      "imageWidth": 219.90625,
+      "imageReady": true,
+      "viewport": 320,
+      "right": 296
+    }
+  ],
+  "errors": [],
+  "extra": [
+    "invalid format remains visible and blocks send",
+    "remove failed draft recovers composer",
+    "real upload and DELETE remove pending bytes",
+    "sent attachment and dark theme survive reload"
+  ]
+}

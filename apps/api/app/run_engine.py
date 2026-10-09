@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 from uuid import uuid4
 
 from fastapi import BackgroundTasks
@@ -43,8 +43,19 @@ from app.execution_worktrees import (
     validate_execution_worktree,
 )
 from app.instruction_builder import build_role_instruction
+from app.custom_agents import custom_launch_permissions
+from app.agent_instructions import (
+    AGENT_INSTRUCTION_BINDING_KEY,
+    agent_instruction_receipt,
+    bound_agent_instruction,
+    capture_agent_instruction,
+)
 from app.ledger import refresh_session_ledger_for_task_run
-from app.models import Agent, ExternalProjectTarget, SessionQueueEntry, TargetLock, Task, TaskRun
+from app.native_reviews import (
+    NATIVE_REVIEW_BINDING_KEY, NativeReviewError, capture_native_review_binding,
+    native_review_instruction, require_native_review_input_current,
+)
+from app.models import Agent, Artifact, ExternalProjectTarget, SessionQueueEntry, TargetLock, Task, TaskRun
 from app.models import Session as AgentHubSession
 from app.models import utc_now
 from app.previews import PreviewError, PreviewService
@@ -61,6 +72,7 @@ from app.repositories import list_session_tasks
 from app.reviews import (
     ReviewError,
     create_scripted_review_for_task_run,
+    stage_native_review_for_task_run,
     list_task_run_reviews,
     record_review_collection_failure,
 )
@@ -103,7 +115,6 @@ from app.task_runs import (
     mark_stale_task_runs,
     internal_metrics_for_run,
     metrics_for_run,
-    persist_scope_decision,
     persist_task_run_execution_access_binding,
     release_task_run_claim,
     refresh_task_run_heartbeat,
@@ -112,7 +123,7 @@ from app.task_runs import (
     require_task_run_scope_baseline,
     require_task_run_scope_passed,
     transition_task_run,
-    validate_task_run_scope,
+    validate_and_persist_task_run_scope,
 )
 
 _preview_service = PreviewService()
@@ -122,8 +133,42 @@ _provider_health_probe = ProviderHealthProbe()
 _provider_capacity_limiter = ProviderConcurrencyLimiter()
 DEFAULT_RUN_WORKER_ID_PREFIX = "worker"
 DEFAULT_DISPATCH_CONCURRENCY = 2
-AUTO_PIPELINE_PLANNERS = {"contract_first_v1", "orchestrator_external_target_v1"}
+AUTO_PIPELINE_PLANNERS = {"contract_first_v1", "orchestrator_external_target_v1", "dynamic_manager_v1"}
+GENERATED_REVIEW_PLANNERS = {
+    "contract_first_v1", "llm_v1", "deterministic_login_v1", "dynamic_manager_v1",
+}
 EXECUTION_LEASE_RENEWAL_INTERVAL_SECONDS = DEFAULT_LEASE_SECONDS / 3
+_SyncResult = TypeVar("_SyncResult")
+
+
+async def _run_sync_execution_step(operation: Callable[[], _SyncResult]) -> _SyncResult:
+    """Yield during blocking work, retaining exclusive use of the run's Session.
+
+    Cancelling to_thread does not stop its worker. Drain it before propagating
+    cancellation so the caller cannot rollback/close or reuse the same Session
+    while the worker still validates or commits. Existing ownership fences remain
+    responsible for permitting writes; this helper grants no execution authority.
+    """
+    worker = asyncio.create_task(asyncio.to_thread(operation))
+    cancelled = False
+    while True:
+        try:
+            result = await asyncio.shield(worker)
+            break
+        except asyncio.CancelledError:
+            cancelled = True
+            if worker.done():
+                break
+        except BaseException:
+            if cancelled:
+                raise asyncio.CancelledError from None
+            raise
+    if cancelled:
+        # Retrieve any exception without replacing the original cancellation.
+        if not worker.cancelled():
+            worker.exception()
+        raise asyncio.CancelledError
+    return result
 
 
 @dataclass(frozen=True)
@@ -553,7 +598,10 @@ class _FinalizerCommitFence:
 
     def before_commit(self, db: DbSession) -> None:
         try:
-            self._before_commit(db)
+            # Validation reads must not flush the pending terminal transition
+            # before its identity and collecting_diff history have been checked.
+            with db.no_autoflush:
+                self._before_commit(db)
         except TaskRunScopeError:
             raise
         except Exception as exc:
@@ -1168,6 +1216,9 @@ class BoundedRunDispatcher:
         if recover_stale:
             RunWorker(worker_id=self.dispatcher_id).recover_stale_runs(db)
         _advance_ready_integrations(db)
+        from app.group_execution import enqueue_ready_group_tasks
+
+        await _run_sync_execution_step(lambda: enqueue_ready_group_tasks(db))
         claims = self._claim_ready_task_runs(
             db,
             excluded_task_run_ids=excluded_task_run_ids or set(),
@@ -1205,6 +1256,9 @@ class BoundedRunDispatcher:
                 excluded_task_run_ids=set(dispatched),
             )
             if not batch:
+                from app.group_summaries import reconcile_group_summaries
+
+                await reconcile_group_summaries(db.get_bind())
                 return dispatched
             dispatched.extend(batch)
 
@@ -1218,6 +1272,15 @@ class BoundedRunDispatcher:
         db.expire_all()
         for task_run in queued_task_runs(db):
             if task_run.id in excluded_task_run_ids:
+                continue
+            # An adapter remains queued while preparing its frozen request.
+            # Another dispatcher must not rewrite its scheduler/queue snapshot
+            # before discovering that the live claim belongs to that worker.
+            if (
+                isinstance(task_run.runner_id, str)
+                and not task_run.runner_id.startswith("local:")
+                and (task_run.lease_expires_at is None or task_run.lease_expires_at > utc_now())
+            ):
                 continue
             if len(claims) >= self.max_concurrency:
                 break
@@ -1329,6 +1392,7 @@ def agent_run_request_for(
     merged_plan_context = dict(task_plan)
     if plan_context:
         merged_plan_context.update(plan_context)
+    merged_plan_context.pop("nativeReviewContract", None)
     memory_snapshot = get_bound_memory_snapshot(
         db,
         internal_metrics_for_run(task_run).get("memorySnapshot"),
@@ -1342,7 +1406,40 @@ def agent_run_request_for(
         memory_snapshot_id=memory_snapshot.id,
     )
     merged_plan_context["sessionContext"] = context_pack
+    stored_binding = internal_metrics_for_run(task_run).get(AGENT_INSTRUCTION_BINDING_KEY)
+    try:
+        if stored_binding is None:
+            from app.task_runs import _role_for_runtime_config
+
+            instruction_binding = capture_agent_instruction(
+                db, workspace_id=session.workspace_id, agent=agent,
+                role=_role_for_runtime_config(task, agent),
+            )
+        else:
+            instruction_binding = bound_agent_instruction(
+                stored_binding, workspace_id=session.workspace_id, agent_id=agent.id,
+            )
+    except ValueError as exc:
+        raise TaskRunLifecycleError(str(exc)) from exc
+    permissions = custom_launch_permissions(
+        db, session.workspace_id, internal_metrics_for_run(task_run), adapter_type,
+    )
+    selection = internal_metrics_for_run(task_run).get("agentSelection")
+    custom = selection.get("customProfile") if isinstance(selection, dict) else None
+    if isinstance(custom, dict) and instruction_binding.get("profileId") != custom.get("id"):
+        raise TaskRunLifecycleError("Custom Agent instruction does not match its frozen profile identity.")
+    from app.attachment_context import resolve_image_inputs
+
+    attachment_context = context_pack.get("attachmentContext", {})
+    try:
+        if not isinstance(attachment_context, dict):
+            raise ValueError("Malformed attachment context.")
+        attachment_images = resolve_image_inputs(db, session.id, attachment_context)
+    except ValueError as exc:
+        raise TaskRunScopeError("ATTACHMENT_INPUT_INVALID", "Selected attachment input failed integrity validation.") from exc
     request = AgentRunRequest(
+        images=attachment_images,
+        has_attachments=bool(attachment_context),
         taskRunId=task_run.id,
         sessionId=session.id,
         workspaceId=session.workspace_id,
@@ -1354,9 +1451,10 @@ def agent_run_request_for(
             agent,
             context_pack,
             adapter_type=adapter_type,
+            system_prompt=instruction_binding["text"],
         ),
         planContext=merged_plan_context,
-        permissionProfile={"network": "off"},
+        permissionProfile=permissions,
         demoMode=True,
         fallbackPolicy="scripted_mock" if adapter_type == "scripted_mock" else "none",
     )
@@ -1366,6 +1464,7 @@ def agent_run_request_for(
         context_pack,
         fence_current_execution=fence_current_execution,
         launch_snapshot=launch_snapshot,
+        instruction_binding=instruction_binding,
     )
     if _launch_snapshot_out is not None:
         if persisted_launch_snapshot is None:
@@ -1547,6 +1646,8 @@ def _persist_context_snapshot(
     *,
     fence_current_execution: bool = False,
     launch_snapshot: Optional[_RequestLaunchSnapshot] = None,
+    instruction_binding: Optional[dict[str, Any]] = None,
+    native_review_binding: Optional[dict[str, Any]] = None,
 ) -> Optional[_RequestLaunchSnapshot]:
     visible_context = context_pack.get("providerVisibleContext")
     canonical_context = visible_context.get("canonicalContext") if isinstance(visible_context, dict) else None
@@ -1562,6 +1663,11 @@ def _persist_context_snapshot(
         raise _execution_lease_ownership_error()
     metrics = internal_metrics_for_run(task_run)
     metrics["canonicalContextSnapshot"] = canonical_context
+    if native_review_binding is not None:
+        metrics[NATIVE_REVIEW_BINDING_KEY] = native_review_binding
+    if instruction_binding is not None:
+        metrics[AGENT_INSTRUCTION_BINDING_KEY] = instruction_binding
+        metrics["agentInstruction"] = agent_instruction_receipt(instruction_binding)
     receipt = memory_usage_receipt(canonical_context)
     if receipt is not None:
         metrics["memoryUsage"] = receipt
@@ -1955,6 +2061,14 @@ async def _launch_adapter_at_final_execution_boundary(
 ) -> AdapterRun:
     boundary_verified = False
     try:
+        native_binding = request.plan_context.get("nativeReviewContract")
+        if isinstance(native_binding, dict):
+            current = db.get(TaskRun, request.task_run_id)
+            if current is None:
+                raise _execution_lease_ownership_error()
+            await _run_sync_execution_step(
+                lambda: require_native_review_input_current(db, current, native_binding)
+            )
         db.rollback()
         db.connection().exec_driver_sql("BEGIN IMMEDIATE")
         db.expire_all()
@@ -1968,6 +2082,13 @@ async def _launch_adapter_at_final_execution_boundary(
             or not _final_launch_token_matches(db, snapshot, token)
             or not supervisor_ownership_guard()
         ):
+            raise _execution_lease_ownership_error()
+        current_run = db.get(TaskRun, request.task_run_id)
+        if current_run is None or custom_launch_permissions(
+            db, request.workspace_id, internal_metrics_for_run(current_run), request.adapter_type,
+        ) != request.permission_profile:
+            raise _execution_access_capabilities_error()
+        if isinstance(native_binding, dict) and internal_metrics_for_run(current_run).get(NATIVE_REVIEW_BINDING_KEY) != native_binding:
             raise _execution_lease_ownership_error()
         boundary_verified = True
         return await adapter.createRun(request)
@@ -2033,14 +2154,31 @@ class _ExecutionAccessBindingAdapter(AgentAdapter):
                         self._db,
                         self._task_run_id,
                     )
-                    capture_task_run_scope_baseline(
-                        self._db,
-                        self._task_run_id,
-                        execution_attempt_id=execution_attempt_id,
+                    await _run_sync_execution_step(
+                        lambda: capture_task_run_scope_baseline(
+                            self._db,
+                            self._task_run_id,
+                            execution_attempt_id=execution_attempt_id,
+                        )
                     )
                     require_task_run_scope_baseline(self._db, self._task_run_id)
                 else:
                     execution_attempt_id = str(uuid4())
+                    if request.adapter_type == "claude_code" and request.permission_profile.get("toolPolicy") == "claude_read_only":
+                        binding = await _run_sync_execution_step(
+                            lambda: capture_native_review_binding(self._db, task_run)
+                        )
+                        updated_snapshot = _persist_context_snapshot(
+                            self._db, task_run, request.plan_context["sessionContext"],
+                            fence_current_execution=True,
+                            launch_snapshot=self._expected_launch_snapshot,
+                            native_review_binding=binding,
+                        )
+                        if updated_snapshot is None:
+                            raise _execution_lease_ownership_error()
+                        self._expected_launch_snapshot = updated_snapshot
+                        request.plan_context["nativeReviewContract"] = binding
+                        request.instruction += native_review_instruction(binding)
                 capabilities = _adapter_capabilities_for_execution(self._adapter)
                 if (
                     self._expected_capabilities is not None
@@ -2947,17 +3085,21 @@ async def finalize_adapter_completed_task_run(
         expected_supervised_run,
     )
     if all(item is None for item in fence_args):
-        run_downstream = _commit_adapter_completed_task_run(db, task_run)
+        run_downstream = await _run_sync_execution_step(
+            lambda: _commit_adapter_completed_task_run(db, task_run)
+        )
     elif all(item is not None for item in fence_args):
         assert lease_controller is not None
         assert supervisor is not None
         assert expected_supervised_run is not None
-        run_downstream = _commit_exact_generation_finalizer(
-            db,
-            task_run,
-            lease_controller=lease_controller,
-            supervisor=supervisor,
-            expected_supervised_run=expected_supervised_run,
+        run_downstream = await _run_sync_execution_step(
+            lambda: _commit_exact_generation_finalizer(
+                db,
+                task_run,
+                lease_controller=lease_controller,
+                supervisor=supervisor,
+                expected_supervised_run=expected_supervised_run,
+            )
         )
     else:
         raise _execution_lease_ownership_error()
@@ -3048,16 +3190,26 @@ def _commit_adapter_completed_task_run(
         db.refresh(task_run)
         return False
     if access_mode == "readonly":
+        if NATIVE_REVIEW_BINDING_KEY in internal_metrics_for_run(task_run):
+            return _complete_native_review(db, task_run)
+        if adapter_type_for_run(db, task_run) == "claude_code":
+            return _fail_native_review(db, task_run, NativeReviewError(
+                "NATIVE_REVIEW_INPUT_UNVERIFIABLE", "Native review has no frozen input binding."
+            ))
         transition_task_run(db, task_run.id, "completed")
         require_task_run_artifact_scope_passed(db, task_run.id)
         _collect_completed_task_run_artifacts(db, task_run)
         _run_completed_task_run_sync_side_effects(db, task_run)
         return True
 
-    decision = validate_task_run_scope(db, task_run.id)
-    persist_scope_decision(db, task_run, decision)
+    decision = validate_and_persist_task_run_scope(db, task_run.id)
     try:
         require_task_run_scope_passed(db, task_run.id)
+        if decision.status != "passed":
+            raise TaskRunScopeError(
+                decision.error_code or "TASK_RUN_SCOPE_UNVERIFIABLE",
+                decision.reason or "The task run has no verifiable scope evidence.",
+            )
     except TaskRunScopeError as exc:
         status = (
             "rejected"
@@ -3077,10 +3229,113 @@ def _commit_adapter_completed_task_run(
         return False
 
     _record_scope_validation_event(db, task_run, "passed", None)
-    _collect_completed_task_run_artifacts(db, task_run)
+    if not decision.changed_paths:
+        return _fail_write_completion(db, task_run, 0, "TASK_RUN_NO_CHANGES")
+    try:
+        diff = collect_task_run_diff(db, task_run.id)
+    except DiffCollectionError as exc:
+        record_diff_collection_failure(db, task_run.id, exc)
+        return _fail_write_completion(
+            db, task_run, len(decision.changed_paths), "TASK_RUN_OUTPUT_UNVERIFIABLE"
+        )
+    if (
+        not diff.patch_text.strip()
+        or not set(diff.changed_files).intersection(decision.changed_paths)
+    ):
+        return _fail_write_completion(
+            db, task_run, len(decision.changed_paths), "TASK_RUN_EMPTY_DIFF",
+            diff_id=diff.id,
+        )
+    _record_completion_validation(
+        db, task_run, len(decision.changed_paths), diff_id=diff.id,
+    )
+    _collect_task_run_review(db, task_run)
     transition_task_run(db, task_run.id, "completed")
     _run_completed_task_run_sync_side_effects(db, task_run)
     return True
+
+
+def _fail_native_review(db: DbSession, task_run: TaskRun, exc: NativeReviewError) -> bool:
+    db.rollback()
+    transition_task_run(db, task_run.id, "failed", error_code=exc.error_code, error_message=exc.message)
+    refresh_session_ledger_for_task_run(db, task_run.id)
+    db.refresh(task_run)
+    return False
+
+
+def _complete_native_review(db: DbSession, task_run: TaskRun) -> bool:
+    from app.events import publish_task_run_event
+
+    try:
+        binding = internal_metrics_for_run(task_run)[NATIVE_REVIEW_BINDING_KEY]
+        require_native_review_input_current(db, task_run, binding)
+        diff = collect_task_run_diff(db, task_run.id)
+        require_native_review_input_current(db, task_run, binding)
+        ready = stage_native_review_for_task_run(db, task_run, diff.artifact_id, binding)
+        # Review, version, receipt and ready event are staged in the same terminal commit.
+        transition_task_run(db, task_run.id, "completed")
+        publish_task_run_event(db, ready)
+    except NativeReviewError as exc:
+        return _fail_native_review(db, task_run, exc)
+    except DiffCollectionError as exc:
+        return _fail_native_review(db, task_run, NativeReviewError(
+            "NATIVE_REVIEW_DIFF_UNVERIFIABLE", "Cannot collect the version-bound review Diff."
+        ))
+    _run_completed_task_run_sync_side_effects(db, task_run)
+    return True
+
+
+def _record_completion_validation(
+    db: DbSession,
+    task_run: TaskRun,
+    changed_path_count: int,
+    *,
+    error_code: Optional[str] = None,
+    diff_id: Optional[str] = None,
+) -> None:
+    evidence = {
+        "schemaVersion": "agenthub.write_completion.v1",
+        "taskRunId": task_run.id,
+        "status": "failed" if error_code else "passed",
+        "accessMode": "write",
+        "changedPathCount": changed_path_count,
+        "diffId": diff_id,
+        "errorCode": error_code,
+        "functionalAcceptance": "not_evaluated",
+    }
+    metrics = internal_metrics_for_run(task_run)
+    metrics["completionValidation"] = evidence
+    task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
+    db.add(task_run)
+    db.commit()
+    append_task_run_event(
+        db, task_run_id=task_run.id,
+        event_type="task.completion_validation",
+        payload_json=json.dumps(evidence, separators=(",", ":")),
+    )
+
+
+def _fail_write_completion(
+    db: DbSession,
+    task_run: TaskRun,
+    changed_path_count: int,
+    error_code: str,
+    *,
+    diff_id: Optional[str] = None,
+) -> bool:
+    _record_completion_validation(
+        db, task_run, changed_path_count, error_code=error_code, diff_id=diff_id,
+    )
+    transition_task_run(
+        db, task_run.id, "failed", error_code=error_code,
+        error_message=(
+            "The coding adapter finished without verifiable new file output. "
+            "Inspect provider tool errors and retry; text-only suggestions do not complete a write task."
+        ),
+    )
+    refresh_session_ledger_for_task_run(db, task_run.id)
+    db.refresh(task_run)
+    return False
 
 
 def _claim_scope_finalization(
@@ -3126,7 +3381,7 @@ async def finalize_completed_task_run(
     task_run: TaskRun,
 ) -> TaskRun:
     require_task_run_artifact_scope_passed(db, task_run.id)
-    _collect_completed_task_run_artifacts(db, task_run)
+    await _run_sync_execution_step(lambda: _collect_completed_task_run_artifacts(db, task_run))
     return await _run_completed_task_run_side_effects(db, task_run)
 
 
@@ -3134,6 +3389,9 @@ def _collect_completed_task_run_artifacts(
     db: DbSession,
     task_run: TaskRun,
 ) -> None:
+    if NATIVE_REVIEW_BINDING_KEY in internal_metrics_for_run(task_run):
+        # Native artifacts are committed once with completion; never replace on replay.
+        return
     diff_ready = True
     try:
         collect_task_run_diff(db, task_run.id)
@@ -3142,17 +3400,21 @@ def _collect_completed_task_run_artifacts(
         record_diff_collection_failure(db, task_run.id, exc)
         record_review_collection_failure(db, task_run.id, ReviewError("No diff artifact found for review."), skipped=True)
     if diff_ready:
-        try:
-            create_scripted_review_for_task_run(db, task_run.id)
-        except ReviewError as exc:
-            record_review_collection_failure(db, task_run.id, exc)
+        _collect_task_run_review(db, task_run)
+
+
+def _collect_task_run_review(db: DbSession, task_run: TaskRun) -> None:
+    try:
+        create_scripted_review_for_task_run(db, task_run.id)
+    except ReviewError as exc:
+        record_review_collection_failure(db, task_run.id, exc)
 
 
 async def _run_completed_task_run_side_effects(
     db: DbSession,
     task_run: TaskRun,
 ) -> TaskRun:
-    _run_completed_task_run_sync_side_effects(db, task_run)
+    await _run_sync_execution_step(lambda: _run_completed_task_run_sync_side_effects(db, task_run))
     return await _finish_completed_task_run_side_effects(db, task_run)
 
 
@@ -3219,6 +3481,10 @@ async def _auto_start_next_pipeline_task(
     for task in list_session_tasks(db, completed_task.session_id):
         if task.id == completed_task_id:
             continue
+        # Group continuation belongs to the dispatcher. Recursive execution here
+        # would retain the upstream provider slot until all descendants finish.
+        if plan_json_for_task(task).get("planner") == "explicit_group_v1":
+            continue
         if not _is_auto_pipeline_task(task):
             continue
         if _has_task_run(db, task.id):
@@ -3244,17 +3510,23 @@ def _complete_ready_pipeline_review_tasks(
     completed_task = db.get(Task, completed_task_id)
     if completed_task is None:
         return []
+    return complete_ready_session_review_tasks(db, completed_task.session_id)
 
+
+def complete_ready_session_review_tasks(db: DbSession, session_id: str) -> list[Task]:
     completed: list[Task] = []
-    for task in list_session_tasks(db, completed_task.session_id):
+    for task in list_session_tasks(db, session_id):
         if task.intent_type not in {"review", "qa_review"}:
             continue
         if task.status not in {"pending", "waiting_dependency", "blocked"}:
             continue
         plan = plan_json_for_task(task)
-        if plan.get("planner") not in {"contract_first_v1", "llm_v1"}:
+        if plan.get("planner") not in GENERATED_REVIEW_PLANNERS:
             continue
-        if not _dependencies_have_review_artifacts(db, task):
+        if _has_task_run(db, task.id):
+            continue
+        review_evidence = _dependency_review_evidence(db, task)
+        if not review_evidence:
             continue
         decision = evaluate_and_apply_scheduler_readiness(db, task)
         if not decision.runnable:
@@ -3269,6 +3541,10 @@ def _complete_ready_pipeline_review_tasks(
             }
         )
         plan["scheduler"] = scheduler
+        plan["reviewSatisfaction"] = {
+            "source": "generated_review_artifacts",
+            "reports": review_evidence,
+        }
         task.plan_json = json.dumps(plan, separators=(",", ":"))
         task.status = "completed"
         task.updated_at = utc_now()
@@ -3279,24 +3555,44 @@ def _complete_ready_pipeline_review_tasks(
     return completed
 
 
-def _dependencies_have_review_artifacts(db: DbSession, task: Task) -> bool:
+def _dependency_review_evidence(db: DbSession, task: Task) -> list[dict[str, Any]]:
     try:
         dependency_ids = json.loads(task.depends_on_task_ids)
     except json.JSONDecodeError:
-        return False
+        return []
     if not isinstance(dependency_ids, list) or not dependency_ids:
-        return False
+        return []
 
+    evidence: list[dict[str, Any]] = []
     for dependency_id in dependency_ids:
         if not isinstance(dependency_id, str):
-            return False
+            return []
+        dependency = db.get(Task, dependency_id)
+        if dependency is None or dependency.session_id != task.session_id:
+            return []
         dependency_runs = list_task_runs(db, dependency_id)
-        completed_runs = [run for run in dependency_runs if run.state == "completed"]
-        if not completed_runs:
-            return False
-        if not any(list_task_run_reviews(db, run.id) for run in completed_runs):
-            return False
-    return True
+        if not dependency_runs or dependency_runs[-1].state != "completed":
+            return []
+        run = dependency_runs[-1]
+        reviews = list_task_run_reviews(db, run.id)
+        if not reviews:
+            return []
+        review = reviews[-1]
+        diff_artifact = db.get(Artifact, review.reviewed_diff_artifact_id)
+        if (
+            diff_artifact is None
+            or diff_artifact.artifact_type != "diff"
+            or diff_artifact.task_run_id != run.id
+        ):
+            return []
+        # Advisory report completion is independent of its passed/warning/failed verdict.
+        evidence.append({
+            "taskId": dependency_id, "taskRunId": run.id,
+            "reviewArtifactId": review.artifact_id,
+            "reviewedDiffArtifactId": diff_artifact.id,
+            "status": review.status, "adapterType": review.adapter_type,
+        })
+    return evidence
 
 
 def _maybe_auto_preview_and_mock_deploy(db: DbSession, task_run: TaskRun) -> None:
@@ -3424,19 +3720,37 @@ async def execute_task_run_background(
             )
             return True
         if adapter_type == "scripted_mock":
+            from app.task_runs import is_scripted_group_review
+
+            scripted_task = db.get(Task, task_run.task_id)
             await execute_task_run(
                 db,
                 task_run,
                 adapter_type="scripted_mock",
-                adapter=ScriptedMockAdapter(),
+                adapter=(
+                    ScriptedMockAdapter(read_only=True)
+                    if scripted_task and is_scripted_group_review(scripted_task, adapter_type)
+                    else ScriptedMockAdapter()
+                ),
             )
             return True
         gateway = _resolve_provider_gateway_for_run(db, task_run, adapter_type)
         adapter_type = gateway["adapter_type"]
+        execution_task = db.get(Task, task_run.task_id)
+        execution_session = db.get(AgentHubSession, execution_task.session_id) if execution_task else None
+        if execution_session is None:
+            raise TaskRunLifecycleError("Session is unavailable for custom Agent execution.")
+        permissions = custom_launch_permissions(
+            db, execution_session.workspace_id, internal_metrics_for_run(task_run), adapter_type,
+        )
         adapter = adapter_for_type(
             adapter_type,
             codex_adapter=CodexAdapter(),
-            claude_code_adapter=ClaudeCodeAdapter(),
+            claude_code_adapter=(
+                ClaudeCodeAdapter(read_only=True)
+                if permissions.get("toolPolicy") == "claude_read_only"
+                else ClaudeCodeAdapter()
+            ),
             scripted_mock_adapter=ScriptedMockAdapter(),
         )
         await execute_task_run(
@@ -3609,17 +3923,21 @@ def _resolve_provider_gateway_for_run(
         candidate_provider_id = provider_assignment.get("providerId")
         if isinstance(candidate_provider_id, str) and candidate_provider_id:
             runtime_provider_id = candidate_provider_id
+    selection = metrics.get("agentSelection")
+    custom = selection.get("customProfile") if isinstance(selection, dict) else None
+    read_only_custom = isinstance(custom, dict) and custom.get("toolPolicy") == "claude_read_only"
+    required_capabilities = () if read_only_custom else (
+        ("file_edit",) if write_lock_required_for_task(task) else ("review",)
+    )
     context = CodingRunContext(
         workspace_id=session.workspace_id,
         session_id=session.id,
         task_id=task.id,
         task_run_id=task_run.id,
-        role=_role_for_task_run(db, task_run),
+        role=custom["role"] if isinstance(custom, dict) else _role_for_task_run(db, task_run),
         target_id=target_id,
         mode="write" if write_lock_required_for_task(task) else "review",
-        required_capabilities=("file_edit",)
-        if write_lock_required_for_task(task)
-        else ("review",),
+        required_capabilities=required_capabilities,
         worktree_path=task_run.worktree_path,
         runtime_provider_id=runtime_provider_id,
         runtime_adapter_type=fallback_adapter_type,

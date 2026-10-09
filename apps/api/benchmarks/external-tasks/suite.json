@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "agenthub.external_task_suite.v1",
+  "cases": [
+    {
+      "id": "title-normalization",
+      "prompt": "Fix slugifyTitle in src/domain.mjs. Trim and lowercase the title, collapse each run of characters other than Unicode letters or numbers to one hyphen, and remove leading/trailing hyphens. Preserve Chinese characters. Empty or punctuation-only titles produce an empty string. Keep the named export. Edit only src/domain.mjs; do not install packages or change other files. Inspect only files within the assigned target.",
+      "baseline": "title-normalization.mjs",
+      "evaluator": "title-normalization.test.mjs",
+      "appExpression": "slugifyTitle('Hello__World!!')",
+      "exportName": "slugifyTitle",
+      "expectedTests": 3
+    },
+    {
+      "id": "invoice-discount",
+      "prompt": "Implement invoiceTotalCents(lines, discountBps = 0) in src/domain.mjs. Sum integer priceCents * quantity, then apply an integer discount in basis points (0..10000) and round the final amount to the nearest cent. Require nonnegative safe integers for priceCents and quantity; reject invalid numbers or unsafe totals with RangeError. Reject invalid discountBps with RangeError. Do not mutate input lines. Keep the named export. Edit only src/domain.mjs; do not install packages or change other files. Inspect only files within the assigned target.",
+      "baseline": "invoice-discount.mjs",
+      "evaluator": "invoice-discount.test.mjs",
+      "appExpression": "invoiceTotalCents([{priceCents: 1000, quantity: 2}], 1500)",
+      "exportName": "invoiceTotalCents",
+      "expectedTests": 4
+    },
+    {
+      "id": "catalog-search",
+      "prompt": "Improve searchBooks(books, query) in src/domain.mjs. Search both title and author case-insensitively after trimming the query. Keep matches in original order; a blank query returns all books as a new array. Do not mutate the array or any book, and preserve original book object identities in results. Keep the named export. Edit only src/domain.mjs; do not install packages or change other files. Inspect only files within the assigned target.",
+      "baseline": "catalog-search.mjs",
+      "evaluator": "catalog-search.test.mjs",
+      "appExpression": "JSON.stringify(searchBooks([{title: 'Agents', author: 'Alice'}], 'alice'))",
+      "exportName": "searchBooks",
+      "expectedTests": 3
+    }
+  ]
+}

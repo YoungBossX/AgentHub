@@ -1,0 +1,9 @@
+{
+  "sessionId": "572639f7-5771-427a-a151-1ff0b1bff368",
+  "checks": [
+    "native result summary and frozen prompt marker shown in conversation",
+    "actual run/artifact receipt in expandable details",
+    "read-only and test limitation shown",
+    "dark mode and reload preserve summary"
+  ]
+}

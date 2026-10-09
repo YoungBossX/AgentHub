@@ -3,20 +3,29 @@
 import {
   type Dispatch,
   type SetStateAction,
+  type RefObject,
   useEffect,
   useRef,
 } from "react"
 
 import {
   listSessionTasks,
+  listSessionMessages,
+  type ChatMessage,
   sessionEventsUrl,
   type SessionTask,
 } from "@/lib/api"
+
+import { visualEvent, type SessionVisualEvent } from "./session-event-timeline"
 
 const SSE_TASK_REFRESH_MAX_RETRIES = 3
 const SSE_TASK_REFRESH_INITIAL_DELAY_MS = 250
 
 type SessionEventRefreshOptions = {
+  summaryPending?: boolean
+  onVisualEvent?: (event: SessionVisualEvent) => void
+  setMessages?: Dispatch<SetStateAction<ChatMessage[]>>
+  messageRevisionRef?: RefObject<number>
   backendUrl: string
   reportSyncError: (action: string, error: unknown) => void
   selectedSessionId: string | null
@@ -32,8 +41,14 @@ export function useSessionEventRefresh({
   setArtifactRefreshVersion,
   setSyncError,
   setTasks,
+  setMessages,
+  onVisualEvent,
+  summaryPending = false,
+  messageRevisionRef,
 }: SessionEventRefreshOptions) {
   const sessionEventCursorsRef = useRef(new Map<string, string>())
+  const summaryPendingRef = useRef(summaryPending)
+  useEffect(() => { summaryPendingRef.current = summaryPending }, [summaryPending])
 
   useEffect(() => {
     if (!selectedSessionId) {
@@ -62,6 +77,8 @@ export function useSessionEventRefresh({
         if (typeof payload.cursor === "string" && payload.cursor.length > 0) {
           sessionEventCursorsRef.current.set(sessionId, payload.cursor)
         }
+        const record = visualEvent(payload, sessionId)
+        if (record) onVisualEvent?.(record)
         setArtifactRefreshVersion((current) => current + 1)
       } catch (error) {
         reportSyncError("无法解析会话事件", error)
@@ -89,13 +106,17 @@ export function useSessionEventRefresh({
       }
       refreshRequested = false
       refreshInFlight = true
+      const messageRevision = messageRevisionRef?.current
       try {
-        const nextTasks = await listSessionTasks(backendUrl, sessionId)
+        const [nextTasks, nextMessages] = await Promise.all([listSessionTasks(backendUrl, sessionId), setMessages ? listSessionMessages(backendUrl, sessionId) : Promise.resolve(null)])
         if (!active) {
           return
         }
         retryAttempt = 0
         setTasks(nextTasks)
+        if (messageRevision !== messageRevisionRef?.current) {
+          refreshRequested = true
+        } else if (nextMessages) setMessages?.(nextMessages)
         setSyncError(null)
       } catch (error) {
         if (!active) {
@@ -120,12 +141,17 @@ export function useSessionEventRefresh({
       }
     }
 
+    // Preparations rejected before the first run have no TaskRunEvent stream.
+    const summaryTimer = window.setInterval(() => {
+      if (summaryPendingRef.current) requestTaskRefresh()
+    }, 2000)
     return () => {
       active = false
       if (retryTimer !== null) {
         window.clearTimeout(retryTimer)
       }
       source.close()
+      window.clearInterval(summaryTimer)
     }
   }, [
     backendUrl,
@@ -134,5 +160,8 @@ export function useSessionEventRefresh({
     setArtifactRefreshVersion,
     setSyncError,
     setTasks,
+    setMessages,
+    onVisualEvent,
+    messageRevisionRef,
   ])
 }
