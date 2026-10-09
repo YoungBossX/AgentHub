@@ -23,6 +23,8 @@ verify a child can read stdin to EOF while the launcher pipe remains open.
 The null standard-input descriptor must remain inheritable across POSIX exec;
 only the separate control descriptor is non-inheritable. Exercise child commands
 with both close_fds modes and include bounded stderr in regression failures.
+Platform simulations in the CI regression suite replace a module-local OS view,
+never the shared os.name used by pathlib and pytest on the actual host.
 It reports readiness only after uvicorn has bound its socket. Wait for
 the Next CLI's ready message and HTTP response before reporting the workspace
 ready. Timeouts, failed binds, child exits and interrupts stop spawned siblings;

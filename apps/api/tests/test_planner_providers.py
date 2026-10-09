@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from types import SimpleNamespace
 
 import pytest
 
@@ -829,7 +830,8 @@ def test_windows_planner_uses_installed_native_executable_without_cmd(monkeypatc
     native = tmp_path / "node_modules/@anthropic-ai/claude-code/bin/claude.exe"
     native.parent.mkdir(parents=True); native.write_bytes(b"fixture")
     monkeypatch.setattr(providers.shutil, "which", lambda _: str(tmp_path / "claude.cmd"))
-    monkeypatch.setattr(providers.os, "name", "nt")
+    # Replace this module's view, not the shared os module used by pathlib/pytest.
+    monkeypatch.setattr(providers, "os", SimpleNamespace(name="nt"))
     assert _default_claude_planner_binary() == str(native)
 
 

@@ -8,6 +8,8 @@
 - 保持启动器控制管道不可继承，仅让已重定向到空设备的标准输入可继承，避免 POSIX exec 关闭 stdin；Windows 标准句柄设置继续保留。
 - 回归覆盖控制描述符私有、空输入可继承、两种 `close_fds` 模式下读取 EOF、Git 正常执行及控制管道停止；失败时显示受限 stderr 和退出状态。
 - 补强用例先在旧实现失败，再在修复后通过；Windows `pnpm test:local` 17 passed，`pnpm check`、strict OpenSpec 与源码空白检查通过。Ubuntu 最终状态以本次修复提交触发的 GitHub Actions 为准，等待远程验证；旧冻结索引保留历史验收含义。
+- 修复提交 `2700747` 的 Ubuntu CI 已通过启动器 17 项与前端 267 项；后端随后暴露 Windows 模拟测试污染全局 `os.name`，令 Linux 的 pathlib/pytest 构造 WindowsPath 而崩溃。将模拟限制在被测模块的 `os` 引用，不改变标准库和测试框架的平台状态，保留原用例的实际原生可执行文件解析断言。
+- 测试隔离修复后，Windows Planner provider 与 Claude 原生契约定向回归 **81 passed**；继续等待修复后 Ubuntu 全量结果。
 
 ## 本地核心工作流终验
 
