@@ -15,7 +15,9 @@ def launcher_input():
     control_fd = os.dup(sys.stdin.fileno())
     os.set_inheritable(control_fd, False)
     with open(os.devnull, "rb") as null_input:
-        os.dup2(null_input.fileno(), sys.stdin.fileno(), inheritable=False)
+        # Only the private control descriptor must be non-inheritable. POSIX
+        # closes non-inheritable stdin at exec, instead of delivering null EOF.
+        os.dup2(null_input.fileno(), sys.stdin.fileno(), inheritable=True)
     if sys.platform == "win32":
         # subprocess uses GetStdHandle on Windows, independently of Python's
         # sys.stdin object. Update it as well as the CRT descriptor.

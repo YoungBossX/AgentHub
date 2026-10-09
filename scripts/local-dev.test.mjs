@@ -145,15 +145,18 @@ test("Python control pipe is private; subprocess stdin reaches EOF while launche
   const root = path.resolve(import.meta.dirname, "..");
   const python = await resolvePython(root);
   const source = `
-import importlib.util, subprocess, sys
+import importlib.util, os, subprocess, sys
 spec = importlib.util.spec_from_file_location('local_api', sys.argv[1])
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 control = module.launcher_input()
-result = subprocess.run([sys.executable, '-c', 'import sys; print(len(sys.stdin.read()))'], capture_output=True, text=True, timeout=3)
-assert result.returncode == 0 and result.stdout.strip() == '0'
+assert not os.get_inheritable(control.fileno()), 'control pipe must remain private'
+assert os.get_inheritable(sys.stdin.fileno()), 'null stdin must survive child exec'
+for close_fds in (True, False):
+    result = subprocess.run([sys.executable, '-c', 'import sys; print(len(sys.stdin.read()))'], close_fds=close_fds, capture_output=True, text=True, timeout=3)
+    assert result.returncode == 0 and result.stdout.strip() == '0', (close_fds, result.returncode, result.stdout, result.stderr)
 git = subprocess.run(['git', 'rev-parse', '--show-toplevel'], capture_output=True, text=True, timeout=3)
-assert git.returncode == 0
+assert git.returncode == 0, (git.returncode, git.stderr)
 print('private-input-ready', flush=True)
 assert control.readline().strip() == 'stop'
 control.close()
@@ -162,10 +165,12 @@ control.close()
     args: ["-u", "-c", source, path.join(root, "scripts/local-api.py")], cwd: root,
     env: projectEnvironment(process.env), graceful: true, readyMarker: "private-input-ready",
   }, { quiet: true });
+  let diagnostics = "";
+  service.child.stderr.on("data", chunk => { diagnostics = (diagnostics + chunk.toString()).slice(-4096); });
   try {
     const deadline = Date.now() + 7000;
     while (!service.ready && !service.ended && Date.now() < deadline) await delay(50);
-    assert.equal(service.ready, true, "Child inherited the open control input or failed Git");
+    assert.equal(service.ready, true, `Private control probe failed: ${service.failure || "readiness timeout"}\n${diagnostics}`);
     assert.equal(service.ended, false);
     await stopServices([service], 3000);
     assert.equal(service.child.exitCode, 0);

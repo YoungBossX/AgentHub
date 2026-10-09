@@ -20,6 +20,9 @@ The control pipe is duplicated privately and process stdin/Windows standard inpu
 is set to the null device so Git/CLI children cannot inherit or consume it. Real
 Windows worktree creation initially blocked until EOF without this separation;
 verify a child can read stdin to EOF while the launcher pipe remains open.
+The null standard-input descriptor must remain inheritable across POSIX exec;
+only the separate control descriptor is non-inheritable. Exercise child commands
+with both close_fds modes and include bounded stderr in regression failures.
 It reports readiness only after uvicorn has bound its socket. Wait for
 the Next CLI's ready message and HTTP response before reporting the workspace
 ready. Timeouts, failed binds, child exits and interrupts stop spawned siblings;

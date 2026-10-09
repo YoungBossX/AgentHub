@@ -1,5 +1,14 @@
 # AgentHub 变更日志
 
+## 启动器跨平台 CI 修复
+
+**日期:** 2026-10-09；`agenthub-local-startup-entrypoint` 1.2。
+
+- 已发布基线 `4855d77` 的 Ubuntu CI 在本地启动器测试失败（16 passed / 1 failed），其后的 Web/API 测试未执行；此前 Windows 本地验收不能替代 Linux 验证。
+- 保持启动器控制管道不可继承，仅让已重定向到空设备的标准输入可继承，避免 POSIX exec 关闭 stdin；Windows 标准句柄设置继续保留。
+- 回归覆盖控制描述符私有、空输入可继承、两种 `close_fds` 模式下读取 EOF、Git 正常执行及控制管道停止；失败时显示受限 stderr 和退出状态。
+- 补强用例先在旧实现失败，再在修复后通过；Windows `pnpm test:local` 17 passed，`pnpm check`、strict OpenSpec 与源码空白检查通过。Ubuntu 最终状态以本次修复提交触发的 GitHub Actions 为准，等待远程验证；旧冻结索引保留历史验收含义。
+
 ## 本地核心工作流终验
 
 **日期:** 2026-10-09；`agenthub-local-final-workflow-acceptance` 1.1 完成（本地未提交）。

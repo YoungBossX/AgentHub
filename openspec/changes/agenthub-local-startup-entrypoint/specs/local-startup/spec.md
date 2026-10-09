@@ -18,6 +18,12 @@ installation, bind only to loopback, and connect selected ports consistently.
 - **THEN** it stops only its spawned services and allows API lifespan cleanup before bounded fallback termination
 - **AND** stored sessions and existing worktrees are retained
 
+#### Scenario: Child commands while the launcher control pipe is open
+- **WHEN** the API starts a child command on Windows or POSIX while its launcher is connected
+- **THEN** the child inherits a readable null standard input and reaches EOF without waiting for launcher shutdown
+- **AND** the separate launcher control descriptor remains non-inheritable, including when a child disables close_fds
+- **AND** a failing subprocess regression reports its bounded stderr and exit status
+
 ### Requirement: Read-only local diagnostics and accurate usage
 The project SHALL provide dependency diagnostics and local setup/workflow documentation
 that distinguish the product API, demo API and Session Preview processes.
