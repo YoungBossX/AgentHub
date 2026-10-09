@@ -2,16 +2,17 @@
 
 ## 启动器跨平台 CI 修复
 
-**日期:** 2026-10-09；`agenthub-local-startup-entrypoint` 1.2。
+**日期:** 2026-10-09；`agenthub-local-startup-entrypoint` 1.2 完成，修复已推送 `dev`。
 
 - 已发布基线 `4855d77` 的 Ubuntu CI 在本地启动器测试失败（16 passed / 1 failed），其后的 Web/API 测试未执行；此前 Windows 本地验收不能替代 Linux 验证。
 - 保持启动器控制管道不可继承，仅让已重定向到空设备的标准输入可继承，避免 POSIX exec 关闭 stdin；Windows 标准句柄设置继续保留。
 - 回归覆盖控制描述符私有、空输入可继承、两种 `close_fds` 模式下读取 EOF、Git 正常执行及控制管道停止；失败时显示受限 stderr 和退出状态。
-- 补强用例先在旧实现失败，再在修复后通过；Windows `pnpm test:local` 17 passed，`pnpm check`、strict OpenSpec 与源码空白检查通过。Ubuntu 最终状态以本次修复提交触发的 GitHub Actions 为准，等待远程验证；旧冻结索引保留历史验收含义。
+- 补强用例先在旧实现失败，再在修复后通过；Windows `pnpm test:local` 17 passed，`pnpm check`、strict OpenSpec 与源码空白检查通过。Ubuntu 最终结果见本节末；旧冻结索引保留对应提交前的历史验收含义。
 - 修复提交 `2700747` 的 Ubuntu CI 已通过启动器 17 项与前端 267 项；后端随后暴露 Windows 模拟测试污染全局 `os.name`，令 Linux 的 pathlib/pytest 构造 WindowsPath 而崩溃。将模拟限制在被测模块的 `os` 引用，不改变标准库和测试框架的平台状态，保留原用例的实际原生可执行文件解析断言。
-- 测试隔离修复后，Windows Planner provider 与 Claude 原生契约定向回归 **81 passed**；继续等待修复后 Ubuntu 全量结果。
+- 测试隔离修复后，Windows Planner provider 与 Claude 原生契约定向回归 **81 passed**。
 - `3a87ef0` 的 Ubuntu 后端已跑至 **1901 passed / 48 skipped / 1 failed**；唯一失败源于连接泄漏基线测试在 `close()` 后才等待关闭，而 CPython 3.11 会直接返回。核对 CPython 3.11/3.12 实现后，将等待者先注册再关闭，保留真实标准库的泄漏超时与未关闭 socket/未 detach 断言，不跳过该回归，也不改运行时代码。
-- 调整后 Windows 连接清理与 Planner provider 定向回归 **78 passed**；Ubuntu 完整结果继续由后续提交验证。
+- 调整后 Windows 连接清理与 Planner provider 定向回归 **78 passed**。
+- 最终代码提交 `a7abfe01a0713190caaaa8d9ae55f5ed2630adb4` 的 [Ubuntu CI](https://github.com/YoungBossX/AgentHub/actions/runs/37921201116) 全部通过：启动器 **17**、Web **267**、API **1902 passed / 48 skipped**、demo-api **5**；`pnpm check` 和 Git 空白检查通过。Python 3.11 日志仍有第三方弃用警告，不将通过解释为零警告或真实 Provider 重跑。
 
 ## 本地核心工作流终验
 
