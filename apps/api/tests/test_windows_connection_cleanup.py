@@ -47,10 +47,15 @@ async def test_stdlib_reset_reproduces_leaked_server_wait_without_recovery():
         transport._closing = True
         with pytest.raises(ConnectionResetError):
             transport._call_connection_lost(None)
+        assert sock.closes == 0 and transport._server is server
+        # Python 3.11 returns immediately when wait_closed() is called after
+        # close(), even with active connections. Register the waiter first so
+        # every supported version observes the leaked transport accounting.
+        closed = asyncio.create_task(server.wait_closed())
+        await asyncio.sleep(0)
         server.close()
         with pytest.raises(asyncio.TimeoutError):
-            await asyncio.wait_for(server.wait_closed(), .02)
-        assert sock.closes == 0 and transport._server is server
+            await asyncio.wait_for(closed, .02)
         protocol.connection_lost.assert_called_once_with(None)
     finally:
         # The deliberately broken baseline must not leak into the next test.
