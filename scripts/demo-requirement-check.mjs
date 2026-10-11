@@ -13,6 +13,8 @@ const checks = []
 let browser
 let browserVersion
 let unavailable = false
+let phase = "contract"
+let diagnosticCode
 
 async function check(id, operation) {
   try {
@@ -49,9 +51,12 @@ try {
   assert.equal(contract?.schemaVersion, schemaVersion)
   assert.ok(["login_page", "demo_heading_text", "primary_action_button_text"].includes(contract.target))
   const channel = process.env.AGENTHUB_VALIDATION_BROWSER_CHANNEL ?? (process.platform === "win32" ? "msedge" : "chromium")
+  phase = "browser_configuration"
   assert.ok(["msedge", "chrome", "chromium"].includes(channel))
+  phase = "browser_launch"
   browser = await chromium.launch({ headless: true, chromiumSandbox: true, timeout: 10000,
     ...(channel === "chromium" ? {} : { channel }) })
+  phase = "browser_execution"
   browserVersion = browser.version()
   for (const [view, width] of [["desktop", 1280], ["narrow", 390]]) {
     const context = await browser.newContext({ viewport: { width, height: 850 }, serviceWorkers: "block",
@@ -123,11 +128,19 @@ try {
       })
     } finally { await context.close() }
   }
-} catch {
+} catch (error) {
   unavailable = true
+  // Emit only fixed categories, never raw launch arguments, host paths or page text.
+  const message = String(error?.message ?? "")
+  diagnosticCode = phase === "browser_launch"
+    ? /No usable sandbox|sandboxing failed|Failed to move to new namespace|Operation not permitted/i.test(message)
+      ? "browser_sandbox_unavailable"
+      : /Executable doesn't exist|distribution .* not found/i.test(message)
+        ? "browser_missing" : "browser_launch_failed"
+    : phase + "_failed"
 } finally {
   if (browser) await browser.close()
 }
 const status = unavailable ? "unavailable" : checks.length > 0 && checks.every((c) => c.status === "passed") ? "passed" : "failed"
-console.log(JSON.stringify({ schemaVersion, contract, status, checks, browserVersion }))
+console.log(JSON.stringify({ schemaVersion, contract, status, checks, browserVersion, diagnosticCode }))
 process.exitCode = status === "passed" ? 0 : status === "unavailable" ? 2 : 1

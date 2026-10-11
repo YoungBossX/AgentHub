@@ -33,3 +33,9 @@ Runtime setup is explicit: pinned Playwright dependency, installed Edge by defau
 on Windows or a prepared Chromium on Linux. CI installs its browser at setup time,
 never during an Agent run. Browser host sandbox support is required; no fallback
 silently disables it.
+
+CI uses the preinstalled system Chrome channel on ubuntu-24.04, whose packaged
+path has the host's AppArmor profile, and runs a sandboxed launch/render probe
+before the full suite. Do not disable the browser sandbox or global host policy.
+Runtime failures expose only allowlisted diagnostic categories (missing browser,
+sandbox, configuration, launch or execution failure), not raw launch logs or paths.

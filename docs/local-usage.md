@@ -276,9 +276,12 @@ QA 面板新增“需求交互验收”，可展开查看桌面/窄屏分项、�
 
 浏览器准备只在开发环境安装阶段进行：根目录 `pnpm install --frozen-lockfile` 会安装固定的
 Playwright 开发依赖。Windows 默认使用已安装的 Edge；Linux 默认使用 Playwright Chromium，
-需事先执行 `pnpm exec playwright install chromium`（CI 的显式准备步骤包含 Linux 系统依赖）。
+需事先执行 `pnpm exec playwright install chromium` 并准备系统依赖及沙箱支持。
+CI 固定使用 Ubuntu 24.04 镜像预装的 Chrome（显式 `chrome` channel），测试前先检查沙箱启动与页面渲染。
+这避免下载版 Chromium 与主机 AppArmor 策略不兼容；不关闭浏览器沙箱或修改主机的全局安全策略。
 可用 `AGENTHUB_VALIDATION_BROWSER_CHANNEL=chromium`、`msedge` 或 `chrome` 选择已有浏览器；
-任务执行不会安装或下载。浏览器无法启动时显示环境不可用，修复环境后发起新运行。
+任务执行不会安装或下载。浏览器无法启动时显示环境不可用，并区分已识别的浏览器缺失、沙箱不可用、
+配置错误或执行中断；诊断只返回固定分类，隐藏原始启动参数和主机路径。修复环境后发起新运行。
 未知或没有明确 `target` 的任务不会根据网页内容猜测验收目标，显示“未覆盖此需求”。
 
 ## 故障恢复与备份

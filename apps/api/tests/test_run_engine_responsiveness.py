@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 import app.run_engine as run_engine
+import app.automatic_validation as automatic_validation
 
 
 @pytest.mark.anyio
@@ -13,8 +14,17 @@ async def test_scope_finalization_yields_to_other_requests(monkeypatch) -> None:
     loop_thread = get_ident()
     worker_threads = []
     refreshed = []
-    task_run = SimpleNamespace(id="run")
+    task_run = SimpleNamespace(id="run", state="collecting_diff")
     db = SimpleNamespace(refresh=lambda run: refreshed.append(run.id))
+
+    # This test isolates the synchronous finalization step. Real validation and
+    # its cancellation/lease boundaries are covered by test_automatic_validation.
+    async def validation(current_db, current_run, *, ownership_guard, requirement_contract):
+        assert current_db is db and current_run is task_run
+        assert ownership_guard()
+        assert requirement_contract is None
+
+    monkeypatch.setattr(automatic_validation, "run_automatic_validation", validation)
 
     def slow_finalization(current_db, current_run):
         assert current_db is db and current_run is task_run
@@ -26,7 +36,10 @@ async def test_scope_finalization_yields_to_other_requests(monkeypatch) -> None:
     monkeypatch.setattr(run_engine, "_commit_adapter_completed_task_run", slow_finalization)
     operation = asyncio.create_task(run_engine.finalize_adapter_completed_task_run(db, task_run))
     try:
-        assert await asyncio.to_thread(entered.wait, 2)
+        started = await asyncio.to_thread(entered.wait, 2)
+        if operation.done():
+            await operation  # Expose setup exceptions instead of hiding them as a timeout.
+        assert started
         # A second coroutine runs while the filesystem check remains blocked.
         await asyncio.sleep(0)
         assert not operation.done()

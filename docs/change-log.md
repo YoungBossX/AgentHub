@@ -1,5 +1,14 @@
 # AgentHub 变更日志
 
+## 需求验收 CI 兼容与故障诊断修复
+
+**日期:** 2026-10-11；`agenthub-requirement-validation` 1.2 验证中。
+
+- 已读取 `a32ecd3` 的 [Ubuntu CI 失败日志](https://github.com/YoungBossX/AgentHub/actions/runs/38133405668)：静态检查、启动器及前端通过，后端 1961 passed / 48 skipped / 10 failed。其中 9 项浏览器启动不可用，1 项完成流程响应性测试夹具落后于自动验证接口；后者已在 Windows 单独复现。
+- 原浏览器 harness 吞掉启动异常，历史日志不足以精确区分沙箱/启动环境原因。根据 Ubuntu 24.04 的 AppArmor 路径策略与镜像预装软件，CI 改为明确使用系统 Chrome，并固定 Ubuntu 24.04；启动预检保留异常日志，及早暴露基础环境故障。保持 `chromiumSandbox: true`，不跳过浏览器测试，不关闭全局 AppArmor。
+- 运行时增加固定失败原因分类，解析端只接受白名单值，隐藏原始主机路径和启动参数；补充未知/非法分类回归。响应性测试隔离自动验证阶段，继续验证同步完成检查不会阻塞事件循环，提前退出时展示真实异常。
+- Windows 相关回归 **79 passed**（真实浏览器需求验收、自动验证、分层 QA、完成流程响应性）；`pnpm check`、strict OpenSpec、脚本语法和空白检查通过。远程验证结果待补充，不将本地通过声明为 Ubuntu 已通过。
+
 ## 需求级浏览器验收与表单交互修复
 
 **日期:** 2026-10-11；`agenthub-requirement-validation` 1.1 完成（本地未提交）。

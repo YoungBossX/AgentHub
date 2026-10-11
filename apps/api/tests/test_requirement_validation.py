@@ -100,7 +100,23 @@ def test_missing_browser_does_not_downgrade_to_smoke_success(app_copy, monkeypat
     monkeypatch.setenv("AGENTHUB_VALIDATION_BROWSER_CHANNEL", "unsupported-browser")
     result = validate_copy(app_copy, threading.Event(), requirement_contract=contract())
     assert result["status"] == "incomplete" and result["functional"]["status"] == "unavailable"
+    assert result["functional"]["diagnosticCode"] == "browser_configuration_failed"
     assert all(command["status"] == "passed" for command in result["commands"])
+
+
+@pytest.mark.parametrize("code", ["browser_sandbox_unavailable", "browser_missing", "browser_launch_failed",
+    "browser_configuration_failed", "browser_execution_failed", "contract_failed", "private host path", {}])
+def test_unavailable_browser_exposes_only_known_diagnostics(code):
+    frozen = contract()
+    report = {"schemaVersion": VERSION, "contract": frozen, "status": "unavailable",
+              "diagnosticCode": code, "reason": "private host path", "checks": []}
+    result = parse_browser_result({"status": "failed", "exitCode": 2, "log": json.dumps(report)}, frozen)
+    assert result["status"] == "unavailable" and result["checks"] == []
+    assert "private host path" not in json.dumps(result)
+    if isinstance(code, str) and (code.startswith("browser_") or code == "contract_failed"):
+        assert result["diagnosticCode"] == code
+    else:
+        assert "diagnosticCode" not in result
 
 
 def test_browser_is_not_started_after_build_failure(app_copy):

@@ -3,6 +3,14 @@ import json
 
 VERSION = "agenthub.requirement_validation.v1"
 TARGETS = {"login_page", "demo_heading_text", "primary_action_button_text"}
+UNAVAILABLE_REASONS = {
+    "browser_sandbox_unavailable": "Browser sandbox is unavailable. Check the host sandbox policy.",
+    "browser_missing": "The configured browser is not installed.",
+    "browser_launch_failed": "Browser launch failed. Check the installed browser and host policy.",
+    "browser_configuration_failed": "Browser channel configuration is unsupported.",
+    "browser_execution_failed": "Browser execution stopped before all checks completed.",
+    "contract_failed": "Browser requirement contract is invalid.",
+}
 
 
 def requirement_contract(plan):
@@ -34,7 +42,10 @@ def parse_browser_result(result, contract):
         if data["schemaVersion"] != VERSION or data["contract"] != contract:
             return unavailable
         if data["status"] == "unavailable":
-            return {**unavailable, "reason": "Browser runtime could not start. Check the installed browser."}
+            code = data.get("diagnosticCode")
+            if isinstance(code, str) and code in UNAVAILABLE_REASONS:
+                return {**unavailable, "diagnosticCode": code, "reason": UNAVAILABLE_REASONS[code]}
+            return unavailable
         checks = data["checks"]
         if ([check["id"] for check in checks] != check_ids(contract)
                 or any(check["status"] not in {"passed", "failed"} for check in checks)):
