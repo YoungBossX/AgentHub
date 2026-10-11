@@ -124,7 +124,9 @@ def capture_group_evidence(db: DbSession, group_id: str) -> dict | None:
                                            "status": review.status, "riskLevel": review.risk_level,
                                            "adapterType": review.adapter_type,
                                            "source": "user_edited" if version and version.editor_source == "user" else "native_model" if meta.get("nativeReceipt") else "scripted_advisory",
-                                           "summary": review.summary[:1200], "validation": "not_run"})
+                                           "summary": review.summary[:1200], "validation": "not_run",
+                                           "qaStatus": (meta.get("qaAssessment") or {}).get("status", "unknown"),
+                                           "functionalAcceptance": "not_established"})
                 row["artifacts"].append(fact)
             if run.state == "completed":
                 types = {a["type"] for a in row["artifacts"]}

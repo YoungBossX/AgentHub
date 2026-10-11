@@ -814,6 +814,7 @@ class ReviewArtifactResponse(ApiModel):
     suggested_changes: list[str] = Field(alias="suggestedChanges")
     adapter_type: str = Field(alias="adapterType")
     native_receipt: Optional[dict[str, Any]] = Field(default=None, alias="nativeReceipt")
+    qa_assessment: Optional[dict[str, Any]] = Field(default=None, alias="qaAssessment")
 
 
 class PreviewResponse(ApiModel):

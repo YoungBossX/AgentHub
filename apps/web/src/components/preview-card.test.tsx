@@ -152,7 +152,8 @@ describe("PreviewCard", () => {
     expect(
       screen.getByText("脚本评审通过 1 个变更文件，风险较低。"),
     ).toBeTruthy()
-    expect(screen.getAllByText("通过").length).toBeGreaterThan(0)
+    expect(screen.getByText("规则结论：通过")).toBeTruthy()
+    expect(screen.getByText(/历史报告缺少分项 QA 证据/)).toBeTruthy()
   })
 
   it("keeps the actual native assessment, provenance and test boundary after rerender", () => {

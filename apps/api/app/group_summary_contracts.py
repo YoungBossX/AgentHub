@@ -36,6 +36,7 @@ def group_summary_prompt(preferences: object, evidence: dict) -> str:
         "Explain completed work, actual artifacts/reviews and remaining blockers, with short nextSteps. "
         "Do not invent actions, successful tests, Preview or deployment. validation must be not_run: summarization runs no tests. "
         "A completed review execution is distinct from its passed/warning/failed advisory verdict. "
+        "Report qaStatus blockers or incomplete evidence explicitly; functionalAcceptance=not_established must never be described as full QA acceptance. "
         "Scripted reports are not native model reviews. Read-only Diff snapshots are not reviewer edits. "
         "Preserve a requested response marker in summary. Mandatory result shape:\n"
         + json.dumps(example, ensure_ascii=False, separators=(",", ":"))

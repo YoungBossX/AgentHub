@@ -29,6 +29,7 @@
     "demo:api:test": "bash scripts/test-demo-api.sh"
   },
   "devDependencies": {
+    "playwright": "1.64.0",
     "typescript": "^5.9.3"
   },
   "pnpm": {

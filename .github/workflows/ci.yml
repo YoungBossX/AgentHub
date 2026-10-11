@@ -33,6 +33,9 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare browser for requirement validation tests
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Install API dependencies
         run: |
           python -m venv .venv

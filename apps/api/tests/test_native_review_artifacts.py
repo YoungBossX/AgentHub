@@ -241,6 +241,10 @@ def test_native_execution_artifact_and_failure_boundaries(fixture, mode, code):
     assert review.adapter_type == "claude_code" and review.summary == "发现一个可改进项。"
     assert review.findings[0]["file"] == SOURCE
     assert review.native_receipt["validation"] == "not_run"
+    assert review.qa_assessment["model"]["status"] == "warning"
+    assert review.qa_assessment["rules"]["status"] == "passed"
+    assert review.qa_assessment["status"] == "incomplete"
+    assert review.qa_assessment["inputFingerprint"] == review.native_receipt["inputFingerprint"]
     assert review.native_receipt["files"][SOURCE]["sha256"] == hashlib.sha256(before).hexdigest()
     assert review_response(review).model_dump(by_alias=True)["nativeReceipt"] == review.native_receipt
     assert db.exec(select(ArtifactVersion).where(ArtifactVersion.artifact_id == review.artifact_id)).one().editor_source == "agent"
@@ -250,6 +254,8 @@ def test_native_execution_artifact_and_failure_boundaries(fixture, mode, code):
     assert [x.id for x in list_task_run_reviews(db, run.id)] == [review.id]
     events = db.exec(select(TaskRunEvent).where(TaskRunEvent.task_run_id == run.id)).all()
     assert sum(event.event_type == "artifact.review.ready" for event in events) == 1
+    ready = next(event for event in events if event.event_type == "artifact.review.ready")
+    assert json.loads(ready.payload_json)["qaAssessment"] == review.qa_assessment
     assert not any('"claudeEventType":"user"' in event.payload_json for event in events)
 
 

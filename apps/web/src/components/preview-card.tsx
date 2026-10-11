@@ -17,6 +17,7 @@ import { type ChangeEvent, useState } from "react"
 
 import { DeployCard } from "./deploy-card"
 import { DiffCard } from "./diff-card"
+import { QaEvidence } from "./qa-evidence"
 import { UserCodeEditStatus } from "./user-code-edit-context"
 import { Button } from "@/components/ui/button"
 import type {
@@ -998,13 +999,14 @@ function ReviewCard({ review }: { review: ReviewArtifact }) {
           </p>
         </div>
         <span className="rounded-sm border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
-          {reviewStatusLabel(review.status)}
+          {native ? "模型结论：" : "规则结论："}{reviewStatusLabel(review.status)}
         </span>
       </div>
 
       <p className="mt-3 rounded-md bg-slate-50 p-3 text-sm leading-6 text-slate-800">
         {reviewTextLabel(review.summary)}
       </p>
+      <QaEvidence review={review} />
 
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
         <div>

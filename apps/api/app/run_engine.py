@@ -2691,6 +2691,8 @@ async def execute_task_run(
             db.rollback()
             raise _execution_lease_ownership_error()
         task_run, lease_controller, request, capabilities, launch_snapshot = prepared
+        from app.requirement_validation import requirement_contract as contract_for_plan
+        frozen_requirement_contract = contract_for_plan(request.plan_context)
         binding_launch_started = False
         try:
             async def reserve_binding_launch(operation):
@@ -2797,6 +2799,7 @@ async def execute_task_run(
                     finalize_adapter_completed_task_run(
                         db,
                         task_run,
+                        requirement_contract=frozen_requirement_contract,
                         lease_controller=lease_controller,
                         supervisor=supervisor,
                         expected_supervised_run=supervised_run,
@@ -3078,12 +3081,27 @@ async def finalize_adapter_completed_task_run(
     lease_controller: Optional[_ExecutionLeaseController] = None,
     supervisor: Optional[RunSupervisor] = None,
     expected_supervised_run: Optional[SupervisedRun] = None,
+    requirement_contract: Optional[dict[str, Any]] = None,
 ) -> TaskRun:
     fence_args = (
         lease_controller,
         supervisor,
         expected_supervised_run,
     )
+    if not (all(item is None for item in fence_args) or all(item is not None for item in fence_args)):
+        raise _execution_lease_ownership_error()
+
+    def owns_validation() -> bool:
+        return (task_run.state == "collecting_diff" and
+                (lease_controller is None or (
+                    lease_controller.owns_current_execution(db)
+                    and supervisor.is_current(expected_supervised_run))))
+
+    # Subprocesses remain cancellable under the existing lease heartbeat. Never
+    # hold the terminal commit reservation while awaiting a validation command.
+    from app.automatic_validation import run_automatic_validation
+    await run_automatic_validation(db, task_run, ownership_guard=owns_validation,
+                                   requirement_contract=requirement_contract)
     if all(item is None for item in fence_args):
         run_downstream = await _run_sync_execution_step(
             lambda: _commit_adapter_completed_task_run(db, task_run)
@@ -3591,6 +3609,7 @@ def _dependency_review_evidence(db: DbSession, task: Task) -> list[dict[str, Any
             "reviewArtifactId": review.artifact_id,
             "reviewedDiffArtifactId": diff_artifact.id,
             "status": review.status, "adapterType": review.adapter_type,
+            **({"qaAssessment": review.qa_assessment} if review.qa_assessment is not None else {}),
         })
     return evidence
 

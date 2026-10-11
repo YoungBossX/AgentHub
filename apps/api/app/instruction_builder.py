@@ -141,7 +141,10 @@ def _frontend_body(
             "In apps/demo/src/App.tsx, find the element with "
             'data-agenthub-target="login-page-slot" and replace only that slot '
             "content with a compact login form containing email and password "
-            "fields. Keep the existing deterministic data-agenthub-target "
+            "fields with accessible labels, required inputs, native email validation, "
+            "and a submit button. Prevent default submission; explicitly label this "
+            "as a demo form without account authentication or network requests. "
+            "Keep the existing deterministic data-agenthub-target "
             "attributes intact, do not edit unrelated files, do not read the "
             "OpenSpec change, and do not run setup or dependency install "
             "commands."

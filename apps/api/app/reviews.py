@@ -14,6 +14,7 @@ from app.models import Artifact, ArtifactVersion, Diff, Review, Task, TaskRun, T
 from app.native_reviews import NativeReviewError, validate_native_assessment
 from app.models import Session as AgentHubSession
 from app.provider_evidence import provider_evidence_for_task_run, scripted_provider_evidence
+from app.qa_assessment import build_qa_assessment, current_qa_assessment
 from app.target_registry import (
     DEMO_BACKEND_TARGET_ID,
     DEMO_FRONTEND_TARGET_ID,
@@ -48,6 +49,7 @@ class StoredReviewArtifact:
     suggested_changes: list[str]
     adapter_type: str
     native_receipt: Optional[dict[str, Any]] = None
+    qa_assessment: Optional[dict[str, Any]] = None
 
 
 def stage_native_review_for_task_run(
@@ -85,13 +87,28 @@ def stage_native_review_for_task_run(
         "boundFileCount": len(binding["files"]),
         "files": {path: binding["files"][path] for path in assessment["filesReviewed"]},
     }
+    diff = db.exec(select(Diff).where(Diff.artifact_id == diff_artifact_id)).first()
+    if diff is None:
+        raise NativeReviewError("NATIVE_REVIEW_OUTPUT_INVALID", "Missing review Diff record.")
+    plan = _plan_for_diff_artifact(db, diff_artifact)
+    # Read-only review may legitimately have no changes; assess bound source paths
+    # as well as Diff paths, without treating an empty Diff as failed execution.
+    rule_files = sorted(set(_json_list(diff.changed_files_json)) | set(binding["files"]))
+    rule_findings, _ = _scripted_findings(
+        rule_files, diff.patch_text,
+        contract=plan.get("appContract") if isinstance(plan.get("appContract"), dict) else None,
+        plan=plan,
+    )
+    qa = build_qa_assessment(db, diff_artifact, plan=plan, files=rule_files,
+                             patch=diff.patch_text, findings=rule_findings,
+                             model_status=assessment["status"], input_fingerprint=binding["inputFingerprint"])
     evidence = provider_evidence_for_task_run(db, task_run, artifact_refs={"diffArtifactId": diff_artifact_id})
     # The artifact is staged before the terminal commit, but represents that completed execution.
     evidence["runStatus"] = "completed"
     artifact = Artifact(task_run_id=task_run.id, artifact_type="review", title="Native model review",
                         status=assessment["status"], meta_json=json.dumps({
                             "reviewedDiffArtifactId": diff_artifact_id, "adapterType": "claude_code",
-                            "providerEvidence": evidence, "nativeReceipt": receipt,
+                            "providerEvidence": evidence, "nativeReceipt": receipt, "qaAssessment": qa,
                         }, separators=(",", ":")))
     review = Review(artifact_id=artifact.id, reviewed_diff_artifact_id=diff_artifact_id,
                     reviewer_agent_id=task_run.agent_id, adapter_type="claude_code",
@@ -113,7 +130,7 @@ def stage_native_review_for_task_run(
                                     "reviewedDiffArtifactId": diff_artifact_id,
                                     "status": review.status, "riskLevel": review.risk_level,
                                     "adapterType": review.adapter_type, "nativeReceipt": receipt,
-                                    "providerEvidence": evidence,
+                                    "providerEvidence": evidence, "qaAssessment": qa,
                                 }, separators=(",", ":")))
 
 
@@ -173,7 +190,7 @@ def create_scripted_review_for_diff(
     if existing is not None:
         artifact = db.get(Artifact, existing.artifact_id)
         if artifact is not None:
-            return _to_stored_review(artifact, existing)
+            return _to_stored_review(db, artifact, existing)
 
     diff = db.exec(select(Diff).where(Diff.artifact_id == diff_artifact.id)).first()
     if diff is None:
@@ -193,6 +210,11 @@ def create_scripted_review_for_diff(
         command_evidence=command_evidence,
     )
     status, risk_level = _status_and_risk_for(findings)
+    # Keep command availability/outcomes in their own layer; preserve the older
+    # advisory findings above for compatibility with historical reports.
+    rule_findings, _ = _scripted_findings(files_reviewed, diff.patch_text, contract=contract, plan=plan)
+    qa = build_qa_assessment(db, diff_artifact, plan=plan, files=files_reviewed,
+                             patch=diff.patch_text, findings=rule_findings)
     summary = _summary_for(status, risk_level, files_reviewed, findings, contract=contract)
     now = utc_now()
     task_run = db.get(TaskRun, diff_artifact.task_run_id)
@@ -220,6 +242,7 @@ def create_scripted_review_for_diff(
                 "contractId": contract.get("contractId") if contract else None,
                 "providerEvidence": review_provider_evidence,
                 "originProviderEvidence": origin_provider_evidence,
+                "qaAssessment": qa,
             },
             separators=(",", ":"),
         ),
@@ -277,11 +300,12 @@ def create_scripted_review_for_diff(
                     },
                 },
                 "originProviderEvidence": origin_provider_evidence,
+                "qaAssessment": qa,
             },
             separators=(",", ":"),
         ),
     )
-    return _to_stored_review(artifact, review)
+    return _to_stored_review(db, artifact, review)
 
 
 def list_task_run_reviews(
@@ -297,7 +321,7 @@ def list_task_run_reviews(
     for artifact in artifacts:
         review = db.exec(select(Review).where(Review.artifact_id == artifact.id)).first()
         if review is not None:
-            reviews.append(_to_stored_review(artifact, review))
+            reviews.append(_to_stored_review(db, artifact, review))
     return reviews
 
 
@@ -318,7 +342,7 @@ def latest_review_for_task_runs(
     review = db.exec(select(Review).where(Review.artifact_id == artifact.id)).first()
     if review is None:
         return None
-    return _to_stored_review(artifact, review)
+    return _to_stored_review(db, artifact, review)
 
 
 def _latest_diff_artifact(db: DbSession, task_run_id: str) -> Optional[Artifact]:
@@ -768,7 +792,7 @@ def _string_value(value: Any) -> Optional[str]:
     return None
 
 
-def _to_stored_review(artifact: Artifact, review: Review) -> StoredReviewArtifact:
+def _to_stored_review(db: DbSession, artifact: Artifact, review: Review) -> StoredReviewArtifact:
     try:
         metadata = json.loads(artifact.meta_json)
     except (ValueError, TypeError):
@@ -788,6 +812,7 @@ def _to_stored_review(artifact: Artifact, review: Review) -> StoredReviewArtifac
         suggested_changes=_json_list(review.suggested_changes_json),
         adapter_type=review.adapter_type,
         native_receipt=metadata.get("nativeReceipt") if isinstance(metadata, dict) else None,
+        qa_assessment=current_qa_assessment(db, metadata.get("qaAssessment")) if isinstance(metadata, dict) else None,
     )
 
 

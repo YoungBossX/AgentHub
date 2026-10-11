@@ -555,6 +555,34 @@ export type DiffArtifact = {
   stats: DiffStats
 }
 
+export type QaAssessment = {
+  schemaVersion: "agenthub.qa.v1"
+  taskRunId: string
+  diffArtifactId: string
+  patchSha256: string
+  inputFingerprint: string | null
+  status: "blocked" | "incomplete" | "passed" | "expired"
+  acceptance: "not_established" | "configured_checks_passed" | "requirement_checks_passed"
+  functional?: {
+    status: "passed" | "failed" | "not_run" | "not_configured" | "unavailable" | "expired" | "unknown"
+    contract: { schemaVersion: string; target: string; expectedText?: string } | null
+    checks: Array<{ id: string; status: "passed" | "failed"; detail?: string }>
+    browserVersion?: string
+    reason?: string
+  }
+  currentness?: "current" | "expired" | "unverifiable"
+  validation?: { eventId: string; status: string; profile: string; sourceFingerprint?: string; policyFingerprint?: string }
+  rules: { status: string; violations: string[]; findings: Array<Record<string, unknown>> }
+  model: { status: string; source: "native" | "none" }
+  commands: Array<{
+    kind: "check" | "test" | "build"
+    status: "recorded_failed" | "recorded_passed" | "not_run" | "passed" | "failed" | "timeout" | "cancelled" | "expired" | "unknown"
+    configured: boolean
+    versionBound: boolean
+    evidence: Array<{ artifactId?: string; eventId?: string; taskRunId: string; command: string; exitCode: number; log?: string; durationMs?: number }>
+  }>
+}
+
 export type ReviewArtifact = {
   id: string
   artifactId: string
@@ -569,6 +597,7 @@ export type ReviewArtifact = {
   findings: Array<Record<string, unknown>>
   suggestedChanges: string[]
   adapterType: string
+  qaAssessment?: QaAssessment | null
   nativeReceipt?: {
     schemaVersion: string
     taskRunId: string

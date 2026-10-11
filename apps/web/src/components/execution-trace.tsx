@@ -309,10 +309,10 @@ function traceStatusForReview(review: ReviewArtifact | null | undefined): TraceS
   if (!review) {
     return "skipped"
   }
-  if (review.status === "failed") {
+  if (review.status === "failed" || review.qaAssessment?.status === "blocked") {
     return "failed"
   }
-  if (review.status === "warning") {
+    if (review.status === "warning" || review.qaAssessment?.status === "incomplete" || review.qaAssessment?.status === "expired") {
     return "warning"
   }
   return "completed"

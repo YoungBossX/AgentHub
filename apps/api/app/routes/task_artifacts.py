@@ -154,6 +154,7 @@ def review_response(review: StoredReviewArtifact) -> ReviewArtifactResponse:
         suggestedChanges=review.suggested_changes,
         adapterType=review.adapter_type,
         nativeReceipt=review.native_receipt,
+        qaAssessment=review.qa_assessment,
     )
 
 

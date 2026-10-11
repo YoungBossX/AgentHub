@@ -12,7 +12,8 @@ import { type ReactNode, useEffect, useMemo, useState } from "react"
 import { ExecutionTrace } from "./execution-trace"
 import { DagSummary } from "./dag-summary"
 import type { ArtifactPanelItem } from "./preview-card"
-import { healthLabel, reviewLabel, statusClasses, statusLabel } from "./task-card"
+import { healthLabel, statusClasses, statusLabel } from "./task-card"
+import { qaLabel } from "./qa-evidence"
 import { RunControls } from "./task-run-controls"
 import { Button } from "./ui/button"
 import { cn } from "@/lib/utils"
@@ -1177,7 +1178,7 @@ function artifactCardMeta(item: ArtifactPanelItem) {
         { label: "文件", value: String(item.artifact.filesReviewed.length) },
         { label: "来源", value: item.artifact.nativeReceipt ? "模型评审 · 未运行测试" : item.artifact.adapterType },
       ],
-      status: reviewLabel(item.artifact.status),
+      status: qaLabel(item.artifact),
       summary: item.artifact.summary,
       title: item.artifact.title,
     }
@@ -1400,7 +1401,7 @@ function ArtifactChips({
       {reviews.length > 0 ? (
         <EvidenceChip
           className="bg-amber-50 text-amber-700"
-          label={`评审${reviewLabel(reviews[reviews.length - 1]?.status ?? "")}`}
+          label={qaLabel(reviews[reviews.length - 1])}
           onClick={selectLatestArtifact("review", taskArtifactItems, onSelectArtifact)}
           selected={selectedArtifactId === latestArtifactId("review", taskArtifactItems)}
         />

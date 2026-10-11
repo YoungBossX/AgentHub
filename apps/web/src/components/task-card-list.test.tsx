@@ -688,8 +688,8 @@ describe("TaskCardList", () => {
       }),
     )
 
-    expect(await screen.findByText("评审通过")).toBeTruthy()
-    fireEvent.click(screen.getByText("评审通过"))
+    const reviewChip = await screen.findByRole("button", { name: "规则评审通过" })
+    fireEvent.click(reviewChip)
     expect(onSelectArtifact).toHaveBeenCalledWith(`review:${sampleReviewArtifact.id}`)
     await waitFor(() =>
       expect(onArtifactsChange).toHaveBeenLastCalledWith([

@@ -86,7 +86,7 @@ def _no_link(path: Path) -> os.stat_result:
     return info
 
 
-def _read_file(root: Path, path: Path) -> dict[str, Any]:
+def _read_file(root: Path, path: Path, *, include_bytes: bool = False) -> dict[str, Any]:
     ancestors = [root, *list(path.parents)[:len(path.relative_to(root).parts) - 1]]
     identities = [(parent, _identity(_no_link(parent))) for parent in ancestors]
     before = _no_link(path)
@@ -103,6 +103,8 @@ def _read_file(root: Path, path: Path) -> dict[str, Any]:
     if any(_identity(_no_link(parent)) != identity for parent, identity in identities):
         raise ValueError("Review input directory changed while reading.")
     result = {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)}
+    if include_bytes:
+        result["content"] = raw
     try:
         text = raw.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
         if "\0" not in text:

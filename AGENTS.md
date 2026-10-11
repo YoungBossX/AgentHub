@@ -162,6 +162,20 @@ pnpm demo:dev
 
 Expected P0 runtime command families:
 
+- Focused exception under `agenthub-requirement-validation`: after fixed demo
+  build validation the server may run its trusted Playwright harness against
+  temporary output for a frozen login/heading/button contract. Use a fresh
+  sandboxed browser context, deny external requests/downloads/service workers,
+  and use installed browsers only. No arbitrary selectors/scripts from plans,
+  authentication, runtime installation, or adapter browser permissions are added.
+
+- Focused exception under `agenthub-versioned-validation`: the server may run
+  its fixed TypeScript check, trusted Vite build harness and Node build-output
+  smoke tests in a temporary copy of `demo-frontend`, using already installed
+  platform dependencies. It must bind receipts to source/policy fingerprints,
+  honor execution cancellation/ownership and never execute edited configuration
+  or install dependencies. This does not expand adapter command permissions.
+
 - Git read/worktree/diff commands needed for session worktrees and artifacts,
   such as `git rev-parse`, `git worktree`, `git diff`, `git status`, and
   optional `git apply --check`.

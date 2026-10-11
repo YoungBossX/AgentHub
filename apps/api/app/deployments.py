@@ -727,6 +727,15 @@ def _ensure_staging_deploy_gates(
     latest_review = _latest_review_for_task_run(db, task_run.id)
     if latest_review is not None and latest_review.status == "failed":
         raise DeployError("Staging deploy blocked because review failed.")
+    if latest_review is not None:
+        review_artifact = db.get(Artifact, latest_review.artifact_id)
+        qa = _metadata_for_artifact(review_artifact).get("qaAssessment") if review_artifact else None
+        if isinstance(qa, dict) and qa.get("status") == "blocked":
+            raise DeployError("Staging deploy blocked by QA rule, model, or command failures.")
+        if isinstance(qa, dict) and isinstance(qa.get("validation"), dict):
+            from app.automatic_validation import validation_currentness
+            if validation_currentness(db, task_run.id, qa["validation"]) != "current":
+                raise DeployError("Staging deploy blocked because validation is stale or unverifiable.")
 
     target = _target_for_task_run(db, task_run)
     changed_files = _latest_changed_files_for_task_run(db, task_run.id)

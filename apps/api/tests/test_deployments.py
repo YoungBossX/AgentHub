@@ -712,6 +712,50 @@ def test_local_staging_deploy_blocks_failed_review(tmp_path: Path) -> None:
             service.create_deployment(db, preview_id, provider_id="local_staging")
 
 
+def test_local_staging_deploy_blocks_qa_even_when_individual_review_passed(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, task_run_id = create_preview_fixture(db, worktree)
+        add_diff_and_review(db, task_run_id, review_status="passed", risk_level="low")
+        artifact = db.exec(select(Artifact).where(
+            Artifact.task_run_id == task_run_id, Artifact.artifact_type == "review",
+        )).one()
+        artifact.meta_json = json.dumps({"qaAssessment": {"status": "blocked"}})
+        db.add(artifact); db.commit()
+        runner = RecordingBuildRunner()
+        provider = LocalStagingDeployProvider(
+            command_runner=runner, static_server=RecordingStaticServer(),
+            health_checker=StaticHealthChecker(), port_allocator=lambda: 45221,
+        )
+        service = DeployService(providers=(provider,))
+        with pytest.raises(DeployError, match="QA rule, model, or command failures"):
+            service.create_deployment(db, preview_id, provider_id="local_staging")
+        assert runner.commands == []
+
+
+def test_local_staging_deploy_blocks_unverifiable_version_before_build(tmp_path: Path) -> None:
+    with next(db_fixture()) as db:
+        worktree = tmp_path / "session-worktree"
+        (worktree / "apps/demo").mkdir(parents=True)
+        preview_id, task_run_id = create_preview_fixture(db, worktree)
+        add_diff_and_review(db, task_run_id, review_status="passed", risk_level="low")
+        artifact = db.exec(select(Artifact).where(
+            Artifact.task_run_id == task_run_id, Artifact.artifact_type == "review",
+        )).one()
+        artifact.meta_json = json.dumps({"qaAssessment": {"status": "passed", "validation": {"status": "passed", "taskRunId": task_run_id}}})
+        db.add(artifact); db.commit()
+        runner = RecordingBuildRunner()
+        provider = LocalStagingDeployProvider(
+            command_runner=runner, static_server=RecordingStaticServer(),
+            health_checker=StaticHealthChecker(), port_allocator=lambda: 45221,
+        )
+        service = DeployService(providers=(provider,))
+        with pytest.raises(DeployError, match="stale or unverifiable"):
+            service.create_deployment(db, preview_id, provider_id="local_staging")
+        assert runner.commands == []
+
+
 def test_local_staging_deploy_blocks_unhealthy_preview(tmp_path: Path) -> None:
     with next(db_fixture()) as db:
         worktree = tmp_path / "session-worktree"
