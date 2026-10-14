@@ -97,6 +97,19 @@ Deferred examples:
 
 ## Data and Runtime Boundaries
 
+- Focused exception under `agenthub-controlled-mcp`: `WorkspaceMcpConnection`
+  stores the built-in read-only document connection and Agent defaults in SQLite.
+  Compatible Codex runs may reach only the server-owned loopback MCP gateway with
+  execution-bound ephemeral credentials and a fixed tool allowlist. The gateway
+  reads bounded README/docs in the assigned target and explicitly related
+  built-in backend documentation in that same worktree; no arbitrary remote URLs,
+  processes, host paths, write tools or general adapter network scope are added.
+
+- Focused exception under `agenthub-skills`: `WorkspaceSkill` stores bounded
+  workspace instruction packages and default Agent bindings in SQLite. Frozen
+  content lives in existing message/run evidence; Skills grant no new tools,
+  filesystem scope, network access or script execution permissions.
+
 - SQLite is the demo database. Do not require Postgres for the final demo.
 - The demo schema is limited to User, Workspace, Session, Message, Agent, Task,
   TaskRun, TaskRunEvent, Artifact, Diff, Preview, Deployment,

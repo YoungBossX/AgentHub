@@ -120,6 +120,12 @@ def prepare_regeneration(db: DbSession, session_id: str, message_id: str, operat
     created = Message(id=operation_id, session_id=session_id, sender_type="user", sender_id=source.sender_id,
                       content_md=source.content_md, message_kind="chat", parent_message_id=source.parent_message_id,
                       context_json=source.context_json, regeneration_json=json.dumps(claim, separators=(",", ":")))
+    from app.skills import rebind_message_selection, SkillError
+
+    try:
+        rebind_message_selection(source, created)
+    except SkillError as exc:
+        raise HTTPException(409, str(exc)) from exc
     return create_session_message(db, session, created), None, True
 
 

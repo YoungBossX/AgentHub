@@ -186,6 +186,24 @@ class AgentProfileDraft(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
+class WorkspaceSkill(SQLModel, table=True):
+    __table_args__ = (Index("ux_workspace_skill_name", "workspace_id", "name", unique=True),)
+    id: str = Field(default_factory=new_id, primary_key=True)
+    workspace_id: str = Field(foreign_key="workspace.id", index=True)
+    name: str
+    package_json: str
+    revision: int = 1
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class WorkspaceMcpConnection(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    workspace_id: str = Field(foreign_key="workspace.id", index=True, unique=True)
+    config_json: str = "{}"
+    revision: int = 1
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
 class AgentRuntimeConfig(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     workspace_id: Optional[str] = Field(

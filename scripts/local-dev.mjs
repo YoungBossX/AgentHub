@@ -63,7 +63,7 @@ export function projectEnvironment(env) {
 
 export function serviceEnvironments(options, env = process.env) {
   return {
-    api: { ...env, AGENTHUB_FRONTEND_ORIGIN: `http://${host}:${options.webPort}`, PYTHONIOENCODING: "utf-8" },
+    api: { ...env, AGENTHUB_FRONTEND_ORIGIN: `http://${host}:${options.webPort}`, AGENTHUB_MCP_GATEWAY_ORIGIN: `http://${host}:${options.apiPort}`, PYTHONIOENCODING: "utf-8" },
     web: { ...projectEnvironment(env), BACKEND_URL: `http://${host}:${options.apiPort}`, NEXT_TELEMETRY_DISABLED: "1" },
     demoApi: { ...projectEnvironment(env), PYTHONIOENCODING: "utf-8" },
   };

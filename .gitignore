@@ -123,6 +123,14 @@ docs/*
 !docs/parallel-dag-freeze-review.md
 !docs/evidence/
 docs/evidence/*
+!docs/evidence/skills-mcp/
+docs/evidence/skills-mcp/*
+!docs/evidence/skills-mcp/README.md
+!docs/evidence/skills-mcp/runtime-acceptance.json
+!docs/evidence/skills-mcp/settings-light.png
+!docs/evidence/skills-mcp/run-dark.png
+!docs/evidence/skills-mcp/preview-dark.png
+!docs/evidence/skills-mcp/import-light.png
 !docs/evidence/message-regeneration/
 docs/evidence/message-regeneration/*
 !docs/evidence/message-regeneration/*.json

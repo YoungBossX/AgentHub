@@ -6,6 +6,7 @@ import { CodeQuoteContext, MAX_QUOTED_CODE_CHARS, type CodeQuote } from "./code-
 import { selectComposerMention } from "./composer-mentions"
 import { useMessageAttachments } from "./use-message-attachments"
 import { useMessageRegeneration } from "./use-message-regeneration"
+import { SkillSelector } from "./skill-selector"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
@@ -96,6 +97,7 @@ export function WorkspaceShell({
   const composerRef = useRef<HTMLTextAreaElement>(null)
   const [contextSessionId, setContextSessionId] = useState<string | null>(null)
   const [contextItems, setContextItems] = useState<ComposerContextItem[]>([])
+  const [skillOverride, setSkillOverride] = useState<{ sessionId: string | null; ids: string[] | null }>({ sessionId: null, ids: null })
   const [conversationMode, setConversationMode] = useState<"direct" | "group">("group")
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
   const [syncError, setSyncError] = useState<string | null>(null)
@@ -439,6 +441,7 @@ export function WorkspaceShell({
         fetch,
         buildComposerMessageContext(activeContextItems),
         attachmentIds,
+        skillOverride.sessionId === sessionId ? skillOverride.ids : null,
       ) } catch (error) {
         // Planning can fail after persistence; recover the immutable binding.
         if (attachmentIds.length) {
@@ -455,6 +458,7 @@ export function WorkspaceShell({
         throw error
       }
       attachments.sent(sessionId, attachmentIds)
+      if (selectedSessionIdRef.current === sessionId) setSkillOverride({ sessionId, ids: null })
       if (selectedSessionIdRef.current === sessionId) setDraft((current) => current.trim() === content ? "" : current)
       const [nextMessages, nextTasks] = await Promise.all([
         listSessionMessages(backendUrl, selectedSessionId),
@@ -548,6 +552,9 @@ export function WorkspaceShell({
           </div>
           {selectedSession ? <div className="shrink-0 px-5 pb-4 pt-2"><MessageComposer
                 inputRef={composerRef}
+                skillSelector={workspace ? <SkillSelector backendUrl={backendUrl} workspaceId={workspace.id}
+                  selected={skillOverride.sessionId === selectedSessionId ? skillOverride.ids : null} disabled={isPending}
+                  onChange={ids => setSkillOverride({ sessionId: selectedSessionId, ids })} /> : null}
                 key={selectedSessionId}
                 attachments={attachments.items}
                 attachmentsBlocked={attachments.blocked}

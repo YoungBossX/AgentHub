@@ -1,0 +1,391 @@
+{
+  "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+  "adapterType": "codex",
+  "skills": {
+    "schemaVersion": "agenthub.skills.v1",
+    "source": "message",
+    "sha256": "3020a4a378a7161af4859b02c37a3d04954bb52819704910d6169aabcd0ca21d",
+    "skills": [
+      {
+        "name": "mcp-doc-workflow",
+        "description": "先查询项目 API 文档，再进行有界代码修改",
+        "revision": 1,
+        "source": "workspace",
+        "sha256": "0322801d1af52064150a9a4653f1097be689ef9dc068fc755b6207b21a58fedb",
+        "resources": [],
+        "status": "loaded"
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "6fdc110a-0fe7-4ed0-b3a4-9f85cfb4f571",
+      "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+      "eventType": "skills.loaded",
+      "payload": {
+        "schemaVersion": "agenthub.skills.v1",
+        "source": "message",
+        "sha256": "3020a4a378a7161af4859b02c37a3d04954bb52819704910d6169aabcd0ca21d",
+        "skills": [
+          {
+            "name": "mcp-doc-workflow",
+            "description": "先查询项目 API 文档，再进行有界代码修改",
+            "revision": 1,
+            "source": "workspace",
+            "sha256": "0322801d1af52064150a9a4653f1097be689ef9dc068fc755b6207b21a58fedb",
+            "resources": [],
+            "status": "loaded"
+          }
+        ]
+      },
+      "sequence": 12,
+      "createdAt": "2026-10-14T04:35:28.746446",
+      "cursor": "2026-10-14T04:35:28.746446|6fdc110a-0fe7-4ed0-b3a4-9f85cfb4f571"
+    },
+    {
+      "id": "93163ff1-eda3-4a84-8853-f914e6acb9f3",
+      "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+      "eventType": "validation.completed",
+      "payload": {
+        "schemaVersion": "agenthub.validation.v1",
+        "files": {
+          "apps/demo/vite.config.ts": "c21eacada911864c510fb42231fcb6d1f58d30b95ceb94ffd0a4fb5922d2bb78",
+          "apps/demo/tsconfig.json": "7a8ddec53aba35daa80afec748db4a517f085dad367fe5427df2f6a5a2d547b4",
+          "apps/demo/tsconfig.app.json": "e9a8dd90c9608be011e11921be7de765b5a58cb14c92a3f295912e17bd81e59d",
+          "apps/demo/src/styles.css": "b68831f283f8f98f9cabdbd5517767a89e2a9356842a78a536c5a4927f690317",
+          "apps/demo/src/main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+          "apps/demo/src/App.tsx": "efd3095f2462e2886f62efc5a4a0fb0bc0a425a75a41f7a9750ac40a1d9f6827",
+          "apps/demo/README.md": "18e5ea119a881427471ecff82b1725e35e5b4db7d65f73ae4ed0003d5a7d3046",
+          "apps/demo/package.json": "2724936b7b5da1d8765f512d671c320451c8aeee98aef8f28e1cd56df1fc460a",
+          "apps/demo/index.html": "d201c3a4eaf6503008a27a179ec1502db08250694aaf28158313202e8dfec1f9",
+          "pnpm-lock.yaml": "0a82dfb091e4a286e6886ab02be14c77fd0bc2b5a9ab2dceb1d8e6154ed4c954",
+          "package.json": "af364b57ce7fe5e10c9bf663c1744fbe3f69c82fa917bbf8db856e8ecfe5547a",
+          "pnpm-workspace.yaml": "617555f4d8252d6089638a810777859f1152cde079ba64e0ab0ecb84da8ee920"
+        },
+        "sourceFingerprint": "1d11e5c694d941f6385c1567cb24e110f8db145d143dcbd567046058c5da2b7b",
+        "policyFingerprint": "12ebcd2b04243f75c625072f47c65496019e29014bb4525527ded9d70d1caf21",
+        "profile": "vite-build-smoke-v1",
+        "status": "passed",
+        "commands": [
+          {
+            "exitCode": 0,
+            "status": "passed",
+            "log": "",
+            "durationMs": 592,
+            "kind": "check",
+            "argv": [
+              "node",
+              "<platform>\\node_modules\\.pnpm\\typescript@5.9.3\\node_modules\\typescript\\bin\\tsc",
+              "--project",
+              "tsconfig.app.json",
+              "--incremental",
+              "--tsBuildInfoFile",
+              "<validation-copy>\\check.tsbuildinfo"
+            ],
+            "command": "node <platform>\\node_modules\\.pnpm\\typescript@5.9.3\\node_modules\\typescript\\bin\\tsc --project tsconfig.app.json --incremental --tsBuildInfoFile <validation-copy>\\check.tsbuildinfo"
+          },
+          {
+            "exitCode": 0,
+            "status": "passed",
+            "log": "vite v7.3.6 building client environment for production...\ntransforming...\n✓ 29 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.41 kB │ gzip:  0.28 kB\ndist/assets/index-ByyKtXfV.css    2.20 kB │ gzip:  0.92 kB\ndist/assets/index-DBm9XXiM.js   194.67 kB │ gzip: 61.22 kB\n✓ built in 617ms\n",
+            "durationMs": 937,
+            "kind": "build",
+            "argv": [
+              "node",
+              "<platform>\\scripts\\demo-validation-build.mjs"
+            ],
+            "command": "node <platform>\\scripts\\demo-validation-build.mjs"
+          },
+          {
+            "exitCode": 0,
+            "status": "passed",
+            "log": "TAP version 13\n# Subtest: built HTML has the React mount point and a module entry\nok 1 - built HTML has the React mount point and a module entry\n  ---\n  duration_ms: 0.6861\n  type: 'test'\n  ...\n# Subtest: every local script and stylesheet reference resolves to a nonempty output\nok 2 - every local script and stylesheet reference resolves to a nonempty output\n  ---\n  duration_ms: 0.7243\n  type: 'test'\n  ...\n# Subtest: production assets include nonempty JavaScript and contain no unresolved source entry\nok 3 - production assets include nonempty JavaScript and contain no unresolved source entry\n  ---\n  duration_ms: 0.3935\n  type: 'test'\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 74.509\n",
+            "durationMs": 172,
+            "kind": "test",
+            "argv": [
+              "node",
+              "--test",
+              "<platform>\\scripts\\demo-build-smoke.test.mjs"
+            ],
+            "command": "node --test <platform>\\scripts\\demo-build-smoke.test.mjs"
+          }
+        ],
+        "functional": {
+          "schemaVersion": "agenthub.requirement_validation.v1",
+          "status": "passed",
+          "contract": {
+            "schemaVersion": "agenthub.requirement_validation.v1",
+            "target": "demo_heading_text",
+            "expectedText": "Skills MCP end to end"
+          },
+          "checks": [
+            {
+              "id": "desktop.text",
+              "status": "passed",
+              "detail": ""
+            },
+            {
+              "id": "desktop.runtime",
+              "status": "passed",
+              "detail": ""
+            },
+            {
+              "id": "narrow.text",
+              "status": "passed",
+              "detail": ""
+            },
+            {
+              "id": "narrow.runtime",
+              "status": "passed",
+              "detail": ""
+            }
+          ],
+          "browserVersion": "155.0.4283.45",
+          "durationMs": 21561
+        },
+        "requirementFingerprint": "b554be4086f8c1b941adb67007c5e7f64fc51d563b3f03eecccc255ae78ad317",
+        "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+        "adapterRunId": "codex-63fba8ad-d8cd-4dc8-8f19-e9fec3a0793a"
+      },
+      "sequence": 32,
+      "createdAt": "2026-10-14T04:37:43.155555",
+      "cursor": "2026-10-14T04:37:43.155555|93163ff1-eda3-4a84-8853-f914e6acb9f3"
+    }
+  ],
+  "qa": [
+    {
+      "schemaVersion": "agenthub.qa.v1",
+      "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+      "diffArtifactId": "36f35483-7549-452a-9025-bc83e71d88cb",
+      "patchSha256": "600f9b8b7ae7eb669e9b7ea870ff56094ad1aeeca13d1a6c5bd222035d4b7c52",
+      "inputFingerprint": null,
+      "status": "incomplete",
+      "rules": {
+        "status": "passed",
+        "violations": [],
+        "findings": []
+      },
+      "model": {
+        "status": "not_run",
+        "source": "none"
+      },
+      "commands": [
+        {
+          "kind": "check",
+          "status": "passed",
+          "configured": true,
+          "versionBound": true,
+          "evidence": [
+            {
+              "eventId": "93163ff1-eda3-4a84-8853-f914e6acb9f3",
+              "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+              "command": "node <platform>\\node_modules\\.pnpm\\typescript@5.9.3\\node_modules\\typescript\\bin\\tsc --project tsconfig.app.json --incremental --tsBuildInfoFile <validation-copy>\\check.tsbuildinfo",
+              "exitCode": 0,
+              "log": "",
+              "durationMs": 592
+            }
+          ]
+        },
+        {
+          "kind": "test",
+          "status": "passed",
+          "configured": true,
+          "versionBound": true,
+          "evidence": [
+            {
+              "eventId": "93163ff1-eda3-4a84-8853-f914e6acb9f3",
+              "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+              "command": "node --test <platform>\\scripts\\demo-build-smoke.test.mjs",
+              "exitCode": 0,
+              "log": "TAP version 13\n# Subtest: built HTML has the React mount point and a module entry\nok 1 - built HTML has the React mount point and a module entry\n  ---\n  duration_ms: 0.6861\n  type: 'test'\n  ...\n# Subtest: every local script and stylesheet reference resolves to a nonempty output\nok 2 - every local script and stylesheet reference resolves to a nonempty output\n  ---\n  duration_ms: 0.7243\n  type: 'test'\n  ...\n# Subtest: production assets include nonempty JavaScript and contain no unresolved source entry\nok 3 - production assets include nonempty JavaScript and contain no unresolved source entry\n  ---\n  duration_ms: 0.3935\n  type: 'test'\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 74.509\n",
+              "durationMs": 172
+            }
+          ]
+        },
+        {
+          "kind": "build",
+          "status": "passed",
+          "configured": true,
+          "versionBound": true,
+          "evidence": [
+            {
+              "eventId": "93163ff1-eda3-4a84-8853-f914e6acb9f3",
+              "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+              "command": "node <platform>\\scripts\\demo-validation-build.mjs",
+              "exitCode": 0,
+              "log": "vite v7.3.6 building client environment for production...\ntransforming...\n✓ 29 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.41 kB │ gzip:  0.28 kB\ndist/assets/index-ByyKtXfV.css    2.20 kB │ gzip:  0.92 kB\ndist/assets/index-DBm9XXiM.js   194.67 kB │ gzip: 61.22 kB\n✓ built in 617ms\n",
+              "durationMs": 937
+            }
+          ]
+        }
+      ],
+      "acceptance": "not_established",
+      "validation": {
+        "schemaVersion": "agenthub.validation.v1",
+        "sourceFingerprint": "1d11e5c694d941f6385c1567cb24e110f8db145d143dcbd567046058c5da2b7b",
+        "policyFingerprint": "12ebcd2b04243f75c625072f47c65496019e29014bb4525527ded9d70d1caf21",
+        "profile": "vite-build-smoke-v1",
+        "status": "passed",
+        "requirementFingerprint": "b554be4086f8c1b941adb67007c5e7f64fc51d563b3f03eecccc255ae78ad317",
+        "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+        "adapterRunId": "codex-63fba8ad-d8cd-4dc8-8f19-e9fec3a0793a",
+        "eventId": "93163ff1-eda3-4a84-8853-f914e6acb9f3"
+      },
+      "currentness": "current",
+      "functional": {
+        "schemaVersion": "agenthub.requirement_validation.v1",
+        "status": "passed",
+        "contract": {
+          "schemaVersion": "agenthub.requirement_validation.v1",
+          "target": "demo_heading_text",
+          "expectedText": "Skills MCP end to end"
+        },
+        "checks": [
+          {
+            "id": "desktop.text",
+            "status": "passed",
+            "detail": ""
+          },
+          {
+            "id": "desktop.runtime",
+            "status": "passed",
+            "detail": ""
+          },
+          {
+            "id": "narrow.text",
+            "status": "passed",
+            "detail": ""
+          },
+          {
+            "id": "narrow.runtime",
+            "status": "passed",
+            "detail": ""
+          }
+        ],
+        "browserVersion": "155.0.4283.45",
+        "durationMs": 21561
+      }
+    }
+  ],
+  "recordedAt": "2026-10-14T04:40:55.2152715Z",
+  "schemaVersion": "agenthub.skills-mcp-acceptance.v1",
+  "limits": [
+    "Local uncommitted implementation; no remote CI evidence.",
+    "Actual Codex run; model QA not run, overall QA incomplete.",
+    "Diagnostic keyword classification has existing false positives for successful native events; not used as acceptance proof.",
+    "Document MCP is built-in and read-only, Codex only."
+  ],
+  "mcp": {
+    "connection": {
+      "schemaVersion": "agenthub.mcp.v1",
+      "serverId": "agenthub_docs",
+      "revision": 1,
+      "sha256": "e5f06493af2ad7491a448b87c77ab67b33a5906303a4155ce57c14e3e70b0c95",
+      "tools": [
+        "list_documents",
+        "read_document"
+      ],
+      "status": "configured"
+    },
+    "events": [
+      {
+        "id": "234e25d8-5259-4401-950f-47579ef46f98",
+        "type": "mcp.connected",
+        "createdAt": "2026-10-14T04:35:33.984018",
+        "payload": {
+          "schemaVersion": "agenthub.mcp.v1",
+          "serverId": "agenthub_docs",
+          "protocolVersion": "2025-06-18"
+        }
+      },
+      {
+        "id": "73eb476f-bbc6-4435-ad48-d668b3726aa3",
+        "type": "mcp.tool.completed",
+        "createdAt": "2026-10-14T04:35:51.729316",
+        "payload": {
+          "schemaVersion": "agenthub.mcp.v1",
+          "serverId": "agenthub_docs",
+          "tool": "list_documents",
+          "arguments": {},
+          "status": "passed",
+          "durationMs": 47,
+          "result": [
+            {
+              "documentId": "demo-frontend:README.md",
+              "path": "apps/demo/README.md",
+              "sha256": "18e5ea119a881427471ecff82b1725e35e5b4db7d65f73ae4ed0003d5a7d3046"
+            },
+            {
+              "documentId": "demo-backend:README.md",
+              "path": "apps/demo-api/README.md",
+              "sha256": "998991ab35d6a1ba213ecbf8b9abb02b1d9243da0ca36da021eb386a3736c396"
+            }
+          ]
+        }
+      },
+      {
+        "id": "5234978e-ca5e-4d10-bf06-0d0c12b3035a",
+        "type": "mcp.tool.completed",
+        "createdAt": "2026-10-14T04:36:41.708578",
+        "payload": {
+          "schemaVersion": "agenthub.mcp.v1",
+          "serverId": "agenthub_docs",
+          "tool": "read_document",
+          "arguments": {
+            "documentId": "demo-backend:README.md"
+          },
+          "status": "passed",
+          "durationMs": 0,
+          "result": {
+            "documentId": "demo-backend:README.md",
+            "path": "apps/demo-api/README.md",
+            "sha256": "998991ab35d6a1ba213ecbf8b9abb02b1d9243da0ca36da021eb386a3736c396",
+            "text": "# AgentHub Demo API\r\n\r\n`apps/demo-api` is the isolated backend target for Backend Agent work. It is\r\napplication code for the demo app, not the AgentHub platform backend.\r\n\r\n## Endpoints\r\n\r\n- `GET /health`\r\n- `GET /contacts`\r\n- `POST /contacts`\r\n\r\nThe first scaffold uses in-memory contacts so agents can modify backend app\r\nbehavior without adding a cloud database, auth, tenancy, or production deploy.\r\n\r\n## Commands\r\n\r\nFrom the repo root:\r\n\r\n```bash\r\npnpm demo:api:dev\r\npnpm demo:api:test\r\npnpm check:demo-api\r\n```\r\n\r\nThe dev server runs on `127.0.0.1:${AGENTHUB_DEMO_API_PORT:-5174}`.\r\n\r\nFrontend demo code may call this backend in local mode through\r\n`http://127.0.0.1:5174`, but P6-4 does not wire the Vite app to this API yet.\r\n"
+          }
+        }
+      }
+    ]
+  },
+  "developmentHead": "68aa0a1",
+  "sessionId": "efaba891-20af-4c9e-81ea-beca298eb3d3",
+  "diffs": [
+    {
+      "patchText": "diff --git a/apps/demo/src/App.tsx b/apps/demo/src/App.tsx\nindex bd27649..4d88ec8 100644\n--- a/apps/demo/src/App.tsx\n+++ b/apps/demo/src/App.tsx\n@@ -10,7 +10,7 @@ export default function App() {\n       <section className=\"workspace-panel\" aria-labelledby=\"demo-heading\">\n         <div className=\"workspace-copy\">\n           <p className=\"eyebrow\">AgentHub demo workspace</p>\n-          <h1 id=\"demo-heading\">Launchpad for a visible coding-agent change</h1>\n+          <h1 id=\"demo-heading\">Skills MCP end to end</h1>\n           <p className=\"lede\">\n             This baseline Vite React app gives future agents a stable place to\n             add a login page and then adjust button copy without changing the\n",
+      "id": "1e09ab2f-d390-4f94-80f2-70c70bae8e55",
+      "artifactId": "36f35483-7549-452a-9025-bc83e71d88cb",
+      "changedFiles": [
+        "apps/demo/src/App.tsx"
+      ],
+      "stats": {
+        "filesChanged": 1,
+        "additions": 1,
+        "deletions": 1,
+        "files": [
+          {
+            "path": "apps/demo/src/App.tsx",
+            "additions": 1,
+            "deletions": 1
+          }
+        ]
+      }
+    }
+  ],
+  "adapterRunId": "codex-63fba8ad-d8cd-4dc8-8f19-e9fec3a0793a",
+  "state": "completed",
+  "errorCode": null,
+  "previews": [
+    {
+      "status": "ready",
+      "url": "http://127.0.0.1:50525",
+      "id": "b7ee3390-5503-4d8e-ab31-394acf679d44",
+      "healthStatus": "healthy"
+    }
+  ],
+  "finalRestartPreview": {
+    "recordedAt": "2026-10-14T05:00:47.2782145Z",
+    "status": "ready",
+    "id": "b4b7fc21-078b-43e7-bd5e-63cf51b4c063",
+    "url": "http://127.0.0.1:57860",
+    "healthStatus": "healthy"
+  }
+}

@@ -15,6 +15,8 @@ import {
 import { cn } from "@/lib/utils"
 import { CustomAgentEditor } from "@/components/custom-agent-editor"
 import { AgentCreationChat } from "@/components/agent-creation-chat"
+import { SkillSettings } from "./skill-settings"
+import { McpSettings } from "./mcp-settings"
 
 type AgentDirectorySettingsPageClientProps = {
   backendUrl?: string
@@ -65,6 +67,8 @@ export function AgentDirectorySettingsPageClient({
 
   return (
     <section className="grid gap-4">
+      <SkillSettings key={workspace?.id} backendUrl={backendUrl} workspaceId={workspace?.id} agents={entries} />
+      <McpSettings key={`mcp:${workspace?.id}`} backendUrl={backendUrl} workspaceId={workspace?.id} agents={entries} />
       <AgentCreationChat backendUrl={backendUrl} workspaceId={workspace?.id} targets={targets} onSaved={async () => {
         const updated = workspace ? await getWorkspaceAgentDirectory(backendUrl, workspace.id) : null
         if (!updated) throw new Error("目录刷新失败")

@@ -27,6 +27,7 @@ def build_role_instruction(
     *,
     adapter_type: str = "codex",
     system_prompt: Optional[str] = None,
+    skill_instruction: str = "",
 ) -> str:
     role = _effective_role(task, agent, context_pack)
     plan = _task_plan(context_pack)
@@ -38,6 +39,7 @@ def build_role_instruction(
             + (agent.system_prompt if system_prompt is None else system_prompt)
         ),
         _role_body(role, task, plan, original_request, target, context_pack),
+        skill_instruction,
         _target_section(role, plan, target),
         _contract_guidance(role, plan, target),
         _context_section(context_pack),

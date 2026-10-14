@@ -84,6 +84,20 @@ def test_mutation_during_validation_is_not_accepted(source_tree, where, monkeypa
     assert validation.validate_copy(source_tree, threading.Event(), runner=runner)["status"] == "stale"
 
 
+def test_checkout_line_endings_preserve_trusted_config_but_keep_raw_source_fingerprint(source_tree):
+    before, _ = validation.capture_validation_source(source_tree)
+    path = source_tree / "apps/demo/package.json"
+    raw = path.read_bytes()
+    changed = raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+    if changed == raw:
+        changed = raw.replace(b"\r\n", b"\n")
+    path.write_bytes(changed)
+    result = validation.validate_copy(source_tree, threading.Event(), runner=success)
+    assert result["status"] == "passed"
+    assert result["sourceFingerprint"] != before["sourceFingerprint"]
+    assert path.read_bytes() == changed
+
+
 def test_first_failure_prevents_build_or_old_output_test(source_tree):
     def fail(*args): return {"status": "failed", "exitCode": 2, "log": "type error", "durationMs": 1}
     result = validation.validate_copy(source_tree, threading.Event(), runner=fail)

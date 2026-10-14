@@ -26,6 +26,7 @@ test("port overrides, forwarding and fixed demo contract stay coherent", () => {
   const environments = serviceEnvironments(options, { BACKEND_URL: "http://incorrect", AGENTHUB_FRONTEND_ORIGIN: "http://incorrect" });
   assert.equal(environments.web.BACKEND_URL, "http://127.0.0.1:8007");
   assert.equal(environments.api.AGENTHUB_FRONTEND_ORIGIN, "http://127.0.0.1:3001");
+  assert.equal(environments.api.AGENTHUB_MCP_GATEWAY_ORIGIN, "http://127.0.0.1:8007");
   for (const args of [
     ["--api-port", "3000"], ["--api-port", "5174", "--demo-api"],
     ["--web-port", "1719"], ["--api-port", "6000"], ["--web-port", "65536"],

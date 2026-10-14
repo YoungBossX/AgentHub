@@ -19,6 +19,7 @@ PROTECTED_ABSOLUTE_PATH_PATTERN = re.compile(
 class PlannerRequest(BaseModel):
     images: tuple[ImageInput, ...] = Field(default=(), exclude=True, repr=False)
     agent_system_prompt: Optional[str] = Field(default=None, alias="agentSystemPrompt")
+    skill_evidence: Optional[dict[str, Any]] = Field(default=None, alias="skillEvidence")
     agent_profile_selection: Optional[dict[str, Any]] = Field(default=None, alias="agentProfileSelection")
     agent_tool_policy: Optional[str] = Field(default=None, alias="agentToolPolicy")
     planner_mode: str = Field(alias="plannerMode")
@@ -38,6 +39,8 @@ class PlannerRequest(BaseModel):
 
     def to_provider_payload(self) -> dict[str, Any]:
         payload = self.model_dump(by_alias=True)
+        if self.skill_evidence is None:
+            payload.pop("skillEvidence", None)
         if self.agent_system_prompt is None:
             payload.pop("agentSystemPrompt", None)
         if self.agent_profile_selection is None:

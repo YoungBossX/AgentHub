@@ -46,7 +46,7 @@ export function SessionEventTimeline({ events, tasks }: { events: SessionVisualE
                 <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${event.eventType === "error" ? "bg-red-500" : "bg-[var(--primary)]"}`} />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium">
-                    {labels[event.eventType] ?? "运行事件"}
+                    {event.eventType === "skills.loaded" ? "技能载入调用指令" : event.eventType === "skills.skipped" ? "技能未载入" : event.eventType === "mcp.connected" ? "MCP 连接已建立" : event.eventType === "mcp.tool.completed" ? "MCP 工具执行结果" : labels[event.eventType] ?? "运行事件"}
                     {event.state ? ` · ${statusLabel(event.state)}` : ""}
                   </p>
                   <p className="mt-1 truncate text-[11px] text-[var(--muted-foreground)]">

@@ -65,6 +65,7 @@ def evaluate_command(
     *,
     expected_cwd: Optional[Union[str, Path]] = None,
     expected_image_paths: Sequence[str] = (),
+    expected_mcp_tools: Sequence[str] = (),
 ) -> GuardrailDecision:
     parts = _command_parts(command)
     display = shlex.join(parts)
@@ -79,6 +80,7 @@ def evaluate_command(
         parts,
         expected_cwd=expected_cwd,
         expected_image_paths=expected_image_paths,
+        expected_mcp_tools=expected_mcp_tools,
     ):
         return GuardrailDecision(allowed=True)
 
@@ -223,6 +225,7 @@ def _is_allowed_runtime_command(
     *,
     expected_cwd: Optional[Union[str, Path]],
     expected_image_paths: Sequence[str] = (),
+    expected_mcp_tools: Sequence[str] = (),
 ) -> bool:
     git_subcommand = _git_subcommand(parts)
     if git_subcommand is not None:
@@ -233,7 +236,7 @@ def _is_allowed_runtime_command(
     if _is_vite_preview_command(parts):
         return True
 
-    if _is_codex_command(parts, expected_cwd=expected_cwd, expected_image_paths=expected_image_paths):
+    if _is_codex_command(parts, expected_cwd=expected_cwd, expected_image_paths=expected_image_paths, expected_mcp_tools=expected_mcp_tools):
         return True
 
     if _is_claude_code_command(parts):
@@ -247,7 +250,17 @@ def _is_codex_command(
     *,
     expected_cwd: Optional[Union[str, Path]],
     expected_image_paths: Sequence[str] = (),
+    expected_mcp_tools: Sequence[str] = (),
 ) -> bool:
+    if expected_mcp_tools:
+        from app.mcp_connections import config_arguments
+        try:
+            prefix = config_arguments(expected_mcp_tools)
+        except ValueError:
+            return False
+        if parts[1:1 + len(prefix)] != prefix:
+            return False
+        parts = [parts[0], *parts[1 + len(prefix):]]
     if expected_image_paths:
         image_args = [part for path in expected_image_paths for part in ("--image", path)]
         count = len(image_args)

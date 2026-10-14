@@ -195,9 +195,17 @@ def build_llm_planner_request(db: DbSession, message: Message, *, target_ids: se
         )
         if orchestrator is not None else None
     )
+    from app.skills import capture_binding, instruction as skill_instruction, receipt as skill_receipt
+
+    planner_skills = capture_binding(db, workspace_id=session.workspace_id,
+        agent_id=orchestrator.id if orchestrator else "planner", role="planner",
+        profile_id=custom_planner.id if custom_planner else None, message=message)
+    prompt = planner_binding["text"] if planner_binding else ""
+    skill_text = skill_instruction(planner_skills, "planner")
     return PlannerRequest(
         images=resolve_image_inputs(db, message.session_id, attachment_context),
-        agentSystemPrompt=planner_binding["text"] if planner_binding else None,
+        agentSystemPrompt="\n\n".join(part for part in [prompt, skill_text] if part) if skill_text else planner_binding["text"] if planner_binding else None,
+        skillEvidence=skill_receipt(planner_skills, "planner", loaded=True) if planner_skills["packages"] else None,
         agentProfileSelection={
             "id": custom_planner.id, "displayName": custom_planner.display_name,
             "mentionAlias": custom_planner.mention_alias, "providerId": custom_planner.provider_id,

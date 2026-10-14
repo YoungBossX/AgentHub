@@ -197,8 +197,9 @@ class ReviewRunner:
     def __init__(self, mode="valid"):
         self.mode = mode
 
-    def start(self, command, cwd):
-        shape = json.loads(command[-1].splitlines()[-1])
+    def start(self, command, cwd, *, input_text=None):
+        instruction = json.loads(input_text)["message"]["content"][0]["text"] if input_text else command[-1]
+        shape = json.loads(instruction.splitlines()[-1])
         output = dict(shape)
         output.update(assessment(shape))
         text = (cwd / SOURCE).read_text(encoding="utf-8")

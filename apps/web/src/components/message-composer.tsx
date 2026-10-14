@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, type Ref, type FormEvent } from "react"
+import { useRef, useState, type Ref, type FormEvent, type ReactNode } from "react"
 import { ArrowDown, ArrowUp, FileText, MessageSquare, Paperclip, Send, X } from "lucide-react"
 import type { DraftAttachment } from "./use-message-attachments"
 import { attachmentReadLabel } from "./message-attachments"
@@ -21,6 +21,7 @@ export type ComposerContextItem = {
 }
 
 type MessageComposerProps = {
+  skillSelector?: ReactNode
   attachments?: DraftAttachment[]
   attachmentsBlocked?: boolean
   onAttach?: (files: File[]) => void
@@ -37,6 +38,7 @@ type MessageComposerProps = {
 }
 
 export function MessageComposer({
+  skillSelector,
   attachments = [],
   attachmentsBlocked = false,
   onAttach,
@@ -57,6 +59,7 @@ export function MessageComposer({
 
   return (
     <div className="mx-auto grid min-w-0 w-full max-w-3xl shrink-0 grid-cols-1 gap-2">
+      {skillSelector}
       {attachments.length ? <ul className="grid max-h-44 gap-1 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2" aria-label="待发送附件">
         {attachments.map((item) => <li key={item.key} className="flex min-w-0 items-start gap-2 rounded bg-[var(--surface-muted)] p-2 text-xs">
           <FileText size={15} className="shrink-0 text-[var(--primary)]" />

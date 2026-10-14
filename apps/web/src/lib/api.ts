@@ -1266,6 +1266,7 @@ export async function createSessionMessage(
   fetcher: Fetcher = fetch,
   context?: MessageContextInput,
   attachmentIds: string[] = [],
+  skillIds: string[] | null = null,
 ): Promise<ChatMessage> {
   const body: Record<string, unknown> = {
     contentMd,
@@ -1275,6 +1276,7 @@ export async function createSessionMessage(
     body.context = context
   }
   if (attachmentIds.length) body.attachmentIds = attachmentIds
+  if (skillIds !== null) body.skillIds = skillIds
   const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
     body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },

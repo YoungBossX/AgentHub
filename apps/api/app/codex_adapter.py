@@ -22,6 +22,8 @@ from app.adapters import (
 )
 from app.guardrails import evaluate_command
 from app.process_environment import adapter_process_env
+from app.process_environment import redact_process_evidence
+from app.mcp_connections import config_arguments as mcp_arguments, TOKEN_ENV
 from app.process_input import private_stdin
 
 DEFAULT_CODEX_BINARY = "/Applications/Codex.app/Contents/Resources/codex"
@@ -46,7 +48,7 @@ class CodexProcess(Protocol):
 
 
 class CodexProcessRunner(Protocol):
-    def start(self, command: list[str], cwd: Path, *, input_text: str | None = None) -> CodexProcess:
+    def start(self, command: list[str], cwd: Path, *, input_text: str | None = None, extra_env: dict[str, str] | None = None) -> CodexProcess:
         ...
 
 
@@ -81,12 +83,14 @@ class SubprocessCodexProcess:
 
 
 class SubprocessCodexRunner:
-    def start(self, command: list[str], cwd: Path, *, input_text: str | None = None) -> CodexProcess:
+    def start(self, command: list[str], cwd: Path, *, input_text: str | None = None, extra_env: dict[str, str] | None = None) -> CodexProcess:
+        if extra_env and set(extra_env) != {TOKEN_ENV}:
+            raise ValueError("Unsupported runtime credential environment.")
         with private_stdin(input_text) as stdin:
             process = subprocess.Popen(
                 command,
                 cwd=str(cwd),
-                env=adapter_process_env("codex"),
+                env=adapter_process_env("codex") | (extra_env or {}),
                 stdin=stdin,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -167,7 +171,7 @@ class CodexAdapter(AgentAdapter):
             self._runs[run_id] = state
             return AdapterRun(adapterRunId=run_id)
 
-        guardrail_decision = evaluate_command(command, expected_cwd=cwd, expected_image_paths=image_paths)
+        guardrail_decision = evaluate_command(command, expected_cwd=cwd, expected_image_paths=image_paths, expected_mcp_tools=request.mcp_tools)
         if not guardrail_decision.allowed:
             state.start_error = PermissionError(
                 guardrail_decision.approval.reason
@@ -180,10 +184,12 @@ class CodexAdapter(AgentAdapter):
             return AdapterRun(adapterRunId=run_id)
 
         try:
-            state.process = (
-                self._process_runner.start(command, cwd, input_text=request.instruction)
-                if request.has_attachments else self._process_runner.start(command, cwd)
-            )
+            kwargs = {"input_text": request.instruction} if request.has_attachments or len(request.instruction) > 12000 else {}
+            if request.mcp_tools:
+                if not request.mcp_token:
+                    raise ValueError("MCP execution credential is missing.")
+                kwargs["extra_env"] = {TOKEN_ENV: request.mcp_token}
+            state.process = self._process_runner.start(command, cwd, **kwargs)
         except Exception as exc:
             state.start_error = exc
             if state.image_directory:
@@ -193,6 +199,13 @@ class CodexAdapter(AgentAdapter):
         return AdapterRun(adapterRunId=run_id)
 
     async def streamEvents(self, run_id: str) -> AsyncIterator[AgentEvent]:
+        token = self._state_for(run_id).request.mcp_token
+        async for event in self._stream_events(run_id):
+            if token:
+                event = event.model_copy(update={"payload": redact_process_evidence(event.payload, {TOKEN_ENV: token})})
+            yield event
+
+    async def _stream_events(self, run_id: str) -> AsyncIterator[AgentEvent]:
         state = self._state_for(run_id)
         request = state.request
 
@@ -312,6 +325,9 @@ class CodexAdapter(AgentAdapter):
     async def interrupt(self, run_id: str) -> None:
         state = self._state_for(run_id)
         state.interrupted = True
+        if state.request.mcp_token:
+            from app.mcp_gateway import revoke_run
+            revoke_run(state.request.task_run_id)
         if state.process is not None:
             state.process.terminate()
             if state.image_directory:
@@ -326,12 +342,16 @@ class CodexAdapter(AgentAdapter):
 
     async def cleanup(self, run_id: str) -> None:
         state = self._runs.pop(run_id, None)
+        if state and state.request.mcp_token:
+            from app.mcp_gateway import revoke_run
+            revoke_run(state.request.task_run_id)
         if state and state.image_directory:
             state.image_directory.cleanup()
 
     def _build_command(self, request: AgentRunRequest, cwd: Path) -> list[str]:
         return [
             self._codex_binary,
+            *(mcp_arguments(request.mcp_tools) if request.mcp_tools else []),
             *(["-c", 'windows.sandbox="unelevated"'] if sys.platform == "win32" else []),
             "--ask-for-approval",
             "never",
@@ -346,7 +366,7 @@ class CodexAdapter(AgentAdapter):
             "--ignore-user-config",
             "--ignore-rules",
             "--",
-            "-" if request.has_attachments else request.instruction,
+            "-" if request.has_attachments or len(request.instruction) > 12000 else request.instruction,
         ]
 
     def _state_for(self, run_id: str) -> CodexRunState:
@@ -372,6 +392,13 @@ def _map_codex_json_event(
     command: list[str],
 ) -> Optional[AgentEvent]:
     event_type = str(raw_event.get("type") or "")
+    item = raw_event.get("item")
+    if isinstance(item, dict) and item.get("type") == "mcp_tool_call" and item.get("server") == "agenthub_docs":
+        tool = item.get("tool")
+        if tool in {"list_documents", "read_document"}:
+            status = "调用中" if item.get("status") == "in_progress" else "已返回，详情见工具记录"
+            return _event("message.delta", task_run_id, {"text": f"MCP · {tool} · {status}",
+                "adapter": "codex", "codexEventType": event_type, "mcpTool": tool, "mcpStatus": item.get("status")})
 
     if event_type == "thread.started":
         return _event(

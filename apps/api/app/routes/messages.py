@@ -137,6 +137,18 @@ def create_message(
         stream_state=request.stream_state,
         context_json=json.dumps(request.context, separators=(",", ":")),
     )
+    from app.skills import SkillError, message_selection
+
+    context = dict(request.context)
+    context.pop("skillSelection", None)
+    if request.skill_ids is not None:
+        if request.sender_type != "user":
+            raise HTTPException(400, "Only user messages may select Skills.")
+        try:
+            context["skillSelection"] = message_selection(db, session.workspace_id, session.id, message.id, request.skill_ids)
+        except SkillError as exc:
+            raise HTTPException(400, str(exc)) from exc
+    message.context_json = json.dumps(context, separators=(",", ":"))
     bind_message_attachments(db, message, request.attachment_ids)
     created = create_session_message(db, session, message)
     dispatch_message(db, created, background_tasks)

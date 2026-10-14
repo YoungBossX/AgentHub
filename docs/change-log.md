@@ -1,5 +1,29 @@
 # AgentHub 变更日志
 
+## 受控文档 MCP 集成
+
+**日期:** 2026-10-14；`agenthub-controlled-mcp` 1.1 完成。
+
+- 新增 SQLite 工作区连接与 Agent 默认绑定，首个服务仅提供 `list_documents`、`read_document`。Codex 通过真实 Streamable HTTP JSON-RPC 连接服务端回环网关；Claude / ScriptedMock 明确显示不支持。
+- 服务端冻结 assigned target 的有界 README/docs，及同 Session worktree 中显式关联的内置后端文档。工具只接受已发现文档 ID；拒绝链接、保护路径、文档目标额外禁止路径、任意远程 URL、命令和写工具。外部项目文档必须来自运行分配的 checkout，不能转读注册的原始宿主路径。
+- 凭据只在内存中短期保存，绑定 TaskRun、Agent、runner、执行代次、租约、队列和目标锁；每次请求重新校验，关闭连接、终止、过期、失去归属及重启均保守拒绝。凭据不进入命令、公共模型、事件或原生 shell 环境。
+- 固定 Codex MCP 参数通过中央命令守卫验证；保留默认沙箱与忽略用户配置边界。长 Skills/审查指令改用私有 stdin，更新原生 Review 测试替身兼容真实输入格式。
+- 设置页展示工具、默认绑定和实际握手探测；执行过程展示真实调用参数、来源哈希、有界返回结果及状态。原生 MCP 文档结果只显示活动摘要，避免参考文档中的 auth 等文字被误识别为 Provider 故障。
+- 真实 Codex 完成技能驱动的文档查询与标题修改，生成真实 Diff；服务端版本绑定的 check/build/3 项产物测试、桌面/窄屏 4 项标题契约通过，Vite 预览健康。首次验收发现 Git Windows CRLF 换行被误识别为可信构建配置修改；仅配置比较归一化换行，原始源码指纹仍保留真实字节。新运行复验通过；历史 unavailable 记录未改写为成功。
+- 全量 API **2,074 passed / 1 skipped**（1425.37 秒）；最后额外文档禁止路径修复后 MCP 模块 **23 passed**（含外部原始宿主目录不被读取）。此前定向 API **70 passed**、Web 全量 **291 passed / 37 files**、启动器 **17 passed**、demo-api **5 passed**，根 `pnpm check`、strict OpenSpec 与空白检查通过。
+- 真实界面确认亮暗主题、390px 无横向溢出、实际调用/技能版本/预览展示；文件选择器导入后保存 v1、停用为 v2 且未默认绑定。API 重启后配置持久化与真实握手探测通过；旧预览失效后经正常入口重启为 ready/healthy，保留历史记录。逐项完成核对及有界运行数据见 [验收证据](evidence/skills-mcp/README.md)。模型 QA 未运行，整体 QA 保持 incomplete；已有非 MCP 诊断关键词误报记录为后续独立任务。未安装依赖，未提交/推送，未运行远程 CI。
+
+## 工作区 Skills 系统
+
+**日期:** 2026-10-14；`agenthub-skills` 1.1 完成。
+
+- 新增工作区技能库：标准 YAML frontmatter 的 `SKILL.md`、有界文本参考资料、启用/停用、角色适用范围、默认 Agent 绑定和乐观版本校验。内置 React 表单、FastAPI 接口与代码审查技能。仅将现有环境已安装的 PyYAML 6.0.3 显式列入 requirements，未安装依赖。
+- 消息 `skillIds` 支持继承默认、显式选择和显式空列表；服务端冻结选择内容并屏蔽伪造快照。TaskRun 冻结内容/身份/版本指纹，旧排队运行不补加载新技能，重试沿用原绑定。重新生成消息保留原技能内容并重新绑定消息身份，无技能历史消息保持原 JSON 字节表示。
+- 兼容角色的正文和直接引用资料进入现有指令组装；包内容不授予工具或目录权限，不执行脚本。原生启动边界通过后记录加载事件；ScriptedMock/不兼容角色明确跳过。公共运行数据隐藏完整内部快照，仅显示来源、版本、指纹和状态。
+- Agent 目录增加技能编辑与默认绑定；聊天输入区增加单次选择（发送后恢复默认）；执行轨迹展示加载证据。已在真实浏览器确认选择、暗色、技能保存及 v0→v1，未将受控原生进程测试声明为真实 Provider 调用。
+- 最终后端相关合并 **506 passed**（TaskRun、Skills、模型/SQLite、Planner 契约/引用、原生评审、消息重新生成、提示词与响应性）；Skills 新增 **24** 项含受控 Claude 原生调用链指令/事件核对。Web 全量 **284 passed / 36 files**；`pnpm check`、strict OpenSpec、空白检查通过。实际页面确认亮/暗主题及 390px 下 scrollWidth=clientWidth；SQLite 关闭重开通过。
+- 回归发现旧无技能消息 JSON 被重新序列化，以及 Planner 历史上下文为 null/数组/非法 JSON 的兼容问题；均保持旧行为并复验通过。新增生命周期夹具采用独立新任务；没有放宽租约/队列检查。未重跑全量后端、远程 CI 或真实 Provider；未提交/推送。本任务关闭后进入 MCP。
+
 ## 需求验收 CI 兼容与故障诊断修复
 
 **日期:** 2026-10-11；`agenthub-requirement-validation` 1.2 完成，修复已推送 `dev`。

@@ -12,6 +12,7 @@ import {
 import type { ArtifactPanelItem } from "./preview-card"
 import { statusLabel } from "./task-card"
 import { cn } from "@/lib/utils"
+import { SkillEvidence } from "./skill-evidence"
 import type {
   DeploymentArtifact,
   DiffArtifact,
@@ -95,6 +96,7 @@ export function ExecutionTrace({
       aria-label="Multi-agent execution trace"
       className="mt-3 rounded-lg border border-slate-200 bg-white p-3"
     >
+      <SkillEvidence value={task.taskRuns.at(-1)?.metricsJson.skills} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
           执行链路

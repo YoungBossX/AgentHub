@@ -135,6 +135,16 @@ def _artifact(
     return artifact
 
 
+def test_mcp_document_auth_text_is_not_a_provider_credential_failure(client: TestClient) -> None:
+    with _db() as db:
+        run = _run(db, state="completed")
+        append_task_run_event(db, task_run_id=run.id, event_type="mcp.tool.completed", payload_json=json.dumps({
+            "tool": "read_document", "status": "passed", "result": {"text": "API auth requires credentials and a token."},
+        }))
+        result = build_task_run_diagnostics(db, run).model_dump(by_alias=True)
+        assert not any(factor["category"] == "provider_auth" for factor in result["contributingFactors"])
+
+
 def test_classifier_prefers_primary_failure_and_keeps_postprocessing_factor(client: TestClient) -> None:
     with _db() as db:
         run = _run(

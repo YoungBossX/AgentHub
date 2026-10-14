@@ -99,6 +99,8 @@ EXPECTED_TABLES = {
     "taskrunevent",
     "user",
     "workspace",
+    "workspaceskill",
+    "workspacemcpconnection",
 }
 
 

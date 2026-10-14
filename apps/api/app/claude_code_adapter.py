@@ -161,7 +161,7 @@ class ClaudeCodeAdapter(AgentAdapter):
         try:
             state.process = (
                 self._process_runner.start(command, cwd, input_text=claude_input(request.instruction, request.images))
-                if request.has_attachments else self._process_runner.start(command, cwd)
+                if request.has_attachments or len(request.instruction) > 12000 else self._process_runner.start(command, cwd)
             )
         except Exception as exc:
             state.start_error = exc
@@ -380,7 +380,7 @@ class ClaudeCodeAdapter(AgentAdapter):
             "--no-session-persistence",
             "--max-budget-usd",
             self._max_budget_usd,
-            *(["--input-format", "stream-json"] if request.has_attachments else ["--", request.instruction]),
+            *(["--input-format", "stream-json"] if request.has_attachments or len(request.instruction) > 12000 else ["--", request.instruction]),
         ]
 
     def _state_for(self, run_id: str) -> ClaudeCodeRunState:

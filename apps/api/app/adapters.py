@@ -55,6 +55,8 @@ class AdapterCapabilities(AdapterModel):
 
 
 class AgentRunRequest(AdapterModel):
+    mcp_tools: list[str] = Field(default_factory=list, exclude=True, repr=False)
+    mcp_token: Optional[str] = Field(default=None, exclude=True, repr=False)
     images: tuple[ImageInput, ...] = Field(default=(), exclude=True, repr=False)
     has_attachments: bool = Field(default=False, exclude=True)
     task_run_id: str = Field(alias="taskRunId")

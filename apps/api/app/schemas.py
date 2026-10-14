@@ -488,6 +488,7 @@ class MessageRegenerateRequest(BaseModel):
 
 
 class MessageCreateRequest(BaseModel):
+    skill_ids: Optional[list[str]] = Field(default=None, alias="skillIds", max_length=3)
     attachment_ids: list[str] = Field(default_factory=list, alias="attachmentIds", max_length=4)
     content_md: str = Field(alias="contentMd")
     sender_type: str = Field(default="user", alias="senderType")

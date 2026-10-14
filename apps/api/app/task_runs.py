@@ -282,6 +282,25 @@ def create_task_run(
     )
     metrics[AGENT_INSTRUCTION_BINDING_KEY] = binding
     metrics["agentInstruction"] = agent_instruction_receipt(binding)
+    from app.skills import BINDING as SKILL_BINDING, SkillError, capture_binding, receipt
+
+    try:
+        skills = capture_binding(db, workspace_id=session.workspace_id, agent_id=agent.id,
+            role=_role_for_runtime_config(task, agent), profile_id=custom_profile.id if custom_profile else None,
+            task=task, previous_run=retry_of_run_id or fallback_from_run_id)
+    except SkillError as exc:
+        db.rollback()
+        raise TaskRunLifecycleError(str(exc)) from exc
+    metrics[SKILL_BINDING] = skills
+    metrics["skills"] = receipt(skills, selected_adapter)
+    from app.mcp_connections import BINDING as MCP_BINDING, capture_binding as capture_mcp, receipt as mcp_receipt
+
+    previous_mcp = db.get(TaskRun, retry_of_run_id or fallback_from_run_id) if retry_of_run_id or fallback_from_run_id else None
+    mcp_binding = capture_mcp(db, session.workspace_id, agent.id, _role_for_runtime_config(task, agent),
+        custom_profile.id if custom_profile else None, previous=previous_mcp)
+    if mcp_binding:
+        metrics[MCP_BINDING] = mcp_binding
+        metrics["mcp"] = mcp_receipt(mcp_binding, selected_adapter)
     if execution_worktree is not None:
         metrics[EXECUTION_WORKTREE_KEY] = execution_worktree
         if retry_of_run_id or fallback_from_run_id:
@@ -823,6 +842,8 @@ def metrics_for_run(task_run: TaskRun) -> dict[str, Any]:
     metrics.pop("scopeFinalizationClaim", None)
     metrics.pop(_EXECUTION_ACCESS_BINDING_KEY, None)
     metrics.pop(AGENT_INSTRUCTION_BINDING_KEY, None)
+    metrics.pop("skillBinding", None)
+    metrics.pop("mcpBinding", None)
     metrics.pop("_nativeReviewBinding", None)
 
     public_decision = _public_scope_decision(

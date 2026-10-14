@@ -314,6 +314,17 @@ def classify_run_failure(
 
     for event in events:
         payload = _json_dict(event.payload_json)
+        if event.event_type in {"mcp.connected", "skills.loaded", "skills.skipped"}:
+            continue
+        if event.event_type == "mcp.tool.completed":
+            if payload.get("status") == "failed":
+                candidates.append(_failure("adapter_error", "MCP document tool call failed.", None, "event", event.created_at,
+                    {"eventType": event.event_type, "tool": payload.get("tool"), "status": "failed"}))
+            continue  # Documentation may discuss authentication without being an auth failure.
+        if event.event_type == "message.delta" and payload.get("codexEventType") in {"item.started", "item.completed"}:
+            raw_item = _json_dict(_string_value(payload.get("text")) or "{}").get("item")
+            if isinstance(raw_item, dict) and raw_item.get("type") == "mcp_tool_call" and raw_item.get("server") == "agenthub_docs":
+                continue  # Historical native tool output is data, not a Provider error report.
         text = " ".join(_compact_strings([event.event_type, json.dumps(payload, default=str)]))
         explicit_category = _category_from_error_code(
             _string_value(payload.get("errorCode"))

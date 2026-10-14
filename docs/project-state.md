@@ -28,6 +28,8 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
+| `agenthub-controlled-mcp` | 1.1 Complete | 工作区只读文档连接、执行绑定回环网关及受控 Codex 参数；真实 Codex 两次工具调用、Skill 载入、Diff、版本绑定 check/build/3 项产物测试及桌面/窄屏标题验收通过，预览健康。API 全量 2,074 passed / 1 skipped；最后文档额外禁止路径修复后 MCP 23 passed；Web 291、启动器 17、demo-api 5，根检查和 strict OpenSpec 通过。模型 QA 未运行，整体 QA 保持 incomplete。见 [证据](evidence/skills-mcp/README.md) 与 [使用说明](local-usage.md#配置与使用项目文档-mcp) |
+| `agenthub-skills` | 1.1 Complete | 工作区技能包、Agent 默认与消息显式选择；Planner/TaskRun 指令加载、冻结快照/重试、版本及兼容性展示。后端相关 506、Web 284，根检查及 strict OpenSpec 通过；实际亮暗/390px/保存版本通过。参考 [使用说明](local-usage.md#配置与使用-skills)。不执行技能脚本，不将指令载入宣称为模型遵循或 QA 通过 |
 | `agenthub-requirement-validation` | 1.1–1.2 Complete（已推送 dev） | 冻结登录/标题/按钮需求契约；Edge/Chrome 桌面与窄屏交互、版本过期及 QA 分项。1.2 修复 CI 浏览器配置和响应性测试夹具，新增有界诊断。`d00b767` 的 [Ubuntu CI](https://github.com/YoungBossX/AgentHub/actions/runs/38136564036) 全部通过：启动器 17、Web 279、API 1979 passed / 48 skipped、demo-api 5；不含真实认证或通用业务验收。见 [使用说明](local-usage.md#查看需求交互验收) |
 | `agenthub-versioned-validation` | 1.1 Complete（本地未提交） | Vite 前端完成前自动类型检查、可信构建与 3 项产物冒烟测试；同运行/执行代次的源码与策略指纹绑定、过期查询、取消和重启保守处理。后端定向 276、Web 全量 274 通过；根检查及 strict OpenSpec 通过。仅已配置验证，不宣称业务验收；见 [使用说明](local-usage.md#查看分项-qa-结果) |
 | `agenthub-layered-qa` | 1.1 Complete（本地未提交） | 新报告持久化规则/模型/命令分项证据；失败不能被模型通过覆盖，本地 staging 拒绝 QA 阻塞；旧证据保守显示。后端相关分批 184、Web 全量 272 后相关 34；根检查及 strict OpenSpec 通过。该阶段未含自动测试，后续由 `agenthub-versioned-validation` 补充 Vite 固定验证配置；仍不宣称完整功能验收。见 [使用说明](local-usage.md#查看分项-qa-结果) |

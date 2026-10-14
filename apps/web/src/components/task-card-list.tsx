@@ -10,6 +10,7 @@ import {
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 
 import { ExecutionTrace } from "./execution-trace"
+import { McpEvidence } from "./mcp-evidence"
 import { DagSummary } from "./dag-summary"
 import type { ArtifactPanelItem } from "./preview-card"
 import { healthLabel, statusClasses, statusLabel } from "./task-card"
@@ -384,6 +385,7 @@ export function TaskCardList({
                 taskArtifactItems={taskArtifactItems}
               />
               <ProcessDisclosure compact={compact} label="执行链路与制品状态">
+              {latestRun?.metricsJson.mcp ? <McpEvidence key={latestRun.id} backendUrl={backendUrl ?? "http://127.0.0.1:8000"} runId={latestRun.id} refreshKey={artifactRefreshKey ?? 0} /> : null}
               <ExecutionTrace
                 deployments={taskDeployments}
                 diffs={taskDiffs}

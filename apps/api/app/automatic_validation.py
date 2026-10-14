@@ -79,7 +79,10 @@ def capture_validation_source(root: Path):
     # Agent-editable source cannot replace executable build configuration.
     for name in CONFIG_FILES:
         expected = (platform / "apps/demo" / name).read_bytes()
-        if contents.get(f"apps/demo/{name}") != expected:
+        actual = contents.get(f"apps/demo/{name}")
+        # Git's Windows checkout may add CRLF. Retain raw bytes in the source
+        # fingerprint, but line endings alone do not change trusted config.
+        if actual is None or actual.replace(b"\r\n", b"\n") != expected.replace(b"\r\n", b"\n"):
             raise ValidationUnavailable("Build configuration differs from the trusted demo profile.")
     for name in ("pnpm-lock.yaml", "package.json", "pnpm-workspace.yaml"):
         # Record both worktree and actually used dependency-policy inputs.

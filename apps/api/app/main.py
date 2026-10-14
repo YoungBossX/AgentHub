@@ -38,6 +38,8 @@ from app.routes.registries import router as registries_router
 from app.routes.sessions import router as sessions_router
 from app.routes.targets import router as targets_router
 from app.routes.workspaces import router as workspaces_router
+from app.routes.skills import router as skills_router
+from app.routes.mcp import router as mcp_router
 from app.run_diagnostics import build_session_run_diagnostics_summary
 from app.run_engine import (
     adapter_for_type,
@@ -165,6 +167,8 @@ app.include_router(user_code_edits_router)
 app.include_router(sessions_router)
 app.include_router(targets_router)
 app.include_router(workspaces_router)
+app.include_router(skills_router)
+app.include_router(mcp_router)
 app.include_router(task_run_routes.router)
 app.include_router(task_artifact_routes.router)
 app.include_router(session_event_routes.router)
