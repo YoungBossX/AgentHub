@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { previewFileId as fileId } from "./preview-serving-paths.mjs";
 
 const platform = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const requireDemo = createRequire(path.join(platform, "apps/demo/package.json"));
@@ -45,13 +46,6 @@ function permitted(filename) {
   const info = exists ? fs.statSync(canonical) : null;
   if (!dependency && (lexical.split(path.sep).includes("node_modules") || (info?.isFile() && info.nlink > 1))) return false;
   return true;
-}
-
-function fileId(id) {
-  let value = id.split("?")[0].split("#")[0];
-  if (value.startsWith("/@fs/")) value = value.slice(5);
-  if (process.platform === "win32" && /^\/[A-Za-z]:\//.test(value)) value = value.slice(1);
-  return value;
 }
 
 function checkCssImports(code, filename) {

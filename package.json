@@ -9,7 +9,7 @@
     "dev": "pnpm --parallel dev",
     "dev:local": "node scripts/local-dev.mjs",
     "doctor:local": "node scripts/local-dev.mjs --doctor",
-    "test:local": "node --test scripts/local-dev.test.mjs scripts/dependency-security.test.mjs",
+    "test:local": "node --test scripts/local-dev.test.mjs scripts/dependency-security.test.mjs scripts/preview-serving-paths.test.mjs",
     "dev:web": "pnpm --filter @agenthub/web dev",
     "dev:api": "bash scripts/dev-api.sh",
     "check": "node --check scripts/local-dev.mjs && node --check scripts/preview-vite.config.mjs && pnpm check:web && pnpm check:api && pnpm check:demo && pnpm check:demo-api",

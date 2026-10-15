@@ -42,7 +42,7 @@ jobs:
           node --input-type=module <<'JS'
           import { chromium } from 'playwright';
           const browser = await chromium.launch({ channel: process.env.AGENTHUB_VALIDATION_BROWSER_CHANNEL,
-            headless: true, chromiumSandbox: true, timeout: 10000 });
+            headless: true, chromiumSandbox: true, timeout: 30000 });
           try {
             const page = await browser.newPage();
             await page.setContent('<h1>Browser ready</h1>');

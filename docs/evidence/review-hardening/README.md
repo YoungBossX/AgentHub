@@ -20,3 +20,15 @@
 控制请求头是公开的浏览器预检标记；本项目仍是本机单用户工作台，没有新增多用户认证。
 固定 Vite React 预览不加载项目自定义 Vite 配置，CSS 远程/data/转义导入保守拒绝；不承诺任意插件或预处理器兼容。
 测试中的链接在独立临时目录内创建，已安装依赖链接先解除再由 pytest 清理，不改写已有 Session 源码。
+
+## 2026-10-15 远程 CI 跟进
+
+`b3afe0e` 已推送至 dev；[CI 38674503667](https://github.com/YoungBossX/AgentHub/actions/runs/38674503667)
+首次 Chrome 启动超时，第二次进入完整测试后为 2,080 passed / 48 skipped / 1 failed。
+失败是规范 POSIX `/@fs/home/...` 丢失绝对根后误拒绝依赖，导致浏览器没有渲染标题。
+原先本地 HTTP 用例的双斜杠 URL 未覆盖 Vite 实际生成的形式，Windows 本地通过不能替代 Linux 验收。
+
+共用解析器的 POSIX/Windows/虚拟 ID 回归已先红后绿，加入早期 Node 门禁；本地 19 项通过。
+规范 URL 的真实 HTTP 越界检查与 React/CSS 浏览器渲染、预览模块 25 项通过。
+CI 预检启动预算调整为 30 秒，保留沙箱及全部测试断言，页面失败新增有界诊断。
+补丁尚待新 GitHub 运行验证，不把旧提交的本地结果当作新提交的 Linux 通过证明。

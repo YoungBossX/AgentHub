@@ -23,3 +23,13 @@ Diagnostics use explicit error codes, failure states, unsuccessful command
 receipts and structured native error events. Ordinary prose, successful
 provider selection and passing validation do not produce failure factors.
 Real errors and unsuccessful postprocessing remain visible.
+
+## CI portability follow-up
+
+Vite uses `/@fs/home/...` for the POSIX path `/home/...`; stripping the prefix
+must restore the leading slash before scope checks. Keep Windows drive and
+virtual IDs intact. A shared URL parser has platform-independent negative and
+positive examples in the early Node test gate; real HTTP coverage uses Vite's
+canonical URL as well as its explicit-root variant. Browser failures record
+bounded request/page errors. CI's cold browser launch allowance is 30 seconds;
+chromiumSandbox remains enabled and all render/scope assertions remain required.

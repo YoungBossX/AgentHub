@@ -13,6 +13,11 @@ from app.previews import SubprocessPreviewRunner, preview_command, reserve_previ
 PLATFORM = Path(__file__).resolve().parents[3]
 
 
+def vite_fs_url(path):
+    # Match Vite's actual POSIX URL, not only the double-slash variant.
+    return "/@fs/" + path.as_posix().lstrip("/")
+
+
 def test_real_preview_denies_unrelated_protected_and_alias_reads(tmp_path):
     project = tmp_path / "workspace/apps/demo"
     project.mkdir(parents=True)
@@ -59,7 +64,7 @@ def test_real_preview_denies_unrelated_protected_and_alias_reads(tmp_path):
             else: raise AssertionError("Preview did not start within its startup budget.")
             main = client.get("/src/main.tsx")
             assert main.status_code == 200, main.text[:2000]
-            for url in [f"/@fs/{unrelated.as_posix()}", "/.env", "/secrets/token.txt", "/public/.env", "/src/denied.txt",
+            for url in [vite_fs_url(unrelated), f"/@fs/{unrelated.as_posix()}", "/.env", "/secrets/token.txt", "/public/.env", "/src/denied.txt",
                         "/src/alias.txt", "/src/hardlink.txt", f"/@fs/{unrelated.as_posix()}?raw", "/%2eenv"]:
                 response = client.get(url)
                 assert response.status_code == 403, (url, response.status_code)
@@ -67,7 +72,7 @@ def test_real_preview_denies_unrelated_protected_and_alias_reads(tmp_path):
             # The transform may emit an import, but loading that module cannot
             # acquire a new filesystem permission through Vite safeModulePaths.
             client.get("/src/escape.ts")
-            escaped = client.get(f"/@fs/{unrelated.as_posix()}?raw")
+            escaped = client.get(vite_fs_url(unrelated) + "?raw")
             assert escaped.status_code == 403 and "PRIVATE_BACKEND_MARKER" not in escaped.text
             css = client.get("/src/escape.css")
             assert css.status_code >= 400 and "PRIVATE_BACKEND_CSS" not in css.text
@@ -75,7 +80,7 @@ def test_real_preview_denies_unrelated_protected_and_alias_reads(tmp_path):
             # Direct React modules and Vite's runtime still load normally.
             assert client.get("/@vite/client").status_code == 200
             react = PLATFORM / "apps/demo/node_modules/react/index.js"
-            assert client.get(f"/@fs/{react.as_posix()}").status_code == 200
+            assert client.get(vite_fs_url(react)).status_code == 200
             browser = subprocess.run([shutil.which("node"), "--input-type=module", "-e", """
 import { chromium } from 'playwright';
 const browser = await chromium.launch({headless:true, chromiumSandbox:true,
@@ -83,13 +88,21 @@ const browser = await chromium.launch({headless:true, chromiumSandbox:true,
     {channel:process.env.AGENTHUB_VALIDATION_BROWSER_CHANNEL || (process.platform==='win32'?'msedge':undefined)}), timeout:30000});
 try {
   const page = await browser.newPage();
-  await page.goto(process.argv[1]);
-  await page.getByRole('heading', {name:'Preview ready',exact:true}).waitFor({timeout:10000});
-  if(await page.locator('h1').evaluate(el=>getComputedStyle(el).fontSize)!=='24px') throw Error('Styles failed');
+  const errors = [];
+  page.on('pageerror', error => { if(errors.length<20) errors.push(error.message); });
+  page.on('response', response => { if(response.status()>=400 && errors.length<20) errors.push(`${response.status()} ${response.url()}`); });
+  try {
+    await page.goto(process.argv[1]);
+    await page.getByRole('heading', {name:'Preview ready',exact:true}).waitFor({timeout:10000});
+    if(await page.locator('h1').evaluate(el=>getComputedStyle(el).fontSize)!=='24px') throw Error('Styles failed');
+  } catch(error) {
+    console.error('Preview browser diagnostics:', JSON.stringify(errors));
+    throw error;
+  }
   console.log('React preview rendered with scoped dependencies and CSS imports');
 } finally { await browser.close(); }
 """, str(client.base_url)], cwd=PLATFORM, capture_output=True, text=True, encoding="utf-8", timeout=45)
-            assert browser.returncode == 0, browser.stderr
+            assert browser.returncode == 0, browser.stderr + "\nVite: " + runner.diagnostics(process.pid).output_tail
     finally:
         runner.close()
         # Explicitly unlink the known installed dependency link before pytest cleanup.

@@ -1,5 +1,14 @@
 # AgentHub 变更日志
 
+## 审查修复的远程 CI 跨平台跟进
+
+**日期:** 2026-10-15；`agenthub-review-defect-hardening` 1.2 本地验证通过，远程复验待完成。
+
+- 修复提交 `b3afe0e` 的 [CI](https://github.com/YoungBossX/AgentHub/actions/runs/38674503667) 首次在 Chrome 10 秒启动预算处超时；同提交第二次浏览器预检和静态检查通过，后端 **2,080 passed / 48 skipped / 1 failed**。唯一失败为新增预览浏览器标题未出现，不能声明该提交远程验收通过。
+- 定位到 Vite 的 POSIX URL `/@fs/home/...` 被误解析成相对 `home/...`，合法的已安装依赖被拒绝。抽取共用解析器，恢复 POSIX 绝对根，保留 Windows 盘符/虚拟 ID 和现有保护范围。旧逻辑在平台无关的早期 Node 回归中先失败，再由修复通过；真实 HTTP 回归同时覆盖规范 URL 与双斜杠形式。
+- 浏览器验收失败时记录有界页面错误/HTTP 状态及 Vite 摘要；所有渲染、CSS、越界断言保持。CI 预检使用 30 秒有限启动预算并保留 chromiumSandbox，不跳过浏览器或测试。
+- 本地启动器/路径回归 **19 passed**，实际预览浏览器与预览模块 **25 passed**；根检查、strict OpenSpec 和空白检查通过。未安装依赖；真正的 Linux 浏览器验收以补丁提交后的 GitHub CI 为准。
+
 ## 整体审查确认的四项缺陷修复
 
 **日期:** 2026-10-14；`agenthub-review-defect-hardening` 1.1 完成；2026-10-15 提交前核对通过。
