@@ -1,6 +1,6 @@
 # 四项审查缺陷的修复证据
 
-对应 `agenthub-review-defect-hardening` 1.1；修复基于 `dev` 的 `d20aea7`，随本次修复提交保存；2026-10-15 提交前核对。本页记录本地验收，远程 CI 以对应提交的 GitHub Actions 为准。
+对应 `agenthub-review-defect-hardening` 1.1–1.2；修复基于 `dev` 的 `d20aea7`，初始修复 `b3afe0e`，CI 跟进修复 `a831265`；2026-10-15 本地与远程核对完成。本页分别记录本地验收和实际 GitHub CI。
 
 | 验收要求 | 直接证据 |
 |---|---|
@@ -31,4 +31,8 @@
 共用解析器的 POSIX/Windows/虚拟 ID 回归已先红后绿，加入早期 Node 门禁；本地 19 项通过。
 规范 URL 的真实 HTTP 越界检查与 React/CSS 浏览器渲染、预览模块 25 项通过。
 CI 预检启动预算调整为 30 秒，保留沙箱及全部测试断言，页面失败新增有界诊断。
-补丁尚待新 GitHub 运行验证，不把旧提交的本地结果当作新提交的 Linux 通过证明。
+补丁 `a831265837e450ff7a333fb6e660aac350e4d518` 的 [CI 38675914342](https://github.com/YoungBossX/AgentHub/actions/runs/38675914342)
+首次运行全部通过，head SHA 已匹配。Ubuntu Chrome 155.0.8059.39 沙箱预检通过，实际耗时约 24 秒；
+早期 Node 19、Web 296/38 文件、API 2,081 passed / 48 skipped、demo-api 5，以及根检查/空白检查全部通过。
+Linux 的真实预览边界及 React/CSS 浏览器验收已通过，不再仅依赖 Windows 和解析器单测。
+任务 1.2 在此验证后完成勾选；随后的验收记录提交仅修改文档，跳过重复 CI，不变更已验证的源码、测试及工作流。

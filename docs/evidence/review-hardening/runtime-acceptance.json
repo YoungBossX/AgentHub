@@ -21,5 +21,21 @@
   "unrelatedSourceHttpStatus": 403,
   "diagnosticFactors": [
     "preview_failed"
-  ]
+  ],
+  "ci": {
+    "commit": "a831265837e450ff7a333fb6e660aac350e4d518",
+    "runId": 38675914342,
+    "runAttempt": 1,
+    "url": "https://github.com/YoungBossX/AgentHub/actions/runs/38675914342",
+    "conclusion": "success",
+    "chromeVersion": "155.0.8059.39",
+    "chromiumSandbox": true,
+    "nodeTests": 19,
+    "webTests": 296,
+    "webFiles": 38,
+    "apiPassed": 2081,
+    "apiSkipped": 48,
+    "demoApiPassed": 5,
+    "previousFailedRunId": 38674503667
+  }
 }
