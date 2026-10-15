@@ -91,6 +91,7 @@ class SubprocessPreviewRunner:
         self._processes: dict[int, subprocess.Popen] = {}
         self._log_paths: dict[int, Path] = {}
         self._log_files: dict[int, object] = {}
+        self._cache_paths: dict[int, Path] = {}
         self._lock = RLock()
         self._closed = False
 
@@ -117,12 +118,15 @@ class SubprocessPreviewRunner:
                 raise PreviewError(f"Could not stop {len(failures)} owned preview process(es).")
 
     def start(self, command: list[str], cwd: Path) -> PreviewProcess:
+        return self.start_bounded(command, cwd)
+
+    def start_bounded(self, command: list[str], cwd: Path, *, denied_paths=()) -> PreviewProcess:
         with self._lock:
             if self._closed:
                 raise PreviewError("Preview runner is shutting down; restart the API before launching a preview.")
-            return self._start(command, cwd)
+            return self._start(command, cwd, denied_paths=denied_paths)
 
-    def _start(self, command: list[str], cwd: Path) -> PreviewProcess:
+    def _start(self, command: list[str], cwd: Path, *, denied_paths=()) -> PreviewProcess:
         log_file = tempfile.NamedTemporaryFile(
             mode="w+",
             encoding="utf-8",
@@ -132,10 +136,16 @@ class SubprocessPreviewRunner:
         )
         log_path = Path(log_file.name)
         env = _preview_process_env()
+        from app.worktrees import repo_root
+        profile = repo_root() / "scripts/preview-vite.config.mjs"
+        cache_path = Path(tempfile.mkdtemp(prefix="agenthub-preview-cache-"))
+        env["AGENTHUB_PREVIEW_CACHE_DIR"] = str(cache_path)
+        env["AGENTHUB_PREVIEW_DENIED_PATHS"] = json.dumps(list(denied_paths))
         launch_command = _resolve_preview_launch_command(
             command,
             search_path=env.get("PATH"),
         )
+        launch_command += ["--config", str(profile), "--configLoader", "native", "--strictPort"]
         try:
             process = subprocess.Popen(
                 launch_command,
@@ -146,6 +156,7 @@ class SubprocessPreviewRunner:
                 text=True,
             )
         except OSError:
+            _remove_preview_cache(cache_path)
             try:
                 log_file.close()
             except OSError:
@@ -159,6 +170,7 @@ class SubprocessPreviewRunner:
         self._processes[process.pid] = process
         self._log_paths[process.pid] = log_path
         self._log_files[process.pid] = log_file
+        self._cache_paths[process.pid] = cache_path
         return PreviewProcess(pid=process.pid, log_path=log_path)
 
     def stop(self, process_id: int) -> None:
@@ -168,6 +180,9 @@ class SubprocessPreviewRunner:
                 _stop_preview_process(process)
                 self._processes.pop(process_id, None)
             self._close_log_file(process_id)
+            cache_path = self._cache_paths.pop(process_id, None)
+            if cache_path:
+                _remove_preview_cache(cache_path)
 
     def diagnostics(self, process_id: int) -> PreviewProcessDiagnostics:
         with self._lock:
@@ -284,7 +299,10 @@ class PreviewService:
         command = preview_command(port)
         url = f"http://127.0.0.1:{port}"
         try:
-            process = self.process_runner.start(command, preview_root)
+            if isinstance(self.process_runner, SubprocessPreviewRunner):
+                process = self.process_runner.start_bounded(command, preview_root, denied_paths=preview_target.denied_paths)
+            else:
+                process = self.process_runner.start(command, preview_root)
         except OSError as exc:
             raise PreviewError(f"Preview process could not start: {exc}") from exc
         checked_at = utc_now()
@@ -635,6 +653,16 @@ def _remove_preview_log(log_path: Path) -> None:
             if attempt == 19:
                 raise
             time.sleep(0.05)
+
+
+def _remove_preview_cache(cache_path: Path) -> None:
+    # Delete only a freshly allocated, server-owned temporary directory. Never
+    # follow a replaced root link into dependencies or another host directory.
+    if cache_path.parent.resolve() != Path(tempfile.gettempdir()).resolve() or not cache_path.name.startswith("agenthub-preview-cache-"):
+        raise PreviewError("Preview cache is outside its assigned temporary directory.")
+    if cache_path.is_symlink() or (cache_path.exists() and getattr(cache_path.stat(follow_symlinks=False), "st_file_attributes", 0) & 0x400):
+        raise PreviewError("Preview cache root was replaced by a link.")
+    shutil.rmtree(cache_path)
 
 
 def command_text(command: list[str]) -> str:

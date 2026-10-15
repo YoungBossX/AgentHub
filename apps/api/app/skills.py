@@ -6,6 +6,7 @@ from pathlib import PurePosixPath
 
 import yaml
 from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import select
 
 from app.models import AgentProfileDraft, Message, Session, TaskRun, WorkspaceSkill, utc_now
@@ -103,6 +104,21 @@ def catalog(db, workspace_id):
 
 def save_package(db, workspace_id, value, expected_revision):
     package = validate_package(value.markdown, value.references, value.roles, value.default_agents, value.enabled)
+    # The aggregate is shared by different package rows, so row CAS alone is
+    # insufficient. Acquire SQLite's writer reservation before catalog reads.
+    try:
+        db.connection().exec_driver_sql("BEGIN IMMEDIATE")
+        db.expire_all()
+        return _save_package_locked(db, workspace_id, package, expected_revision)
+    except (IntegrityError, OperationalError) as exc:
+        db.rollback()
+        raise SkillError("Skill defaults changed concurrently; reload before saving.") from exc
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _save_package_locked(db, workspace_id, package, expected_revision):
     for key in package["defaultAgents"]:
         role = key if key in ROLES else None
         if role is None:
@@ -132,12 +148,7 @@ def save_package(db, workspace_id, value, expected_revision):
             raise SkillError("Skill changed concurrently; reload before saving.")
     else:
         db.add(WorkspaceSkill(workspace_id=workspace_id, name=name, package_json=raw))
-    from sqlalchemy.exc import IntegrityError
-    try:
-        db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise SkillError("Skill changed concurrently; reload before saving.") from exc
+    db.commit()
     return next(p for p in catalog(db, workspace_id) if p["name"] == name)
 
 

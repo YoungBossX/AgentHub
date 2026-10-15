@@ -1,11 +1,11 @@
-import { apiUrl, responseErrorMessage } from "./api-core"
+import { controlledRequest, apiUrl, responseErrorMessage } from "./api-core"
 
 export type McpConnection = { serverId: string; enabled: boolean; tools: string[]; defaultAgents: string[]; revision: number }
 export type McpRunEvidence = { connection: { serverId: string; revision: number; tools: string[]; status: string } | null
   events: { id: string; type: string; createdAt: string; payload: { tool?: string; status?: string; durationMs?: number; arguments?: unknown; result?: unknown } }[] }
 
 async function request<T>(base: string, path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(base, path), options)
+  const response = await controlledRequest(fetch, apiUrl(base, path), options)
   if (!response.ok) throw new Error(await responseErrorMessage(response, "MCP 请求失败"))
   return response.json()
 }

@@ -145,6 +145,42 @@ def test_mcp_document_auth_text_is_not_a_provider_credential_failure(client: Tes
         assert not any(factor["category"] == "provider_auth" for factor in result["contributingFactors"])
 
 
+@pytest.mark.parametrize(("event_type", "payload"), [
+    ("provider.resolved", {"selectedAdapterType": "codex", "selectionReason": "Compatible provider selected"}),
+    ("message.delta", {"text": "Implemented authentication and validation successfully."}),
+    ("validation.completed", {"status": "passed", "commands": [{"kind": "build", "exitCode": 0}]}),
+    ("completed", {"adapter": "codex", "stderr": "model list refresh timeout"}),
+    ("artifact.preview.ready", {"healthStatus": "healthy"}),
+    ("message.delta", {"codexEventType": "item.completed", "text": json.dumps({"item": {"type": "agent_message", "text": "API auth policy completed"}})}),
+    ("message.delta", {"codexEventType": "item.completed", "text": json.dumps({"item": {"type": "command_execution", "exit_code": 0, "aggregated_output": "auth validation tests passed"}})}),
+    ("message.delta", {"codexEventType": "error", "transient": True, "text": "Reconnecting after timeout"}),
+])
+def test_success_and_prose_do_not_produce_failures_or_recovery_suggestions(client, event_type, payload):
+    with _db() as db:
+        run = _run(db, state="completed")
+        append_task_run_event(db, run.id, event_type, json.dumps(payload))
+        result = build_task_run_diagnostics(db, run)
+    assert result.primary_failure is None
+    assert result.contributing_factors == []
+    assert not any(s.kind in {"choose_fallback", "open_settings", "retry"} for s in result.suggestions)
+
+
+@pytest.mark.parametrize(("event_type", "payload", "category"), [
+    ("error", {"message": "Unauthorized: 401", "code": "CODEX_EXIT_ERROR"}, "provider_auth"),
+    ("error", {"message": "Authentication form parse error", "code": "CODEX_EXIT_ERROR"}, "adapter_error"),
+    ("validation.completed", {"status": "passed", "commands": [{"exitCode": 1}]}, "validation_failed"),
+    ("validation.completed", {"status": "unavailable", "commands": []}, "validation_failed"),
+    ("message.delta", {"codexEventType": "item.completed", "text": json.dumps({"item": {"type": "command_execution", "exit_code": 1, "aggregated_output": "Build failed"}})}, "preview_failed"),
+    ("message.delta", {"codexEventType": "item.completed", "text": json.dumps({"item": {"type": "command_execution", "exit_code": 2, "aggregated_output": "Syntax error"}})}, "adapter_error"),
+])
+def test_explicit_and_structured_failures_remain_visible(client, event_type, payload, category):
+    with _db() as db:
+        run = _run(db, state="completed")
+        append_task_run_event(db, run.id, event_type, json.dumps(payload))
+        result = build_task_run_diagnostics(db, run)
+    assert category in {factor.category for factor in result.contributing_factors}
+
+
 def test_classifier_prefers_primary_failure_and_keeps_postprocessing_factor(client: TestClient) -> None:
     with _db() as db:
         run = _run(

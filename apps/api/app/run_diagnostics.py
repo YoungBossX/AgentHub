@@ -105,7 +105,7 @@ _CATEGORY_PRIORITY = [
 ]
 
 _CATEGORY_PATTERNS: list[tuple[str, tuple[str, ...]]] = [
-    ("provider_auth", ("unauthorized", "forbidden", "invalid credential", "missing credential", "api key", "apikey", "auth", "token invalid", "401")),
+    ("provider_auth", ("unauthorized", "forbidden", "invalid credential", "missing credential", "invalid api key", "missing api key", "authentication failed", "authentication error", "auth failed", "auth error", "token invalid", "401")),
     ("provider_quota", ("quota", "rate limit", "rate_limit", "too many requests", "billing", "payment", "429")),
     (
         "provider_unavailable",
@@ -325,11 +325,12 @@ def classify_run_failure(
             raw_item = _json_dict(_string_value(payload.get("text")) or "{}").get("item")
             if isinstance(raw_item, dict) and raw_item.get("type") == "mcp_tool_call" and raw_item.get("server") == "agenthub_docs":
                 continue  # Historical native tool output is data, not a Provider error report.
-        text = " ".join(_compact_strings([event.event_type, json.dumps(payload, default=str)]))
+        error_code = _string_value(payload.get("errorCode")) or _string_value(payload.get("code"))
         explicit_category = _category_from_error_code(
-            _string_value(payload.get("errorCode"))
+            error_code
         )
-        category = explicit_category or _category_from_text(text)
+        text = _event_failure_text(event.event_type, payload)
+        category = explicit_category or (_category_from_text(text) if text is not None else "unknown")
         if event.event_type == "task.stale":
             category = (
                 "validation_failed"
@@ -362,10 +363,14 @@ def classify_run_failure(
             category = _deploy_category(str(payload.get("status") or event.event_type))
         elif event.event_type in {"artifact.diff.failed", "artifact.review.failed"}:
             category = "artifact_collection_failed"
+        elif event.event_type.startswith("validation.") and text is not None:
+            category = explicit_category or "validation_failed"
         elif event.event_type == "error" and category == "unknown":
             category = "adapter_error"
+        elif text is not None and category == "unknown" and event.event_type == "message.delta":
+            category = "adapter_error"
         if category != "unknown":
-            candidates.append(_failure(category, _reason_for_category(category), _string_value(payload.get("errorCode")) or task_run.error_code, "event", event.created_at, {"eventType": event.event_type, **payload}))
+            candidates.append(_failure(category, _reason_for_category(category), error_code or task_run.error_code, "event", event.created_at, {"eventType": event.event_type, **payload}))
 
     for preview in previews:
         if preview.health_status not in {"healthy", "ready", "running"}:
@@ -390,6 +395,34 @@ def classify_run_failure(
 
     contributing = _dedupe_failures([candidate for candidate in candidates if candidate != primary])
     return primary, contributing
+
+
+def _event_failure_text(event_type: str, payload: dict) -> Optional[str]:
+    """Only error envelopes are diagnostic input; model/document prose is data."""
+    if event_type == "message.delta":
+        if payload.get("transient"):
+            return None
+        raw = _json_dict(_string_value(payload.get("text")) or "{}")
+        item = raw.get("item")
+        if isinstance(item, dict):
+            exit_code = item.get("exit_code")
+            if item.get("type") == "command_execution" and type(exit_code) is int and exit_code != 0:
+                return str(item.get("aggregated_output") or "Adapter command exited non-zero.")
+            if item.get("status") == "failed" or item.get("error"):
+                return json.dumps(item.get("error") or {"status": "failed"}, default=str)
+        if raw.get("type") in {"error", "turn.failed", "item.failed"} or raw.get("is_error") is True:
+            return json.dumps(raw.get("error") or raw.get("errors") or raw, default=str)
+        return None
+    failed_states = {"failed", "error", "blocked", "denied", "unavailable", "unhealthy", "interrupted", "timed_out", "violation", "unverifiable", "review_required"}
+    is_failure = event_type == "error" or event_type.endswith((".failed", ".refused", ".denied"))
+    is_failure = is_failure or any(payload.get(key) in failed_states for key in ("state", "status", "result", "healthStatus") if isinstance(payload.get(key), str))
+    commands = payload.get("commands")
+    if isinstance(commands, list):
+        is_failure = is_failure or any(isinstance(command, dict) and type(command.get("exitCode")) is int and command["exitCode"] != 0 for command in commands)
+    if not is_failure:
+        return None
+    # Avoid feeding metadata such as selectedAdapterType or policy names into inference.
+    return " ".join(_compact_strings([payload.get(key) for key in ("message", "errorMessage", "reason", "stderr", "error")]))
 
 
 def build_run_timeline(
@@ -548,6 +581,8 @@ def _suggestions_for(
     contributing: list[_FailureEvidence],
     artifacts: list[Artifact],
 ) -> list[RunDiagnosticsSuggestionResponse]:
+    if primary is None and not contributing:
+        return []
     categories = [item.category for item in [primary, *contributing] if item is not None]
     category = categories[0] if categories else "unknown"
     artifact_targets = {artifact.artifact_type: artifact.id for artifact in artifacts}

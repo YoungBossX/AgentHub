@@ -334,6 +334,12 @@ docs/evidence/bounded-code-editing/*
 
 # Extra local temp files
 
+# Public, bounded evidence for the confirmed review defects
+!docs/evidence/review-hardening/
+docs/evidence/review-hardening/*
+!docs/evidence/review-hardening/README.md
+!docs/evidence/review-hardening/runtime-acceptance.json
+
 # Final local workflow acceptance evidence
 !docs/local-final-workflow-review.md
 !docs/evidence/local-final-workflow/

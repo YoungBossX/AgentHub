@@ -1,5 +1,7 @@
 import copy
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from fastapi import BackgroundTasks
@@ -54,6 +56,45 @@ def test_yaml_multiline_metadata_and_only_linked_references_are_loaded():
     binding = {"role": "frontend", "packages": [p]}
     text = instruction(binding, "codex")
     assert "expected contract" in text and "unused" not in text and "allowed-tools" not in text
+
+
+@pytest.mark.parametrize("budget", ["count", "bytes"])
+@pytest.mark.parametrize("existing_rows", [False, True])
+def test_concurrent_default_saves_cannot_overfill_aggregate(tmp_path, budget, existing_rows):
+    engine = create_engine(f"sqlite:///{(tmp_path / 'race.sqlite').as_posix()}", connect_args={"check_same_thread": False})
+    SQLModel.metadata.create_all(engine)
+    def value(name, size=30, enabled=True):
+        return request(markdown=f"---\nname: {name}\ndescription: Budget fixture\n---\n" + "x" * size, enabled=enabled)
+    try:
+        with DbSession(engine) as db:
+            w = Workspace(name="Concurrent", root_path="unused", repo_url="local://unused", default_branch="main")
+            db.add(w); db.commit(); workspace_id = w.id
+            save_package(db, workspace_id, value("base-one", 10000 if budget == "bytes" else 30), 0)
+            if budget == "count": save_package(db, workspace_id, value("base-two"), 0)
+            if existing_rows:
+                for name in ["candidate-one", "candidate-two"]:
+                    save_package(db, workspace_id, value(name, enabled=False), 0)
+        ready = threading.Barrier(2, timeout=10)
+        def save(name):
+            with DbSession(engine) as db:
+                ready.wait()
+                try:
+                    save_package(db, workspace_id, value(name, 8000 if budget == "bytes" else 30), 1 if existing_rows else 0)
+                    return "saved"
+                except SkillError as exc:
+                    assert "budget" in str(exc)
+                    return "rejected"
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(save, ["candidate-one", "candidate-two"]))
+        assert sorted(outcomes) == ["rejected", "saved"]
+        with DbSession(engine) as db:
+            binding = capture_binding(db, workspace_id=workspace_id, agent_id="agent", role="frontend")
+            assert len(binding["packages"]) == (3 if budget == "count" else 2)
+        # Prove the rolled-back connection leaves future configuration saves usable.
+        with DbSession(engine) as db:
+            save_package(db, workspace_id, value("base-one", enabled=False), 1)
+    finally:
+        engine.dispose()
 
 
 def test_workspace_persistence_builtin_override_and_conflict(client):

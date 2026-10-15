@@ -5,7 +5,7 @@ describe("organization transport", () => {
   it("updates only requested session metadata", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "s", pinnedAt: "date" }), { status: 200 }))
     await organizeSession("http://api/", "s", { pinned: true }, fetcher)
-    expect(fetcher).toHaveBeenCalledWith("http://api/sessions/s/organization", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: '{"pinned":true}' })
+    expect(fetcher).toHaveBeenCalledWith("http://api/sessions/s/organization", { method: "PATCH", headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" }, body: '{"pinned":true}' })
   })
   it("pins within the supplied session and preserves backend errors", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "Message not found in this Session" }), { status: 404 }))

@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session as DbSession
 
 from app.config import get_settings
+from app.local_request_guard import LocalRequestGuard
 from app.db import engine, init_database
 from app.message_regeneration import recover_interrupted_requests
 from app.user_code_edits import recover_user_edits
@@ -151,6 +152,7 @@ async def memory_snapshot_error_handler(
     )
 
 
+app.add_middleware(LocalRequestGuard, frontend_origins=LOCAL_FRONTEND_ORIGINS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(LOCAL_FRONTEND_ORIGINS),

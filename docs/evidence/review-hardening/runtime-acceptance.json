@@ -1,0 +1,25 @@
+{
+  "taskRunId": "085af646-f568-4506-9437-de2f3d49dc53",
+  "controlDenials": {
+    "preview-origin": 403,
+    "missing-control": 403,
+    "untrusted-host": 403
+  },
+  "mcpProbe": {
+    "status": "ready",
+    "protocolVersion": "2025-11-25",
+    "tools": [
+      "list_documents",
+      "read_document"
+    ]
+  },
+  "preview": {
+    "id": "f79428f1-0a67-4833-9bdc-b990df97867b",
+    "url": "http://127.0.0.1:19575",
+    "healthStatus": "healthy"
+  },
+  "unrelatedSourceHttpStatus": 403,
+  "diagnosticFactors": [
+    "preview_failed"
+  ]
+}

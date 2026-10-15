@@ -28,6 +28,7 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
+| `agenthub-review-defect-hardening` | 1.1 Complete | 本地 API Host/Origin/控制头、固定 Vite 文件服务及 JS/CSS 越界检查、默认 Skill 并发预算、结构化故障诊断。API 全量 2,128 passed / 1 skipped；Web 296、启动器 17、demo-api 5，根检查/strict OpenSpec/空白检查通过。真实浏览器渲染与实际开发 API/新预览 403/MCP 握手通过；[证据](evidence/review-hardening/README.md)。提交前本地验收记录；远程 CI 以对应提交的 GitHub Actions 为准 |
 | `agenthub-controlled-mcp` | 1.1 Complete | 工作区只读文档连接、执行绑定回环网关及受控 Codex 参数；真实 Codex 两次工具调用、Skill 载入、Diff、版本绑定 check/build/3 项产物测试及桌面/窄屏标题验收通过，预览健康。API 全量 2,074 passed / 1 skipped；最后文档额外禁止路径修复后 MCP 23 passed；Web 291、启动器 17、demo-api 5，根检查和 strict OpenSpec 通过。模型 QA 未运行，整体 QA 保持 incomplete。见 [证据](evidence/skills-mcp/README.md) 与 [使用说明](local-usage.md#配置与使用项目文档-mcp) |
 | `agenthub-skills` | 1.1 Complete | 工作区技能包、Agent 默认与消息显式选择；Planner/TaskRun 指令加载、冻结快照/重试、版本及兼容性展示。后端相关 506、Web 284，根检查及 strict OpenSpec 通过；实际亮暗/390px/保存版本通过。参考 [使用说明](local-usage.md#配置与使用-skills)。不执行技能脚本，不将指令载入宣称为模型遵循或 QA 通过 |
 | `agenthub-requirement-validation` | 1.1–1.2 Complete（已推送 dev） | 冻结登录/标题/按钮需求契约；Edge/Chrome 桌面与窄屏交互、版本过期及 QA 分项。1.2 修复 CI 浏览器配置和响应性测试夹具，新增有界诊断。`d00b767` 的 [Ubuntu CI](https://github.com/YoungBossX/AgentHub/actions/runs/38136564036) 全部通过：启动器 17、Web 279、API 1979 passed / 48 skipped、demo-api 5；不含真实认证或通用业务验收。见 [使用说明](local-usage.md#查看需求交互验收) |

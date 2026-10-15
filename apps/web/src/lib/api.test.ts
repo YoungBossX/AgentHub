@@ -79,7 +79,7 @@ describe("workspace and session API", () => {
     expect(await refreshSessionMemorySnapshot("http://127.0.0.1:8000/", "session/2", fetchMock)).toEqual(result)
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
       "http://127.0.0.1:8000/sessions/session%2F2/memory-snapshot/refresh",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
   })
 
@@ -178,7 +178,7 @@ describe("workspace and session API", () => {
       "http://127.0.0.1:8000/workspaces/workspace-1/sessions",
       {
         body: JSON.stringify({ title: "Second session" }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -269,7 +269,7 @@ describe("workspace and session API", () => {
           backendTargetId: "demo-backend",
           frontendTargetId: "external-sample-app",
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "PATCH",
       },
     )
@@ -352,7 +352,7 @@ describe("workspace and session API", () => {
       "http://127.0.0.1:8000/workspaces/workspace-1/external-targets/analyze",
       {
         body: JSON.stringify({ rootPath: "/Users/demo/Desktop/sample-app" }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -365,7 +365,7 @@ describe("workspace and session API", () => {
           projectType: "vite-react",
           rootPath: "/Users/demo/Desktop/sample-app",
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -528,7 +528,7 @@ describe("workspace and session API", () => {
           sessionId: "session-1",
           userRequest: "新建全栈项目",
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -759,7 +759,7 @@ describe("workspace and session API", () => {
           supportedModes: ["review", "read_only"],
           supportedTargets: ["demo-frontend"],
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -891,7 +891,7 @@ describe("workspace and session API", () => {
             },
           },
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "PUT",
       },
     )
@@ -941,7 +941,7 @@ describe("workspace and session API", () => {
             enabled: true,
           },
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -1031,7 +1031,7 @@ describe("workspace and session API", () => {
       "http://127.0.0.1:8000/memory/memory-1/status",
       {
         body: JSON.stringify({ status: "archived" }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "PATCH",
       },
     )
@@ -1098,7 +1098,7 @@ describe("message and event API", () => {
           contentMd: "@orchestrator build a login page",
           senderType: "user",
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -1144,7 +1144,7 @@ describe("message and event API", () => {
             selectedArtifactVersionId: "version-2",
           },
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -1316,36 +1316,36 @@ describe("task API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "http://127.0.0.1:8000/tasks/task-1/runs",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "http://127.0.0.1:8000/task-runs/run-1/interrupt",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
       "http://127.0.0.1:8000/task-runs/run-1/retry",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       4,
       "http://127.0.0.1:8000/task-runs/run-1/approve",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       5,
       "http://127.0.0.1:8000/task-runs/run-1/deny",
       {
         body: JSON.stringify({ reason: "No thanks." }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       6,
       "http://127.0.0.1:8000/task-runs/run-1/retry-with-fallback",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(fallback.adapterType).toBe("scripted_mock")
   })
@@ -1395,7 +1395,7 @@ describe("task API", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "http://127.0.0.1:8000/tasks/task-1/runs/force-codex-failure",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(run.errorCode).toBe("CODEX_DEMO_FORCED_FAILURE")
   })
@@ -1540,7 +1540,7 @@ describe("task API", () => {
           contentMd: "# Updated",
           summary: "Edited in the workbench.",
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json", "x-agenthub-control": "local-workspace" },
         method: "POST",
       },
     )
@@ -1588,7 +1588,7 @@ describe("task API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "http://127.0.0.1:8000/task-runs/run-1/review",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
@@ -1633,7 +1633,7 @@ describe("task API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "http://127.0.0.1:8000/task-runs/run-1/preview",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
@@ -1643,7 +1643,7 @@ describe("task API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
       "http://127.0.0.1:8000/previews/preview-1/stop",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(created.url).toBe("http://127.0.0.1:5173")
     expect(previews[0].healthStatus).toBe("healthy")
@@ -1697,7 +1697,7 @@ describe("task API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "http://127.0.0.1:8000/previews/preview-1/deploy",
-      { method: "POST" },
+      { method: "POST", headers: { "x-agenthub-control": "local-workspace" } },
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,

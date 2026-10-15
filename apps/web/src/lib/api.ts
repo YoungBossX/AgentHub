@@ -1,6 +1,7 @@
 import {
   ApiRequestError,
   apiUrl,
+  controlledRequest,
   responseErrorMessage,
   type Fetcher,
 } from "./api-core"
@@ -382,7 +383,7 @@ export class RegenerationRequestError extends ApiRequestError {
 }
 
 export async function regenerateSessionMessage(backendUrl: string, sessionId: string, messageId: string, requestId: string, fetcher: Fetcher = fetch): Promise<ChatMessage> {
-  const response = await fetcher(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/regenerate`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/regenerate`), {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestId }),
   })
   if (!response.ok) throw new RegenerationRequestError(await responseErrorMessage(response, "无法重新生成消息"), response.status)
@@ -415,7 +416,7 @@ export type GroupSummary = {
 }
 
 export async function retryGroupSummary(backendUrl: string, sessionId: string, groupId: string): Promise<ChatMessage> {
-  const response = await fetch(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/groups/${encodeURIComponent(groupId)}/summary/retry`), { method: "POST" })
+  const response = await controlledRequest(fetch, apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/groups/${encodeURIComponent(groupId)}/summary/retry`), { method: "POST" })
   if (!response.ok) throw new ApiRequestError(await responseErrorMessage(response, "无法重试任务组汇总"))
   return await response.json() as ChatMessage
 }
@@ -702,7 +703,7 @@ export async function getBackendHealth(
   backendUrl: string,
   fetcher: Fetcher = fetch,
 ): Promise<BackendHealth> {
-  const response = await fetcher(apiUrl(backendUrl, "/health"), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, "/health"), {
     cache: "no-store",
   })
 
@@ -721,7 +722,7 @@ export async function getDemoWorkspace(
   backendUrl: string,
   fetcher: Fetcher = fetch,
 ): Promise<Workspace | null> {
-  const response = await fetcher(apiUrl(backendUrl, "/workspaces/demo"), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, "/workspaces/demo"), {
     cache: "no-store",
   })
 
@@ -738,7 +739,7 @@ export async function listWorkspaceSessions(
   fetcher: Fetcher = fetch,
   view: "active" | "archived" | "all" = "active",
 ): Promise<WorkspaceSession[]> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/sessions${view === "active" ? "" : `?view=${view}`}`),
     {
       cache: "no-store",
@@ -753,7 +754,7 @@ export async function listWorkspaceSessions(
 }
 
 export async function organizeSession(backendUrl: string, sessionId: string, changes: { pinned?: boolean; archived?: boolean }, fetcher: Fetcher = fetch): Promise<WorkspaceSession> {
-  const response = await fetcher(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/organization`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/organization`), {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(changes),
   })
   if (!response.ok) throw new ApiRequestError(await responseErrorMessage(response, "无法整理会话"))
@@ -761,7 +762,7 @@ export async function organizeSession(backendUrl: string, sessionId: string, cha
 }
 
 export async function pinSessionMessage(backendUrl: string, sessionId: string, messageId: string, pinned: boolean, fetcher: Fetcher = fetch): Promise<ChatMessage> {
-  const response = await fetcher(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/pin`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/pin`), {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pinned }),
   })
   if (!response.ok) throw new ApiRequestError(await responseErrorMessage(response, "无法置顶消息"))
@@ -773,7 +774,7 @@ export async function listWorkspaceTargets(
   workspaceId: string,
   fetcher: Fetcher = fetch,
 ): Promise<TargetProject[]> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/targets`),
     {
       cache: "no-store",
@@ -813,7 +814,7 @@ export async function generateAgentConfiguration(
   backendUrl: string, workspaceId: string, input: { message: string; history: AgentCreationTurn[]; currentDraft: CustomAgentInput | null },
   fetcher: Fetcher = fetch,
 ): Promise<AgentCreationResult> {
-  const response = await fetcher(apiUrl(backendUrl, `/workspaces/${encodeURIComponent(workspaceId)}/agent-creation`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/workspaces/${encodeURIComponent(workspaceId)}/agent-creation`), {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   })
   if (!response.ok) {
@@ -828,7 +829,7 @@ export async function saveCustomAgent(
   backendUrl: string, workspaceId: string, input: CustomAgentInput,
   profileId?: string, fetcher: Fetcher = fetch,
 ): Promise<AgentProfile> {
-  const response = await fetcher(apiUrl(backendUrl, `/workspaces/${workspaceId}/custom-agents${profileId ? `/${profileId}` : ""}`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/workspaces/${workspaceId}/custom-agents${profileId ? `/${profileId}` : ""}`), {
     method: profileId ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   })
   if (!response.ok) {
@@ -847,7 +848,7 @@ export async function refreshSessionMemorySnapshot(
   sessionId: string,
   fetcher: Fetcher = fetch,
 ): Promise<WorkspaceSession> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/memory-snapshot/refresh`),
     { method: "POST" },
   )
@@ -869,7 +870,7 @@ export async function analyzeExternalProject(
   rootPath: string,
   fetcher: Fetcher = fetch,
 ): Promise<ExternalProjectAnalysis> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/external-targets/analyze`),
     {
       body: JSON.stringify({ rootPath }),
@@ -893,7 +894,7 @@ export async function createExternalProjectTarget(
   input: ExternalProjectTargetInput,
   fetcher: Fetcher = fetch,
 ): Promise<ExternalProjectTarget> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/external-targets`),
     {
       body: JSON.stringify(input),
@@ -917,7 +918,7 @@ export async function applyProjectProvisioning(
   input: ProjectProvisioningApplyInput,
   fetcher: Fetcher = fetch,
 ): Promise<ProjectProvisioningApplyResponse> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/project-provisioning/apply`),
     {
       body: JSON.stringify(input),
@@ -946,7 +947,7 @@ export async function listExternalTargetFolders(
     params.set("path", path)
   }
   const query = params.toString()
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(
       backendUrl,
       `/workspaces/${workspaceId}/external-targets/folders${query ? `?${query}` : ""}`,
@@ -977,7 +978,7 @@ export async function updateSessionTargetSelection(
   },
   fetcher: Fetcher = fetch,
 ): Promise<WorkspaceSession> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/sessions/${sessionId}/target-selection`),
     {
       body: JSON.stringify(selection),
@@ -1000,7 +1001,7 @@ export async function listWorkspaceAgents(
   workspaceId: string,
   fetcher: Fetcher = fetch,
 ): Promise<AgentContact[]> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/agents`),
     {
       cache: "no-store",
@@ -1019,7 +1020,7 @@ export async function listWorkspaceAgentProfiles(
   workspaceId: string,
   fetcher: Fetcher = fetch,
 ): Promise<AgentProfile[]> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/agent-profiles`),
     {
       cache: "no-store",
@@ -1037,7 +1038,7 @@ export async function listProviderConfigs(
   backendUrl: string,
   fetcher: Fetcher = fetch,
 ): Promise<ProviderConfig[]> {
-  const response = await fetcher(apiUrl(backendUrl, "/provider-configs"), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, "/provider-configs"), {
     cache: "no-store",
   })
 
@@ -1053,7 +1054,7 @@ export async function getWorkspaceAgentDirectory(
   workspaceId: string,
   fetcher: Fetcher = fetch,
 ): Promise<AgentDirectory | null> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/agent-directory`),
     {
       cache: "no-store",
@@ -1073,7 +1074,7 @@ export async function createAgentProfileDraft(
   input: AgentProfileDraftInput,
   fetcher: Fetcher = fetch,
 ): Promise<AgentProfile> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/agent-profile-drafts`),
     {
       body: JSON.stringify(input),
@@ -1103,7 +1104,7 @@ export async function getAgentRuntimeConfig(
   workspaceId: string,
   fetcher: Fetcher = fetch,
 ): Promise<AgentRuntimeConfig | null> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/runtime-config`),
     {
       cache: "no-store",
@@ -1123,7 +1124,7 @@ export async function updateAgentRuntimeConfig(
   roles: Record<string, RuntimeRoleConfigInput>,
   fetcher: Fetcher = fetch,
 ): Promise<AgentRuntimeConfig> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/runtime-config`),
     {
       body: JSON.stringify({ roles }),
@@ -1146,7 +1147,7 @@ export async function checkAgentRuntimeProvider(
   roleConfig: RuntimeRoleConfigInput,
   fetcher: Fetcher = fetch,
 ): Promise<RuntimeProviderCheck> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/runtime-config/check-provider`),
     {
       body: JSON.stringify({ role, roleConfig }),
@@ -1169,7 +1170,7 @@ export async function listWorkspaceMemory(
   fetcher: Fetcher = fetch,
 ): Promise<MemoryItem[]> {
   const suffix = status ? `?status=${encodeURIComponent(status)}` : ""
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/memory${suffix}`),
     {
       cache: "no-store",
@@ -1189,7 +1190,7 @@ export async function updateMemoryItemStatus(
   status: string,
   fetcher: Fetcher = fetch,
 ): Promise<MemoryItem> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/memory/${memoryItemId}/status`),
     {
       body: JSON.stringify({ status }),
@@ -1211,7 +1212,7 @@ export async function createWorkspaceSession(
   title: string,
   fetcher: Fetcher = fetch,
 ): Promise<WorkspaceSession> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/workspaces/${workspaceId}/sessions`),
     {
       body: JSON.stringify({ title }),
@@ -1232,7 +1233,7 @@ export async function listSessionMessages(
   sessionId: string,
   fetcher: Fetcher = fetch,
 ): Promise<ChatMessage[]> {
-  const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
     cache: "no-store",
   })
 
@@ -1248,7 +1249,7 @@ export async function getSessionLedger(
   sessionId: string,
   fetcher: Fetcher = fetch,
 ): Promise<SessionExecutionLedger | null> {
-  const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/ledger`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/sessions/${sessionId}/ledger`), {
     cache: "no-store",
   })
 
@@ -1277,7 +1278,7 @@ export async function createSessionMessage(
   }
   if (attachmentIds.length) body.attachmentIds = attachmentIds
   if (skillIds !== null) body.skillIds = skillIds
-  const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
     body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },
     method: "POST",
@@ -1317,7 +1318,7 @@ async function attachmentRequestError(response: Response, fallback: string) {
 }
 
 export async function uploadMessageAttachment(backendUrl: string, sessionId: string, file: File, signal: AbortSignal): Promise<MessageAttachment> {
-  const response = await fetch(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/attachments?filename=${encodeURIComponent(file.name)}`), {
+  const response = await controlledRequest(fetch, apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/attachments?filename=${encodeURIComponent(file.name)}`), {
     method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file, signal,
   })
   if (!response.ok) throw await attachmentRequestError(response, "附件上传失败")
@@ -1325,7 +1326,7 @@ export async function uploadMessageAttachment(backendUrl: string, sessionId: str
 }
 
 export async function deletePendingAttachment(backendUrl: string, sessionId: string, attachmentId: string) {
-  const response = await fetch(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/attachments/${encodeURIComponent(attachmentId)}`), { method: "DELETE" })
+  const response = await controlledRequest(fetch, apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/attachments/${encodeURIComponent(attachmentId)}`), { method: "DELETE" })
   if (!response.ok && response.status !== 404) throw await attachmentRequestError(response, "附件移除失败")
 }
 
@@ -1347,7 +1348,7 @@ export async function listSessionTasks(
   sessionId: string,
   fetcher: Fetcher = fetch,
 ): Promise<SessionTask[]> {
-  const response = await fetcher(apiUrl(backendUrl, `/sessions/${sessionId}/tasks`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/sessions/${sessionId}/tasks`), {
     cache: "no-store",
   })
 
@@ -1373,7 +1374,7 @@ export async function decideTaskPlan(
   reason: string,
   fetcher: Fetcher = fetch,
 ): Promise<SessionTask> {
-  const response = await fetcher(apiUrl(backendUrl, `/tasks/${taskId}/plan-decision/${action}`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/tasks/${taskId}/plan-decision/${action}`), {
     body: JSON.stringify({ reason }),
     headers: { "Content-Type": "application/json" },
     method: "POST",
@@ -1438,7 +1439,7 @@ export async function denyTaskRun(
   reason: string,
   fetcher: Fetcher = fetch,
 ): Promise<TaskRun> {
-  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/deny`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/task-runs/${taskRunId}/deny`), {
     body: JSON.stringify({ reason }),
     headers: { "Content-Type": "application/json" },
     method: "POST",
@@ -1455,7 +1456,7 @@ export async function listTaskRunDiffs(
   taskRunId: string,
   fetcher: Fetcher = fetch,
 ): Promise<DiffArtifact[]> {
-  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/diffs`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/task-runs/${taskRunId}/diffs`), {
     cache: "no-store",
   })
 
@@ -1471,7 +1472,7 @@ export async function createTaskRunReview(
   taskRunId: string,
   fetcher: Fetcher = fetch,
 ): Promise<ReviewArtifact> {
-  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/review`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/task-runs/${taskRunId}/review`), {
     method: "POST",
   })
 
@@ -1487,7 +1488,7 @@ export async function listTaskRunReviews(
   taskRunId: string,
   fetcher: Fetcher = fetch,
 ): Promise<ReviewArtifact[]> {
-  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/reviews`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/task-runs/${taskRunId}/reviews`), {
     cache: "no-store",
   })
 
@@ -1503,7 +1504,7 @@ export async function startTaskRunPreview(
   taskRunId: string,
   fetcher: Fetcher = fetch,
 ): Promise<PreviewArtifact> {
-  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/preview`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/task-runs/${taskRunId}/preview`), {
     method: "POST",
   })
 
@@ -1519,7 +1520,7 @@ export async function listTaskRunPreviews(
   taskRunId: string,
   fetcher: Fetcher = fetch,
 ): Promise<PreviewArtifact[]> {
-  const response = await fetcher(apiUrl(backendUrl, `/task-runs/${taskRunId}/previews`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/task-runs/${taskRunId}/previews`), {
     cache: "no-store",
   })
 
@@ -1535,7 +1536,7 @@ export async function stopPreview(
   previewId: string,
   fetcher: Fetcher = fetch,
 ): Promise<PreviewArtifact> {
-  const response = await fetcher(apiUrl(backendUrl, `/previews/${previewId}/stop`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/previews/${previewId}/stop`), {
     method: "POST",
   })
 
@@ -1551,7 +1552,7 @@ export async function createPreviewDeployment(
   previewId: string,
   fetcher: Fetcher = fetch,
 ): Promise<DeploymentArtifact> {
-  const response = await fetcher(apiUrl(backendUrl, `/previews/${previewId}/deploy`), {
+  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/previews/${previewId}/deploy`), {
     method: "POST",
   })
 
@@ -1567,7 +1568,7 @@ export async function listTaskRunDeployments(
   taskRunId: string,
   fetcher: Fetcher = fetch,
 ): Promise<DeploymentArtifact[]> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/task-runs/${taskRunId}/deployments`),
     {
       cache: "no-store",
@@ -1586,7 +1587,7 @@ export async function getSessionArtifactWorkbench(
   sessionId: string,
   fetcher: Fetcher = fetch,
 ): Promise<ArtifactWorkbenchSession> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/sessions/${sessionId}/artifact-workbench`),
     {
       cache: "no-store",
@@ -1606,7 +1607,7 @@ export async function saveArtifactWorkbenchEdit(
   input: ArtifactWorkbenchEditInput,
   fetcher: Fetcher = fetch,
 ): Promise<ArtifactWorkbenchVersion> {
-  const response = await fetcher(
+  const response = await controlledRequest(fetcher,
     apiUrl(backendUrl, `/artifacts/${artifactId}/workbench/edits`),
     {
       body: JSON.stringify(input),
@@ -1623,7 +1624,7 @@ export async function saveArtifactWorkbenchEdit(
 }
 
 async function mutateTaskRun(url: string, fetcher: Fetcher): Promise<TaskRun> {
-  const response = await fetcher(url, { method: "POST" })
+  const response = await controlledRequest(fetcher, url, { method: "POST" })
 
   if (!response.ok) {
     throw new ApiRequestError(
@@ -1645,7 +1646,7 @@ export type PrepareCodeEdit = { operationId: string; sourceArtifactId: string } 
 )
 
 async function codeEditRequest<T>(backendUrl: string, sessionId: string, suffix: string, body?: unknown): Promise<T> {
-  const response = await fetch(apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/code-edits${suffix}`), body === undefined
+  const response = await controlledRequest(fetch, apiUrl(backendUrl, `/sessions/${encodeURIComponent(sessionId)}/code-edits${suffix}`), body === undefined
     ? { cache: "no-store" } : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
   if (!response.ok) throw new ApiRequestError(await responseErrorMessage(response, "代码编辑请求失败"))
   return await response.json() as T
