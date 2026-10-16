@@ -5,8 +5,12 @@ import { CodeQuoteContext, MAX_QUOTED_CODE_CHARS, type CodeQuote } from "./code-
 
 import { selectComposerMention } from "./composer-mentions"
 import { useMessageAttachments } from "./use-message-attachments"
+import { useMessageHistory } from "./use-message-history"
+import { listMessagePage } from "@/lib/message-history-api"
 import { useMessageRegeneration } from "./use-message-regeneration"
 import { SkillSelector } from "./skill-selector"
+import { ReviewRepairContext } from "./review-repair"
+import type { RepairDraft } from "@/lib/review-repair-api"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
@@ -22,6 +26,7 @@ import {
 
 import { ArtifactPanel } from "@/components/artifact-panel"
 import { SessionProgress, SessionResults } from "./session-overview"
+import { SessionGuidance } from "./session-guidance"
 import { sessionStages, type WorkspaceView } from "./session-workbench-state"
 import { SessionEventTimeline, type SessionVisualEvent } from "./session-event-timeline"
 import { WorkspaceHeader } from "@/components/workspace-shell-header"
@@ -52,7 +57,6 @@ import {
   createSessionMessage,
   createWorkspaceSession,
   getSessionArtifactWorkbench,
-  listSessionMessages,
   listSessionTasks,
   retryGroupSummary,
   organizeSession,
@@ -85,10 +89,21 @@ export function WorkspaceShell({
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
   const [sessions, setSessions] = useState(initialSessions)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const reportSyncError = useCallback(
+    (action: string, error: unknown) => {
+      const detail = error instanceof ApiRequestError ? error.message : null
+      setSyncError(detail && detail.trim().length > 0 ? `${action}：${detail}` : `${action}。请确认 FastAPI 后端可访问：${backendUrl}。`)
+    }, [backendUrl],
+  )
   const messageRevisionRef = useRef(0)
+  const history = useMessageHistory(backendUrl, selectedSessionId, messageRevisionRef,
+    error => reportSyncError("无法加载会话消息", error), () => setSyncError(null))
+  const { messages, setMessages } = history
   const [tasks, setTasks] = useState<SessionTask[]>([])
   const [draft, setDraft] = useState("")
+  const [repairDraft, setRepairDraft] = useState<{ sessionId: string; draft: RepairDraft } | null>(null)
   const [artifactRefreshVersion, setArtifactRefreshVersion] = useState(0)
   const [evidenceArtifactItems, setEvidenceArtifactItems] = useState<ArtifactPanelItem[]>([])
   const [workbenchArtifacts, setWorkbenchArtifacts] = useState<ArtifactWorkbenchArtifact[]>([])
@@ -100,7 +115,6 @@ export function WorkspaceShell({
   const [skillOverride, setSkillOverride] = useState<{ sessionId: string | null; ids: string[] | null }>({ sessionId: null, ids: null })
   const [conversationMode, setConversationMode] = useState<"direct" | "group">("group")
   const [previewFrameKey, setPreviewFrameKey] = useState(0)
-  const [syncError, setSyncError] = useState<string | null>(null)
 
   const [view, setView] = useState<WorkspaceView>("conversation")
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -116,14 +130,15 @@ export function WorkspaceShell({
     })
   }, [])
 
-  const selectedSessionId = searchParams.get("session") ?? sessions[0]?.id ?? null
+  const visibleDraft = repairDraft && repairDraft.sessionId !== selectedSessionId ? "" : draft
   const attachments = useMessageAttachments(backendUrl, selectedSessionId)
   const selectedSessionIdRef = useRef(selectedSessionId)
-  const regeneration = useMessageRegeneration(backendUrl, selectedSessionId, (sessionId, nextMessages, nextTasks, created) => {
+  const regeneration = useMessageRegeneration(backendUrl, selectedSessionId, (sessionId, nextMessages, nextTasks, created, page) => {
     setSessions((current) => current.map((session) => session.id === sessionId ? { ...session, lastMessageAt: created.createdAt } : session))
     if (selectedSessionIdRef.current !== sessionId) return
     messageRevisionRef.current += 1
-    setMessages(nextMessages)
+    if (page) history.showLatestPage(page)
+    else history.showLatestMessages(nextMessages)
     setTasks(nextTasks)
     setSyncError(null)
   })
@@ -147,17 +162,6 @@ export function WorkspaceShell({
     setInspectorOpen(true)
     setInspectorCollapsed(false)
   }
-  const reportSyncError = useCallback(
-    (action: string, error: unknown) => {
-      const detail = error instanceof ApiRequestError ? error.message : null
-      setSyncError(
-        detail && detail.trim().length > 0
-          ? `${action}：${detail}`
-          : `${action}。请确认 FastAPI 后端可访问：${backendUrl}。`,
-      )
-    },
-    [backendUrl],
-  )
 
   const reportArtifactError = useCallback((error: unknown) => reportSyncError("无法加载执行成果", error), [reportSyncError])
 
@@ -169,31 +173,6 @@ export function WorkspaceShell({
     },
     [reportSyncError, startTransition],
   )
-
-  useEffect(() => {
-    if (!selectedSessionId) {
-      return
-    }
-
-    let cancelled = false
-    const revision = messageRevisionRef.current
-    listSessionMessages(backendUrl, selectedSessionId)
-      .then((nextMessages) => {
-        if (!cancelled && revision === messageRevisionRef.current) {
-          setMessages(nextMessages)
-          setSyncError(null)
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-        reportSyncError("无法加载会话消息", error)
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [backendUrl, reportSyncError, selectedSessionId])
 
   useEffect(() => {
     if (!selectedSessionId) {
@@ -258,6 +237,7 @@ export function WorkspaceShell({
     setTasks,
     setMessages,
     messageRevisionRef,
+    refreshHistory: history.refresh,
     onVisualEvent,
     summaryPending: messages.some((message) => message.sessionId === selectedSessionId && (message.regeneration?.state === "preparing" || message.groupSummary?.state === "pending" || message.groupSummary?.state === "calling")),
   })
@@ -268,6 +248,7 @@ export function WorkspaceShell({
       return
     }
     setContextItems([])
+    if (repairDraft) { setRepairDraft(null); setDraft("") }
     setSidebarOpen(false)
     setInspectorExpanded(false)
     setSyncError(null)
@@ -303,8 +284,8 @@ export function WorkspaceShell({
     const sessionId = selectedSessionId
     runClientAction(async () => {
       await retryGroupSummary(backendUrl, sessionId, groupId)
-      const nextMessages = await listSessionMessages(backendUrl, sessionId)
-      if (selectedSessionIdRef.current === sessionId) setMessages(nextMessages)
+      const page = await listMessagePage(backendUrl, sessionId)
+      if (selectedSessionIdRef.current === sessionId) history.showLatestPage(page)
     }, "无法重试任务组汇总")
   }
 
@@ -399,6 +380,7 @@ export function WorkspaceShell({
     setContextSessionId(selectedSessionId)
     setSelectedArtifactId(artifact.id)
     if (intent) {
+      setRepairDraft(null)
       setDraft(contextIntentDraft(intent))
     }
   }
@@ -425,11 +407,11 @@ export function WorkspaceShell({
 
   function handleSendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!selectedSessionId || isPending || attachments.blocked || draft.trim().length === 0) {
+    if (!selectedSessionId || isPending || attachments.blocked || visibleDraft.trim().length === 0) {
       return
     }
 
-    const content = draft.trim()
+    const content = visibleDraft.trim()
     const sessionId = selectedSessionId
     const attachmentIds = attachments.ids
     runClientAction(async () => {
@@ -439,17 +421,18 @@ export function WorkspaceShell({
         selectedSessionId,
         content,
         fetch,
-        buildComposerMessageContext(activeContextItems),
+        { ...buildComposerMessageContext(activeContextItems), ...(repairDraft?.sessionId === sessionId ? { reviewRepair: repairDraft.draft.selection } : {}) },
         attachmentIds,
         skillOverride.sessionId === sessionId ? skillOverride.ids : null,
       ) } catch (error) {
         // Planning can fail after persistence; recover the immutable binding.
         if (attachmentIds.length) {
-          const saved = await listSessionMessages(backendUrl, sessionId).catch(() => [])
+          const savedPage = await listMessagePage(backendUrl, sessionId).catch(() => null)
+          const saved = savedPage?.messages ?? []
           if (saved.some((message) => message.contentMd === content && attachmentIds.every((id) => message.attachments?.some((item) => item.id === id)))) {
             attachments.sent(sessionId, attachmentIds)
             if (selectedSessionIdRef.current === sessionId) {
-              setMessages(saved)
+              if (savedPage) history.showLatestPage(savedPage)
               setDraft((current) => current.trim() === content ? "" : current)
             }
             throw new ApiRequestError(`消息及附件已保存，但规划未完成：${error instanceof Error ? error.message : "请求失败"}`)
@@ -458,16 +441,15 @@ export function WorkspaceShell({
         throw error
       }
       attachments.sent(sessionId, attachmentIds)
+      if (selectedSessionIdRef.current === sessionId) setRepairDraft(current => current === repairDraft ? null : current)
       if (selectedSessionIdRef.current === sessionId) setSkillOverride({ sessionId, ids: null })
       if (selectedSessionIdRef.current === sessionId) setDraft((current) => current.trim() === content ? "" : current)
-      const [nextMessages, nextTasks] = await Promise.all([
-        listSessionMessages(backendUrl, selectedSessionId),
+      const [page, nextTasks] = await Promise.all([
+        listMessagePage(backendUrl, selectedSessionId),
         listSessionTasks(backendUrl, selectedSessionId),
       ])
       if (selectedSessionIdRef.current !== sessionId) return
-      setMessages((current) =>
-        nextMessages.length > 0 ? nextMessages : [...current, created],
-      )
+      history.showLatestPage(page.messages.length ? page : { ...page, messages: [...messages, created] })
       setTasks(nextTasks)
       setSessions((current) =>
         current.map((session) =>
@@ -494,6 +476,17 @@ export function WorkspaceShell({
 
   return (
     <CodeEditProvider backendUrl={backendUrl} sessionId={selectedSessionId}>
+    <ReviewRepairContext.Provider value={{ backendUrl, sessionId: selectedSessionId, revision: artifactRefreshVersion,
+      onDraft: (sessionId, value) => {
+        if (selectedSessionIdRef.current !== sessionId) return
+        setRepairDraft({ sessionId, draft: value }); setDraft(value.contentMd); setView("conversation")
+        setInspectorExpanded(false); setInspectorOpen(false)
+        requestAnimationFrame(() => composerRef.current?.focus())
+      }, onOpenArtifact: id => {
+        const item = artifactItems.find(item => item.artifact.artifactId === id)
+        if (item) selectArtifact(item.id)
+        else setSyncError("该产物暂未载入，请刷新会话的执行过程。")
+      } }}>
     <CodeQuoteContext.Provider key={selectedSessionId} value={handleQuoteCode}>
     <section className="h-dvh overflow-hidden bg-white" data-region="app-shell">
       <WorkbenchLayout inspectorCollapsed={inspectorCollapsed} inspectorExpanded={inspectorExpanded} className={`workbench-layout h-full min-h-0 ${inspectorExpanded ? "inspector-expanded" : ""} ${inspectorOpen ? "inspector-open" : ""} ${sidebarOpen ? "sidebar-open" : ""} ${inspectorCollapsed ? "inspector-collapsed" : ""}`}>
@@ -510,9 +503,13 @@ export function WorkspaceShell({
             onToggleSidebar={() => setSidebarOpen((open) => !open)} onToggleInspector={() => { if (window.matchMedia("(min-width: 1200px)").matches) setInspectorCollapsed((value) => !value); else setInspectorOpen((open) => !open) }} />
           {syncError ? <div className="mx-5 mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">{syncError}</div> : null}
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5" data-region="center-scroll">
+            {selectedSession ? <div className="mx-auto max-w-4xl"><SessionGuidance tasks={visibleTasks} artifacts={artifactItems} messages={history.latestMessages} onNavigate={(next, taskId) => {
+              setView(next)
+              requestAnimationFrame(() => { if (taskId) document.getElementById(`task-${taskId}`)?.scrollIntoView({ block: "start", behavior: "smooth" }); else if (next === "conversation") composerRef.current?.focus() })
+            }} /></div> : null}
             <div className="mx-auto max-w-3xl" hidden={view !== "conversation"}>
               {selectedSession?.archivedAt ? <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs"><span>会话已归档 · 历史保留，不中断任务</span><button type="button" disabled={isPending} onClick={() => handleOrganizeSession(selectedSession.id, { archived: false })} className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1">恢复会话</button></div> : null}
-              <ChatThread backendUrl={backendUrl} agents={initialAgents} messages={visibleMessages} onQuoteMessage={handleQuoteMessage} onRetryGroupSummary={handleRetryGroupSummary} onPinMessage={handlePinMessage} onRegenerateMessage={regeneration.run} actionsPending={isPending || regeneration.pending} selectedSession={selectedSession} taskCount={visibleTasks.length}
+              <ChatThread backendUrl={backendUrl} agents={initialAgents} messages={visibleMessages} history={history} onQuoteMessage={handleQuoteMessage} onRetryGroupSummary={handleRetryGroupSummary} onPinMessage={handlePinMessage} onRegenerateMessage={regeneration.run} actionsPending={isPending || regeneration.pending} selectedSession={selectedSession} taskCount={visibleTasks.length}
                 taskListSlot={<><SessionProgress tasks={visibleTasks} agents={initialAgents} onOpenProcess={() => setView("process")} />{artifactItems.length ? <SessionResults compact artifacts={artifactItems} tasks={visibleTasks} onSelect={selectArtifact} /> : null}</>} />
             </div>
             <div className="mx-auto max-w-4xl space-y-5" hidden={view !== "process"}>
@@ -550,7 +547,9 @@ export function WorkspaceShell({
             </div>
             <div className="mx-auto max-w-3xl" hidden={view !== "results"}><SessionResults artifacts={artifactItems} tasks={visibleTasks} onSelect={selectArtifact} /></div>
           </div>
-          {selectedSession ? <div className="shrink-0 px-5 pb-4 pt-2"><MessageComposer
+          {selectedSession ? <div className="shrink-0 px-5 pb-4 pt-2">
+              {repairDraft?.sessionId === selectedSessionId ? <div className="mx-auto mb-2 flex max-w-3xl flex-wrap items-center justify-between gap-2 rounded border border-[var(--border)] bg-[var(--surface-muted)] p-2 text-xs"><span>修复草稿 · 评审 {repairDraft.draft.selection.reviewArtifactId.slice(0, 8)} · {repairDraft.draft.selection.issueIds.length} 个问题 · 版本 {repairDraft.draft.selection.expectedFingerprint.slice(0, 12)} · 发送时核对源码</span><button type="button" onClick={() => setRepairDraft(null)}>取消修复绑定</button></div> : null}
+              <MessageComposer
                 inputRef={composerRef}
                 skillSelector={workspace ? <SkillSelector backendUrl={backendUrl} workspaceId={workspace.id}
                   selected={skillOverride.sessionId === selectedSessionId ? skillOverride.ids : null} disabled={isPending}
@@ -561,10 +560,10 @@ export function WorkspaceShell({
                 onAttach={attachments.add}
                 onRemoveAttachment={attachments.remove}
                 contextItems={activeContextItems}
-                draft={draft}
+                draft={visibleDraft}
                 isPending={isPending}
                 onClearContext={() => setContextItems([])}
-                onDraftChange={setDraft}
+                onDraftChange={value => { if (repairDraft && repairDraft.sessionId !== selectedSessionId) setRepairDraft(null); setDraft(value) }}
                 onMoveContextItem={(itemId, direction) =>
                   setContextItems((current) => moveContextItem(current, itemId, direction))
                 }
@@ -584,6 +583,7 @@ export function WorkspaceShell({
       </WorkbenchLayout>
     </section>
     </CodeQuoteContext.Provider>
+    </ReviewRepairContext.Provider>
     </CodeEditProvider>
   )
 }

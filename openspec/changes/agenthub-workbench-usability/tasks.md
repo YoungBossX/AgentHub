@@ -1,0 +1,4 @@
+## 1. Local workbench usability
+
+- [x] 1.1 Add state-grounded phase/blocker/next-action guidance and structured Skill-reference editing/import; verify approvals/queue/failure/stale evidence, saved versions/conflicts, bounds and light/dark/narrow UI. Web 317, Skills API 28, strict/check/whitespace and eight sandboxed browser theme/width cases passed; details in `docs/workbench-usability-review.md`.
+- [x] 1.2 Measure long conversation retrieval/rendering; implement and verify bounded stable history loading/refresh, explicit older-history access, pins/attachments/regeneration/SSE compatibility and document measured evidence. API 78, Web 326/43, root checks and strict validation passed; four 5,000-message browser cases and four repair-compatibility cases passed. Measurement and fixture boundaries are recorded in `docs/workbench-usability-review.md`.

@@ -7,7 +7,8 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session as DbSession
 
-from app.config import get_settings
+from app.config import get_settings, sqlite_path_from_url
+from app.maintenance_lease import database_lease
 from app.local_request_guard import LocalRequestGuard
 from app.db import engine, init_database
 from app.message_regeneration import recover_interrupted_requests
@@ -35,12 +36,14 @@ from app.routes.attachments import router as attachments_router
 from app.routes.user_code_edits import router as user_code_edits_router
 from app.routes.health import router as health_router
 from app.routes.messages import router as messages_router
+from app.routes.message_history import router as message_history_router
 from app.routes.registries import router as registries_router
 from app.routes.sessions import router as sessions_router
 from app.routes.targets import router as targets_router
 from app.routes.workspaces import router as workspaces_router
 from app.routes.skills import router as skills_router
 from app.routes.mcp import router as mcp_router
+from app.routes.review_repairs import router as review_repairs_router
 from app.run_diagnostics import build_session_run_diagnostics_summary
 from app.run_engine import (
     adapter_for_type,
@@ -61,6 +64,15 @@ from app.windows_connection_cleanup import install_windows_connection_cleanup
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    from contextlib import nullcontext
+    path = sqlite_path_from_url(str(engine.url))
+    with database_lease(path, exclusive=False) if path and str(path) != ":memory:" else nullcontext():
+        async with _runtime_lifespan():
+            yield
+
+
+@asynccontextmanager
+async def _runtime_lifespan() -> AsyncIterator[None]:
     restore_connection_handler = install_windows_connection_cleanup(asyncio.get_running_loop())
     try:
         init_database(seed=True)
@@ -164,6 +176,7 @@ app.include_router(health_router)
 app.include_router(agent_settings_router)
 app.include_router(registries_router)
 app.include_router(messages_router)
+app.include_router(message_history_router)
 app.include_router(attachments_router)
 app.include_router(user_code_edits_router)
 app.include_router(sessions_router)
@@ -171,6 +184,7 @@ app.include_router(targets_router)
 app.include_router(workspaces_router)
 app.include_router(skills_router)
 app.include_router(mcp_router)
+app.include_router(review_repairs_router)
 app.include_router(task_run_routes.router)
 app.include_router(task_artifact_routes.router)
 app.include_router(session_event_routes.router)

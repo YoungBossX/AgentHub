@@ -9,7 +9,7 @@ from sqlmodel import Session as DbSession
 from app.external_evidence import list_task_run_command_evidence
 from app.models import Artifact, Session, Task, TaskRun
 from app.target_registry import TargetRegistryError, get_target_for_workspace
-from app.automatic_validation import validation_for_run, validation_currentness
+from app.automatic_validation import validation_for_run, validation_currentness, required_command_kinds
 
 
 def build_qa_assessment(
@@ -53,7 +53,11 @@ def build_qa_assessment(
     validation = validation_for_run(db, artifact.task_run_id)
     currentness = validation_currentness(db, artifact.task_run_id, validation) if validation else None
     if validation:
+        required = required_command_kinds(validation.get("profile"))
         for item in commands:
+            if item["kind"] not in required:
+                item.update(configured=False, versionBound=False, status="not_applicable", evidence=[])
+                continue
             entry = next((entry for entry in validation.get("commands", []) if entry.get("kind") == item["kind"]), None)
             item.update(configured=True, versionBound=currentness == "current")
             item["status"] = entry["status"] if entry and currentness == "current" else "not_run"
@@ -67,7 +71,9 @@ def build_qa_assessment(
     passed = (not blocked and rule_status == "passed" and model_status == "passed"
               and bool(input_fingerprint) and currentness == "current"
               and validation.get("status") == "passed"
-              and all(item["status"] == "passed" and item["versionBound"] for item in commands))
+              and bool(required_command_kinds(validation.get("profile")))
+              and all(item["status"] == "passed" and item["versionBound"]
+                      for item in commands if item["configured"]))
     result = {
         "schemaVersion": "agenthub.qa.v1",
         "taskRunId": artifact.task_run_id, "diffArtifactId": artifact.id,

@@ -1,0 +1,484 @@
+{
+  "schemaVersion": "agenthub.business_contract_evidence.v1",
+  "mode": "trusted-harness-real-source-and-browser",
+  "providerEvaluated": false,
+  "liveHttpPreview": false,
+  "deploymentExecuted": false,
+  "backend": {
+    "schemaVersion": "agenthub.validation.v1",
+    "profile": "fastapi-contract-v1",
+    "status": "passed",
+    "files": {
+      "apps/demo-api/tests/test_contacts.py": "3f9e860635952c680d412b1ab5bfb881f730cde618b87d41de37938937808c04",
+      "apps/demo-api/README.md": "998991ab35d6a1ba213ecbf8b9abb02b1d9243da0ca36da021eb386a3736c396",
+      "apps/demo-api/app/__init__.py": "d61ab2e437fff4aa583396952d03bcbc0ed7be07d762ccea2f35aa1d1d3dbbe3",
+      "apps/demo-api/app/main.py": "126939ebdfdb77c9d2b38209a02cccce7fb37784fac6c69bcfd79e649b1ca03d"
+    },
+    "sourceFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f",
+    "policyFingerprint": "e3095b2d255d704cd3d62418ff176a8f2e750f2d2d6b8f0d36d53e84bb165dc6",
+    "commands": [
+      {
+        "kind": "check",
+        "status": "passed",
+        "exitCode": 0,
+        "durationMs": 171,
+        "checks": [
+          {
+            "id": "python.syntax",
+            "status": "passed"
+          }
+        ],
+        "schemaVersion": "agenthub.backend_contract.v2"
+      },
+      {
+        "kind": "test",
+        "status": "passed",
+        "exitCode": 0,
+        "durationMs": 609,
+        "checks": [
+          {
+            "id": "api.health",
+            "status": "passed"
+          },
+          {
+            "id": "api.contacts_list",
+            "status": "passed"
+          },
+          {
+            "id": "api.create",
+            "status": "passed"
+          },
+          {
+            "id": "api.validation",
+            "status": "passed"
+          },
+          {
+            "id": "api.duplicate",
+            "status": "passed"
+          },
+          {
+            "id": "api.cors",
+            "status": "passed"
+          },
+          {
+            "id": "api.openapi",
+            "status": "passed"
+          },
+          {
+            "id": "api.field_boundaries",
+            "status": "passed"
+          },
+          {
+            "id": "api.invalid_types",
+            "status": "passed"
+          },
+          {
+            "id": "api.unique_identity",
+            "status": "passed"
+          },
+          {
+            "id": "api.seed_duplicate",
+            "status": "passed"
+          },
+          {
+            "id": "api.method_contract",
+            "status": "passed"
+          }
+        ],
+        "schemaVersion": "agenthub.backend_contract.v2"
+      }
+    ]
+  },
+  "integration": [
+    {
+      "status": "passed",
+      "contract": "contacts-create-v1",
+      "policyFingerprint": "d6e654b02aa48dbbfc10b2c6f738d703a6d90dac48ec534f93ab2cf0a5022242",
+      "checks": [
+        {
+          "id": "desktop.initial",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.create",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.persist",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.layout",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.runtime",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.initial",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.create",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.persist",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.layout",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.runtime",
+          "status": "passed"
+        }
+      ],
+      "requests": [
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        }
+      ],
+      "browserVersion": "155.0.4283.45",
+      "frontendFingerprint": "7c6398b831e9c5f54c46e196643ade0b47e60111de116dd5d28d4e3c179cd871",
+      "backendFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f"
+    },
+    {
+      "status": "passed",
+      "contract": "contacts-resilience-v2",
+      "policyFingerprint": "95ba8ed08b1b9ae84431ab2a6f81567b341154d4efe48af711cbebb4f2f8df1a",
+      "checks": [
+        {
+          "id": "desktop.initial",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.create",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.duplicate",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.invalid",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.server_failure",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.retry",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.persist",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.layout",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.runtime",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.initial",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.create",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.duplicate",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.invalid",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.server_failure",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.retry",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.persist",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.layout",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.runtime",
+          "status": "passed"
+        }
+      ],
+      "requests": [
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 409
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 503,
+          "injected": "fixed_503"
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 409
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 503,
+          "injected": "fixed_503"
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        }
+      ],
+      "browserVersion": "155.0.4283.45",
+      "frontendFingerprint": "7c6398b831e9c5f54c46e196643ade0b47e60111de116dd5d28d4e3c179cd871",
+      "backendFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f"
+    }
+  ],
+  "testEvidence": {
+    "junitSha256": "f944a458594e530a33818287b80d70b69ca74fcf54fcb911da727843802b069b",
+    "summary": {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "70",
+      "time": "131.796",
+      "timestamp": "2026-10-16T12:04:32.551574+08:00",
+      "hostname": "XCC"
+    },
+    "businessCases": [
+      {
+        "name": "test_partial_wrong_contract_or_incoherent_browser_receipts_never_pass[schema]",
+        "durationSeconds": 0.001
+      },
+      {
+        "name": "test_partial_wrong_contract_or_incoherent_browser_receipts_never_pass[contract]",
+        "durationSeconds": 0.001
+      },
+      {
+        "name": "test_partial_wrong_contract_or_incoherent_browser_receipts_never_pass[coverage]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_partial_wrong_contract_or_incoherent_browser_receipts_never_pass[duplicate_id]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_partial_wrong_contract_or_incoherent_browser_receipts_never_pass[exit]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_partial_wrong_contract_or_incoherent_browser_receipts_never_pass[status]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_partial_wrong_contract_or_incoherent_browser_receipts_never_pass[check_status]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_non_object_receipts_fail_closed[None]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_non_object_receipts_fail_closed[payload1]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_non_object_receipts_fail_closed[True]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_non_object_receipts_fail_closed[1]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_non_object_receipts_fail_closed[passed]",
+        "durationSeconds": 0.0
+      },
+      {
+        "name": "test_real_extended_api_contract_detects_business_defects[company_limit-api.field_boundaries]",
+        "durationSeconds": 1.024
+      },
+      {
+        "name": "test_real_extended_api_contract_detects_business_defects[defaults-api.unique_identity]",
+        "durationSeconds": 1.091
+      },
+      {
+        "name": "test_real_extended_api_contract_detects_business_defects[identity-api.unique_identity]",
+        "durationSeconds": 1.166
+      },
+      {
+        "name": "test_real_extended_api_contract_detects_business_defects[seed_duplicate-api.seed_duplicate]",
+        "durationSeconds": 1.202
+      },
+      {
+        "name": "test_real_extended_api_contract_detects_business_defects[optional_type-api.invalid_types]",
+        "durationSeconds": 1.126
+      },
+      {
+        "name": "test_real_extended_api_contract_detects_business_defects[method-api.method_contract]",
+        "durationSeconds": 1.13
+      },
+      {
+        "name": "test_real_contacts_resilience_and_both_source_policy_receipts",
+        "durationSeconds": 5.218
+      },
+      {
+        "name": "test_real_browser_detects_failure_handling_defects[ignore_rejection-duplicate]",
+        "durationSeconds": 18.96
+      },
+      {
+        "name": "test_real_browser_detects_failure_handling_defects[clear_input-server_failure]",
+        "durationSeconds": 19.4
+      },
+      {
+        "name": "test_real_browser_detects_failure_handling_defects[optimistic_failure-duplicate]",
+        "durationSeconds": 5.312
+      },
+      {
+        "name": "test_real_browser_detects_failure_handling_defects[changed_existing_names-duplicate]",
+        "durationSeconds": 5.194
+      },
+      {
+        "name": "test_real_browser_detects_failure_handling_defects[no_recovery-retry]",
+        "durationSeconds": 28.415
+      },
+      {
+        "name": "test_real_browser_detects_failure_handling_defects[invalid_form-invalid]",
+        "durationSeconds": 10.234
+      },
+      {
+        "name": "test_integration_copy_rejects_source_policy_drift_and_cancellation[source]",
+        "durationSeconds": 0.338
+      },
+      {
+        "name": "test_integration_copy_rejects_source_policy_drift_and_cancellation[policy]",
+        "durationSeconds": 0.347
+      },
+      {
+        "name": "test_integration_copy_rejects_source_policy_drift_and_cancellation[cancelled]",
+        "durationSeconds": 0.333
+      },
+      {
+        "name": "test_contract_and_both_validation_policies_are_part_of_identity",
+        "durationSeconds": 0.006
+      }
+    ]
+  },
+  "limits": "Fixed contacts only. Real sandboxed browser and disposable in-process ASGI transport, labeled synthetic 503. Negative controls use real mutated copies; parser and drift controls use explicit doubles. No native Provider, product UI/SSE/live HTTP preview/deployment proof."
+}

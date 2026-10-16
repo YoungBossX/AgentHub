@@ -62,6 +62,7 @@ TaskRunEvent → SSE → Web Workspace
 | [`docs/demo-script.md`](docs/demo-script.md) | 录屏、现场演示和答辩脚本 |
 | [`docs/architecture.md`](docs/architecture.md) | 架构、核心链路、模块地图和可靠性边界 |
 | [`docs/project-state.md`](docs/project-state.md) | 当前基线、冻结证据、已知限制与交付状态 |
+| [`docs/ordered-local-improvements.md`](docs/ordered-local-improvements.md) | 同版本原生 QA 评测、业务验收扩展与职责拆分的本地证据和范围 |
 | [`AGENTS.md`](AGENTS.md) | AI 协作守则和项目 guardrails |
 | [`openspec/changes`](openspec/changes) | Spec、任务拆解和演进记录 |
 | [`docs/change-log.md`](docs/change-log.md) | 当前工程变更和验证记录 |
@@ -79,6 +80,14 @@ TaskRunEvent → SSE → Web Workspace
 | **Concurrency Control**       | Session Queue + Scheduler + Target Lock 协同控制写任务顺序与目标级互斥 |
 | **Realtime Trace**            | TaskRunEvent 持久化到 SQLite，通过 SSE 增量推送，以 Session 游标、周期重放和空闲心跳支持恢复 |
 | **Evidence Delivery**         | 将真实代码修改进一步组织为 Diff、Review、Preview 与运行诊断，而不是只返回文本结果 |
+| **Versioned Validation**       | 内置 Vite/FastAPI 固定验证绑定源码、策略和执行代次，旧成功不能验收新代码；模型评审与自动检查分别显示 |
+| **Review & Repair**            | 从具体发现准备修复草稿，显式发送、复验并保留旧报告；普通模型建议仍需人工核验 |
+| **Skills & Controlled MCP**    | 版本冻结的技能包和受控只读文档连接；不授予任意脚本、网络或主机写权限 |
+| **Local Usability & Data**     | 阶段/阻塞/下一步提示、有界消息历史/分段正文、离线一致快照/恢复演练及引用检查后的缓存隔离 |
+
+本地个人项目的当前能力和证据见 [交付核对](docs/local-project-delivery.md)。
+2026-10-15 的改进仍在本地工作分支，尚未提交/推送；历史 CI 通过不能验证这些未提交改动。
+固定检查只覆盖其明示契约，不等于任意业务功能正确或通用恶意代码沙箱。
 
 ---
 

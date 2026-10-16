@@ -1060,7 +1060,7 @@ describe("message and event API", () => {
       }
 
       return new Response(
-        JSON.stringify([
+        JSON.stringify({ messages: [
           {
             id: "message-1",
             sessionId: "session-1",
@@ -1072,7 +1072,7 @@ describe("message and event API", () => {
             streamState: "complete",
             createdAt: "2026-05-14T00:00:00Z",
           },
-        ]),
+        ], pinnedMessages: [], pinnedTotal: 0, total: 1, hasOlder: false, hasNewer: false, olderCursor: "message-1", newerCursor: "message-1", latestMessageId: "message-1", previewCharacterLimit: 12000 }),
         { status: 200 },
       )
     })

@@ -1,4 +1,4 @@
-"""Fixed, server-owned Vite validation. No package scripts from Agent output."""
+"""Fixed, server-owned validation profiles. No scripts from Agent output."""
 
 import asyncio
 import hashlib
@@ -25,6 +25,7 @@ from app.requirement_validation import requirement_contract as contract_for_plan
 
 SCHEMA = "agenthub.validation.v1"
 PROFILE = "vite-build-smoke-v1"
+BACKEND_PROFILE = "fastapi-contract-v1"
 MAX_FILES = 512
 MAX_BYTES = 16 * 1024 * 1024
 COMMAND_TIMEOUT = 60
@@ -33,6 +34,23 @@ CONFIG_FILES = ("package.json", "vite.config.ts", "tsconfig.json", "tsconfig.app
 
 class ValidationUnavailable(ValueError):
     pass
+
+
+def profile_for_target(target_id):
+    return {"demo-frontend": PROFILE, "demo-backend": BACKEND_PROFILE}.get(target_id)
+
+
+def required_command_kinds(profile):
+    return {PROFILE: ("check", "build", "test"), BACKEND_PROFILE: ("check", "test")}.get(profile, ())
+
+
+def capture_profile_source(root, profile):
+    if profile == BACKEND_PROFILE:
+        from app.backend_validation import capture_backend_source
+        return capture_backend_source(root)
+    if profile != PROFILE:
+        raise ValidationUnavailable("Unsupported automatic validation profile.")
+    return capture_validation_source(root)
 
 
 def digest(value):
@@ -241,7 +259,8 @@ def capture_validation_source_copy(root, contents):
 async def run_automatic_validation(db: DbSession, run: TaskRun, *, ownership_guard=lambda: True, requirement_contract=None):
     task = db.get(Task, run.task_id)
     plan = json.loads(task.plan_json) if task else {}
-    if plan.get("targetId") != "demo-frontend":
+    profile = profile_for_target(plan.get("targetId"))
+    if profile is None:
         return
     existing = validation_for_run(db, run.id)
     if existing is not None:
@@ -250,12 +269,17 @@ async def run_automatic_validation(db: DbSession, run: TaskRun, *, ownership_gua
         return
     adapter_run_id = run.adapter_run_id
     append_task_run_event(db, task_run_id=run.id, event_type="validation.started", payload_json=json.dumps({
-        "schemaVersion": SCHEMA, "profile": PROFILE, "status": "running",
+        "schemaVersion": SCHEMA, "profile": profile, "status": "running",
         "taskRunId": run.id, "adapterRunId": adapter_run_id,
     }))
     cancelled = threading.Event()
     kwargs = {"requirement_contract": requirement_contract} if requirement_contract else {}
-    operation = asyncio.create_task(asyncio.to_thread(validate_copy, Path(run.worktree_path), cancelled, **kwargs))
+    validator = validate_copy
+    if profile == BACKEND_PROFILE:
+        from app.backend_validation import validate_backend_copy
+        validator = validate_backend_copy
+        kwargs = {}
+    operation = asyncio.create_task(asyncio.to_thread(validator, Path(run.worktree_path), cancelled, **kwargs))
     try:
         result = await asyncio.shield(operation)
     except asyncio.CancelledError:
@@ -263,7 +287,7 @@ async def run_automatic_validation(db: DbSession, run: TaskRun, *, ownership_gua
         await asyncio.gather(operation, return_exceptions=True)
         raise
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
-        result = {"schemaVersion": SCHEMA, "profile": PROFILE, "status": "unavailable",
+        result = {"schemaVersion": SCHEMA, "profile": profile, "status": "unavailable",
                   "reason": str(exc) if isinstance(exc, ValidationUnavailable) else "Source capture or command execution was unavailable."}
     if not ownership_guard():
         return
@@ -301,15 +325,18 @@ def validation_currentness(db, run_id, receipt):
     # The embedded review receipt must still refer to the original server event.
     stored = validation_for_run(db, run_id)
     if not receipt.get("eventId") or stored is None or any(stored.get(key) != receipt.get(key) for key in (
-            "eventId", "taskRunId", "adapterRunId", "status", "sourceFingerprint", "policyFingerprint", "requirementFingerprint")):
+            "eventId", "taskRunId", "adapterRunId", "profile", "status", "sourceFingerprint", "policyFingerprint", "requirementFingerprint")):
         return "unverifiable"
     try:
+        task = db.get(Task, run.task_id)
+        plan = json.loads(task.plan_json) if task else {}
+        profile = profile_for_target(plan.get("targetId"))
+        if profile is None or receipt.get("profile") != profile:
+            return "unverifiable"
         if "requirementFingerprint" in receipt:
-            task = db.get(Task, run.task_id)
-            plan = json.loads(task.plan_json) if task else {}
             if digest(contract_for_plan(plan)) != receipt["requirementFingerprint"]:
                 return "expired"
-        current, _ = capture_validation_source(Path(run.worktree_path))
+        current, _ = capture_profile_source(Path(run.worktree_path), profile)
         return "current" if all(current[key] == receipt.get(key) for key in ("sourceFingerprint", "policyFingerprint")) else "expired"
     except (OSError, ValueError):
         return "unverifiable"

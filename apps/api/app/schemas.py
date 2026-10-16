@@ -480,6 +480,9 @@ class MessageResponse(ApiModel):
     attachments: list[dict[str, Any]] = Field(default_factory=list)
     regeneration: Optional[dict[str, Any]] = None
     regeneration_action: Optional[dict[str, Any]] = Field(default=None, alias="regenerationAction")
+    context_budget: Optional[dict[str, Any]] = Field(default=None, alias="contextBudget")
+    content_truncated: bool = Field(default=False, alias="contentTruncated")
+    content_characters: Optional[int] = Field(default=None, alias="contentCharacters")
 
 
 class MessageRegenerateRequest(BaseModel):

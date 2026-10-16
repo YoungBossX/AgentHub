@@ -4,6 +4,44 @@ AgentHub 当前面向本机单用户编程工作流。数据库、会话工作�
 网页提供对话、执行过程及成果查看。本文对应现有实现，原始设计要求的核对见
 [个人项目交付表](local-project-delivery.md)，实测与限制见 [项目状态](project-state.md)。
 
+## 查看最终上下文预算
+
+执行详情、规划详情及预算拒绝回复可展开“上下文预算”，查看当次最终字符/字节总量、
+图片及来源选择记录。来源大小可能重叠，不应相加；字符不等于模型 Token。
+应用在初始请求超过总限额时拒绝调用，不会截断必要规则或静默降低规划方式。
+减少新请求的引用、附件或 Skills 后重新发送；冻结规则变动应先显式刷新会话快照。
+CLI 自行加载的内容和后续工具输出仍在初始输入计量范围之外。
+计量单位、上限和证据见 [最终上下文预算记录](final-context-budget-review.md)。
+
+## 从评审问题准备修复
+
+在成果面板打开评审报告，在“修复与复验”中选择最多 8 个问题，点击“准备修复草稿”。
+此时不会启动 Agent 或修改文件；输入框显示原评审、选择数量和版本绑定，可编辑后明确发送，
+也可取消绑定。源码、目标或原报告已变化时须重新评审，不能静默沿用旧草稿。
+
+修复历史保留新运行及产物入口。固定检查只在同配置/策略和当前源码匹配时显示恢复；
+普通模型建议仍待人工核验。核对当前修复后可明确点击“我已核验此问题”，显示为用户确认；
+后续源码变化会使该确认失效，旧记录仍保留。没有版本证据的历史报告只能走原有手动引用。
+范围和本地验证见 [评审修复验收记录](review-repair-loop-review.md)。
+
+### 开发调用速查
+
+下面是新增读取/修复接口。`id` 为 Session ID，`messageId`/`artifactId` 必须归属同会话。
+POST 沿用下文的 `X-AgentHub-Control: local-workspace`；跨会话、失效源码/版本等会拒绝，
+不能从客户端自报成功覆盖服务端结果。
+
+| 接口 | 参数/用途 |
+| --- | --- |
+| `GET /sessions/{id}/messages/page` | `limit=80`（最多 200）；只选 `before`、`after`、`around` 中一个游标。返回 messages、独立 pinnedMessages/总量及前后游标 |
+| `GET /sessions/{id}/messages/{messageId}` | 有界预览及来源元数据，用于恢复明确的重新生成操作身份 |
+| `GET /sessions/{id}/messages/{messageId}/content` | `offset=0&limit=12000`，Unicode 字符偏移，返回前后段位置；含 NUL 的历史正文返回 409 |
+| `GET /sessions/{id}/reviews/{artifactId}/repair` | 读取当前问题、修复/确认历史 |
+| `POST /sessions/{id}/reviews/{artifactId}/repair/prepare` | JSON `issueIds` 数组（1–8），返回 contentMd/selection，不执行任务 |
+| `POST /sessions/{id}/reviews/{artifactId}/repair/confirm` | JSON messageId、issueId、sourceFingerprint、revision，保存版本校验后的用户确认 |
+
+准备修复后的显式发送仍使用原消息 API 和服务端重建的绑定，不应修改或伪造 selection。
+旧 `GET /sessions/{id}/messages` 保留全量兼容，工作台已改用分页；新客户端应使用有界接口。
+
 ## 本地 API 与预览边界
 
 API 只接受 `127.0.0.1`、`localhost` 或 IPv6 回环 Host。浏览器来源必须是工作台
@@ -53,6 +91,10 @@ Claude Code / ScriptedMock 当前保留原流程并显示不支持此连接。
 下的文本文件，每个最多 12 KB，整个包最多 48 KB。通过相对 Markdown 链接引用资料；只将直接引用的资料
 加载进指令。不执行技能脚本，`allowed-tools` 元数据也不会增加 Agent 权限。
 
+参考资料使用路径/内容条目编辑，可添加、移除或导入 UTF-8 文本文件。导入文件后核对相对路径，
+允许 `.md/.txt/.json/.yaml/.yml`；重复路径、非 UTF-8 或超限内容会阻止应用。
+保存版本冲突保留当前草稿，需核对最新版本后再保存。
+
 聊天输入区“本次技能”默认继承 Agent 设置，也可明确选择最多 3 个技能（指令合计最多 24 KB），或
 “全部取消”让这条消息不使用技能。成功发送后恢复默认选择。群组任务只向适用角色加载相应技能。
 执行过程的“技能加载”显示所用来源、版本、指纹及已加载/角色不适用/脚本模式不支持。
@@ -62,10 +104,17 @@ Claude Code / ScriptedMock 当前保留原流程并显示不支持此连接。
 重新生成消息保留原显式技能包并绑定新消息身份。旧运行不自动补加载后来配置的技能。
 
 普通聊天支持 Markdown 标题、列表、表格、引用和代码。代码块右上角可单独复制
-代码，消息下方可复制完整原文或引用到下一条消息；复制失败会显示提示。宽表格
+代码，消息下方可复制已显示内容或引用到下一条消息；复制失败会显示提示。宽表格
 和长代码在消息内横向滚动。图片链接先显示来源，点击“加载图片”后才请求图片；
 部分图片服务不允许跨源匿名加载，可使用“打开图片链接”。若要让 Agent 读取文件
 或图片，请使用输入框左侧的“添加附件”，普通图片链接不会自动转成模型图像输入。
+
+会话初始加载最近 80 条，最多同时显示 200 条。使用“加载更早消息”“加载较新消息”翻页；
+查看历史时新消息不会把当前窗口挤走，点击“回到最新消息”回到尾页并定位最后一条。
+关键消息展示最近 16 条置顶及总量，点击可定位窗口外的原消息。
+正文超过 12,000 Unicode 字符时显示预览；“查看全文（分段）”每次展示一段，可前后翻阅。
+预览的复制/引用仅包含已显示内容，“复制当前段”只复制该段。数据库和后续 Agent 读取的
+原文保持完整；含 NUL 控制字符的旧内容会明确提示不支持分段，不会改写原文。
 
 消息下方的图钉按钮用于保留后续 Agent 需要参考的约定。置顶后，即使消息已离开
 最近 8 条消息窗口，同会话的新规划和执行请求仍会携带它；取消置顶只影响后续
@@ -280,6 +329,16 @@ TaskRun 执行完成、模型评审通过和网页功能验证是不同证据。
 
 ### 查看分项 QA 结果
 
+内置 `demo-backend` 现在也会在完成前自动验证：平台在临时副本中使用已安装的
+Python 执行语法检查，以及健康接口、联系人读取/创建、非法输入、重复邮箱、
+本地预览 CORS 和 OpenAPI 七组固定契约。它不启动新的 HTTP 服务，不执行目标内
+可修改的测试或配置，也不安装依赖。Python 后端不需要前端构建，QA 会显示该项不适用。
+
+回执绑定本次执行代次、源码、Python/依赖版本与验证策略；源码或策略改变后，
+旧报告保留并显示过期，不能借用为新版本验收。规则、固定检查与模型评审均通过
+才建立已配置验证通过；缺少模型评审仍为待验证。固定契约不覆盖新接口、真实
+数据库或完整前后端联调。隔离副本及 Python 审计限制不等于通用恶意代码沙箱。
+
 新生成的评审报告分别显示规则检查、模型评审，以及静态检查/测试/构建的命令记录。
 “QA 待验证”表示证据尚不完整；“QA 有阻塞问题”表示规则、模型或命令记录存在失败。
 模型的通过结论不能覆盖规则失败，本地 staging 也会拒绝有阻塞问题的报告。
@@ -369,9 +428,54 @@ OAuth/JWT/服务端认证等额外要求不属于脚本登录模板，显式兜�
 减少一次，相关文件/锁/完成检查保留；本地固定样本和验证边界见
 [输出核验性能记录](scope-finalization-performance-review.md)。
 
-备份前正常停止产品服务，保留 SQLite（如有同名 `-wal`/`-shm` 文件一起保留）、
-会话 `.worktrees/`、Git 主仓库以及受保护的本地配置。工作树的 `.git` 引用主仓库，
-只复制 SQLite 或单个工作树不能完整还原工作区。不要为解决启动问题运行重置命令。
+### 一致备份、恢复与缓存隔离
+
+先正常停止产品 API、Agent、Preview 及其他编辑器/Git 写操作；工具不替你终止进程。
+工作树的 `.git` 引用主仓库，只复制 SQLite 或单个工作树不能完整还原工作区。
+API 采用数据库生命周期共享锁；离线维护要求独占锁、配置端口停止监听、无活动运行/预览，
+并在 SQLite 写保留下捕获。旧 API 需先停机；独占锁不限制独立编辑器，不属于 OS 文件系统快照。
+
+以下从仓库根目录执行，示例使用已有 Windows `.venv`；macOS/Linux 替换为 `.venv/bin/python`。
+快照目标必须是仓库外的新目录，实际数据库路径与 API 端口按自己的配置填写：
+
+```powershell
+.venv\Scripts\python.exe scripts/local-data.py snapshot --repo X:\Git_Clone\AgentHub --database X:\Git_Clone\AgentHub\apps\api\data\agenthub.sqlite3 --destination E:\AgentHubBackups\snapshot-20261015 --api-port 8000
+.venv\Scripts\python.exe scripts/local-data.py verify --snapshot E:\AgentHubBackups\snapshot-20261015
+.venv\Scripts\python.exe scripts/local-data.py restore --snapshot E:\AgentHubBackups\snapshot-20261015 --destination E:\AgentHubBackups\rehearsal-20261015
+```
+
+快照通过 SQLite backup API 包含 WAL，保存自有 Git 元数据及 `.worktrees` 中注册的工作树、
+已跟踪/未被忽略的源文件和暂存状态；保存逐文件哈希、HEAD/index 和来源路径。
+上限 100,000 文件/4 GiB、单文件 512 MiB。缺失/外来工作树、链接/硬链接、外部 Git object store、
+扩展 Git 格式/子模块、活动运行、来源变化或校验失败时拒绝完整快照，部分输出保留供检查。
+依赖、忽略的构建/运行产物、`.env*`、`secrets` 和外部项目宿主源目录不包含在内，需分别保管/准备。
+快照含用户消息、附件和 Git 本地配置，未加密；存放在自己的私有目录，只恢复自己生成的快照。
+
+独立恢复演练只修复副本 Git 指针/配置，检查 SQLite、文件、HEAD/index/对象；不会改写 DB 的
+原路径、历史哈希或把旧验收变成新验收。演练目录不能直接当迁移后的产品运行。
+原位置完整丢失时，才能向精确原路径恢复，并使用 `verify` 返回的完整 `snapshotId`：
+
+```powershell
+.venv\Scripts\python.exe scripts/local-data.py restore --snapshot E:\AgentHubBackups\snapshot-20261015 --destination X:\Git_Clone\AgentHub --original-paths --confirm-id <snapshotId>
+```
+
+已有目录一律拒绝覆盖，恢复期间持有目标 DB 独占锁且文件只能新建。环境配置/依赖按原安装说明另行准备，重新启动并检查原会话与预览；
+工具恢复成功不等于完成运行重启验收。不要为排障运行数据库或 Git 重置命令。
+
+容量清单和清理也在停机后执行。预览不移动文件，输出新文件保存在仓库外：
+
+```powershell
+.venv\Scripts\python.exe scripts/local-data.py inventory --repo X:\Git_Clone\AgentHub --database X:\Git_Clone\AgentHub\apps\api\data\agenthub.sqlite3
+.venv\Scripts\python.exe scripts/local-data.py cleanup-preview --repo X:\Git_Clone\AgentHub --database X:\Git_Clone\AgentHub\apps\api\data\agenthub.sqlite3 --output E:\AgentHubBackups\cleanup-preview.json
+.venv\Scripts\python.exe scripts/local-data.py cleanup-apply --repo X:\Git_Clone\AgentHub --database X:\Git_Clone\AgentHub\apps\api\data\agenthub.sqlite3 --plan E:\AgentHubBackups\cleanup-preview.json --confirm-id <planId>
+```
+
+先读预览的候选及阻塞原因，再使用其完整 `planId` 应用。只允许固定目录中具有已知标识的
+Python/pytest 缓存；未知文件、Git 跟踪、持久化路径/JSON 引用或过期预览都保留/拒绝。
+应用移入 `.agenthub-maintenance/quarantine/<planId>`，逐步保存 `receipt.json`；第二步失败也
+保留已移动内容和未移动项。它不删除 Session/Run/制品、工作树、依赖或用户项目，不自动清空
+隔离区；磁盘字节仍保留（`diskBytesFreed=0`）。如需恢复，按回执路径在对应原目录不存在时
+手动移回；Python/pytest 缓存也可在后续运行重新生成。详见 [验收记录](local-data-maintenance-review.md)。
 
 工程验证使用 `pnpm check`、`pnpm test:local`、`pnpm test:web`、`pnpm test`。
 仓库含受版本管理的依赖补丁；按锁文件复现使用

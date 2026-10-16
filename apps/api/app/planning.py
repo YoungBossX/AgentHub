@@ -282,6 +282,7 @@ def plan_for_message(
                             db,
                             message,
                             conversation.outcome,
+                            context_budget=conversation.provider_result.context_budget,
                         )
                         return []
                     llm_outcome = create_llm_plan_tasks_from_outcome(
@@ -298,6 +299,9 @@ def plan_for_message(
                         )
                         return llm_tasks
                 except LLMPlannerError as exc:
+                    if exc.error_code == "CONTEXT_BUDGET_EXCEEDED":
+                        _create_orchestrator_boundary_message(db, message, str(exc), context_budget=exc.memory_evidence.get("contextBudget"))
+                        return []
                     outcome = conversation.outcome if conversation is not None else {}
                     is_task_plan_validation_failure = outcome.get("outcomeType") == "task_plan"
                     llm_fallback = llm_planner_fallback_metadata(

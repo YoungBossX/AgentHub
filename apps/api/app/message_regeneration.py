@@ -3,7 +3,7 @@
 import json
 
 from fastapi import HTTPException
-from sqlalchemy import update
+from sqlalchemy import case, func, update
 from sqlmodel import Session as DbSession, select
 
 from app.models import Message, Session, Task, TaskRun
@@ -23,8 +23,9 @@ def metadata(message: Message) -> dict:
 
 def attachment_source(db: DbSession, message: Message) -> str:
     source_id = metadata(message).get("attachmentSourceMessageId")
-    source = db.get(Message, source_id) if isinstance(source_id, str) else None
-    return source.id if source and source.session_id == message.session_id and source.sender_type == "user" else message.id
+    source = db.exec(select(Message.id).where(Message.id == source_id, Message.session_id == message.session_id,
+        Message.sender_type == "user")).first() if isinstance(source_id, str) else None
+    return source or message.id
 
 
 def source_request(db: DbSession, message: Message, messages: dict | None = None) -> Message | None:
@@ -40,8 +41,9 @@ def regeneration_view(db: DbSession, session_id: str, messages: list[Message] | 
                    .where(Task.session_id == session_id, TaskRun.state.in_(ACTIVE_STATES))).first() is not None
     unfinished = set(db.exec(select(Task.created_by_message_id).where(Task.session_id == session_id,
                      Task.status.notin_({"completed", "failed", "cancelled", "interrupted"}))).all())
-    return {"messages": {row.id: row for row in messages}, "busy": busy, "unfinished": unfinished,
-            "preparing": any(metadata(row).get("state") == "preparing" for row in messages)}
+    preparing = db.exec(select(Message.id).where(Message.session_id == session_id,
+        case((func.json_valid(Message.regeneration_json), func.json_extract(Message.regeneration_json, '$.state')), else_=None) == "preparing").limit(1)).first() is not None
+    return {"messages": {row.id: row for row in messages}, "busy": busy, "unfinished": unfinished, "preparing": preparing}
 
 
 def _reason(db: DbSession, message: Message, source: Message, view: dict) -> str | None:
@@ -121,6 +123,9 @@ def prepare_regeneration(db: DbSession, session_id: str, message_id: str, operat
                       content_md=source.content_md, message_kind="chat", parent_message_id=source.parent_message_id,
                       context_json=source.context_json, regeneration_json=json.dumps(claim, separators=(",", ":")))
     from app.skills import rebind_message_selection, SkillError
+    from app.review_repairs import rebind_message
+
+    rebind_message(db, source, created)
 
     try:
         rebind_message_selection(source, created)

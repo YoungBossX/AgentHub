@@ -1,0 +1,6 @@
+## 1. Native QA evaluation
+
+- [x] 1.1 Implement native QA collection/gates, cohort freeze/invalidation, bounded retry policy and per-attempt/per-role/first/final elapsed statistics; verify wrong/missing/scripted/stale QA, same-source guards, retry/cancel semantics and existing workflow execution with explicit test sources. Final focused 35, earlier workflow 48 and adjacent native/layered QA 55 passed (overlap); import/syntax, root/strict/whitespace checks passed at the documented revisions. See `docs/native-qa-evaluation-review.md`. Actual live evidence is recorded in completed item 1.2.
+- [x] 1.2 Freeze the implementation and run at least ten live samples over the five categories on one cohort; inspect actual native QA and independent acceptance, preserve all failures/retries/time and publish bounded evidence without claiming repeated cases are distinct tasks or generic model performance.
+
+Post-batch reporting correction: 37 focused tests passed (including initial injected-category counts, started/finalized/timed separation and unknown-time harness failure). The live cohort predates this correction; original results remain immutable. First/final 4/10 and 6/10, natural 4/8, injected recovery 2/2 with two retries, ten verified native QA attempts. See bounded evidence and inspection.

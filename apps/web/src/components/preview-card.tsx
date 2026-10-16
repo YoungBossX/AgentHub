@@ -18,6 +18,7 @@ import { type ChangeEvent, useState } from "react"
 import { DeployCard } from "./deploy-card"
 import { DiffCard } from "./diff-card"
 import { QaEvidence } from "./qa-evidence"
+import { ReviewRepair } from "./review-repair"
 import { UserCodeEditStatus } from "./user-code-edit-context"
 import { Button } from "@/components/ui/button"
 import type {
@@ -1007,6 +1008,7 @@ function ReviewCard({ review }: { review: ReviewArtifact }) {
         {reviewTextLabel(review.summary)}
       </p>
       <QaEvidence review={review} />
+      <ReviewRepair artifactId={review.artifactId} />
 
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
         <div>

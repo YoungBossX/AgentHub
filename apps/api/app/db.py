@@ -39,6 +39,12 @@ def _ensure_sqlite_demo_schema_indexes(db_engine: Engine) -> None:
         return
     tables = set(inspect(db_engine).get_table_names())
     with db_engine.begin() as connection:
+        if "message" in tables:
+            columns = {column["name"] for column in inspect(db_engine).get_columns("message")}
+            if {"session_id", "created_at", "id"}.issubset(columns):
+                connection.execute(text("CREATE INDEX IF NOT EXISTS ix_message_session_order ON message (session_id, created_at, id)"))
+                if "pinned_at" in columns:
+                    connection.execute(text("CREATE INDEX IF NOT EXISTS ix_message_session_pins ON message (session_id, pinned_at, created_at, id)"))
         if "taskrunevent" in tables:
             connection.execute(
                 text(

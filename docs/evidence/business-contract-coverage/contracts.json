@@ -1,0 +1,353 @@
+{
+  "schemaVersion": "agenthub.business_contract_evidence.v1",
+  "mode": "trusted-harness-real-source-and-browser",
+  "providerEvaluated": false,
+  "liveHttpPreview": false,
+  "deploymentExecuted": false,
+  "backend": {
+    "schemaVersion": "agenthub.validation.v1",
+    "profile": "fastapi-contract-v1",
+    "status": "passed",
+    "files": {
+      "apps/demo-api/tests/test_contacts.py": "3f9e860635952c680d412b1ab5bfb881f730cde618b87d41de37938937808c04",
+      "apps/demo-api/README.md": "998991ab35d6a1ba213ecbf8b9abb02b1d9243da0ca36da021eb386a3736c396",
+      "apps/demo-api/app/__init__.py": "d61ab2e437fff4aa583396952d03bcbc0ed7be07d762ccea2f35aa1d1d3dbbe3",
+      "apps/demo-api/app/main.py": "126939ebdfdb77c9d2b38209a02cccce7fb37784fac6c69bcfd79e649b1ca03d"
+    },
+    "sourceFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f",
+    "policyFingerprint": "e3095b2d255d704cd3d62418ff176a8f2e750f2d2d6b8f0d36d53e84bb165dc6",
+    "commands": [
+      {
+        "kind": "check",
+        "status": "passed",
+        "exitCode": 0,
+        "durationMs": 171,
+        "checks": [
+          {
+            "id": "python.syntax",
+            "status": "passed"
+          }
+        ],
+        "schemaVersion": "agenthub.backend_contract.v2"
+      },
+      {
+        "kind": "test",
+        "status": "passed",
+        "exitCode": 0,
+        "durationMs": 625,
+        "checks": [
+          {
+            "id": "api.health",
+            "status": "passed"
+          },
+          {
+            "id": "api.contacts_list",
+            "status": "passed"
+          },
+          {
+            "id": "api.create",
+            "status": "passed"
+          },
+          {
+            "id": "api.validation",
+            "status": "passed"
+          },
+          {
+            "id": "api.duplicate",
+            "status": "passed"
+          },
+          {
+            "id": "api.cors",
+            "status": "passed"
+          },
+          {
+            "id": "api.openapi",
+            "status": "passed"
+          },
+          {
+            "id": "api.field_boundaries",
+            "status": "passed"
+          },
+          {
+            "id": "api.invalid_types",
+            "status": "passed"
+          },
+          {
+            "id": "api.unique_identity",
+            "status": "passed"
+          },
+          {
+            "id": "api.seed_duplicate",
+            "status": "passed"
+          },
+          {
+            "id": "api.method_contract",
+            "status": "passed"
+          }
+        ],
+        "schemaVersion": "agenthub.backend_contract.v2"
+      }
+    ]
+  },
+  "integration": [
+    {
+      "status": "passed",
+      "contract": "contacts-create-v1",
+      "policyFingerprint": "9ea3734946e5ff13abb59ccd03f57b2e06b304503708c6eda84ba90d31a1dcb4",
+      "checks": [
+        {
+          "id": "desktop.initial",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.create",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.persist",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.layout",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.runtime",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.initial",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.create",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.persist",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.layout",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.runtime",
+          "status": "passed"
+        }
+      ],
+      "requests": [
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        }
+      ],
+      "browserVersion": "155.0.4283.45",
+      "frontendFingerprint": "7c6398b831e9c5f54c46e196643ade0b47e60111de116dd5d28d4e3c179cd871",
+      "backendFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f"
+    },
+    {
+      "status": "passed",
+      "contract": "contacts-resilience-v2",
+      "policyFingerprint": "04b9d22c2a606bcda528b888182b7a68e48cb87635b3a10f063f175465dc1bad",
+      "checks": [
+        {
+          "id": "desktop.initial",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.create",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.duplicate",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.invalid",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.server_failure",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.retry",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.persist",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.layout",
+          "status": "passed"
+        },
+        {
+          "id": "desktop.runtime",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.initial",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.create",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.duplicate",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.invalid",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.server_failure",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.retry",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.persist",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.layout",
+          "status": "passed"
+        },
+        {
+          "id": "narrow.runtime",
+          "status": "passed"
+        }
+      ],
+      "requests": [
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 409
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 503,
+          "injected": "fixed_503"
+        },
+        {
+          "view": "desktop",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "desktop",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 409
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 503,
+          "injected": "fixed_503"
+        },
+        {
+          "view": "narrow",
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "view": "narrow",
+          "method": "GET",
+          "status": 200
+        }
+      ],
+      "browserVersion": "155.0.4283.45",
+      "frontendFingerprint": "7c6398b831e9c5f54c46e196643ade0b47e60111de116dd5d28d4e3c179cd871",
+      "backendFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f"
+    }
+  ],
+  "limits": "Fixed contacts contracts only. API executes in a disposable copy, browser uses trusted in-process ASGI transport. Synthetic 503s labeled, no native Provider or product UI/SSE coverage. Negative controls verified separately in test_business_contracts.py."
+}

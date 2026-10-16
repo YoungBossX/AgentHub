@@ -126,6 +126,31 @@ def _validate_command_policy(spec: TaskGraphTaskSpec, target: TargetProject) -> 
             )
 
 
+def scoped_group_validation_expectations(
+    global_entries: list[str], local_entries: list[str], *, target_id: str,
+    allowed_targets: dict[str, TargetProject],
+) -> list[str]:
+    """Distribute aggregate commands without granting new target permissions.
+
+    Validate the group union before filtering so an unknown command cannot be
+    silently discarded. Task-local entries remain unchanged for the normal
+    per-target validator to reject misplaced commands.
+    """
+    commands = {key: set(allowed_validation_commands(target).values()) for key, target in allowed_targets.items()}
+    selected = []
+    for entry in global_entries:
+        if not _looks_like_command(entry):
+            selected.append(entry)
+            continue
+        owners = {key for key, permitted in commands.items()
+                  if entry in permitted or _starts_with_allowed_command_note(entry, permitted)}
+        if not owners:
+            raise PlanValidationError(f"Manager planner generated unsupported validation command for group: {entry}")
+        if target_id in owners:
+            selected.append(entry)
+    return list(dict.fromkeys([*selected, *local_entries]))
+
+
 def _validate_dependency_keys(task_specs: list[TaskGraphTaskSpec]) -> None:
     ordered_keys = [
         f"{index + 1}-{spec.role}-{spec.intent_type}"

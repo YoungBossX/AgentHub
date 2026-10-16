@@ -9,9 +9,14 @@ import { GroupSummaryCard } from "./group-summary-card"
 import { ChatMarkdown } from "./chat-markdown"
 import { CopyTextButton } from "./copy-text-button"
 import { MessageAttachments } from "./message-attachments"
+import { ContextBudgetEvidence } from "./context-budget-evidence"
+import { LongMessageContent } from "./long-message-content"
+import { HISTORY_WINDOW_SIZE } from "@/lib/message-history-api"
+import type { useMessageHistory } from "./use-message-history"
 import { MessageRegeneration, RegenerationLineage } from "./message-regeneration"
 
 type ChatThreadProps = {
+  history?: ReturnType<typeof useMessageHistory>
   onRegenerateMessage?: (message: ChatMessage) => Promise<void>
   backendUrl?: string
   agents?: AgentContact[]
@@ -26,6 +31,7 @@ type ChatThreadProps = {
 }
 
 export function ChatThread({
+  history,
   onRegenerateMessage,
   backendUrl = "",
   agents = [],
@@ -38,17 +44,27 @@ export function ChatThread({
   taskCount,
   taskListSlot,
 }: ChatThreadProps) {
+  const visible = messages.slice(-HISTORY_WINDOW_SIZE)
+  const pins = (history?.pins ?? visible.filter(message => message.pinnedAt)).slice(0, 16)
+  const pinnedTotal = history?.pinnedTotal ?? visible.filter(message => message.pinnedAt).length
   return (
     <section
       className="min-h-0 flex-1 overflow-y-auto pr-1"
       data-region="center-scroll"
     >
       <div className="mx-auto grid w-full min-w-0 max-w-3xl grid-cols-1 gap-4">
-        {messages.some((message) => message.pinnedAt) ? <details className="sticky top-0 z-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm" aria-label="关键消息">
-          <summary className="cursor-pointer text-sm font-medium"><Pin size={14} className="mr-2 inline" />置顶消息 · {messages.filter((message) => message.pinnedAt).length}</summary>
-          <div className="mt-2 grid max-h-48 gap-1 overflow-y-auto">{messages.filter((message) => message.pinnedAt).map((message) => <button key={message.id} type="button" onClick={() => document.getElementById(`message-${message.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" })} className="rounded p-2 text-left text-xs text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)]">{message.contentMd.slice(0, 140)}</button>)}</div>
+        {pinnedTotal > 0 ? <details className="sticky top-0 z-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm" aria-label="关键消息">
+          <summary className="cursor-pointer text-sm font-medium"><Pin size={14} className="mr-2 inline" />置顶消息 · {pinnedTotal}</summary>
+          {pinnedTotal > pins.length ? <p className="mt-2 text-xs text-[var(--muted-foreground)]">显示最近 {pins.length} 条置顶，其余置顶仍保留在可翻页查看的会话历史中。</p> : null}
+          <div className="mt-2 grid max-h-48 gap-1 overflow-y-auto">{pins.map((message) => <button key={message.id} type="button" onClick={() => history ? history.openMessage(message.id) : document.getElementById(`message-${message.id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" })} className="rounded p-2 text-left text-xs text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)]">{message.contentMd.slice(0, 140)}</button>)}</div>
         </details> : null}
-        {selectedSession && messages.length === 0 ? (
+        {history ? <div data-history-latest={history.latestMessageId} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-2 text-xs" aria-label="消息历史导航">
+          <span>{history.loading ? "正在加载最近消息…" : `当前显示 ${visible.length} 条 · 窗口上限 ${HISTORY_WINDOW_SIZE} 条`}{history.historical ? " · 正在查看历史" : " · 跟随最新"}</span>
+          <div className="flex flex-wrap gap-2">{history.hasOlder ? <button type="button" disabled={history.pending} className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 disabled:opacity-40" onClick={() => void history.older()}>加载更早消息</button> : null}
+            <button type="button" disabled={history.pending} className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 disabled:opacity-40" onClick={() => void history.latest()}>{history.historical ? "回到最新消息" : "刷新消息"}</button></div>
+          {history.hasNewer ? <p className="w-full text-[var(--muted-foreground)]">后面还有消息，可继续向后翻页或回到最新。</p> : null}
+        </div> : null}
+        {selectedSession && visible.length === 0 && !history?.loading ? (
           <div className="rounded-lg border border-[var(--border)] bg-white p-5 shadow-sm">
             <div className="flex items-start gap-3">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)]">
@@ -66,7 +82,7 @@ export function ChatThread({
           </div>
         ) : null}
 
-        {messages.map((message) => (
+        {visible.map((message) => (
           <MessageBubble
             onRegenerateMessage={onRegenerateMessage}
             backendUrl={backendUrl}
@@ -79,6 +95,7 @@ export function ChatThread({
             actionsPending={actionsPending}
           />
         ))}
+        {history?.hasNewer ? <button type="button" disabled={history.pending} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-xs disabled:opacity-40" onClick={() => void history.newer()}>加载较新消息</button> : null}
 
 
         {taskListSlot}
@@ -133,13 +150,16 @@ function MessageBubble({
           {message.pinnedAt ? <Pin aria-label="消息已置顶" size={12} className="ml-2 inline text-[var(--primary)]" /> : null}
         </p>
         {message.messageKind === "group_summary" && message.groupSummary?.evidence ? <GroupSummaryCard summary={message.groupSummary} onRetry={onRetryGroupSummary} /> : <ChatMarkdown content={message.contentMd} messageId={message.id} />}
+        <LongMessageContent key={message.id} backendUrl={backendUrl} message={message} />
         {message.attachments?.length ? <MessageAttachments items={message.attachments} backendUrl={backendUrl} /> : null}
+        <ContextBudgetEvidence receipt={message.contextBudget} />
         <RegenerationLineage message={message} />
         <div className={cn("mt-2 flex gap-1", isUser ? "justify-end" : "justify-start")}>
           {onPinMessage ? <button type="button" disabled={actionsPending} aria-label={message.pinnedAt ? "取消置顶消息" : "置顶消息"} title={message.pinnedAt ? "取消置顶消息" : "置顶关键消息"} onClick={() => onPinMessage(message, !message.pinnedAt)} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-40">{message.pinnedAt ? <PinOff size={13} /> : <Pin size={13} />}</button> : null}
-          <CopyTextButton text={message.contentMd} label="复制消息" ariaLabel="Copy message" compact />
+          <CopyTextButton text={message.contentMd} label={message.contentTruncated ? "复制已显示预览" : "复制消息"} ariaLabel={message.contentTruncated ? "Copy displayed preview" : "Copy message"} compact />
           <button
-            aria-label="Quote as context"
+            aria-label={message.contentTruncated ? "Quote displayed preview as context" : "Quote as context"}
+            title={message.contentTruncated ? "引用已显示的预览；完整原文可分段查看。" : "引用消息为上下文"}
             className={cn(
               "inline-flex h-7 w-7 items-center justify-center rounded-md transition",
               isUser

@@ -40,6 +40,16 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: navigationMocks.replace }),
   useSearchParams: () => new URLSearchParams(navigationMocks.search),
 }))
+vi.mock("@/lib/message-history-api", async original => ({
+  ...await original<typeof import("@/lib/message-history-api")>(),
+  listMessagePage: async (url: string, sessionId: string) => {
+    const messages = await apiMocks.listSessionMessages(url, sessionId)
+    return { messages, pinnedMessages: messages.filter((row: ChatMessage) => row.pinnedAt).slice(0, 16),
+      pinnedTotal: messages.filter((row: ChatMessage) => row.pinnedAt).length, total: messages.length,
+      hasOlder: false, hasNewer: false, olderCursor: messages[0]?.id ?? null, newerCursor: messages.at(-1)?.id ?? null,
+      latestMessageId: messages.at(-1)?.id ?? null, previewCharacterLimit: 12000 }
+  },
+}))
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),

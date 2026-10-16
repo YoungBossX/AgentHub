@@ -14,6 +14,6 @@ def context_section(context_pack: dict[str, Any]) -> str:
     return (
         "Canonical Shared Context:\n"
         "```json\n"
-        f"{json.dumps(canonical_context, ensure_ascii=True, sort_keys=True, indent=2)}\n"
+        f"{json.dumps(canonical_context, ensure_ascii=False, sort_keys=True, indent=2)}\n"
         "```"
     )

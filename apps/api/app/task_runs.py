@@ -845,6 +845,8 @@ def metrics_for_run(task_run: TaskRun) -> dict[str, Any]:
     metrics.pop("skillBinding", None)
     metrics.pop("mcpBinding", None)
     metrics.pop("_nativeReviewBinding", None)
+    metrics.pop("_reviewRepairLaunch", None)
+    metrics.pop("_reviewRepairOutput", None)
 
     public_decision = _public_scope_decision(
         task_run,

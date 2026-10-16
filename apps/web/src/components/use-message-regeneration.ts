@@ -2,9 +2,10 @@
 
 import { useRef, useState } from "react"
 import { listSessionMessages, listSessionTasks, regenerateSessionMessage, RegenerationRequestError, type ChatMessage, type SessionTask } from "@/lib/api"
+import { getHistoryMessage, listMessagePage, type MessagePage } from "@/lib/message-history-api"
 
 export function useMessageRegeneration(backendUrl: string, selectedSessionId: string | null,
-  apply: (sessionId: string, messages: ChatMessage[], tasks: SessionTask[], created: ChatMessage) => void) {
+  apply: (sessionId: string, messages: ChatMessage[], tasks: SessionTask[], created: ChatMessage, page?: MessagePage) => void) {
   const inFlight = useRef(new Set<string>())
   const operations = useRef(new Map<string, string>())
   const [pending, setPending] = useState<string[]>([])
@@ -33,7 +34,9 @@ export function useMessageRegeneration(backendUrl: string, selectedSessionId: st
         // A response can be lost after persistence. Resolve by identity before
         // offering another deliberate generation; never resend a fresh UUID.
         const history = await listSessionMessages(backendUrl, sessionId).catch(() => [])
-        const saved = history.find((row) => row.id === operationId && row.regeneration?.sourceMessageId === message.id)
+        const located = history.find((row) => row.id === operationId)
+          ?? await getHistoryMessage(backendUrl, sessionId, operationId).catch(() => undefined)
+        const saved = located?.regeneration?.sourceMessageId === message.id ? located : undefined
         if (saved) created = saved
         else {
           if (error instanceof RegenerationRequestError && error.status >= 400 && error.status < 500) {
@@ -43,8 +46,8 @@ export function useMessageRegeneration(backendUrl: string, selectedSessionId: st
           throw new Error("网络结果尚未确认。再次确认会检查同一次操作，不会重复提交新任务。")
         }
       }
-      const [messages, tasks] = await Promise.all([listSessionMessages(backendUrl, sessionId), listSessionTasks(backendUrl, sessionId)])
-      apply(sessionId, messages, tasks, created)
+      const [page, tasks] = await Promise.all([listMessagePage(backendUrl, sessionId), listSessionTasks(backendUrl, sessionId)])
+      apply(sessionId, page.messages, tasks, created, page)
       forget()
       if (created.regeneration?.state === "failed") throw new Error("原请求已保留，但本次规划未完成。请查看消息和已有任务，再决定是否重新生成。")
     } finally {

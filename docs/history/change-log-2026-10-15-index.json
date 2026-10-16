@@ -1,0 +1,25 @@
+{
+  "originalSections": 94,
+  "originalNormalizedUtf8Sha256": "216cdd30f3aed4f3b0d8352d62e09e2473347a019b36afa7b757a7475ec41e1d",
+  "archives": [
+    {
+      "file": "change-log-2026-10-15-1.md",
+      "lines": 946,
+      "sections": 63,
+      "eofSeparatorNewlinesRemoved": 1
+    },
+    {
+      "file": "change-log-2026-10-15-2.md",
+      "lines": 889,
+      "sections": 22,
+      "eofSeparatorNewlinesRemoved": 1
+    },
+    {
+      "file": "change-log-2026-10-15-3.md",
+      "lines": 348,
+      "sections": 9
+    }
+  ],
+  "currentLines": 66,
+  "deliveryNormalization": "2026-10-16: remove only trailing empty archive separators for Git whitespace checks; append eofSeparatorNewlinesRemoved newlines before restoring relative links to reconstruct the original section text byte-for-byte."
+}

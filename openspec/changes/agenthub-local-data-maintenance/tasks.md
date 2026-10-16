@@ -1,0 +1,4 @@
+## 1. Local data maintenance
+
+- [x] 1.1 Implement offline API/SQLite/Git exclusion, consistent bounded snapshots, verification and isolated/same-location restore; verify WAL, staged/unstaged/untracked/deleted files, linked worktree identity, integrity/tamper/path/link/active-state refusal and truthful scope. Final review added restore-time API exclusion and exclusive file creation; final combined maintenance tests 33 passed. See `docs/local-data-maintenance-review.md`.
+- [x] 1.2 Implement bounded storage inventory and reference-safe cleanup preview/explicit quarantine with stale/tamper/ownership/partial-failure fences; verify active Sessions/user paths are retained and document the operator workflow. Combined maintenance 30 passed, final cleanup 12 passed (overlapping), root checks and strict validation passed. See the review and `docs/local-usage.md`.

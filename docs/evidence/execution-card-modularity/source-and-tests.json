@@ -1,0 +1,324 @@
+{
+  "schemaVersion": "agenthub.modularity_source_evidence.v1",
+  "backend": {
+    "movedDefinitions": [
+      "_ExecutionLeaseToken",
+      "_RecoveredTaskRunState",
+      "_RequestLaunchSnapshot",
+      "_PrepareFailureOwnershipSnapshot",
+      "_renew_execution_lease",
+      "_task_run_matches_execution_lease",
+      "_queue_entry_matches_execution_lease",
+      "_session_matches_execution_lease",
+      "_target_lock_matches_execution_lease",
+      "_execution_lease_token_for_task_run",
+      "_execution_lease_ownership_error"
+    ],
+    "unchangedEngineDefinitions": [
+      "_run_sync_execution_step",
+      "_RequestPersistenceOwnershipError",
+      "_request_persistence_ownership_error",
+      "_FinalizerCommitFence",
+      "_task_run_row_matches_execution_identity",
+      "_recover_finalizer_scope_error",
+      "_ExecutionLeaseController",
+      "get_preview_service",
+      "get_deploy_service",
+      "schedule_task_run_execution",
+      "DispatchClaim",
+      "BoundedRunDispatcher",
+      "RunWorker",
+      "next_queued_task_run",
+      "queued_task_runs",
+      "agent_run_request_for",
+      "_capture_request_launch_snapshot",
+      "_expected_task_run_worktree_path",
+      "_external_target_registration_fingerprint_for",
+      "_persist_context_snapshot",
+      "_request_launch_snapshot_matches",
+      "plan_json_for_task",
+      "adapter_for_type",
+      "_require_request_launch_snapshot_current",
+      "_post_binding_launch_snapshot",
+      "_final_launch_token_matches",
+      "_launch_adapter_at_final_execution_boundary",
+      "_ExecutionAccessBindingAdapter",
+      "_execution_access_capabilities_error",
+      "_adapter_capabilities_for_execution",
+      "_claim_scope_execution_attempt",
+      "_persist_active_task_run_scope_failure",
+      "_freeze_prepare_failure_ownership",
+      "_prepare_failure_write_lock_is_current",
+      "_prepare_failure_ownership_matches",
+      "execute_task_run",
+      "_run_adapter_stream_with_execution_lease",
+      "_interrupt_exact_supervised_run",
+      "_run_with_execution_lease",
+      "finalize_adapter_completed_task_run",
+      "_commit_exact_generation_finalizer",
+      "_commit_adapter_completed_task_run",
+      "_fail_native_review",
+      "_complete_native_review",
+      "_record_completion_validation",
+      "_fail_write_completion",
+      "_claim_scope_finalization",
+      "finalize_completed_task_run",
+      "_collect_completed_task_run_artifacts",
+      "_collect_task_run_review",
+      "_run_completed_task_run_side_effects",
+      "_run_completed_task_run_sync_side_effects",
+      "_advance_ready_integrations",
+      "_finish_completed_task_run_side_effects",
+      "_record_scope_validation_event",
+      "_auto_start_next_pipeline_task",
+      "_complete_ready_pipeline_review_tasks",
+      "complete_ready_session_review_tasks",
+      "_dependency_review_evidence",
+      "_maybe_auto_preview_and_mock_deploy",
+      "_is_auto_pipeline_task",
+      "_has_task_run",
+      "_background_execute_task_run",
+      "_background_run_worker_once",
+      "_background_dispatch_queued_task_runs",
+      "_execute_dispatch_claim",
+      "execute_task_run_background",
+      "_prepare_claimed_task_run_for_adapter",
+      "_scope_baseline_required_for_run",
+      "_resolve_provider_gateway_for_run",
+      "_release_provider_capacity",
+      "_role_for_task_run",
+      "_new_worker_id",
+      "interrupt_supervised_task_run"
+    ],
+    "explicitDifferences": [
+      "Two function exports renamed inside ownership module; historic engine wrappers retained.",
+      "Token capture accepts an optional explicit clock; both engine wrappers forward existing engine clock."
+    ],
+    "engineBeforeLines": 4103,
+    "engineAfterLines": 3743
+  },
+  "files": {
+    "apps/api/app/run_engine.py": {
+      "sha256": "168fd2de7467e8b23586b4ac7ba89030cca938758b89369455ac4eb9d445df07",
+      "lines": 3743
+    },
+    "apps/api/app/execution_ownership.py": {
+      "sha256": "1527ceec17e2643b5b29dbb8b12526162c07908c18bc03d99289875b6e3c20ba",
+      "lines": 419
+    },
+    "apps/web/src/components/task-card-list.tsx": {
+      "sha256": "e18c8657642246f3a25a6ca893435f3fa5a78b4b8886725c62afb4cf98663bd5",
+      "lines": 767
+    },
+    "apps/web/src/components/task-card-data.ts": {
+      "sha256": "1f858902187a92e071e6ab0f6a2d9fe9d7aa5c3e886f28ab94b984674ced21cb",
+      "lines": 156
+    },
+    "apps/web/src/components/task-plan-summary.tsx": {
+      "sha256": "9f8dac7f4283d58fff9b496676f536b514926779bcfd4e3e821e71ebc23c1fc8",
+      "lines": 213
+    },
+    "apps/web/src/components/artifact-message-cards.tsx": {
+      "sha256": "e10739e58faabbd49b671146c059e54640bce69c14625e2cdd2c069384cf7ae7",
+      "lines": 408
+    }
+  },
+  "baselineDirectoryName": "agenthub-modularity-baseline-0_ruht63",
+  "limits": "Source-equivalence plus scoped runtime/component regression evidence. No complete API rerun, product browser/HTTP/SSE, new real Provider run, deployment or remote CI. Not a cryptographic attestation; prior native-QA cohort remains historical.",
+  "frontend": {
+    "movedDeclarations": [
+      {
+        "file": "task-card-data.ts",
+        "name": "PlannerEvidenceSummary"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "PMODecisionSummaryData"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "SchedulerMeta"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "plannerEvidenceFromPlan"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "pmoDecisionFromPlan"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "planReviewMetadataFromPlan"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "taskSupportsPreview"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "previewTargetIdForTask"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "taskBreakdownFromPlan"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "objectValue"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "stringValue"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "stringList"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "schedulerMeta"
+      },
+      {
+        "file": "task-card-data.ts",
+        "name": "shortId"
+      },
+      {
+        "file": "task-plan-summary.tsx",
+        "name": "PlanReviewSummary"
+      },
+      {
+        "file": "task-plan-summary.tsx",
+        "name": "PMODecisionSummary"
+      },
+      {
+        "file": "task-plan-summary.tsx",
+        "name": "pmoDecisionLabel"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "ArtifactContextIntent"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "ArtifactMessageCards"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "ArtifactMessageCard"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "ContextActionButtons"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "compareArtifactCards"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "artifactCardMeta"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "artifactCardKindLabel"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "artifactInspectLabel"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "ArtifactKindIcon"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "artifactCardIconClass"
+      },
+      {
+        "file": "artifact-message-cards.tsx",
+        "name": "artifactCardBorder"
+      }
+    ],
+    "unchangedEntryDeclarations": [
+      "customAgentName",
+      "TaskCardListProps",
+      "TaskCardList",
+      "SchedulerSummary",
+      "preferredPreview",
+      "RunSummary",
+      "ArtifactChips",
+      "EvidenceChip",
+      "latestArtifactId",
+      "selectLatestArtifact",
+      "RecoverySummary",
+      "ProcessDisclosure"
+    ],
+    "entryBeforeLines": 1532,
+    "entryAfterLines": 767,
+    "clientBoundary": "existing TaskCardList entry only; no callback server boundary added",
+    "sourceChecks": "Declaration text identical after export and newline normalization, including every JSX class, callback and disable condition."
+  },
+  "verification": {
+    "lifecycleSafety": {
+      "fileName": "agenthub-modularity-api-final-20261016.xml",
+      "sha256": "30f8839851a16bd503a36ecd4c0a5e599f65f27f93266e91c7995e8977d128e1",
+      "summary": {
+        "tests": "549",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "1",
+        "time": "147.430"
+      },
+      "skipped": [
+        {
+          "test": "test_posix_exact_case_semantics_keeps_distinct_git_spelling_ordinary",
+          "reason": "exact-case POSIX semantics regression"
+        }
+      ]
+    },
+    "adjacent": {
+      "fileName": "agenthub-modularity-adjacent-20261016.xml",
+      "sha256": "40dc45e04aae3af2e1bbc6bd1daa1015eb2b049b9662669c808cecd34a71162b",
+      "summary": {
+        "tests": "139",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "time": "336.953"
+      },
+      "skipped": []
+    },
+    "web": {
+      "tests": 326,
+      "files": 43,
+      "durationSeconds": 35.16,
+      "fileName": "agenthub-modularity-webtests-20261016.log",
+      "sha256": "8a5feb3fc479c3177d4edaf9bdd6dd2b85dea25ae11730a2f0a130f36ee6c810"
+    },
+    "lintTypes": {
+      "fileName": "agenthub-modularity-webcheck-final-20261016.log",
+      "observedExitCode": 0,
+      "sha256": "a23179e1571bcbdf5c9bc9b323526c3c6e8af2d2e0c73400b0c6c75a7293eede"
+    },
+    "rootCheck": {
+      "fileName": "agenthub-modularity-rootcheck-20261016.log",
+      "observedExitCode": 0,
+      "sha256": "35937579c913e55260d735a7f044d5af7c594d28d7750688951701328e499888"
+    },
+    "initialEnvironmentFailure": {
+      "fileName": "agenthub-modularity-api-20261016.xml",
+      "passed": 542,
+      "failed": 6,
+      "skipped": 1,
+      "reason": "Fresh global SQLite was not initialized; all six errors were missing targetlock. Initialized a different isolated 26-table database; same six and final full batch passed. No product DB changes."
+    }
+  },
+  "deliveryNormalization": {
+    "date": "2026-10-16",
+    "file": "apps/api/app/execution_ownership.py",
+    "beforeSha256": "745e76987d78f6fe0e43cbe7bd58bb31e966c2d4d9c308c45ffd85e14a7a78c1",
+    "afterSha256": "1527ceec17e2643b5b29dbb8b12526162c07908c18bc03d99289875b6e3c20ba",
+    "change": "Removed one trailing empty EOF line only; AST unchanged. Test results predate this formatting normalization."
+  }
+}

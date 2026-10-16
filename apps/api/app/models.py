@@ -112,6 +112,8 @@ class Session(SQLModel, table=True):
 
 
 class Message(SQLModel, table=True):
+    __table_args__ = (Index("ix_message_session_order", "session_id", "created_at", "id"),
+                      Index("ix_message_session_pins", "session_id", "pinned_at", "created_at", "id"))
     id: str = Field(default_factory=new_id, primary_key=True)
     session_id: str = Field(foreign_key="session.id", index=True)
     sender_type: str

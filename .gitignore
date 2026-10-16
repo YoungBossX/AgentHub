@@ -30,6 +30,7 @@ build/
 *.db
 *.sqlite
 *.sqlite3
+*.maintenance.lock
 
 # Build outputs
 .next/
@@ -65,6 +66,7 @@ temp/
 .cache/
 
 # Session worktrees (AgentHub specific)
+.agenthub-maintenance/
 .worktrees/
 session-worktrees/
 agent-workspaces/
@@ -98,6 +100,18 @@ agenthub_design_v_2.md
 
 # Internal project docs (for AI/dev workflow, not for public users)
 docs/*
+!docs/backend-versioned-validation-review.md
+!docs/review-repair-loop-review.md
+!docs/final-context-budget-review.md
+!docs/workbench-usability-review.md
+!docs/local-data-maintenance-review.md
+!docs/current-doc-reconciliation-review.md
+!docs/local-improvement-plan.md
+!docs/ordered-local-improvements.md
+!docs/native-qa-evaluation-review.md
+!docs/business-contract-coverage-review.md
+!docs/execution-card-modularity-review.md
+!docs/workflow-evaluation.md
 !docs/pinned-message-context-review.md
 !docs/chat-markdown-rendering-review.md
 !docs/local-dependency-security-review.md
@@ -112,6 +126,8 @@ docs/*
 !docs/history/change-log-archive.md
 !docs/history/project-state-archive.md
 !docs/history/README.md
+!docs/history/change-log-2026-10-15-*.md
+!docs/history/change-log-2026-10-15-index.json
 !docs/p18b-freeze-review.md
 !docs/p18b-bounded-workflow-evidence.json
 !docs/p18b-provider-probe-evidence.json
@@ -123,6 +139,22 @@ docs/*
 !docs/parallel-dag-freeze-review.md
 !docs/evidence/
 docs/evidence/*
+!docs/evidence/native-qa-evaluation/
+docs/evidence/native-qa-evaluation/*
+!docs/evidence/native-qa-evaluation/*.json
+!docs/evidence/native-qa-evaluation/README.md
+!docs/evidence/business-contract-coverage/
+docs/evidence/business-contract-coverage/*
+!docs/evidence/business-contract-coverage/README.md
+!docs/evidence/business-contract-coverage/*.json
+!docs/evidence/execution-card-modularity/
+docs/evidence/execution-card-modularity/*
+!docs/evidence/execution-card-modularity/README.md
+!docs/evidence/execution-card-modularity/*.json
+!docs/evidence/workflow-evaluation/
+docs/evidence/workflow-evaluation/*
+!docs/evidence/workflow-evaluation/README.md
+!docs/evidence/workflow-evaluation/runtime-acceptance.json
 !docs/evidence/skills-mcp/
 docs/evidence/skills-mcp/*
 !docs/evidence/skills-mcp/README.md

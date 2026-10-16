@@ -35,17 +35,31 @@ from app.ledger import refresh_session_ledger
 router = APIRouter()
 
 
-def message_response(db: DbSession, message: Message, *, view: dict | None = None, attachments: dict | None = None) -> MessageResponse:
+def message_response(db: DbSession, message: Message, *, view: dict | None = None, attachments: dict | None = None, preview: bool = False) -> MessageResponse:
     from app.group_summaries import public_group_summary
     from app.message_regeneration import attachment_source, public_regeneration
 
     lineage, action = public_regeneration(db, message, view)
     owner = attachment_source(db, message)
-    return MessageResponse.model_validate(message).model_copy(update={
+    try:
+        context = json.loads(message.context_json)
+    except (ValueError, TypeError):
+        context = {}
+    budget = context.get("_plannerContextBudget") if isinstance(context, dict) else None
+    response = MessageResponse.model_validate(message).model_copy(update={
         "group_summary": public_group_summary(db, message), "regeneration": lineage,
         "regeneration_action": action,
         "attachments": (attachments if attachments is not None else metadata_for_messages(db, message.session_id, [owner])).get(owner, []),
+        "context_budget": budget if isinstance(budget, dict) else None,
     })
+    if preview:
+        from app.message_history import PREVIEW_CHARACTERS
+
+        raw = message.content_md
+        response = response.model_copy(update={"content_md": raw[:PREVIEW_CHARACTERS],
+            "content_truncated": len(raw) > PREVIEW_CHARACTERS or "\0" in raw,
+            "content_characters": None if "\0" in raw else len(raw)})
+    return response
 
 
 @router.get("/sessions/{session_id}/messages", response_model=list[MessageResponse])
@@ -94,7 +108,7 @@ def regenerate_message(session_id: str, message_id: str, request: MessageRegener
             finish_request(db, operation_id, failed=True)
         else:
             finish_request(db, operation_id, failed=False)
-    return message_response(db, db.get(Message, operation_id))
+    return message_response(db, db.get(Message, operation_id), preview=True)
 
 
 @router.post("/sessions/{session_id}/groups/{group_id}/summary/retry", response_model=MessageResponse, status_code=201)
@@ -140,6 +154,10 @@ def create_message(
     from app.skills import SkillError, message_selection
 
     context = dict(request.context)
+    context.pop("_plannerContextBudget", None)
+    from app.review_repairs import bind_message
+
+    context = bind_message(db, message, context)
     context.pop("skillSelection", None)
     if request.skill_ids is not None:
         if request.sender_type != "user":
@@ -152,7 +170,7 @@ def create_message(
     bind_message_attachments(db, message, request.attachment_ids)
     created = create_session_message(db, session, message)
     dispatch_message(db, created, background_tasks)
-    return message_response(db, created)
+    return message_response(db, created, preview=True)
 
 
 def dispatch_message(db: DbSession, created: Message, background_tasks: BackgroundTasks) -> None:

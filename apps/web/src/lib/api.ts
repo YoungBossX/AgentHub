@@ -5,6 +5,7 @@ import {
   responseErrorMessage,
   type Fetcher,
 } from "./api-core"
+import { listMessagePage } from "./message-history-api"
 
 export { ApiRequestError } from "./api-core"
 
@@ -362,6 +363,9 @@ export type MemoryItem = {
 }
 
 export type ChatMessage = {
+  contentTruncated?: boolean
+  contentCharacters?: number | null
+  contextBudget?: unknown
   regeneration?: { sourceMessageId: string; requestMessageId: string; operationId: string; kind: "request" | "summary"; state: string; errorCode?: string } | null
   regenerationAction?: { kind: "request" | "summary"; available: boolean; reason: string | null } | null
   attachments?: MessageAttachment[]
@@ -577,7 +581,7 @@ export type QaAssessment = {
   model: { status: string; source: "native" | "none" }
   commands: Array<{
     kind: "check" | "test" | "build"
-    status: "recorded_failed" | "recorded_passed" | "not_run" | "passed" | "failed" | "timeout" | "cancelled" | "expired" | "unknown"
+    status: "recorded_failed" | "recorded_passed" | "not_run" | "not_applicable" | "passed" | "failed" | "timeout" | "cancelled" | "expired" | "unknown"
     configured: boolean
     versionBound: boolean
     evidence: Array<{ artifactId?: string; eventId?: string; taskRunId: string; command: string; exitCode: number; log?: string; durationMs?: number }>
@@ -1233,15 +1237,7 @@ export async function listSessionMessages(
   sessionId: string,
   fetcher: Fetcher = fetch,
 ): Promise<ChatMessage[]> {
-  const response = await controlledRequest(fetcher, apiUrl(backendUrl, `/sessions/${sessionId}/messages`), {
-    cache: "no-store",
-  })
-
-  if (!response.ok) {
-    return []
-  }
-
-  return (await response.json()) as ChatMessage[]
+  return (await listMessagePage(backendUrl, sessionId, {}, fetcher)).messages
 }
 
 export async function getSessionLedger(

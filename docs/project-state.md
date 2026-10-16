@@ -5,7 +5,7 @@
 
 ## 当前快照
 
-截至 2026-10-11，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
+截至 2026-10-16，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
 核心闭环为：
 
 ```text
@@ -28,6 +28,16 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
+| `agenthub-execution-card-modularity` | 1.1 Complete（本地未提交） | 引擎 4103→3743、卡片 1532→767；所有权与计划/制品职责独立。源码一致性、548/1 skip 生命周期安全、139 相邻、Web 326、根/strict 验证，见 [记录](execution-card-modularity-review.md)。三项总目标完成本地交付，非全部技术债清零 |
+| `agenthub-business-contract-coverage` | 1.1 Complete（本地未提交） | 13 组语法/API、旧 10/新 18 浏览器检查与双源码/策略绑定；70 最终专项、53 工作流/55 QA 回归（重叠），先复现再修复两类验收缺口。见 [记录](business-contract-coverage-review.md)；本轮有界大文件拆分另见对应记录 |
+| `agenthub-native-qa-evaluation` | 1.1–1.2 Complete（本地未提交） | 十个冻结样本，首次 4/10、最终 6/10，10 次原生 QA 证据已复核；自然/注入与重试/分角色耗时分开，四次失败保留。最后计数修正 37 专项通过，见 [记录](native-qa-evaluation-review.md)。本轮三项有序目标已完成，历史版本与测试范围分别保留 |
+| `agenthub-current-local-documentation` | 1.1 Complete（本地未提交） | 当前指南/模型/六接口/交付状态协调，94 章节历史归档逐字保留，69 文档/344 链接检查无缺失。本轮 API 批次 2,293/1 skip，最后维护另复跑 33；Web 326、本地工具 19、demo-api 5、根/strict 通过。来源/载入时序及尚未推送边界见 [核对记录](current-doc-reconciliation-review.md)，现行旧 API 尚待安全重启 |
+| `agenthub-local-data-maintenance` | 1.1–1.2 Complete（本地未提交） | 离线 API/维护互斥、WAL/Git/工作树快照、哈希及恢复演练/精确缺失原路径恢复；恢复期目标 DB 独占/文件只新建，容量分类、引用绑定缓存预览与显式隔离/部分回执。最终 33（含清理 12），根检查与 strict 通过。未操作实际产品数据，隔离保留字节而非永久删除；[说明](local-usage.md#一致备份恢复与缓存隔离) / [记录](local-data-maintenance-review.md) |
+| `agenthub-workbench-usability` | 1.1–1.2 Complete（本地未提交） | 当前阶段/阻塞/下一步、结构化 Skill 参考文件、稳定消息分页与分段全文。5,000 条夹具初始 80、DOM 最多 200、置顶 16；最终 API 78、Web 326/43 文件、根检查及四组长会话/四组修复兼容浏览器检查通过。完整原文与 Agent 上下文保留；夹具和测量边界见 [记录](workbench-usability-review.md) |
+| `agenthub-final-context-budget` | 1.1 Complete（本地未提交） | 应用最终输入字符/字节/图片门禁、四类真实 Planner 格式、原生契约/MCP 提示、冻结来源选择/省略与可折叠历史回执。最终专项 19、执行代次/原生/MCP 等 446、Web 303，亮暗/390px 四组浏览器检查通过；不等于模型 Token 或 CLI 隐式/后续工具上下文统计。[记录](final-context-budget-review.md) |
+| `agenthub-review-repair-loop` | 1.1 Complete（本地未提交） | 选择问题、无执行草稿、显式发送/重新生成、源码及目录绑定、启动/输出围栏、重试与当前检查/用户确认历史；最终专项 27、Web 301，沙箱 Edge 1440/390px 亮暗四组交互通过。相邻回归及测试替身/浏览器 API 夹具边界见 [验收记录](review-repair-loop-review.md)，没有真实模型修复或新远程 CI |
+| `agenthub-workflow-evaluation` | 1.1 Complete（本地未提交） | 五类冻结场景、隔离消息规划/队列/原生执行、独立 API/真实浏览器联调、逐次失败/重试与源码证据。首轮真实完整批次 4/5（自然 3/4；另有明确故障注入恢复），修复命令跨目标混入后独立真实联调复验通过，215.969 秒、10 项桌面/窄屏检查。旧失败和限时中断保留，不拼接同版本成功率；[说明](workflow-evaluation.md)及[证据](evidence/workflow-evaluation/README.md)。QA 为脚本，不宣称通用模型能力或新远程 CI |
+| `agenthub-backend-versioned-validation` | 1.1 Complete（本地未提交） | 内置 FastAPI 临时副本语法/七组 ASGI 契约，源码及执行代次/策略绑定，过期及取消/归属围栏；QA 按 check/test 判定并显示 build 不适用。后端相关 240、Web 298、启动器 19、根检查及 strict OpenSpec 通过。仅固定接口契约，非真实 Provider/完整业务验收；[记录](backend-versioned-validation-review.md) |
 | `agenthub-review-defect-hardening` | 1.1–1.2 Complete（已推送 dev） | API Host/Origin/控制头、预览文件及 JS/CSS 边界、默认 Skill 并发预算、结构化诊断和 POSIX Vite URL 兼容。`a831265` 的 [Ubuntu CI](https://github.com/YoungBossX/AgentHub/actions/runs/38675914342) 全部通过：沙箱 Chrome 155.0.8059.39、启动器/路径 19、Web 296/38 文件、API 2,081 passed / 48 skipped、demo-api 5、根检查和空白检查。此前本机全量 2,128/1 skip；最后预览相关 25。保留 `b3afe0e` 首轮启动超时和重跑单项失败历史；[证据](evidence/review-hardening/README.md) |
 | `agenthub-controlled-mcp` | 1.1 Complete | 工作区只读文档连接、执行绑定回环网关及受控 Codex 参数；真实 Codex 两次工具调用、Skill 载入、Diff、版本绑定 check/build/3 项产物测试及桌面/窄屏标题验收通过，预览健康。API 全量 2,074 passed / 1 skipped；最后文档额外禁止路径修复后 MCP 23 passed；Web 291、启动器 17、demo-api 5，根检查和 strict OpenSpec 通过。模型 QA 未运行，整体 QA 保持 incomplete。见 [证据](evidence/skills-mcp/README.md) 与 [使用说明](local-usage.md#配置与使用项目文档-mcp) |
 | `agenthub-skills` | 1.1 Complete | 工作区技能包、Agent 默认与消息显式选择；Planner/TaskRun 指令加载、冻结快照/重试、版本及兼容性展示。后端相关 506、Web 284，根检查及 strict OpenSpec 通过；实际亮暗/390px/保存版本通过。参考 [使用说明](local-usage.md#配置与使用-skills)。不执行技能脚本，不将指令载入宣称为模型遵循或 QA 通过 |
@@ -98,6 +108,12 @@ Web 109 passed，demo-api 5 passed。详见
 [变更日志](change-log.md)。
 
 ## 当前证据边界
+
+2026-10-15 本地完善包括内置 FastAPI 版本绑定验证、代表性工作流评测、评审修复复验、
+最终托管上下文预算、阶段提示/Skill 参考编辑/消息分页，以及离线数据维护。
+各专项数字为各自批次，不能相加为唯一总数；本地检查不等于新远程 CI。
+真实工作流首轮 4/5 与后续独立复验分别保留，不拼成同一版本 5/5。浏览器 API 夹具、
+受控 EventSource、测试写入器和脚本 QA 均不能冒充真实模型执行或真实 SSE 网络验证。
 
 ### Conversation workbench UI
 
@@ -316,10 +332,14 @@ config、memory settings 的 12 个 HTTP operations 及响应映射移至专用 
 `pnpm check` 通过。其当时保留的 9 项基线失败已有独立后续修复和全量绿色结果，不再是
 当前项目失败项。
 
-剩余体积主要在安全关键执行核心 `run_engine.py`（3,501 行）、`task_run_scope.py`
+该历史拆分阶段剩余体积主要在安全关键执行核心 `run_engine.py`（3,501 行）、`task_run_scope.py`
 （2,966 行）、`task_runs.py`（2,802 行），以及 `task-card-list.tsx`（1,471 行）、
 `api.ts`（1,384 行）、`planning_tasks.py`（1,244 行）和 `preview-card.tsx`（1,086 行）。
 这些模块需要新的专项 OpenSpec 与不变量测试，未混入本次行为保持型拆分。
+
+2026-10-16 的 `agenthub-execution-card-modularity` 已另行完成有界拆分：当前引擎
+3,743 行，所有权核心独立 419 行；任务卡片入口 767 行，数据 156、计划摘要 213、
+制品卡片 408 行。上述旧数字保留历史含义，不能用作当前行数；验证见专项记录。
 
 ### Windows scope observation stability
 
@@ -531,14 +551,17 @@ Agent 运行时的命令与路径护栏。
 
 ## 交付状态
 
-`be48efa` 是本轮候选集之前已交付到 `origin/dev` 与 `origin/main` 的共同基线。先行候选
-`fc70f29` 已在 2026-09-03 回读到 `origin/dev`，但 `origin/main` 当时仍为 `be48efa`。
-最终审计随后发现其全局 Vite override 的 peer 范围污染，并完成上述收窄修正；因此
-`fc70f29` 不能单独作为最终修正已交付的证据。
+2026-10-16 用户单独授权将累计本地改进提交并推送至
+`codex/local-workspace-improvements`。原验收中的“未提交/推送”描述保留当时快照含义；
+本次实际提交号、远程送达和 CI 状态以 Git/GitHub 的对应记录为准。
 
-最终候选是否已远程交付，必须以包含当前 Browserslist/Vite 修正的 `fc70f29` 后继提交
-以及 `git ls-remote` 回读为准。本地分支名、工作树测试或本状态文档都不能替代该证据，
-也不能据此推断 `main` 已同步。
+2026-10-15 本轮只读核对：当前分支 `codex/local-workspace-improvements`，HEAD 为
+`f3f4e1b61c7e5d6b0957174da192eb4c4ee4547a`，`git ls-remote --heads origin main dev`
+回读两个远程分支均为同一提交。本轮新增代码、文档和 OpenSpec 尚未提交/推送；
+此远程基线不包含这些工作区改动，旧 CI 也不为它们背书。
+
+早期 `be48efa`/`fc70f29` 交付叙述保留在历史变更与冻结记录中，不能覆盖上述当前回读。
+后续交付仍应核对干净状态、祖先关系、远程实际 SHA 和对应 CI，不能仅凭本地分支名判断。
 
 ## 历史与维护
 

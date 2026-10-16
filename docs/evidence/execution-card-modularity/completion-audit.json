@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "agenthub.ordered_improvement_audit.v1",
+  "objectiveItems": [
+    {
+      "item": 1,
+      "status": "complete-local",
+      "evidence": "docs/evidence/native-qa-evaluation/batch.json",
+      "sha256": "b99f6d4e4dfc84cad822e34e7d4bf64e81a7b31bf1be325fca8507367d256817",
+      "selected": 10,
+      "firstAttemptPassed": 4,
+      "finalPassed": 6,
+      "nativeQaVerifiedAttempts": 10,
+      "explicitRetries": 2,
+      "failedSamplesRetained": 4,
+      "historicalCohort": true,
+      "subsequentlyChangedPolicyPaths": [
+        "apps/api/app/backend_validation.py",
+        "apps/api/app/run_engine.py",
+        "apps/api/app/workflow_acceptance.py",
+        "apps/api/app/workflow_evaluation.py",
+        "apps/api/app/workflow_suite.py",
+        "scripts/demo-backend-check.py",
+        "scripts/workflow-contacts-check.mjs"
+      ]
+    },
+    {
+      "item": 2,
+      "status": "complete-local",
+      "evidence": "docs/evidence/business-contract-coverage/contracts-final.json",
+      "sha256": "e3fb5d27b82e7a5d1355849eb67694880de10942e9b26b35c12d1e2baa66a84a",
+      "tests": 70,
+      "backendSyntaxApiGroups": 13,
+      "browserChecks": [
+        10,
+        18
+      ],
+      "sourceAndCurrentPolicyMatched": true,
+      "sourceDirectoryNames": [
+        "agenthub-business-final-evidence-ejxlscjx"
+      ]
+    },
+    {
+      "item": 3,
+      "status": "complete-local",
+      "evidence": "docs/evidence/execution-card-modularity/source-and-tests.json",
+      "sha256": "2627d55b87ca6635b88e04dfb3dfa99faddfbf7a7708a935c0000165be8feb59",
+      "lifecyclePassed": 548,
+      "posixSkipped": 1,
+      "adjacentPassed": 139,
+      "webPassed": 326,
+      "sourceEquivalenceVerified": true
+    }
+  ],
+  "taskChecklists": [
+    "agenthub-native-qa-evaluation",
+    "agenthub-business-contract-coverage",
+    "agenthub-execution-card-modularity"
+  ],
+  "localDocumentLinksChecked": 144,
+  "limits": "All three scoped objectives complete locally. Native cohort is historical; four failures remain, including context-budget growth. Business/browser fixtures are not arbitrary business, product UI/HTTP/SSE or new model acceptance. No whole-API claim, installation, production restart/deployment, commit/push or remote CI verification.",
+  "deliveryNormalization": "Ownership EOF-only normalization verified AST-identical; archive EOF separators recoverable via index, all 94 original sections reconstruct exactly."
+}

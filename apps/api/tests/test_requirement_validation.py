@@ -152,7 +152,7 @@ def test_requirement_results_bind_plan_and_do_not_rewrite_snapshot(fixture, stat
     task.plan_json = json.dumps(plan); run.state = "completed"
     db.add_all([task, run]); db.commit()
     frozen = requirement_contract(plan)
-    value = {**capture_validation_source(root)[0], "schemaVersion": "agenthub.validation.v1", "status": "incomplete" if status == "unavailable" else status,
+    value = {**capture_validation_source(root)[0], "schemaVersion": "agenthub.validation.v1", "profile": "vite-build-smoke-v1", "status": "incomplete" if status == "unavailable" else status,
              "taskRunId": run.id, "adapterRunId": run.adapter_run_id, "requirementFingerprint": digest(frozen),
              "functional": {"status": status, "contract": frozen, "checks": []},
              "commands": [{"kind": kind, "command": kind, "exitCode": 0, "status": "passed"} for kind in ("check", "test", "build")]}

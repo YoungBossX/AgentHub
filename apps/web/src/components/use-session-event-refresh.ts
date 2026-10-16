@@ -22,6 +22,7 @@ const SSE_TASK_REFRESH_MAX_RETRIES = 3
 const SSE_TASK_REFRESH_INITIAL_DELAY_MS = 250
 
 type SessionEventRefreshOptions = {
+  refreshHistory?: () => Promise<void>
   summaryPending?: boolean
   onVisualEvent?: (event: SessionVisualEvent) => void
   setMessages?: Dispatch<SetStateAction<ChatMessage[]>>
@@ -35,6 +36,7 @@ type SessionEventRefreshOptions = {
 }
 
 export function useSessionEventRefresh({
+  refreshHistory,
   backendUrl,
   reportSyncError,
   selectedSessionId,
@@ -48,6 +50,8 @@ export function useSessionEventRefresh({
 }: SessionEventRefreshOptions) {
   const sessionEventCursorsRef = useRef(new Map<string, string>())
   const summaryPendingRef = useRef(summaryPending)
+  const historyRefreshRef = useRef(refreshHistory)
+  useEffect(() => { historyRefreshRef.current = refreshHistory }, [refreshHistory])
   useEffect(() => { summaryPendingRef.current = summaryPending }, [summaryPending])
 
   useEffect(() => {
@@ -108,7 +112,9 @@ export function useSessionEventRefresh({
       refreshInFlight = true
       const messageRevision = messageRevisionRef?.current
       try {
-        const [nextTasks, nextMessages] = await Promise.all([listSessionTasks(backendUrl, sessionId), setMessages ? listSessionMessages(backendUrl, sessionId) : Promise.resolve(null)])
+        const updateHistory = historyRefreshRef.current
+        const [nextTasks, nextMessages] = await Promise.all([listSessionTasks(backendUrl, sessionId), updateHistory
+          ? updateHistory().then(() => null) : setMessages ? listSessionMessages(backendUrl, sessionId) : Promise.resolve(null)])
         if (!active) {
           return
         }

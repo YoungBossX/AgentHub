@@ -22,6 +22,24 @@ function snapshot(): QaAssessment {
 }
 
 describe("layered QA evidence", () => {
+  it.each(["passed", "expired"] as const)("shows the backend scope without inventing a build: %s", (status) => {
+    const qa = snapshot()
+    qa.status = status
+    qa.currentness = status === "passed" ? "current" : "expired"
+    qa.validation = { eventId: "backend-validation", status: "passed", profile: "fastapi-contract-v1", sourceFingerprint: "backend1234567890" }
+    qa.commands = qa.commands.map(item => item.kind === "build"
+      ? { ...item, status: "not_applicable", configured: false }
+      : { ...item, status, versionBound: status === "passed" })
+    qa.functional = { status: "not_configured", contract: null, checks: [] }
+    render(createElement(QaEvidence, { review: { ...sampleReviewArtifact, qaAssessment: qa } }))
+    expect(screen.getByText(/Python 语法、FastAPI/)).toBeTruthy()
+    expect(screen.getByText("此验证配置不需要")).toBeTruthy()
+    expect(screen.getByText(/不包含新增接口、真实数据库或完整前后端联调/)).toBeTruthy()
+    expect(screen.queryByText(/类型检查、构建、构建产物/)).toBeNull()
+    expect(screen.queryByText(/请检查已安装的浏览器/)).toBeNull()
+    expect(screen.queryByText(/需求交互验收/)).toBeNull()
+    if (status === "expired") expect(screen.getByText("QA 证据已过期")).toBeTruthy()
+  })
   it.each(["passed", "failed", "expired", "unavailable", "not_configured"] as const)("shows bounded requirement coverage: %s", (status) => {
     const qa = snapshot()
     qa.status = status === "passed" ? "passed" : status === "failed" ? "blocked" : status === "expired" ? "expired" : "incomplete"

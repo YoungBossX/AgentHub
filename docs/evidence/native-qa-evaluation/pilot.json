@@ -1,0 +1,2458 @@
+{
+  "schemaVersion": "agenthub.native_qa_evaluation_evidence.v1",
+  "recordedAt": "2026-10-16T03:26:01.901445+00:00",
+  "mode": "live",
+  "status": "completed",
+  "developmentHead": "f3f4e1b61c7e5d6b0957174da192eb4c4ee4547a",
+  "cohort": {
+    "id": "0789f80faf6b3e8c94e4d5479954517886e6bd455456c3a8ba8c9004f3c49d82",
+    "status": "frozen",
+    "identity": {
+      "developmentHead": "f3f4e1b61c7e5d6b0957174da192eb4c4ee4547a",
+      "sourcePolicy": {
+        "apps/api/app/__init__.py": "4032d434a3866ac373e2f61e184f0d833fd5208fa81c877d41ec01d7d521b1b5",
+        "apps/api/app/adapters.py": "5125d850a1d6976ae52bd8a44a55353304718b9436c1d1c5b243d24582f34123",
+        "apps/api/app/agent_capabilities.py": "7063ecacfb8e8a79a2d858a2226c9a36a85b7190e1fddb7b74ea02ca69628268",
+        "apps/api/app/agent_creation.py": "84cbd6ea98241a0ce466d8889474acf7e95eb1cb0b426df40b60d9b922b4608f",
+        "apps/api/app/agent_directory.py": "0b98f604f9e5d2b79f1fdfe88489f2acbc414af03a4f1b1a12b45d5c93c9d5ad",
+        "apps/api/app/agent_instructions.py": "c8c55e8785c633526d8045c9b92d8ddb4c42b97be2ce32f4abf15e5df927b75f",
+        "apps/api/app/agent_profile_drafts.py": "6f5add5145c275f0f5c39450593d1496720fc4129b74166b34dfda4a6729a585",
+        "apps/api/app/agent_profiles.py": "0f81c33fea65d0c49e942f9488d331ee9e56e20ac39bb6227ff348d69d74c28d",
+        "apps/api/app/agent_runtime_config.py": "ab8295eed0382e9fd8813bdb66d9f921f7dc08ac204a64dc71d1b45d4c012b39",
+        "apps/api/app/agent_selection_policy.py": "f90e5ed9e6b797d6ce42949e6d4c9068b2769401da940f75bed2ffc32da4332a",
+        "apps/api/app/agent_target_compatibility.py": "5e243f4d1f3acca5c718fd29b13f72707e2b8d3fbdf834114601a3a11cae7432",
+        "apps/api/app/artifact_references.py": "b9824e6dff82d5189483b4d3625ef635b01622a5d9f97a6da8ac33dc5dca66f7",
+        "apps/api/app/artifact_versions.py": "db9930cce0f9876e92a07a7199422b849d5647a8e58c5de34a181d5174c3a279",
+        "apps/api/app/artifact_workbench.py": "d2b3d6c5b22ba98dad420f72eb045b3fc889d10e612572affdcb927dd00f5c13",
+        "apps/api/app/attachment_context.py": "fc46aae49acd32084ba4cebbe3f4714171c26de567ce30b61cddfdbeb7875bfd",
+        "apps/api/app/attachment_inputs.py": "fc6894657380c732e39706b1c94711afd823089003935cc92f4b8450ba926208",
+        "apps/api/app/attachment_parser.py": "776a41920937bc655ec9928fe71e34a12c28bed80963bf5cb21bc69efc771d51",
+        "apps/api/app/attachments.py": "e667e8ce721e125f9585b0be60d56ea230767d77d5195ab2c2b2591f45751e46",
+        "apps/api/app/automatic_validation.py": "1878979c63df606fe3565962bd9161864809cde13f3ff6ef791b98fb380d7773",
+        "apps/api/app/backend_validation.py": "ad9bd50ed09ebda3a40eb4db056dc64f076f1bf4729fce16081117eeebc8d748",
+        "apps/api/app/canonical_context.py": "85f7bc1c5925c6e625709af840baa520f71621eaf21f0fb9c8bfa3b729781fdb",
+        "apps/api/app/claude_code_adapter.py": "332f728154251a83e8a86c9a56ac89633bce65c018d0a5bf7806c98cb4410400",
+        "apps/api/app/claude_executable.py": "4f1da61673ab3998fd2c6ccde2c0d47a39fb68fdb11e9524a39203f05b571fa0",
+        "apps/api/app/codex_adapter.py": "dd4b1d94a67cdad748c12f6902a45827d4b3b627250f7a9eb15308b1c6d61178",
+        "apps/api/app/config.py": "e24a808616d6ee1f4945aeff63cb1018a975bd014f922b96cebb1f6592cdbce2",
+        "apps/api/app/context_budget.py": "06525be1d55d85ce6f33da8874839b4b3db0f2ebf1e62fcb1f385dd23fb17cda",
+        "apps/api/app/context_items.py": "690540944f29a0a2fdb30bf74be2149b9dd99ca9c1a0fc684cdf167291486e0d",
+        "apps/api/app/context_pack.py": "05975943582b67fce6bff17d09ca1b684020dbb71cfa55a2ac13d10069af96ec",
+        "apps/api/app/custom_agent_schemas.py": "75ecab459fd38264bd9bce96c4faa553ecf2bbb91a1b13fde052fc8254d21a12",
+        "apps/api/app/custom_agents.py": "059edbbb42e59d33e4bf2b47d43e3ba09e402f27372115deab91033d5dedfc96",
+        "apps/api/app/dag_integration.py": "19d90f46beed43197d57334e5324e95c9d2e3d699f0c3c43ce9a7f9ff2126963",
+        "apps/api/app/db.py": "12232e7d505d10938cd3f13a2de0c4bb5cb7efc63cc9938cabcc2ccba495bc9a",
+        "apps/api/app/demo_planner.py": "d9a603c0b86bb804344e41fa1d9bd50d477fd2e38f9fef9a43cf611af25dd8ed",
+        "apps/api/app/dependencies.py": "447ba2c75bbd7c67ba2872931df493f5f149ce11bd9b4066870e489e88037612",
+        "apps/api/app/deployment_providers.py": "d0895e60602a98760114855c2420e4376ab693f5e064980daa70c22aef08e6a2",
+        "apps/api/app/deployments.py": "223dd259be8c9869afa2aa61479d4a128321a6b057af7dd1ce9227e3cd9b3963",
+        "apps/api/app/diffs.py": "e7977e38f17574e611454dc4fabe889f489b3da72e2e1305cc84d2a6145094a4",
+        "apps/api/app/events.py": "99bc736d0cc6ab45740787510fc189eb69d8955f66bf2d5534cf8cd72993f016",
+        "apps/api/app/execution_worktrees.py": "3477347dae171b4b3cf5ac5ad594ea73cf4a9835804e32a9b4d87253c3f3e0e6",
+        "apps/api/app/external_benchmark.py": "43a471fb0850bef8e17426fef5763bbb3d4e807c3b291f444759460b78a3443a",
+        "apps/api/app/external_evidence.py": "7ab53df7bd32823c202b457c5cf05915d73186cbe1d5d87b533f3dee4617fb9f",
+        "apps/api/app/external_memory_scan.py": "5136e89bb0845b9720c6ed9592bd42eaa11a7dbe9abd9773f25ca1db082394e7",
+        "apps/api/app/external_workspaces.py": "104c8423e38046aef2c32fe868175e28514b44426b3be681f5e2188f1fbc167f",
+        "apps/api/app/group_execution.py": "ad902f9643514fc9448e0bb2c93e559044ebf5d2bfcef1d0e6c81708260b9fcd",
+        "apps/api/app/group_planner.py": "969446c8013a12ed971421c3d4b26bb6efefe882024c145fc263042130c16bdc",
+        "apps/api/app/group_planning.py": "db14a88af9f43e43e58c83abe3554992f7ce9164acedbae881688a6f3e0ecc28",
+        "apps/api/app/group_summaries.py": "35bac69b2a24a8a724998852954fa04bd931ca98ea7d5cfe85db4222a1636f54",
+        "apps/api/app/group_summary_contracts.py": "4e8b1349e7a2ce8cebfd9f5e901fad8f2876f11e60f85ea31cadc24384f65eee",
+        "apps/api/app/guardrails.py": "ba23d39ad44a39293a2ef28b9e5c632e58f0afea2f5ca548785e9459ef0442b1",
+        "apps/api/app/handoffs.py": "48ed68f007931045d7199be1472b5dd07d02f89b59fba47f7d2086b9e17c38d0",
+        "apps/api/app/instruction_adapters/__init__.py": "255abc6a7f52074c673f80c0d9b3968f5cc0be49a456a1709a7664fa5508d3b9",
+        "apps/api/app/instruction_adapters/base.py": "1dd62dabba89b8a3abe448afedd8d5dd44c2b19cb93b2832197bda512c5965f9",
+        "apps/api/app/instruction_adapters/claude_code.py": "9ef3988644bf4cd5a73037cfa1f9f29e950a2cd991a8fc782c5a9e30d9d54b9d",
+        "apps/api/app/instruction_adapters/codex.py": "6e2c13c7ea9d4a3efd68c646375f372856f424d7a2dd8507031e8565f187d865",
+        "apps/api/app/instruction_adapters/scripted_mock.py": "672f10f7b4b4a321665711bf0e54cf2dce36a08c1abc5a561301f857718b243b",
+        "apps/api/app/instruction_adapters/shared_sections.py": "cd807c4d4bad7a5f821d9bc5fbfab3b5744c95feb39cd6ad4543b160681bc187",
+        "apps/api/app/instruction_builder.py": "733b97399fafc306abe5a049b53b48ab1bd31029b0a2ce95f6c95977832635ec",
+        "apps/api/app/ledger.py": "3624d9eea2af7467883b004be9dce33db58566c41ea306b8237e362e863eaa77",
+        "apps/api/app/live_memory_compliance.py": "b3ee3a425b5ac251ba93fe88d8886ada26caa61b5468729b0c27ecf0905642ae",
+        "apps/api/app/llm_planner.py": "2d017924c595858bd49740bb10940a3d2f21a36199befa9af89341dd249d69ed",
+        "apps/api/app/local_data.py": "68717c8261c2066219582999e24f86c376f22cd91120aa652a60e8b9a99b3ef6",
+        "apps/api/app/local_data_cleanup.py": "a5395756b046264d8801f6829ad6e53c6b843028ea8ac7924ce209d8a9d4e097",
+        "apps/api/app/local_folders.py": "79684e7a6fff0ad71fa9b9c65a4a313934f93056ab67b6ffe7908fae79dbcde1",
+        "apps/api/app/local_request_guard.py": "e39d84d9064ee9bfa75be0b9e222adef80663f2a4e2a84406e7f5450007b895e",
+        "apps/api/app/main.py": "9bcb8212998da53fff64bbd1abe474ea8992f9fab07986dde491557282fe757b",
+        "apps/api/app/maintenance_lease.py": "9d1a1c2d7822fc6853272c57e41af7a83f4c3b56ce794cec50bf6ae37069fd4d",
+        "apps/api/app/mcp_connections.py": "5e19495c3cc06f9cfd7bbb33eb4fb57a28787b8af94bd7d0de85e558e0061f2b",
+        "apps/api/app/mcp_gateway.py": "292fd5d1ece42b4a08b2cb16bf41b4fa9218f19c4de756444be79136cd95bc42",
+        "apps/api/app/memory_evals.py": "02f64bfe9612345e12d2942595b27f46a8f766926fb873a99f6222facf1af8be",
+        "apps/api/app/memory_instructions.py": "26c2dde8583b96daeff528332c85b972d716e8d9efe82083b761a834b55180fe",
+        "apps/api/app/memory_rehearsal.py": "0d7a8be40a2d52f7c710abd5f0c739b88cb58d55f02d421e588dc4421794b92d",
+        "apps/api/app/memory_retrieval.py": "514cfc9dbedeec7f29e38580cbe39b5b7c5c3a12851ea6b649735592cd43ece5",
+        "apps/api/app/memory_snapshots.py": "c392f7ac60f82dff487608089611041f23237b823fee4d52c296dbc412092d3b",
+        "apps/api/app/memory_store.py": "5661d94972ccde7ed6211d0c5e74242a6307b451115c9234b089af7f9701ebbe",
+        "apps/api/app/memory_usage.py": "7c2f2082d6c64960a7107e4a64f1ca88a1f17cffc977e1d63abe212389dc0235",
+        "apps/api/app/memory_write_policy.py": "12f83685069ec34b52e0e418dd9c3cd2bc77a43150f80f14bbda9f549f4e7b9f",
+        "apps/api/app/message_history.py": "5c234a9aef4b54fbe9d2adfc9a9fe97dfc2ee89871f661ae3faeaa4c15e05bd5",
+        "apps/api/app/message_regeneration.py": "d44f5f53739828c92669a3d535023457ffe6179313a69a52146ffb2dd97915a1",
+        "apps/api/app/mission_trace.py": "108949ef22d917aa319b42a36dd9e61865cbf85b76244c82e21e980da7b8f06a",
+        "apps/api/app/models.py": "2741d6b2e40de507386c2e960784535e544cb876febf19a4fa295b55921e10c7",
+        "apps/api/app/native_reviews.py": "c771b232592fc38d69eae5a36bd3208b82778388bf218927c1b109a345398cec",
+        "apps/api/app/p18b_workflow_rehearsal.py": "c6600517de751f644cb70666fe844abbc6e8893104ee0a15c99f8b9c6de06252",
+        "apps/api/app/pinned_context.py": "556f75df9cfdd1d349b86503f4e9b56f8c9c3107920621bb68ee6e8ef3857976",
+        "apps/api/app/plan_validator.py": "f0ae3221f350df515e4a9bac6c6297a4d3795c45d9321ed86dfe926c18aa32ad",
+        "apps/api/app/planner_contracts.py": "62f40b656abd454b78f71eb9b6d46401083d292478386613969cc9d029cb962a",
+        "apps/api/app/planner_observation.py": "17b17ee2c48c17e2520f51a4467ed31c6be01348bde2c247cf2ac53ebdbfcd32",
+        "apps/api/app/planner_providers.py": "e242dc5109807f2fb0ec81f6ee239bc7f362ab9d9a3a2847531987c60d21bf78",
+        "apps/api/app/planner_service.py": "87c358cefafd33f6d6fb7f7f80df319eaeea0fb9c00282abd9bddc1cce496d56",
+        "apps/api/app/planning.py": "b1caae9d5a76f447bd43aec49a1ca09cfee886eb532e95d0bac17a5fd20518a0",
+        "apps/api/app/planning_intents.py": "a1c2d45ee0d4fb5e1381cf40c0d56cab923728d2e8f369614d4dd95283d4ffb4",
+        "apps/api/app/planning_tasks.py": "565669634dd1df8e4ba2223c934ce55ee9fec736ff8839b1a1adc0ebc47b66e5",
+        "apps/api/app/pmo_decisions.py": "38e6c57d6e01a73c949a3f74cee866eb785c4645a40f6700f2f5c280efb51656",
+        "apps/api/app/policy_engine.py": "cea26c6b0e51e5325a4ad3d4446f8f274b17a585bdcb980907c35eb1354be239",
+        "apps/api/app/preview_deploy_jobs.py": "3a5bc8244ebef6de74a27a51ce2f5d392b8bbb3b691a252a2815de95a414e041",
+        "apps/api/app/previews.py": "d51235844a8df54d16ce4b3bc9f8bfa7e945c0127e1dc6ba08595c71d0d8dfdd",
+        "apps/api/app/process_environment.py": "570850d21799053195fcc3cb553c9daa31a84f2e490a1d07e8a3c4bb1a38f4f4",
+        "apps/api/app/process_input.py": "1d1e2480d13e0bc687a721ab72fda1c7475469c0de61ae77896b79b34910b24e",
+        "apps/api/app/project_analyzer.py": "26aa9d58fa989810453b38f69aa17d22c5924eb54d02e7991612e0c4e6649897",
+        "apps/api/app/project_command_policy.py": "165d9c18980ddde63fb46efe04c20653d70e1eaaeed0101a06680ee8f07e15a3",
+        "apps/api/app/project_profiles.py": "6640c534f9f3eec8b7f685b932e8fc2716c97930405ba14c55c33af78bf83288",
+        "apps/api/app/project_provisioning.py": "a2661afdf2e00dbeb698f0d8954201b4335f12391caf512281abe5c730f05474",
+        "apps/api/app/provider_assignments.py": "40ed3c0fc50c5ddd9dd1d47dd9ba2847ce29d3679400f8063f258de44c90ea76",
+        "apps/api/app/provider_configs.py": "c16c8fe130066d0993d1519efb69bf36f0ff2cfda3ab5727cb4f5ae56047f992",
+        "apps/api/app/provider_evidence.py": "b447e45622f079f271c005d6cbbe890554ea323e65e15ab4ad97bdd100fba93d",
+        "apps/api/app/provider_gateway.py": "cd29c3bcc7ead2a2d4f003db93fc60715558f1e53899f8eab9f3824adc739d27",
+        "apps/api/app/provider_health.py": "ce3dc8a1d389e1d7d69cb462a92abc50f46960add7bb3ea5b25c0adba8abcab2",
+        "apps/api/app/qa_assessment.py": "ef7615814de04ff22ad4bb12725fae27e0690233cae8f245909aebe78cda8feb",
+        "apps/api/app/recovery.py": "5cfb3229ac02290e6182d49590586e966bbfa127616a4551539b4bfa7fa3e8aa",
+        "apps/api/app/repositories.py": "cb26e85d327ae564d26610cf39f7b99e92325a88469fb4ab285fdb3433571e39",
+        "apps/api/app/requirement_validation.py": "1ec2d5821608786a369a5a9a83d147e2063034972b6963d7bb7ddcd06a8bcb92",
+        "apps/api/app/review_repair_issues.py": "3093bb27058d3820f98b621df3494058733d99a0cd95ddd47d314146faf9c2dd",
+        "apps/api/app/review_repairs.py": "cc42f9a3cdc8cd2fe07f177c5716774f7b08d0464fff0d84f8faf5094d82013e",
+        "apps/api/app/reviews.py": "f00426a1ad2eaaf1dbd45e0e18606617d70dd17e98b14e7977ff0977ab002674",
+        "apps/api/app/routes/__init__.py": "cee0da60c1e3aef4654b95fa07ab0c97c7f64af2d061e636106a40f03470a1df",
+        "apps/api/app/routes/agent_settings.py": "4f8f52b12ccbf240d52308430aef8e4bfc4c398d7c3f106d9f68a51b7cf1cb06",
+        "apps/api/app/routes/attachments.py": "d7de2054d95471c15e94a6b703c59f673683b91c67c34dbca977bdfd49942d81",
+        "apps/api/app/routes/health.py": "7d6d02b448bf0dfdfa471fb47424d839b01971f40a076d3f295e74414caaa9fc",
+        "apps/api/app/routes/mcp.py": "83dc21632fafd5b29d822cc83b88178f2752d3903104d49912d7edb5ca37567e",
+        "apps/api/app/routes/message_history.py": "9e0cab9f017addc6cc5ac3314de5a32b274508e8bfea07cdf4db37c13124861c",
+        "apps/api/app/routes/messages.py": "fff6f04b6de98028f47f89f6e01c85c8ec6dfa91c664ea946f6becb129d5840c",
+        "apps/api/app/routes/registries.py": "bd6ca38e10d30f3f11f93b5b6284cdf9374b0b5b46c097986a205c971ee0c4d9",
+        "apps/api/app/routes/review_repairs.py": "a9eb5b6d7359a9f240f0efcab773e9d7b676465a08cdd9a962dba0c0bb758249",
+        "apps/api/app/routes/session_events.py": "403e3ad2575a33a16950700c3771fddc0300c4eb3944221b5dca1a1f0b5f20cc",
+        "apps/api/app/routes/sessions.py": "95b02f840e8cd2baf673426e1497a2bf52e6cc5b1f8746458fc132ae228b0528",
+        "apps/api/app/routes/skills.py": "da8236c95962a121ebf508c3eafdfd736ce0037f2ea737879b8d7f1b257d5c1e",
+        "apps/api/app/routes/targets.py": "768bf33c4ebc813c0f94af21a42498fd6cce50eeafcc4a54d47568ca0cd0ce09",
+        "apps/api/app/routes/task_artifacts.py": "d5b8e6df783329a7cf0966bcb30e8f274e55fcbb93c52c1b2ba78809876eb757",
+        "apps/api/app/routes/task_runs.py": "04e293f862e897ed6f9dceefa37d8f7795017f285c9c9985aabed79de4f64eb7",
+        "apps/api/app/routes/user_code_edits.py": "1845adf0bd8f1b31123f8317f8b18b2c103416ba4f36c8c5c30f4b118734d3c5",
+        "apps/api/app/routes/workspaces.py": "0e1516a81818e5e4d3231d57bf1b5595e3452da3d69af24d6fe353f2f47c5db0",
+        "apps/api/app/run_diagnostics.py": "98bf1cb0bd4ea64e17e1410b71c2cc69ab0e5ee4cf44fba924ceeea3859f5346",
+        "apps/api/app/run_engine.py": "e6282f0ad7ae333953759754c45541ad735708be2db91cf458a1de9a3b80a2ed",
+        "apps/api/app/run_supervisor.py": "5314508a98d0d198667d2a1b41d19a072bc3a0f14145d5bd0fab4ca8f78ff558",
+        "apps/api/app/scheduler.py": "a24ab203bf54485b83b8199fac00a574bb45f618d75d8c51ea9239c583f08677",
+        "apps/api/app/schemas.py": "055cc3a40472def71416cf12b80770f6de7c4e7f920603038a68759253ead6a5",
+        "apps/api/app/scripted_mock.py": "d51dcc3cc23794dd2bf629848ff468db6ad00c74407c1cbd84aa61975f777b15",
+        "apps/api/app/seed.py": "8980c417eb8dca27834f14ac10ea32be012450c0af7ef8ee8df3a0976e0517ef",
+        "apps/api/app/session_queue.py": "eb5be430c0549cf98590b89cc49b7c2ddaeccbc34b5a4d01583fe97a731f2638",
+        "apps/api/app/skill_runtime.py": "b3d019cf64f01ebbd5ffb0711248a1fe519004882500f601783c4f4163b96774",
+        "apps/api/app/skills.py": "9a5101413ad0f3da04108cb0bad1e9c36fce39c096516495000ed34184f92bf9",
+        "apps/api/app/target_locks.py": "45b2a037d29d4c77bad8737090dbf6e782dac9ba81c905780944e97faabb1fb0",
+        "apps/api/app/target_registry.py": "c1d71cd0e6ab408083e7e9636e3e227bdf5eed5e256dafe08ae19c599c0fe3da",
+        "apps/api/app/task_graph_builder.py": "ea8df977b018ab76fc5ed1b368840dd5aae3a68f98b6abfe0de03e03630e2ffb",
+        "apps/api/app/task_run_scope.py": "22640722a2c13726815e92d0ae2bf294c3881fa93a14c1f22e8d711927db2a5c",
+        "apps/api/app/task_runs.py": "09ae039d0ede253cbdb264c48e93163b74e1f661ad0ceeebadfca6e199b38496",
+        "apps/api/app/transactional_delivery.py": "aea6d809711547fe8b12329cd86edce3ee2fa6b5e616edd43e47f3ab28fe5195",
+        "apps/api/app/user_code_edits.py": "c8e5ac4be4df379ac629f044533b3db7a38e130b871e853c48054f1ea1e75e94",
+        "apps/api/app/user_edit_fences.py": "47513e7270730a850a495542c6c0a0f1ade09c00e1def2fae393fd2b3215745d",
+        "apps/api/app/user_edit_files.py": "318be127f2b11334788154b6ddd856fa0be095db58dd4d19e8510777e8a8efdd",
+        "apps/api/app/user_patch.py": "0ddb6f1b3fe2f77e836a55778d1dd0ef394fbd5de58a449c6b3dc7c4848e01a6",
+        "apps/api/app/windows_connection_cleanup.py": "28d2bf8677d99389d03f40632e963de657934fa1b2baf5187d7ffb6b26d18735",
+        "apps/api/app/workflow_acceptance.py": "ce4b4d4513da9efed760dc200ac91b8f4e6ea8d4364a8246a4f66e155779b207",
+        "apps/api/app/workflow_cohort.py": "7205239fc7de6c718dbe2b3fbbbdf489ce2dacfaac1413fa21afd8b47f790532",
+        "apps/api/app/workflow_evaluation.py": "17c8d08b85aa69d2143b07bd1a83964fd3948d5bef6552fad7080ab4b5c0c3e9",
+        "apps/api/app/workflow_profiles.py": "928b2b21009ad1dd519a5e10210c376cffc3efa5c9fba77e89338d2a2a620d9a",
+        "apps/api/app/workflow_review_evidence.py": "15fbf781f808766352dddc66ec455b390531a2bf847500f0ca60bfebf02bbe76",
+        "apps/api/app/workflow_suite.py": "200142dab2b48203df6eb29e9a42c8ccc8661872a7753526dbebd5c666ee81b8",
+        "apps/api/app/worktrees.py": "b3d689d2922bafda415e9346035f8702010dc38606d675d7342e110ffb510192",
+        "apps/api/requirements.txt": "c12e209349b9ebb82eb5b1e88ca20378e22856976cb40942b61d8fe246279e38",
+        "apps/demo/index.html": "d201c3a4eaf6503008a27a179ec1502db08250694aaf28158313202e8dfec1f9",
+        "apps/demo/package.json": "35ac1be578e95ccf296a7e5b8098c9a44c274bb211d62690ddc8d016d4df898d",
+        "apps/demo/README.md": "18e5ea119a881427471ecff82b1725e35e5b4db7d65f73ae4ed0003d5a7d3046",
+        "apps/demo/src/App.tsx": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297",
+        "apps/demo/src/main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+        "apps/demo/src/styles.css": "b68831f283f8f98f9cabdbd5517767a89e2a9356842a78a536c5a4927f690317",
+        "apps/demo/tsconfig.app.json": "e9a8dd90c9608be011e11921be7de765b5a58cb14c92a3f295912e17bd81e59d",
+        "apps/demo/tsconfig.json": "7a8ddec53aba35daa80afec748db4a517f085dad367fe5427df2f6a5a2d547b4",
+        "apps/demo/vite.config.ts": "c21eacada911864c510fb42231fcb6d1f58d30b95ceb94ffd0a4fb5922d2bb78",
+        "apps/demo-api/app/__init__.py": "d61ab2e437fff4aa583396952d03bcbc0ed7be07d762ccea2f35aa1d1d3dbbe3",
+        "apps/demo-api/app/main.py": "126939ebdfdb77c9d2b38209a02cccce7fb37784fac6c69bcfd79e649b1ca03d",
+        "apps/demo-api/README.md": "998991ab35d6a1ba213ecbf8b9abb02b1d9243da0ca36da021eb386a3736c396",
+        "apps/demo-api/tests/test_contacts.py": "3f9e860635952c680d412b1ab5bfb881f730cde618b87d41de37938937808c04",
+        "package.json": "2ea945a7902a12e5f3fd62f8a5a42f060ce452fc6f6fc73a170227a45e017e59",
+        "patches/braces@3.0.3.patch": "8bb219f5e9bba11a14f0db85bf3191edff9e38f534a4b10509618a2301041be1",
+        "patches/monaco-editor@0.56.0.patch": "68027eb849d067a0dd490502a379de9a8bc3a0f18ab82212a02f7013e9e1ac00",
+        "pnpm-lock.yaml": "0a82dfb091e4a286e6886ab02be14c77fd0bc2b5a9ab2dceb1d8e6154ed4c954",
+        "pnpm-workspace.yaml": "617555f4d8252d6089638a810777859f1152cde079ba64e0ab0ecb84da8ee920",
+        "scripts/demo-backend-check.py": "15216300305eb34661d8e21cd6714362953e33a61ef321ee6878ed34774a4c87",
+        "scripts/demo-build-smoke.test.mjs": "911ceef3515ba934a6e7f0f18f89fc90e3f971918f7ffae8201c1aca796d204f",
+        "scripts/demo-requirement-check.mjs": "f506a642587d9638d170b9e1e4dccaef0d578cf284085edff2223182d3d0aada",
+        "scripts/demo-validation-build.mjs": "853435b722af2135e63cedea39421e950baee468f06d957cdd0b9973cedf1893",
+        "scripts/dependency-security.test.mjs": "6f49773d71b8859e189c4519d7fc22f84be2448b83ef704972f158088c14a92c",
+        "scripts/local-api.py": "9e1009fc497d60a606f95e6bf6bcf85028d721d86f8f0bb39fdcf3c517e78926",
+        "scripts/local-data.py": "6ce6aef6e646541b0d426b79b9ec40f7b6dafae91b6d30fee9aee63ba16f3d5a",
+        "scripts/local-dev.mjs": "9842b29a70c8ce38d14a655d6a8fd594d538003fd473b9d41237e44281184f40",
+        "scripts/local-dev.test.mjs": "8d24ececd64c08772346d087ccd4717b3c5bef3b81af3d0b5ce0b9088364c66d",
+        "scripts/measure-message-history.py": "a573b5ed88943290daa23d109986c82572611ab1e4256ca76e660227833686c8",
+        "scripts/message-history-browser-check.mjs": "2bd8cacc3e30ae8e7b82ade683e1bb165e93aa9c28d5607ecd1327bd55a2341b",
+        "scripts/preview-serving-paths.mjs": "574d4a1a30dd54d5b3720f624860bfc062f95e55e5449808bf00d5a00fdf6389",
+        "scripts/preview-serving-paths.test.mjs": "e97f3ffee13880d30b499bce51e65307282b37ce9f9183b6657da638caf81c46",
+        "scripts/preview-vite.config.mjs": "b9c2043efdedc17aa08400f67afdeca1c07059539372eb942812e38afc7a4f63",
+        "scripts/review-repair-browser-check.mjs": "471b10273ff58bb8fce98d315c4b20fbb2c07e15780aeb450da4be3b23eb86da",
+        "scripts/workbench-usability-browser-check.mjs": "4f10264cefd6c942e1787472abfa2e4e141e0731d164216b6b9a37e924bedf46",
+        "scripts/workflow-api-bridge.py": "3e56258333ae9e7ca3224e5b4693385f51a0c187cd63b74dc65fbb18fa1cbef1",
+        "scripts/workflow-contacts-check.mjs": "71b19c23957abbf470a43fec333fbe0128be233a9e4d45a03d38ba9ff890a758"
+      },
+      "codingAdapter": "codex",
+      "qaAdapter": "claude_code",
+      "python": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]",
+      "selectedScenarios": [
+        {
+          "id": "backend-repair",
+          "prompts": [
+            "@workflow-backend @workflow-qa Fix apps/demo-api/app/main.py: GET /health must return status 'ok' and service 'agenthub-demo-api'. Preserve all existing contacts/CORS/OpenAPI behavior. Review the actual diff."
+          ],
+          "headings": [],
+          "backend": true,
+          "frontend": false,
+          "integration": false,
+          "multi_file": false,
+          "fault_injection": false
+        }
+      ],
+      "repetitions": 1,
+      "maxRetriesPerTask": 1
+    },
+    "limits": "Same implementation/input policy, not a model-version guarantee; fixed scenario repetitions are not distinct business tasks."
+  },
+  "summary": {
+    "selected": 1,
+    "attempted": 1,
+    "passed": 1,
+    "firstAttemptPassed": 1,
+    "firstAttemptSuccessRate": 1.0,
+    "finalSuccessRate": 1.0,
+    "retryCount": 0,
+    "roles": {
+      "coding": {
+        "attempts": 1,
+        "retries": 0,
+        "completed": 1,
+        "elapsed": {
+          "observed": 1,
+          "unknown": 0,
+          "totalSeconds": 52.697,
+          "medianSeconds": 52.697,
+          "maxSeconds": 52.697
+        }
+      },
+      "qa": {
+        "attempts": 1,
+        "retries": 0,
+        "completed": 1,
+        "elapsed": {
+          "observed": 1,
+          "unknown": 0,
+          "totalSeconds": 18.247,
+          "medianSeconds": 18.247,
+          "maxSeconds": 18.247
+        }
+      }
+    },
+    "totalElapsed": {
+      "observed": 1,
+      "unknown": 0,
+      "totalSeconds": 93.063,
+      "medianSeconds": 93.063,
+      "maxSeconds": 93.063
+    },
+    "nativeQaVerifiedAttempts": 1,
+    "medianElapsedSeconds": 91.891,
+    "maxElapsedSeconds": 91.891,
+    "failureCounts": {},
+    "naturalScenarios": {
+      "selected": 1,
+      "attempted": 1,
+      "passed": 1,
+      "firstAttemptPassed": 1,
+      "firstAttemptSuccessRate": 1.0,
+      "finalSuccessRate": 1.0,
+      "retryCount": 0,
+      "roles": {
+        "coding": {
+          "attempts": 1,
+          "retries": 0,
+          "completed": 1,
+          "elapsed": {
+            "observed": 1,
+            "unknown": 0,
+            "totalSeconds": 52.697,
+            "medianSeconds": 52.697,
+            "maxSeconds": 52.697
+          }
+        },
+        "qa": {
+          "attempts": 1,
+          "retries": 0,
+          "completed": 1,
+          "elapsed": {
+            "observed": 1,
+            "unknown": 0,
+            "totalSeconds": 18.247,
+            "medianSeconds": 18.247,
+            "maxSeconds": 18.247
+          }
+        }
+      },
+      "totalElapsed": {
+        "observed": 1,
+        "unknown": 0,
+        "totalSeconds": 93.063,
+        "medianSeconds": 93.063,
+        "maxSeconds": 93.063
+      },
+      "nativeQaVerifiedAttempts": 1,
+      "medianElapsedSeconds": 91.891,
+      "maxElapsedSeconds": 91.891,
+      "failureCounts": {}
+    },
+    "faultInjectionScenarios": {
+      "selected": 0,
+      "attempted": 0,
+      "passed": 0,
+      "firstAttemptPassed": 0,
+      "firstAttemptSuccessRate": null,
+      "finalSuccessRate": null,
+      "retryCount": 0,
+      "roles": {
+        "coding": {
+          "attempts": 0,
+          "retries": 0,
+          "completed": 0,
+          "elapsed": {
+            "observed": 0,
+            "unknown": 0,
+            "totalSeconds": null,
+            "medianSeconds": null,
+            "maxSeconds": null
+          }
+        },
+        "qa": {
+          "attempts": 0,
+          "retries": 0,
+          "completed": 0,
+          "elapsed": {
+            "observed": 0,
+            "unknown": 0,
+            "totalSeconds": null,
+            "medianSeconds": null,
+            "maxSeconds": null
+          }
+        }
+      },
+      "totalElapsed": {
+        "observed": 0,
+        "unknown": 0,
+        "totalSeconds": null,
+        "medianSeconds": null,
+        "maxSeconds": null
+      },
+      "nativeQaVerifiedAttempts": 0,
+      "medianElapsedSeconds": null,
+      "maxElapsedSeconds": null,
+      "failureCounts": {}
+    },
+    "categories": {
+      "backend-repair": {
+        "selected": 1,
+        "attempted": 1,
+        "passed": 1,
+        "firstAttemptPassed": 1,
+        "firstAttemptSuccessRate": 1.0,
+        "finalSuccessRate": 1.0,
+        "retryCount": 0,
+        "roles": {
+          "coding": {
+            "attempts": 1,
+            "retries": 0,
+            "completed": 1,
+            "elapsed": {
+              "observed": 1,
+              "unknown": 0,
+              "totalSeconds": 52.697,
+              "medianSeconds": 52.697,
+              "maxSeconds": 52.697
+            }
+          },
+          "qa": {
+            "attempts": 1,
+            "retries": 0,
+            "completed": 1,
+            "elapsed": {
+              "observed": 1,
+              "unknown": 0,
+              "totalSeconds": 18.247,
+              "medianSeconds": 18.247,
+              "maxSeconds": 18.247
+            }
+          }
+        },
+        "totalElapsed": {
+          "observed": 1,
+          "unknown": 0,
+          "totalSeconds": 93.063,
+          "medianSeconds": 93.063,
+          "maxSeconds": 93.063
+        },
+        "nativeQaVerifiedAttempts": 1,
+        "medianElapsedSeconds": 91.891,
+        "maxElapsedSeconds": 91.891,
+        "failureCounts": {}
+      }
+    }
+  },
+  "rawReportSha256": "361c92f76ec2cfe43c211e1b48e2387f22f0df12283fefcb89a7a4494ef11f41",
+  "rawDirectoryName": "agenthub-native-qa-pilot-23de161e-ee33-45b4-84d4-999effcca280",
+  "limits": "Actual isolated CLI workflow; repeated fixed scenarios are not distinct business tasks or general model performance. No product UI/SSE, deployment or source prose is exported.",
+  "cases": [
+    {
+      "caseId": "backend-repair",
+      "repetition": 1,
+      "verdict": "passed",
+      "firstAttemptPassed": true,
+      "retryCount": 0,
+      "faultInjection": false,
+      "elapsedSeconds": 91.891,
+      "totalElapsedSeconds": 93.063,
+      "preparationElapsedSeconds": 1.0,
+      "failureGates": [],
+      "baselineFailing": true,
+      "baseCommit": "a981eaf6cd913e70cf2a686f8dc14af6200d44d3",
+      "inputHashes": {
+        "package.json": "2ea945a7902a12e5f3fd62f8a5a42f060ce452fc6f6fc73a170227a45e017e59",
+        "pnpm-lock.yaml": "0a82dfb091e4a286e6886ab02be14c77fd0bc2b5a9ab2dceb1d8e6154ed4c954",
+        "pnpm-workspace.yaml": "617555f4d8252d6089638a810777859f1152cde079ba64e0ab0ecb84da8ee920",
+        "apps/demo/index.html": "d201c3a4eaf6503008a27a179ec1502db08250694aaf28158313202e8dfec1f9",
+        "apps/demo/package.json": "35ac1be578e95ccf296a7e5b8098c9a44c274bb211d62690ddc8d016d4df898d",
+        "apps/demo/README.md": "18e5ea119a881427471ecff82b1725e35e5b4db7d65f73ae4ed0003d5a7d3046",
+        "apps/demo/tsconfig.app.json": "e9a8dd90c9608be011e11921be7de765b5a58cb14c92a3f295912e17bd81e59d",
+        "apps/demo/tsconfig.json": "7a8ddec53aba35daa80afec748db4a517f085dad367fe5427df2f6a5a2d547b4",
+        "apps/demo/vite.config.ts": "c21eacada911864c510fb42231fcb6d1f58d30b95ceb94ffd0a4fb5922d2bb78",
+        "apps/demo/src/App.tsx": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297",
+        "apps/demo/src/main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+        "apps/demo/src/styles.css": "b68831f283f8f98f9cabdbd5517767a89e2a9356842a78a536c5a4927f690317",
+        "apps/demo-api/README.md": "998991ab35d6a1ba213ecbf8b9abb02b1d9243da0ca36da021eb386a3736c396",
+        "apps/demo-api/app/main.py": "1ab451c1346a7e69aa9211dd3c93c5ecbbc79dc9ea518b9845e4e5cc4b7a12ca",
+        "apps/demo-api/app/__init__.py": "d61ab2e437fff4aa583396952d03bcbc0ed7be07d762ccea2f35aa1d1d3dbbe3",
+        "apps/demo-api/tests/test_contacts.py": "3f9e860635952c680d412b1ab5bfb881f730cde618b87d41de37938937808c04"
+      },
+      "profiles": [
+        {
+          "id": "a518749b-8cda-4f43-a5b9-48b5828b0962",
+          "role": "frontend",
+          "alias": "workflow-frontend",
+          "adapterType": "codex",
+          "toolPolicy": "codex_coding",
+          "targets": [
+            "demo-frontend"
+          ]
+        },
+        {
+          "id": "2c43deac-b212-4358-8b2f-84141003a06f",
+          "role": "backend",
+          "alias": "workflow-backend",
+          "adapterType": "codex",
+          "toolPolicy": "codex_coding",
+          "targets": [
+            "demo-backend"
+          ]
+        },
+        {
+          "id": "65a8e172-0e00-4250-b522-899df02cea45",
+          "role": "review",
+          "alias": "workflow-qa",
+          "adapterType": "claude_code",
+          "toolPolicy": "claude_read_only",
+          "targets": [
+            "demo-frontend",
+            "demo-backend"
+          ]
+        }
+      ],
+      "phases": [
+        {
+          "index": 0,
+          "promptHash": "1d3b9cd1cf579e27cd00b33822edeffe593f04cd6af157bb3e0dc309b02bb684",
+          "messageId": "4d9163b9-5468-43a1-b3f3-c117c911aa47",
+          "nativePlanning": true,
+          "planningSource": "real_llm",
+          "requireNativeQa": true,
+          "codingAdapter": "codex",
+          "maxRetriesPerTask": 1,
+          "requiredSnapshotId": "ec1c8172-b13d-455d-b63b-f45807d40c1b",
+          "requiredRuleId": "434a0f64-867a-4a8b-88d3-00afe539bdee",
+          "requiredRuleHash": "40c6446e8b1f7eb3e3237577a7ea0e5ae85e2fedb3fc48a50800ca17258a4a59",
+          "allTasksCompleted": true,
+          "immutableInputs": true,
+          "changedPaths": [
+            "apps/demo-api/app/main.py"
+          ],
+          "sourceHashes": {
+            "package.json": "2ea945a7902a12e5f3fd62f8a5a42f060ce452fc6f6fc73a170227a45e017e59",
+            "pnpm-lock.yaml": "0a82dfb091e4a286e6886ab02be14c77fd0bc2b5a9ab2dceb1d8e6154ed4c954",
+            "pnpm-workspace.yaml": "617555f4d8252d6089638a810777859f1152cde079ba64e0ab0ecb84da8ee920",
+            "apps/demo/index.html": "d201c3a4eaf6503008a27a179ec1502db08250694aaf28158313202e8dfec1f9",
+            "apps/demo/package.json": "35ac1be578e95ccf296a7e5b8098c9a44c274bb211d62690ddc8d016d4df898d",
+            "apps/demo/README.md": "18e5ea119a881427471ecff82b1725e35e5b4db7d65f73ae4ed0003d5a7d3046",
+            "apps/demo/tsconfig.app.json": "e9a8dd90c9608be011e11921be7de765b5a58cb14c92a3f295912e17bd81e59d",
+            "apps/demo/tsconfig.json": "7a8ddec53aba35daa80afec748db4a517f085dad367fe5427df2f6a5a2d547b4",
+            "apps/demo/vite.config.ts": "c21eacada911864c510fb42231fcb6d1f58d30b95ceb94ffd0a4fb5922d2bb78",
+            "apps/demo/src/App.tsx": "178e2f4916ce8f593f497505f12353f6bed3897e001cfc9e986633459099a297",
+            "apps/demo/src/main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+            "apps/demo/src/styles.css": "b68831f283f8f98f9cabdbd5517767a89e2a9356842a78a536c5a4927f690317",
+            "apps/demo-api/README.md": "998991ab35d6a1ba213ecbf8b9abb02b1d9243da0ca36da021eb386a3736c396",
+            "apps/demo-api/app/main.py": "126939ebdfdb77c9d2b38209a02cccce7fb37784fac6c69bcfd79e649b1ca03d",
+            "apps/demo-api/app/__init__.py": "d61ab2e437fff4aa583396952d03bcbc0ed7be07d762ccea2f35aa1d1d3dbbe3",
+            "apps/demo-api/tests/test_contacts.py": "3f9e860635952c680d412b1ab5bfb881f730cde618b87d41de37938937808c04"
+          },
+          "elapsedSeconds": 91.813,
+          "failureGates": [],
+          "verdict": "passed",
+          "acceptance": {
+            "status": "passed",
+            "results": {
+              "backend": {
+                "schemaVersion": "agenthub.validation.v1",
+                "profile": "fastapi-contract-v1",
+                "status": "passed",
+                "sourceFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f",
+                "policyFingerprint": "bf6cac13ed35193192131d398d7d7a3691fc4973a32d2efd495efd9974c10676",
+                "commands": [
+                  {
+                    "kind": "check",
+                    "status": "passed",
+                    "exitCode": 0,
+                    "durationMs": 187
+                  },
+                  {
+                    "kind": "test",
+                    "status": "passed",
+                    "exitCode": 0,
+                    "durationMs": 609
+                  }
+                ],
+                "functional": {
+                  "status": "not_configured",
+                  "checks": []
+                }
+              }
+            }
+          },
+          "attempts": [
+            {
+              "taskRunId": "965f2dbc-d971-4ddc-b4c4-98fd712a0559",
+              "taskId": "b452e22f-21af-4e27-a4f2-41989c6ce069",
+              "role": "backend",
+              "targetId": "demo-backend",
+              "state": "completed",
+              "errorCode": null,
+              "adapterRunId": "codex-220cb23f-5180-413b-96e8-24b4eaf7d397",
+              "retryOfRunId": null,
+              "providerAssignment": {
+                "role": "backend",
+                "adapterType": "codex",
+                "providerId": "local-codex-cli",
+                "source": "runtime_config",
+                "targetId": "demo-backend",
+                "supportedMode": "write",
+                "fallbackPolicy": "environment_default"
+              },
+              "providerTurnObserved": true,
+              "elapsedSeconds": 52.697,
+              "startedAt": "2026-10-16T03:26:22.800521",
+              "endedAt": "2026-10-16T03:27:15.497138",
+              "diffs": [
+                {
+                  "id": "c753d6f9-1cb1-42ea-92be-cbb1d7311f8f",
+                  "artifactId": "0a2c06e4-b350-4777-9f4e-19cebd521bb9",
+                  "files": [
+                    "apps/demo-api/app/main.py"
+                  ],
+                  "patchHash": "06024081be85fadba43932acfc9fbeffb11a54028b8d5facf11c7459d0967d1a",
+                  "nonempty": true,
+                  "currentFileHashes": {
+                    "apps/demo-api/app/main.py": "126939ebdfdb77c9d2b38209a02cccce7fb37784fac6c69bcfd79e649b1ca03d"
+                  }
+                }
+              ],
+              "events": [
+                {
+                  "id": "42b0dbb4-c7bc-49b5-9368-5ad9ea5039e5",
+                  "type": "task.state",
+                  "sequence": 1
+                },
+                {
+                  "id": "d3f3c0de-9fc8-4b26-9ea7-853c47394229",
+                  "type": "session_queue.enqueued",
+                  "sequence": 2
+                },
+                {
+                  "id": "cc09cf99-012b-4831-9d35-21a0ea39dfe8",
+                  "type": "task.checkpoint.created",
+                  "sequence": 3
+                },
+                {
+                  "id": "3075ad58-ad62-4d61-bf29-680d2019f7b3",
+                  "type": "run.claimed",
+                  "sequence": 4
+                },
+                {
+                  "id": "bfce2004-2839-4068-b436-ed73b172acab",
+                  "type": "session_queue.ready",
+                  "sequence": 5
+                },
+                {
+                  "id": "b4fcb1ad-a00d-4bd0-bdc6-10baee51e910",
+                  "type": "target_lock.acquired",
+                  "sequence": 6
+                },
+                {
+                  "id": "726af3e5-1f62-43e8-97b0-90c0dcf3838a",
+                  "type": "session_queue.running",
+                  "sequence": 7
+                },
+                {
+                  "id": "bd6a50a3-c0c5-47d0-aaf7-859cd7f28432",
+                  "type": "task.heartbeat",
+                  "sequence": 8
+                },
+                {
+                  "id": "a7a97f20-6f7b-4198-924e-0d1005f7b3a4",
+                  "type": "provider.resolved",
+                  "sequence": 9
+                },
+                {
+                  "id": "4225ae2c-93a3-4680-9df6-b79d5a3b672d",
+                  "type": "provider.health_checked",
+                  "sequence": 10
+                },
+                {
+                  "id": "3c81de4d-717f-4e40-84fa-473ba0ca8443",
+                  "type": "provider.capacity_acquired",
+                  "sequence": 11
+                },
+                {
+                  "id": "86dd558f-3120-4cf5-bc73-8b6516fde04f",
+                  "type": "task.state",
+                  "sequence": 12
+                },
+                {
+                  "id": "0012ee73-7d77-442b-b294-96e6a53bdd04",
+                  "type": "task.state",
+                  "sequence": 13
+                },
+                {
+                  "id": "178323a7-82c4-426f-9d00-63bc80a90dfa",
+                  "type": "message.delta",
+                  "sequence": 14
+                },
+                {
+                  "id": "2ff37f10-0a01-4d97-b400-2bb312ff3f11",
+                  "type": "message.delta",
+                  "sequence": 15
+                },
+                {
+                  "id": "cc9fbc81-97e6-4856-a648-b5d427239f79",
+                  "type": "message.delta",
+                  "sequence": 16
+                },
+                {
+                  "id": "1865bcff-ce54-494f-95b2-ab54ca267a89",
+                  "type": "message.delta",
+                  "sequence": 17
+                },
+                {
+                  "id": "b745c40d-e119-4cf7-aae3-0d85fd41dd32",
+                  "type": "message.delta",
+                  "sequence": 18
+                },
+                {
+                  "id": "1cbbe4b4-554f-42a7-98d2-04314ac240aa",
+                  "type": "message.delta",
+                  "sequence": 19
+                },
+                {
+                  "id": "03ef0414-93ab-4e22-a420-264d5b6a5354",
+                  "type": "message.delta",
+                  "sequence": 20
+                },
+                {
+                  "id": "38353090-7de8-4449-9d12-3f813a1381f5",
+                  "type": "message.delta",
+                  "sequence": 21
+                },
+                {
+                  "id": "10aa85cd-27fd-4929-bbfe-1405d28b1956",
+                  "type": "completed",
+                  "sequence": 22
+                },
+                {
+                  "id": "26322400-2747-486e-b834-cffd133bbfdc",
+                  "type": "validation.started",
+                  "sequence": 23
+                },
+                {
+                  "id": "97221f5d-2d72-40ad-9d30-231edc431083",
+                  "type": "validation.completed",
+                  "sequence": 24
+                },
+                {
+                  "id": "f2d19f5c-8612-4eba-8a71-c67853767898",
+                  "type": "task.scope_validation.passed",
+                  "sequence": 25
+                },
+                {
+                  "id": "6d4c482c-862c-476f-99e9-9a1ee8a85d7f",
+                  "type": "artifact.diff.ready",
+                  "sequence": 26
+                },
+                {
+                  "id": "c9dac1e3-ccd5-4921-af4f-902cf562d836",
+                  "type": "task.completion_validation",
+                  "sequence": 27
+                },
+                {
+                  "id": "a903cb50-a96b-4284-a129-635514f88ee3",
+                  "type": "artifact.review.ready",
+                  "sequence": 28
+                },
+                {
+                  "id": "dbdcfa43-b412-4673-b57a-a3ffe9a0bdb4",
+                  "type": "task.state",
+                  "sequence": 29
+                },
+                {
+                  "id": "fe930d68-a88b-4a22-ac04-6c164d7b1b23",
+                  "type": "target_lock.released",
+                  "sequence": 30
+                },
+                {
+                  "id": "3146c988-7f6e-4e1d-8ce1-a9e8a2c7d2f1",
+                  "type": "session_queue.advanced",
+                  "sequence": 31
+                },
+                {
+                  "id": "cb303924-f3fd-4cb8-99ab-a3b42ee53f4f",
+                  "type": "provider.capacity_released",
+                  "sequence": 32
+                }
+              ],
+              "scopeStatus": "passed",
+              "validation": {
+                "schemaVersion": "agenthub.validation.v1",
+                "profile": "fastapi-contract-v1",
+                "status": "passed",
+                "sourceFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f",
+                "policyFingerprint": "bf6cac13ed35193192131d398d7d7a3691fc4973a32d2efd495efd9974c10676",
+                "eventId": "97221f5d-2d72-40ad-9d30-231edc431083",
+                "taskRunId": "965f2dbc-d971-4ddc-b4c4-98fd712a0559",
+                "commands": [
+                  {
+                    "kind": "check",
+                    "status": "passed",
+                    "exitCode": 0,
+                    "durationMs": 172
+                  },
+                  {
+                    "kind": "test",
+                    "status": "passed",
+                    "exitCode": 0,
+                    "durationMs": 547
+                  }
+                ],
+                "functional": {
+                  "status": "not_configured",
+                  "checks": []
+                }
+              },
+              "reviews": []
+            },
+            {
+              "taskRunId": "08c648e8-a89b-49c6-8ca3-a05dcd3e64e1",
+              "taskId": "e4380a5e-a76f-4439-950a-5fbe2cbf1cdb",
+              "role": "review",
+              "targetId": "demo-backend",
+              "state": "completed",
+              "errorCode": null,
+              "adapterRunId": "claude-code-96c0e82c-ec0f-49cd-8c9f-195688599272",
+              "retryOfRunId": null,
+              "providerAssignment": {
+                "role": "review",
+                "adapterType": "claude_code",
+                "providerId": "local-claude-code-cli",
+                "source": "runtime_config",
+                "targetId": "demo-backend",
+                "supportedMode": "review",
+                "fallbackPolicy": "environment_default"
+              },
+              "providerTurnObserved": true,
+              "elapsedSeconds": 18.247,
+              "startedAt": "2026-10-16T03:27:15.857604",
+              "endedAt": "2026-10-16T03:27:34.104218",
+              "diffs": [
+                {
+                  "id": "89b2023a-bbe1-4c64-b537-5632b3380c15",
+                  "artifactId": "f08eadf2-22f2-40ef-bb4d-d23f042d6238",
+                  "files": [
+                    "apps/demo-api/app/main.py"
+                  ],
+                  "patchHash": "06024081be85fadba43932acfc9fbeffb11a54028b8d5facf11c7459d0967d1a",
+                  "nonempty": true,
+                  "currentFileHashes": {
+                    "apps/demo-api/app/main.py": "126939ebdfdb77c9d2b38209a02cccce7fb37784fac6c69bcfd79e649b1ca03d"
+                  }
+                }
+              ],
+              "events": [
+                {
+                  "id": "814b20f4-127f-42d1-8fd2-ab4e7062477d",
+                  "type": "task.state",
+                  "sequence": 1
+                },
+                {
+                  "id": "2c1792e3-9e6b-418d-97ba-6e750072c42d",
+                  "type": "session_queue.enqueued",
+                  "sequence": 2
+                },
+                {
+                  "id": "a2860ea2-2da0-4780-9527-26a41853249c",
+                  "type": "run.claimed",
+                  "sequence": 3
+                },
+                {
+                  "id": "ec2e1507-95c2-4127-83c9-1a9021ecd358",
+                  "type": "session_queue.ready",
+                  "sequence": 4
+                },
+                {
+                  "id": "50e626c8-51ef-4b19-9417-c8d15ae417a5",
+                  "type": "session_queue.running",
+                  "sequence": 5
+                },
+                {
+                  "id": "97167649-0393-4ffb-8af5-65a7ca98d128",
+                  "type": "task.heartbeat",
+                  "sequence": 6
+                },
+                {
+                  "id": "f6d1d560-ce62-415e-8b30-e80ea7b79eff",
+                  "type": "provider.resolved",
+                  "sequence": 7
+                },
+                {
+                  "id": "776de38f-aa7b-4b26-844d-22bbaeec858d",
+                  "type": "provider.health_checked",
+                  "sequence": 8
+                },
+                {
+                  "id": "701c1e9c-1090-4d70-b9c5-0ff933710359",
+                  "type": "provider.capacity_acquired",
+                  "sequence": 9
+                },
+                {
+                  "id": "e557346d-795b-455d-9feb-6798514dbbbb",
+                  "type": "task.state",
+                  "sequence": 10
+                },
+                {
+                  "id": "994f3e09-39db-4863-8189-976780da3a94",
+                  "type": "task.state",
+                  "sequence": 11
+                },
+                {
+                  "id": "0c484ff8-14c2-4c70-a856-671b34fa88e2",
+                  "type": "task.state",
+                  "sequence": 12
+                },
+                {
+                  "id": "6517649e-eec3-4b06-b92a-f453d3f874b4",
+                  "type": "task.state",
+                  "sequence": 13
+                },
+                {
+                  "id": "43bc9d6e-e65b-4956-8ad5-32bcb8babe34",
+                  "type": "task.state",
+                  "sequence": 14
+                },
+                {
+                  "id": "8f9ae740-19bc-40e8-abc4-6ec601a9900e",
+                  "type": "task.state",
+                  "sequence": 15
+                },
+                {
+                  "id": "fe82b94f-1692-4d1b-8f2f-93529a38deff",
+                  "type": "task.state",
+                  "sequence": 16
+                },
+                {
+                  "id": "17918206-2329-41b1-94b7-1a75cd225871",
+                  "type": "task.state",
+                  "sequence": 17
+                },
+                {
+                  "id": "8078f583-f12b-4ed1-b750-ee3a3e5e1c59",
+                  "type": "task.state",
+                  "sequence": 18
+                },
+                {
+                  "id": "34fcb540-de2e-482b-8355-5dbe5d3109a5",
+                  "type": "task.state",
+                  "sequence": 19
+                },
+                {
+                  "id": "b798e249-8c21-4a83-89c5-106d9983a872",
+                  "type": "task.state",
+                  "sequence": 20
+                },
+                {
+                  "id": "7fd88c26-7610-4c94-a503-dd5ed2a42ebb",
+                  "type": "task.state",
+                  "sequence": 21
+                },
+                {
+                  "id": "45f135e5-66fb-497a-b03f-e49675ce4c8b",
+                  "type": "task.state",
+                  "sequence": 22
+                },
+                {
+                  "id": "4a869cc1-db36-4ac2-8840-f05452e038b1",
+                  "type": "task.state",
+                  "sequence": 23
+                },
+                {
+                  "id": "0333a826-0fe7-4ad2-8a45-888c077fa23f",
+                  "type": "task.state",
+                  "sequence": 24
+                },
+                {
+                  "id": "c8ab7cdb-223c-4155-bf6a-4b62781600b0",
+                  "type": "task.state",
+                  "sequence": 25
+                },
+                {
+                  "id": "01a3b4c2-44df-4032-bb53-2e7f947eb2ab",
+                  "type": "task.state",
+                  "sequence": 26
+                },
+                {
+                  "id": "6f0344e1-09db-4e36-b45b-5fe7e448c24f",
+                  "type": "task.state",
+                  "sequence": 27
+                },
+                {
+                  "id": "3b403544-3028-4198-a5a9-3a31984b0209",
+                  "type": "task.state",
+                  "sequence": 28
+                },
+                {
+                  "id": "8cb6cf31-3970-4ff9-8841-46431defd42e",
+                  "type": "task.state",
+                  "sequence": 29
+                },
+                {
+                  "id": "65fcefbc-1062-49d6-a3b4-6d333679a8ee",
+                  "type": "task.state",
+                  "sequence": 30
+                },
+                {
+                  "id": "b711d0ea-6559-4bc3-8110-a5ae5f1b483c",
+                  "type": "task.state",
+                  "sequence": 31
+                },
+                {
+                  "id": "108aff85-cf06-43f3-b457-928e590dfa77",
+                  "type": "task.state",
+                  "sequence": 32
+                },
+                {
+                  "id": "ea13d19c-c667-44d5-a75c-7c46850b1cfa",
+                  "type": "task.state",
+                  "sequence": 33
+                },
+                {
+                  "id": "7a66c20b-1004-4e43-b726-38cafe256734",
+                  "type": "task.state",
+                  "sequence": 34
+                },
+                {
+                  "id": "1ecbfa85-7cf5-45a4-9431-f074c59c95ac",
+                  "type": "task.state",
+                  "sequence": 35
+                },
+                {
+                  "id": "b664876e-6a83-4679-9370-28ec9f1313d5",
+                  "type": "task.state",
+                  "sequence": 36
+                },
+                {
+                  "id": "3a483ed8-c6d1-4cf3-8567-338155a47929",
+                  "type": "task.state",
+                  "sequence": 37
+                },
+                {
+                  "id": "ef4a30e8-d68c-4358-808f-598cb960d7b3",
+                  "type": "task.state",
+                  "sequence": 38
+                },
+                {
+                  "id": "dc12c4e2-4f89-4a25-9b4e-55dd21b44a70",
+                  "type": "task.state",
+                  "sequence": 39
+                },
+                {
+                  "id": "7f7262e9-0de5-4e19-8449-9b1b1019e2a8",
+                  "type": "task.state",
+                  "sequence": 40
+                },
+                {
+                  "id": "e5920518-2225-4917-a4b5-d9bb0314e03e",
+                  "type": "task.state",
+                  "sequence": 41
+                },
+                {
+                  "id": "e6c92f08-bc39-4d45-b01c-3cc6f17f7fb2",
+                  "type": "task.state",
+                  "sequence": 42
+                },
+                {
+                  "id": "991ceb5c-695c-48f2-9e89-2142a4d47e2f",
+                  "type": "task.state",
+                  "sequence": 43
+                },
+                {
+                  "id": "80446439-a81f-4f90-befa-94a55b6a5014",
+                  "type": "task.state",
+                  "sequence": 44
+                },
+                {
+                  "id": "e0b54645-97e6-4242-a30b-f8846d28a292",
+                  "type": "task.state",
+                  "sequence": 45
+                },
+                {
+                  "id": "81974de2-6e3e-4baf-8c70-0d4e0e5d94cf",
+                  "type": "task.state",
+                  "sequence": 46
+                },
+                {
+                  "id": "5f350516-425e-4eb9-953f-25f7d35be931",
+                  "type": "task.state",
+                  "sequence": 47
+                },
+                {
+                  "id": "07b2078f-9e08-4948-bb27-780688a3cc49",
+                  "type": "task.state",
+                  "sequence": 48
+                },
+                {
+                  "id": "dd35c2b3-16e6-4207-b11d-efb47163c251",
+                  "type": "task.state",
+                  "sequence": 49
+                },
+                {
+                  "id": "02f78fdb-9bc5-404d-9c58-2120cfd05428",
+                  "type": "task.state",
+                  "sequence": 50
+                },
+                {
+                  "id": "383f2942-e5b1-4233-a1c4-01a0cf6cd97e",
+                  "type": "task.state",
+                  "sequence": 51
+                },
+                {
+                  "id": "7f5f2980-fb08-4aac-88ca-4134da634733",
+                  "type": "task.state",
+                  "sequence": 52
+                },
+                {
+                  "id": "9c03b50f-78f0-4709-8cbf-4a305b9c7cd2",
+                  "type": "task.state",
+                  "sequence": 53
+                },
+                {
+                  "id": "1b29c3b2-1681-402f-88eb-8c801a812304",
+                  "type": "task.state",
+                  "sequence": 54
+                },
+                {
+                  "id": "7f10fafd-0cb5-41fe-8ef4-b8603f4ae5b4",
+                  "type": "task.state",
+                  "sequence": 55
+                },
+                {
+                  "id": "03a31b84-4955-419e-98fa-341474be225c",
+                  "type": "task.state",
+                  "sequence": 56
+                },
+                {
+                  "id": "850ac653-c948-4427-bd55-84c7e5c0cdab",
+                  "type": "task.state",
+                  "sequence": 57
+                },
+                {
+                  "id": "6f78c6a6-de83-43a6-a57e-11c61e2b0265",
+                  "type": "task.state",
+                  "sequence": 58
+                },
+                {
+                  "id": "e5cd960d-f9ca-4060-9e1a-c65b10cb868c",
+                  "type": "task.state",
+                  "sequence": 59
+                },
+                {
+                  "id": "99ee3ea2-d67b-4630-84be-9ff10ab44063",
+                  "type": "task.state",
+                  "sequence": 60
+                },
+                {
+                  "id": "68c19001-2cbd-406c-b54f-c4861d65fd40",
+                  "type": "task.state",
+                  "sequence": 61
+                },
+                {
+                  "id": "820ae755-ab03-409d-9a2d-4595411f797e",
+                  "type": "task.state",
+                  "sequence": 62
+                },
+                {
+                  "id": "c36dfb77-1f70-4ae9-9d12-629f36c75d53",
+                  "type": "task.state",
+                  "sequence": 63
+                },
+                {
+                  "id": "fab62145-bc15-42f6-b2af-7ebbca7ee05f",
+                  "type": "task.state",
+                  "sequence": 64
+                },
+                {
+                  "id": "581470c1-2ec8-448a-9b2e-d9ce98674397",
+                  "type": "task.state",
+                  "sequence": 65
+                },
+                {
+                  "id": "bca4422f-7ca1-4781-aecd-1e51523342e2",
+                  "type": "task.state",
+                  "sequence": 66
+                },
+                {
+                  "id": "6dbf93c8-c0ca-40f0-a5b4-af808918454b",
+                  "type": "task.state",
+                  "sequence": 67
+                },
+                {
+                  "id": "edbf074f-a3f2-4cba-af48-6d55da6f66d0",
+                  "type": "task.state",
+                  "sequence": 68
+                },
+                {
+                  "id": "27a12beb-9ce9-4656-99f8-e73ebb8a5b23",
+                  "type": "task.state",
+                  "sequence": 69
+                },
+                {
+                  "id": "df95c086-f27d-4aa6-a2a0-7abc9289bb85",
+                  "type": "task.state",
+                  "sequence": 70
+                },
+                {
+                  "id": "ae28a5bc-afa4-481e-b962-b06ce9348ff0",
+                  "type": "task.state",
+                  "sequence": 71
+                },
+                {
+                  "id": "d2f66fbe-cdb4-41a8-9855-3d9620ac5924",
+                  "type": "message.delta",
+                  "sequence": 72
+                },
+                {
+                  "id": "423e03b9-3446-490f-8e08-d412290a6e6b",
+                  "type": "message.delta",
+                  "sequence": 73
+                },
+                {
+                  "id": "279735e3-a8c9-4ce8-9336-92055b4cb3a9",
+                  "type": "message.delta",
+                  "sequence": 74
+                },
+                {
+                  "id": "b45a8cbc-ac4a-49a4-872b-5b0d48abcb1a",
+                  "type": "message.delta",
+                  "sequence": 75
+                },
+                {
+                  "id": "ea321232-e044-484c-869a-e87f52f9ec15",
+                  "type": "message.delta",
+                  "sequence": 76
+                },
+                {
+                  "id": "84205bfe-5c5f-41a1-8319-fe2e0586e595",
+                  "type": "message.delta",
+                  "sequence": 77
+                },
+                {
+                  "id": "0a80f31f-823f-44a9-b390-c634571eb625",
+                  "type": "message.delta",
+                  "sequence": 78
+                },
+                {
+                  "id": "f4e69002-423c-4da8-870f-a093530fbc6a",
+                  "type": "message.delta",
+                  "sequence": 79
+                },
+                {
+                  "id": "d35ccbb7-e792-40b9-bab8-f9594514a31d",
+                  "type": "message.delta",
+                  "sequence": 80
+                },
+                {
+                  "id": "6eaa75fe-0b45-4418-ae8a-0cf86d33fa52",
+                  "type": "message.delta",
+                  "sequence": 81
+                },
+                {
+                  "id": "ba2f21d7-e78d-4f47-8288-0f12551e79e5",
+                  "type": "message.delta",
+                  "sequence": 82
+                },
+                {
+                  "id": "b0ba8343-0896-4910-8cc8-7831821574b7",
+                  "type": "message.delta",
+                  "sequence": 83
+                },
+                {
+                  "id": "98cd45ff-8b42-4c45-b57f-46498bd02d65",
+                  "type": "message.delta",
+                  "sequence": 84
+                },
+                {
+                  "id": "1dd635f7-e07c-44bc-a775-3aee6f3d6ce1",
+                  "type": "message.delta",
+                  "sequence": 85
+                },
+                {
+                  "id": "6de84188-6b87-420b-b261-68c65d74aa61",
+                  "type": "message.delta",
+                  "sequence": 86
+                },
+                {
+                  "id": "4d5aad03-d2e3-43e7-9406-1a22e5f1c323",
+                  "type": "message.delta",
+                  "sequence": 87
+                },
+                {
+                  "id": "ad217303-ecea-4e8c-b050-e60eda0cbb90",
+                  "type": "message.delta",
+                  "sequence": 88
+                },
+                {
+                  "id": "58046209-53bf-42ff-a636-91f7c39761d0",
+                  "type": "message.delta",
+                  "sequence": 89
+                },
+                {
+                  "id": "ab5e83b8-8e4a-457a-bdb3-f024aa84f16a",
+                  "type": "message.delta",
+                  "sequence": 90
+                },
+                {
+                  "id": "fc1f4729-0016-4330-821e-c6f4fecd7ec2",
+                  "type": "message.delta",
+                  "sequence": 91
+                },
+                {
+                  "id": "ba23fb19-f9e3-41a0-9957-2b5666fc4ce5",
+                  "type": "message.delta",
+                  "sequence": 92
+                },
+                {
+                  "id": "23684352-81b9-47ae-a443-a5cd74985762",
+                  "type": "message.delta",
+                  "sequence": 93
+                },
+                {
+                  "id": "ea7040f6-f22a-46c5-b66a-70929048f9c0",
+                  "type": "message.delta",
+                  "sequence": 94
+                },
+                {
+                  "id": "edf61800-8461-43f8-a160-61822e2290ba",
+                  "type": "message.delta",
+                  "sequence": 95
+                },
+                {
+                  "id": "46d05183-c3f6-4979-8a30-593c0cbc44a6",
+                  "type": "message.delta",
+                  "sequence": 96
+                },
+                {
+                  "id": "c6c6d69c-d743-474a-915f-5212ca57e881",
+                  "type": "message.delta",
+                  "sequence": 97
+                },
+                {
+                  "id": "a25369e6-9f40-4394-a72c-8cdc9305a251",
+                  "type": "message.delta",
+                  "sequence": 98
+                },
+                {
+                  "id": "70f2db12-cdca-4f59-a1db-a17c3992e502",
+                  "type": "message.delta",
+                  "sequence": 99
+                },
+                {
+                  "id": "a344080f-71f0-4710-8bdb-6219e06376e0",
+                  "type": "message.delta",
+                  "sequence": 100
+                },
+                {
+                  "id": "58b55d46-0091-47f6-87b8-ecbc774f3109",
+                  "type": "message.delta",
+                  "sequence": 101
+                },
+                {
+                  "id": "e6220efb-9652-4906-8dff-41625aa60521",
+                  "type": "message.delta",
+                  "sequence": 102
+                },
+                {
+                  "id": "a832dbe2-c016-4f40-88f7-332d2a974b1c",
+                  "type": "message.delta",
+                  "sequence": 103
+                },
+                {
+                  "id": "e0e5f9ff-4755-4702-a393-eb7a8eeae0e0",
+                  "type": "message.delta",
+                  "sequence": 104
+                },
+                {
+                  "id": "0bbb4419-0e88-4632-b5a1-779219e2f505",
+                  "type": "message.delta",
+                  "sequence": 105
+                },
+                {
+                  "id": "cbf85a85-2f45-4a73-b4ef-bdb1cf84d76f",
+                  "type": "message.delta",
+                  "sequence": 106
+                },
+                {
+                  "id": "00e01984-8041-4927-974e-28952e1d07c5",
+                  "type": "message.delta",
+                  "sequence": 107
+                },
+                {
+                  "id": "8545d788-fc6b-4a6d-b382-5dcbd04196f9",
+                  "type": "message.delta",
+                  "sequence": 108
+                },
+                {
+                  "id": "ce0fa372-0aa8-44fc-933a-db2bf3afaa8f",
+                  "type": "message.delta",
+                  "sequence": 109
+                },
+                {
+                  "id": "422ff08b-928f-4efd-831b-c1512b5906d5",
+                  "type": "message.delta",
+                  "sequence": 110
+                },
+                {
+                  "id": "0c4d7226-e389-4a88-a2b2-c7a1475c2681",
+                  "type": "message.delta",
+                  "sequence": 111
+                },
+                {
+                  "id": "5b0f95c7-17b1-4ccd-87a2-42c1c94e5bc5",
+                  "type": "message.delta",
+                  "sequence": 112
+                },
+                {
+                  "id": "dfb06e11-6469-480a-ac8f-99aba136e3f2",
+                  "type": "message.delta",
+                  "sequence": 113
+                },
+                {
+                  "id": "b27cb68b-f5e2-4f07-bf04-32a560b6c29d",
+                  "type": "message.delta",
+                  "sequence": 114
+                },
+                {
+                  "id": "e0ffe0e9-11fb-4709-a603-dbbcfd750191",
+                  "type": "message.delta",
+                  "sequence": 115
+                },
+                {
+                  "id": "5f89e56a-f9b7-4e73-9397-70768634b14e",
+                  "type": "message.delta",
+                  "sequence": 116
+                },
+                {
+                  "id": "dceea936-c247-4268-9068-a25c10d5193c",
+                  "type": "message.delta",
+                  "sequence": 117
+                },
+                {
+                  "id": "1a3120f7-5746-4ec2-91a0-f9f1867f7e91",
+                  "type": "message.delta",
+                  "sequence": 118
+                },
+                {
+                  "id": "60882b2a-4cb0-4ad6-a5ad-458012092918",
+                  "type": "message.delta",
+                  "sequence": 119
+                },
+                {
+                  "id": "8b975d50-a95c-47dc-aa19-217f4f361817",
+                  "type": "message.delta",
+                  "sequence": 120
+                },
+                {
+                  "id": "4f0b1504-8409-416f-b75f-5a75fb0861cf",
+                  "type": "message.delta",
+                  "sequence": 121
+                },
+                {
+                  "id": "3647ddc8-1b5b-4710-9cb3-0dfa55c191da",
+                  "type": "message.delta",
+                  "sequence": 122
+                },
+                {
+                  "id": "3a22f06e-9bd7-4a5a-9f61-9cb403b33953",
+                  "type": "message.delta",
+                  "sequence": 123
+                },
+                {
+                  "id": "1c228c18-903c-4042-b6e2-bbc5f52f9547",
+                  "type": "message.delta",
+                  "sequence": 124
+                },
+                {
+                  "id": "9ba9462e-0a60-4459-b31c-fc397bb5ed2c",
+                  "type": "message.delta",
+                  "sequence": 125
+                },
+                {
+                  "id": "05ac41ad-3e67-4b63-aade-5fb4423826d9",
+                  "type": "message.delta",
+                  "sequence": 126
+                },
+                {
+                  "id": "12e72422-0a97-4c77-819c-0f6eac27d088",
+                  "type": "message.delta",
+                  "sequence": 127
+                },
+                {
+                  "id": "1fd9e689-efc4-4386-8ebf-413e14e2efd5",
+                  "type": "message.delta",
+                  "sequence": 128
+                },
+                {
+                  "id": "9b1bfdca-bbcd-410e-84b7-7a1cc0ec86cc",
+                  "type": "message.delta",
+                  "sequence": 129
+                },
+                {
+                  "id": "34abdae8-ad71-488d-b56b-dde4e97fe610",
+                  "type": "message.delta",
+                  "sequence": 130
+                },
+                {
+                  "id": "c71f75d2-5884-4a70-b85c-cf93fe1a0417",
+                  "type": "message.delta",
+                  "sequence": 131
+                },
+                {
+                  "id": "0cbaff6c-a492-4672-b4e2-0c98ea16d204",
+                  "type": "message.delta",
+                  "sequence": 132
+                },
+                {
+                  "id": "3c8f2677-64cd-47cc-9024-8a2098fafa8e",
+                  "type": "message.delta",
+                  "sequence": 133
+                },
+                {
+                  "id": "8840a755-7456-4f31-a888-d9bd46adbac3",
+                  "type": "message.delta",
+                  "sequence": 134
+                },
+                {
+                  "id": "82a9fe70-070b-4e1f-a854-dd1eff81a767",
+                  "type": "message.delta",
+                  "sequence": 135
+                },
+                {
+                  "id": "9e3e9a1b-a767-40ed-8396-fc5e4a12e7fd",
+                  "type": "message.delta",
+                  "sequence": 136
+                },
+                {
+                  "id": "11108243-8f64-467c-9f0d-ae5cfbd56aa4",
+                  "type": "message.delta",
+                  "sequence": 137
+                },
+                {
+                  "id": "f83a4017-4561-42a6-9ff3-902dbb5b941a",
+                  "type": "message.delta",
+                  "sequence": 138
+                },
+                {
+                  "id": "5a5725b0-07e5-4d83-8d1e-6d2205ae7343",
+                  "type": "message.delta",
+                  "sequence": 139
+                },
+                {
+                  "id": "90a3a048-3672-4b66-8011-dca6a025989a",
+                  "type": "message.delta",
+                  "sequence": 140
+                },
+                {
+                  "id": "ccaf23a5-8613-4e10-8d2f-2d0c1ba4a108",
+                  "type": "message.delta",
+                  "sequence": 141
+                },
+                {
+                  "id": "a0c3b792-1cb1-4515-ba37-7ce5344b2cd7",
+                  "type": "message.delta",
+                  "sequence": 142
+                },
+                {
+                  "id": "7ae51848-24f2-49b4-9bf2-8775c9884f95",
+                  "type": "message.delta",
+                  "sequence": 143
+                },
+                {
+                  "id": "fa5a86af-f838-491e-ae10-e0389a82b79c",
+                  "type": "message.delta",
+                  "sequence": 144
+                },
+                {
+                  "id": "9003846e-7a93-4d24-ba72-ed063da45ceb",
+                  "type": "message.delta",
+                  "sequence": 145
+                },
+                {
+                  "id": "6f791f2c-cf96-4151-a132-2ea4e3a63ee7",
+                  "type": "message.delta",
+                  "sequence": 146
+                },
+                {
+                  "id": "276bd7ed-d2cc-4fbd-8b50-22f2849abc19",
+                  "type": "message.delta",
+                  "sequence": 147
+                },
+                {
+                  "id": "8346a85b-ba48-44c2-ba67-6743e0bf1923",
+                  "type": "message.delta",
+                  "sequence": 148
+                },
+                {
+                  "id": "a2559957-5c18-4ebe-a838-d011ec976209",
+                  "type": "message.delta",
+                  "sequence": 149
+                },
+                {
+                  "id": "07d53836-a153-4521-bb71-77a373952650",
+                  "type": "message.delta",
+                  "sequence": 150
+                },
+                {
+                  "id": "a51cf83c-f66b-41dd-9c2e-a9b9010726c1",
+                  "type": "message.delta",
+                  "sequence": 151
+                },
+                {
+                  "id": "f472c47c-3046-4c65-9e67-496a8a722bd7",
+                  "type": "message.delta",
+                  "sequence": 152
+                },
+                {
+                  "id": "6e362c41-0db0-48e5-aae9-3714d6733bfe",
+                  "type": "message.delta",
+                  "sequence": 153
+                },
+                {
+                  "id": "8b9cf80f-3726-421b-a375-2d488c47265f",
+                  "type": "message.delta",
+                  "sequence": 154
+                },
+                {
+                  "id": "f5007a39-f84f-410d-be79-c9d2245787c9",
+                  "type": "message.delta",
+                  "sequence": 155
+                },
+                {
+                  "id": "fb22b8a9-862b-4922-9f6e-7d45bed1724e",
+                  "type": "message.delta",
+                  "sequence": 156
+                },
+                {
+                  "id": "92e37a65-4871-4e27-a969-8c3d1337f35b",
+                  "type": "message.delta",
+                  "sequence": 157
+                },
+                {
+                  "id": "3f8249be-6e25-4f3e-a493-d3b95a29b67b",
+                  "type": "message.delta",
+                  "sequence": 158
+                },
+                {
+                  "id": "708c4f87-12ed-4394-9b0a-4a6d6755aa0c",
+                  "type": "message.delta",
+                  "sequence": 159
+                },
+                {
+                  "id": "f842cbd3-c39a-4b24-b289-2cd7f43b30c8",
+                  "type": "message.delta",
+                  "sequence": 160
+                },
+                {
+                  "id": "cdf1f8f0-57d3-4aca-a8bf-6b748f3de8ae",
+                  "type": "message.delta",
+                  "sequence": 161
+                },
+                {
+                  "id": "8904de32-e73b-4cc0-a389-77731d4d9f81",
+                  "type": "message.delta",
+                  "sequence": 162
+                },
+                {
+                  "id": "eb13a771-2209-447c-be44-501762920f26",
+                  "type": "message.delta",
+                  "sequence": 163
+                },
+                {
+                  "id": "c2f167dc-4973-4a7d-8ce3-92227bf27043",
+                  "type": "message.delta",
+                  "sequence": 164
+                },
+                {
+                  "id": "5bd91319-6aff-4a99-8699-c85c96246354",
+                  "type": "message.delta",
+                  "sequence": 165
+                },
+                {
+                  "id": "5fcaf096-b77d-42db-88ba-2b0505881f99",
+                  "type": "message.delta",
+                  "sequence": 166
+                },
+                {
+                  "id": "52da17cf-a3ee-4cb0-ab1d-51297f20c8e6",
+                  "type": "message.delta",
+                  "sequence": 167
+                },
+                {
+                  "id": "692bba97-f206-4828-9c47-10f93385c49a",
+                  "type": "message.delta",
+                  "sequence": 168
+                },
+                {
+                  "id": "29c3dd0d-fa99-4e06-9af3-fa9e84f412cf",
+                  "type": "message.delta",
+                  "sequence": 169
+                },
+                {
+                  "id": "d14c1acf-e5aa-4187-b855-379d55ade347",
+                  "type": "message.delta",
+                  "sequence": 170
+                },
+                {
+                  "id": "bc0c286d-162f-4fb0-ab05-1d6d77e9ab7e",
+                  "type": "message.delta",
+                  "sequence": 171
+                },
+                {
+                  "id": "dc7d5a97-12cb-4efa-8581-75ffbb24d13b",
+                  "type": "message.delta",
+                  "sequence": 172
+                },
+                {
+                  "id": "5431b787-a43b-4b9c-b31a-4112e11fd15e",
+                  "type": "message.delta",
+                  "sequence": 173
+                },
+                {
+                  "id": "0cab0e8a-2c06-4788-a51d-121eb50c088a",
+                  "type": "message.delta",
+                  "sequence": 174
+                },
+                {
+                  "id": "f2fd04a1-7c41-4d7b-9c9a-5252e0a8bba4",
+                  "type": "message.delta",
+                  "sequence": 175
+                },
+                {
+                  "id": "9a4ed08c-a48c-45bd-a63a-3515cdc36c01",
+                  "type": "message.delta",
+                  "sequence": 176
+                },
+                {
+                  "id": "7faafc6e-4a4c-419a-ab9d-d968319719b5",
+                  "type": "message.delta",
+                  "sequence": 177
+                },
+                {
+                  "id": "3d8463a6-aa52-4ce7-9073-004e6a71f659",
+                  "type": "message.delta",
+                  "sequence": 178
+                },
+                {
+                  "id": "b70cdc15-c7b6-4512-8ba3-1094bdfc5384",
+                  "type": "message.delta",
+                  "sequence": 179
+                },
+                {
+                  "id": "409eaa18-7923-415d-ae6f-372dc0c2a994",
+                  "type": "message.delta",
+                  "sequence": 180
+                },
+                {
+                  "id": "1ac23978-47bd-49bf-a070-915a12b65bbe",
+                  "type": "message.delta",
+                  "sequence": 181
+                },
+                {
+                  "id": "c46c41f6-e078-4242-9fd6-76282e2c1c00",
+                  "type": "message.delta",
+                  "sequence": 182
+                },
+                {
+                  "id": "5614d740-7fe4-4d91-933d-dfe204289490",
+                  "type": "message.delta",
+                  "sequence": 183
+                },
+                {
+                  "id": "7b7a1660-f6bf-45f2-9f62-7b3d650ab511",
+                  "type": "message.delta",
+                  "sequence": 184
+                },
+                {
+                  "id": "59506cb6-9a06-498f-946b-af3f16c085d7",
+                  "type": "message.delta",
+                  "sequence": 185
+                },
+                {
+                  "id": "1bf9d819-ad43-4065-8b24-069e55860a45",
+                  "type": "message.delta",
+                  "sequence": 186
+                },
+                {
+                  "id": "cb038a29-22e5-427c-9842-ae7dff5eb1b3",
+                  "type": "message.delta",
+                  "sequence": 187
+                },
+                {
+                  "id": "0e839299-6e27-49f3-b08d-0f99ad868b51",
+                  "type": "message.delta",
+                  "sequence": 188
+                },
+                {
+                  "id": "c536a061-5b77-46fd-b7fc-6ca88391ea83",
+                  "type": "message.delta",
+                  "sequence": 189
+                },
+                {
+                  "id": "49a05a90-3e01-486a-a411-3205f7fdc87f",
+                  "type": "message.delta",
+                  "sequence": 190
+                },
+                {
+                  "id": "fb7c78eb-473a-4b48-aa37-42780e3d36ba",
+                  "type": "message.delta",
+                  "sequence": 191
+                },
+                {
+                  "id": "4a063881-e75f-4bf7-ab3f-86c4b4ef85df",
+                  "type": "message.delta",
+                  "sequence": 192
+                },
+                {
+                  "id": "ee9f318c-e31d-452c-ab32-379e8216c362",
+                  "type": "message.delta",
+                  "sequence": 193
+                },
+                {
+                  "id": "e73c152c-efaf-4d2e-a554-64ddebbc5cd7",
+                  "type": "message.delta",
+                  "sequence": 194
+                },
+                {
+                  "id": "8be25136-e16c-4c3e-99ae-16bc6ba7e5ff",
+                  "type": "message.delta",
+                  "sequence": 195
+                },
+                {
+                  "id": "19830157-3e9d-4945-8a02-99c78ae4ef24",
+                  "type": "message.delta",
+                  "sequence": 196
+                },
+                {
+                  "id": "a7f9b464-6ade-46ec-a59e-f3b712d93627",
+                  "type": "message.delta",
+                  "sequence": 197
+                },
+                {
+                  "id": "4a7ea218-061b-48a6-8f67-c3823923fe2e",
+                  "type": "message.delta",
+                  "sequence": 198
+                },
+                {
+                  "id": "e4e0402a-6863-4e9b-8a8e-92ae9ef0e3cc",
+                  "type": "message.delta",
+                  "sequence": 199
+                },
+                {
+                  "id": "5443cada-3253-4345-80af-0bfbccbae000",
+                  "type": "message.delta",
+                  "sequence": 200
+                },
+                {
+                  "id": "2ba51f41-f2a0-4ce6-ad9a-bc8b47d4c9ab",
+                  "type": "message.delta",
+                  "sequence": 201
+                },
+                {
+                  "id": "e4448691-d0b0-45b5-9399-5f9a6264d0b9",
+                  "type": "message.delta",
+                  "sequence": 202
+                },
+                {
+                  "id": "7d7aa36e-c343-4740-80c3-a7fd6067bbc2",
+                  "type": "message.delta",
+                  "sequence": 203
+                },
+                {
+                  "id": "47173d0f-3aa0-4d1d-9fa4-67318ea3b11e",
+                  "type": "message.delta",
+                  "sequence": 204
+                },
+                {
+                  "id": "9c028476-b6c3-4a3e-b214-d88f0c85c485",
+                  "type": "message.delta",
+                  "sequence": 205
+                },
+                {
+                  "id": "600c9be9-8bd3-433a-812f-c04c02d4f66a",
+                  "type": "message.delta",
+                  "sequence": 206
+                },
+                {
+                  "id": "ccd7ba2c-1b6a-4610-9279-f78e12835ac9",
+                  "type": "message.delta",
+                  "sequence": 207
+                },
+                {
+                  "id": "32d11705-72fe-4ef6-88d4-30f842bb1f9f",
+                  "type": "message.delta",
+                  "sequence": 208
+                },
+                {
+                  "id": "66a7b814-0ed8-4b91-8d8b-e91c40eeeb42",
+                  "type": "message.delta",
+                  "sequence": 209
+                },
+                {
+                  "id": "55f516fa-bac2-4e80-9389-9b691cf0c94a",
+                  "type": "message.delta",
+                  "sequence": 210
+                },
+                {
+                  "id": "2110184c-dade-47f3-9bc9-124e054ac77b",
+                  "type": "message.delta",
+                  "sequence": 211
+                },
+                {
+                  "id": "edce4d08-f9bd-45fc-90d2-d83638e76438",
+                  "type": "message.delta",
+                  "sequence": 212
+                },
+                {
+                  "id": "dc6954cd-2791-4432-a50f-614ab6ab5d29",
+                  "type": "message.delta",
+                  "sequence": 213
+                },
+                {
+                  "id": "94166de6-16d8-47f3-bd08-de130d56dd2c",
+                  "type": "message.delta",
+                  "sequence": 214
+                },
+                {
+                  "id": "b256dde5-39eb-45a2-93ac-1a0fe42233b1",
+                  "type": "message.delta",
+                  "sequence": 215
+                },
+                {
+                  "id": "0d1a71ab-4fd9-4ae9-96a8-c9a8a633c5b7",
+                  "type": "message.delta",
+                  "sequence": 216
+                },
+                {
+                  "id": "099e6b40-2e64-4950-b0c2-202fd68ab1a1",
+                  "type": "message.delta",
+                  "sequence": 217
+                },
+                {
+                  "id": "6502c585-aaeb-4e07-9d6d-fecfd112d579",
+                  "type": "message.delta",
+                  "sequence": 218
+                },
+                {
+                  "id": "23992da5-4fd3-49ca-b501-c73624b639bd",
+                  "type": "message.delta",
+                  "sequence": 219
+                },
+                {
+                  "id": "6544204a-366e-4d8d-8a98-8fc03756e146",
+                  "type": "message.delta",
+                  "sequence": 220
+                },
+                {
+                  "id": "fdb2bff9-c3ed-489a-854d-6e40dcab6c4b",
+                  "type": "message.delta",
+                  "sequence": 221
+                },
+                {
+                  "id": "0d0397f5-f306-4a12-ab76-81aea826827c",
+                  "type": "message.delta",
+                  "sequence": 222
+                },
+                {
+                  "id": "74291c60-bb9c-4497-b3d3-0beb4797fb78",
+                  "type": "message.delta",
+                  "sequence": 223
+                },
+                {
+                  "id": "68360dfe-241a-4a6a-8dac-07d8d06ce2f3",
+                  "type": "message.delta",
+                  "sequence": 224
+                },
+                {
+                  "id": "1e9c3afb-d3b2-4b55-aaa9-997337c5bbab",
+                  "type": "message.delta",
+                  "sequence": 225
+                },
+                {
+                  "id": "883323e4-c6d0-42b4-9955-13bc1401b99a",
+                  "type": "message.delta",
+                  "sequence": 226
+                },
+                {
+                  "id": "054231ea-8a7d-445a-96bf-45023295a612",
+                  "type": "message.delta",
+                  "sequence": 227
+                },
+                {
+                  "id": "8869a62e-02e3-4e5a-b8a4-c9a09f571f33",
+                  "type": "message.delta",
+                  "sequence": 228
+                },
+                {
+                  "id": "430a2c7a-d577-4a6a-80d1-37862c85a89b",
+                  "type": "message.delta",
+                  "sequence": 229
+                },
+                {
+                  "id": "82b52216-eed6-4bc7-a97b-d2e7254df071",
+                  "type": "message.delta",
+                  "sequence": 230
+                },
+                {
+                  "id": "26bcc0e6-be09-449a-9d16-1ef825f489d4",
+                  "type": "message.delta",
+                  "sequence": 231
+                },
+                {
+                  "id": "7a7ddfe4-a9d9-4846-88e0-28f63d59bb32",
+                  "type": "message.delta",
+                  "sequence": 232
+                },
+                {
+                  "id": "286de939-7659-4342-97c1-0fa1ac3332fc",
+                  "type": "message.delta",
+                  "sequence": 233
+                },
+                {
+                  "id": "2d1bd950-5d4a-4f93-bb87-88aedcd03f00",
+                  "type": "message.delta",
+                  "sequence": 234
+                },
+                {
+                  "id": "a486a1a9-ca68-451d-8bca-2114b61c0b06",
+                  "type": "message.delta",
+                  "sequence": 235
+                },
+                {
+                  "id": "ac5da705-4900-46d7-836e-8448e4f81ffb",
+                  "type": "message.delta",
+                  "sequence": 236
+                },
+                {
+                  "id": "79d1e4c0-482b-4674-aad6-36ffe957d803",
+                  "type": "message.delta",
+                  "sequence": 237
+                },
+                {
+                  "id": "eab6f726-3f26-4fdf-9912-d048ecc0861e",
+                  "type": "message.delta",
+                  "sequence": 238
+                },
+                {
+                  "id": "c8d68a83-f97e-4f20-b658-6e5b2b7d954b",
+                  "type": "message.delta",
+                  "sequence": 239
+                },
+                {
+                  "id": "0d3afbc8-e965-4538-8373-17bd921d6ef6",
+                  "type": "message.delta",
+                  "sequence": 240
+                },
+                {
+                  "id": "d631b111-c699-4da0-ae0f-48fecb70a95f",
+                  "type": "message.delta",
+                  "sequence": 241
+                },
+                {
+                  "id": "4eee7432-ecc8-4192-b2cc-e74db985ee1e",
+                  "type": "message.delta",
+                  "sequence": 242
+                },
+                {
+                  "id": "5a7b1354-763d-4309-9322-a28733a939fd",
+                  "type": "message.delta",
+                  "sequence": 243
+                },
+                {
+                  "id": "9012bfef-105d-47cc-8b99-4c60b58f08ea",
+                  "type": "message.delta",
+                  "sequence": 244
+                },
+                {
+                  "id": "ef9e298b-4bc3-4029-ae9e-fafa4f21ad85",
+                  "type": "message.delta",
+                  "sequence": 245
+                },
+                {
+                  "id": "6a2113cf-7989-425c-8358-e15108855960",
+                  "type": "message.delta",
+                  "sequence": 246
+                },
+                {
+                  "id": "4797b23f-ca38-4d33-8a08-4afb9c4720ea",
+                  "type": "message.delta",
+                  "sequence": 247
+                },
+                {
+                  "id": "335d39b4-c384-4205-a584-c69663ab0b4c",
+                  "type": "message.delta",
+                  "sequence": 248
+                },
+                {
+                  "id": "f80bcb48-d0af-40fe-9e49-1cb1bf47aa5e",
+                  "type": "message.delta",
+                  "sequence": 249
+                },
+                {
+                  "id": "b5321f9c-fc4a-4672-9ec0-2f67a6fa9e1a",
+                  "type": "message.delta",
+                  "sequence": 250
+                },
+                {
+                  "id": "51783c78-6b57-4ee7-832b-b20a7ae79f4e",
+                  "type": "message.delta",
+                  "sequence": 251
+                },
+                {
+                  "id": "f1ebdbd7-ec04-4846-9d09-abcfa7bb52f5",
+                  "type": "message.delta",
+                  "sequence": 252
+                },
+                {
+                  "id": "5f5332a6-c82e-4ab5-ac08-2da539f19b78",
+                  "type": "message.delta",
+                  "sequence": 253
+                },
+                {
+                  "id": "bdb45ad3-48d4-4978-a1ea-4b35692a794b",
+                  "type": "message.delta",
+                  "sequence": 254
+                },
+                {
+                  "id": "6722869d-0b23-4d55-bc2c-d1c7b2a2d530",
+                  "type": "message.delta",
+                  "sequence": 255
+                },
+                {
+                  "id": "6b535f26-dce7-4596-ae60-b43d5c497aee",
+                  "type": "message.delta",
+                  "sequence": 256
+                },
+                {
+                  "id": "bf7928aa-4a23-478d-ab26-0cf78df8160f",
+                  "type": "message.delta",
+                  "sequence": 257
+                },
+                {
+                  "id": "c1268822-a28e-4c56-a737-742ccb75519b",
+                  "type": "message.delta",
+                  "sequence": 258
+                },
+                {
+                  "id": "4b840c75-795f-4c36-a21c-802c5dadf91f",
+                  "type": "message.delta",
+                  "sequence": 259
+                },
+                {
+                  "id": "90a4e7d4-cd0d-4919-b65a-c456f47d139c",
+                  "type": "message.delta",
+                  "sequence": 260
+                },
+                {
+                  "id": "1b4bd2c6-9f6c-4831-8468-eee50ac81561",
+                  "type": "message.delta",
+                  "sequence": 261
+                },
+                {
+                  "id": "f02ea785-23e2-4e93-95fd-04193269b347",
+                  "type": "message.delta",
+                  "sequence": 262
+                },
+                {
+                  "id": "e2bc10f8-8df2-47f5-b2e8-d71692a9ad97",
+                  "type": "message.delta",
+                  "sequence": 263
+                },
+                {
+                  "id": "6aea81cd-c2dd-44c3-8709-bb8d6d5fd1a7",
+                  "type": "message.delta",
+                  "sequence": 264
+                },
+                {
+                  "id": "b73b0709-6397-42f8-b848-5dcf4fa59d73",
+                  "type": "message.delta",
+                  "sequence": 265
+                },
+                {
+                  "id": "6933071f-7716-4752-a3bc-b945a97e3fdb",
+                  "type": "message.delta",
+                  "sequence": 266
+                },
+                {
+                  "id": "d2f98e4d-9e7d-4ff6-a68c-7703ff87eb23",
+                  "type": "message.delta",
+                  "sequence": 267
+                },
+                {
+                  "id": "b363dbaa-72a4-413a-b89c-9767284df523",
+                  "type": "message.delta",
+                  "sequence": 268
+                },
+                {
+                  "id": "16a4407b-24aa-4426-9b63-63ccb31136b7",
+                  "type": "message.delta",
+                  "sequence": 269
+                },
+                {
+                  "id": "bb1a10f8-9455-4d8c-8de2-7cecd7d47cb3",
+                  "type": "message.delta",
+                  "sequence": 270
+                },
+                {
+                  "id": "f0c90469-165c-4c38-bc06-04bb3f4d090c",
+                  "type": "message.delta",
+                  "sequence": 271
+                },
+                {
+                  "id": "5c2ca386-24bd-4cf5-9a04-e2a97997bb0f",
+                  "type": "message.delta",
+                  "sequence": 272
+                },
+                {
+                  "id": "b0462795-1f66-4446-b747-33531bf4c353",
+                  "type": "message.delta",
+                  "sequence": 273
+                },
+                {
+                  "id": "4994e9ef-b02b-4d69-a7c5-602209aeff9b",
+                  "type": "message.delta",
+                  "sequence": 274
+                },
+                {
+                  "id": "5d4e6955-41ff-4d4c-8bb1-e4b72c21cd1d",
+                  "type": "message.delta",
+                  "sequence": 275
+                },
+                {
+                  "id": "d540ff92-38c3-4568-bc71-f2e7b132c820",
+                  "type": "message.delta",
+                  "sequence": 276
+                },
+                {
+                  "id": "92bacd2c-c4dc-4481-a32c-6a4f8889b88a",
+                  "type": "message.delta",
+                  "sequence": 277
+                },
+                {
+                  "id": "46e5d9cd-5eed-4f57-bc40-42cc676c6e5a",
+                  "type": "message.delta",
+                  "sequence": 278
+                },
+                {
+                  "id": "9c18c704-bbf6-4ad1-9842-a2d5c740a472",
+                  "type": "message.delta",
+                  "sequence": 279
+                },
+                {
+                  "id": "277eb165-586d-4e33-a376-2a97e7d475a3",
+                  "type": "message.delta",
+                  "sequence": 280
+                },
+                {
+                  "id": "590b3dad-f89b-4173-8da1-70e6d6160b6e",
+                  "type": "message.delta",
+                  "sequence": 281
+                },
+                {
+                  "id": "a4186b75-d84b-4d81-b506-93cc52361468",
+                  "type": "message.delta",
+                  "sequence": 282
+                },
+                {
+                  "id": "ddd2c07f-af93-47e1-afce-843c98254615",
+                  "type": "message.delta",
+                  "sequence": 283
+                },
+                {
+                  "id": "970c5fac-9866-4fb1-9e76-fcab2980f2f6",
+                  "type": "message.delta",
+                  "sequence": 284
+                },
+                {
+                  "id": "3a7c8238-a7c1-48f3-81f9-44b26d813174",
+                  "type": "message.delta",
+                  "sequence": 285
+                },
+                {
+                  "id": "89c29d77-dd02-4b1e-a463-c2db517ef2fb",
+                  "type": "message.delta",
+                  "sequence": 286
+                },
+                {
+                  "id": "42bcd2d9-b8ed-4010-b215-37d40402c452",
+                  "type": "message.delta",
+                  "sequence": 287
+                },
+                {
+                  "id": "2042259e-42a3-4cd1-b550-1664e242a32e",
+                  "type": "message.delta",
+                  "sequence": 288
+                },
+                {
+                  "id": "2e38bc0d-6e03-41e9-adb3-eca8103dafb8",
+                  "type": "message.delta",
+                  "sequence": 289
+                },
+                {
+                  "id": "29ba9904-89b4-4d60-a843-5168f65f8f9b",
+                  "type": "message.delta",
+                  "sequence": 290
+                },
+                {
+                  "id": "bd568381-27d6-4d6b-b97d-dd579d19bc03",
+                  "type": "message.delta",
+                  "sequence": 291
+                },
+                {
+                  "id": "27a93f91-c68f-498e-8ae9-f8997390f264",
+                  "type": "message.delta",
+                  "sequence": 292
+                },
+                {
+                  "id": "04a3ba7b-d423-4ecb-8e65-7dde2ecfc589",
+                  "type": "message.delta",
+                  "sequence": 293
+                },
+                {
+                  "id": "bafb9ea3-cdae-462e-95fb-cc80d030ab6b",
+                  "type": "message.delta",
+                  "sequence": 294
+                },
+                {
+                  "id": "3041cf7a-416c-4299-b620-0107937e2506",
+                  "type": "message.delta",
+                  "sequence": 295
+                },
+                {
+                  "id": "6949d86a-4e55-44a5-a7e1-8dab37e190b3",
+                  "type": "message.delta",
+                  "sequence": 296
+                },
+                {
+                  "id": "c9c653f2-26e5-4915-992c-95e3ee625019",
+                  "type": "message.delta",
+                  "sequence": 297
+                },
+                {
+                  "id": "4050e710-acd5-4079-8254-45f5685c18d4",
+                  "type": "message.delta",
+                  "sequence": 298
+                },
+                {
+                  "id": "6dcc30f9-0c76-42f6-9d36-8a65c505fa39",
+                  "type": "message.delta",
+                  "sequence": 299
+                },
+                {
+                  "id": "75238889-d054-420c-bfb5-4a7f443d50b4",
+                  "type": "message.delta",
+                  "sequence": 300
+                },
+                {
+                  "id": "9398cea8-f6a1-4327-9714-6b198e7b374e",
+                  "type": "message.delta",
+                  "sequence": 301
+                },
+                {
+                  "id": "b13ac904-d038-4ffd-a89e-c4f34ad4cc11",
+                  "type": "message.delta",
+                  "sequence": 302
+                },
+                {
+                  "id": "93b795b8-539c-481d-94e6-997a47654e9b",
+                  "type": "message.delta",
+                  "sequence": 303
+                },
+                {
+                  "id": "1eb5be6c-11d1-466d-9b2f-8baec51ffa3b",
+                  "type": "message.delta",
+                  "sequence": 304
+                },
+                {
+                  "id": "d406a2d4-56c9-414f-8c05-9d7c4b273faf",
+                  "type": "completed",
+                  "sequence": 305
+                },
+                {
+                  "id": "1cff9a0a-e75b-4010-b27a-b9e52b72b8ec",
+                  "type": "validation.started",
+                  "sequence": 306
+                },
+                {
+                  "id": "f5bed2f7-58e7-4fa1-84fd-460bae7f1508",
+                  "type": "validation.completed",
+                  "sequence": 307
+                },
+                {
+                  "id": "252598aa-0ab4-4849-a04e-bd60c22c8c33",
+                  "type": "artifact.diff.ready",
+                  "sequence": 308
+                },
+                {
+                  "id": "9b07a168-c78c-41bd-9ed1-95693b6ee92d",
+                  "type": "artifact.review.ready",
+                  "sequence": 309
+                },
+                {
+                  "id": "a147042e-4257-451d-ae1a-bee1d560aafd",
+                  "type": "task.state",
+                  "sequence": 310
+                },
+                {
+                  "id": "6abd45b1-7690-4200-9c22-31dd0842246a",
+                  "type": "session_queue.advanced",
+                  "sequence": 311
+                },
+                {
+                  "id": "517ea677-d937-419f-b210-62bc3c479479",
+                  "type": "provider.capacity_released",
+                  "sequence": 312
+                }
+              ],
+              "scopeStatus": null,
+              "validation": {
+                "schemaVersion": "agenthub.validation.v1",
+                "profile": "fastapi-contract-v1",
+                "status": "passed",
+                "sourceFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f",
+                "policyFingerprint": "bf6cac13ed35193192131d398d7d7a3691fc4973a32d2efd495efd9974c10676",
+                "eventId": "f5bed2f7-58e7-4fa1-84fd-460bae7f1508",
+                "taskRunId": "08c648e8-a89b-49c6-8ca3-a05dcd3e64e1",
+                "commands": [
+                  {
+                    "kind": "check",
+                    "status": "passed",
+                    "exitCode": 0,
+                    "durationMs": 187
+                  },
+                  {
+                    "kind": "test",
+                    "status": "passed",
+                    "exitCode": 0,
+                    "durationMs": 562
+                  }
+                ],
+                "functional": {
+                  "status": "not_configured",
+                  "checks": []
+                }
+              },
+              "reviews": [
+                {
+                  "artifactId": "5f8b2ae7-8b6a-465e-b3b3-05247e78308f",
+                  "reviewId": "8eac7e2f-24df-4ae5-836c-f09e6da19f63",
+                  "taskRunId": "08c648e8-a89b-49c6-8ca3-a05dcd3e64e1",
+                  "adapterType": "claude_code",
+                  "status": "passed",
+                  "riskLevel": "low",
+                  "qaStatus": "passed",
+                  "model": {
+                    "status": "passed",
+                    "source": "native"
+                  },
+                  "inputFingerprint": "24b604d893b865a55ffd38517304c18b2c69b7bcac99eb2775501e9d1034ee18",
+                  "outputSha256": "10c8f84bb2529fac560175d265d8adfab5b9d620fe359bfaa1319ce9418972f4",
+                  "verifiedNativeReceipt": true,
+                  "verificationFailures": [],
+                  "filesReviewed": [
+                    "apps/demo-api/app/main.py"
+                  ],
+                  "readEvidence": {
+                    "apps/demo-api/app/main.py": "af34fd058eb9618775a1c5bd6119fca1f6d8abb11794683a0d7edc5b968fbd98"
+                  },
+                  "boundFiles": {
+                    "apps/demo-api/README.md": "998991ab35d6a1ba213ecbf8b9abb02b1d9243da0ca36da021eb386a3736c396",
+                    "apps/demo-api/app/__init__.py": "d61ab2e437fff4aa583396952d03bcbc0ed7be07d762ccea2f35aa1d1d3dbbe3",
+                    "apps/demo-api/app/main.py": "126939ebdfdb77c9d2b38209a02cccce7fb37784fac6c69bcfd79e649b1ca03d",
+                    "apps/demo-api/tests/test_contacts.py": "3f9e860635952c680d412b1ab5bfb881f730cde618b87d41de37938937808c04"
+                  },
+                  "findingCount": 0,
+                  "validation": {
+                    "schemaVersion": "agenthub.validation.v1",
+                    "sourceFingerprint": "ac51ef5d54f16e263876a30e3c17039d73b73ebfee51e84cfb38d3b3a2db444f",
+                    "policyFingerprint": "bf6cac13ed35193192131d398d7d7a3691fc4973a32d2efd495efd9974c10676",
+                    "profile": "fastapi-contract-v1",
+                    "status": "passed",
+                    "taskRunId": "08c648e8-a89b-49c6-8ca3-a05dcd3e64e1",
+                    "adapterRunId": "claude-code-96c0e82c-ec0f-49cd-8c9f-195688599272",
+                    "eventId": "f5bed2f7-58e7-4fa1-84fd-460bae7f1508"
+                  },
+                  "currentness": "current"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

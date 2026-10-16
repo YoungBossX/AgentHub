@@ -1,0 +1,3 @@
+## 1. Current documentation
+
+- [x] 1.1 Reconcile current capabilities, usage/architecture/delivery state, validation and remaining boundaries; preserve indexed dated evidence, inspect links/source paths and rule drift, verify current local/remote Git refs without committing or pushing, and record final checks. Current guides/26 entities/six routes updated; 94 historical sections preserved against HEAD, 69 documents/344 local links checked; API batch 2293/1 skip, final maintenance 33, Web 326, local tools 19, demo-api 5 and root/strict checks passed with explicit source/fixture/timing boundaries. Existing live API still needs a safe restart; no runtime switch was performed. See `docs/current-doc-reconciliation-review.md`.

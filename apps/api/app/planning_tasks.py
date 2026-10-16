@@ -1156,6 +1156,8 @@ def _create_orchestrator_boundary_message(
     db: DbSession,
     message: Message,
     content: str,
+    *,
+    context_budget: Optional[dict[str, Any]] = None,
 ) -> None:
     orchestrator = db.exec(select(Agent).where(Agent.role == "orchestrator")).first()
     summary = Message(
@@ -1165,6 +1167,7 @@ def _create_orchestrator_boundary_message(
         content_md=content,
         message_kind="chat",
         parent_message_id=message.id,
+        context_json=json.dumps({"_plannerContextBudget": context_budget}) if context_budget else "{}",
     )
     create_session_message(db, _session_for_message(db, message), summary)
 
@@ -1173,6 +1176,8 @@ def _create_conversation_outcome_message(
     db: DbSession,
     message: Message,
     outcome: dict,
+    *,
+    context_budget: Optional[dict[str, Any]] = None,
 ) -> None:
     reply = outcome.get("reply")
     if not isinstance(reply, str) or not reply.strip():
@@ -1185,6 +1190,7 @@ def _create_conversation_outcome_message(
         sender_type="orchestrator",
         sender_id=orchestrator.id if orchestrator is not None else None,
         content_md=reply.strip(),
+        context_json=json.dumps({"_plannerContextBudget": context_budget}) if context_budget else "{}",
         message_kind="chat",
         parent_message_id=message.id,
     )

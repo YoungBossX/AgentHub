@@ -97,6 +97,15 @@ Deferred examples:
 
 ## Data and Runtime Boundaries
 
+- Focused exception under `agenthub-local-data-maintenance`: the offline operator
+  CLI may read the primary checkout's SQLite/Git metadata and registered managed
+  worktrees to create a new external local snapshot. Restore never overwrites an
+  existing checkout; rehearsal repairs only copied Git pointers. Explicit cleanup
+  may quarantine only revalidated fixed developer caches. It may not delete
+  Sessions, modify user project paths, run saved hooks/code, install dependencies
+  or expand adapter permissions. The API holds a shared database lifetime lease;
+  maintenance requires exclusive ownership and a stopped runtime.
+
 - Focused exception under `agenthub-controlled-mcp`: `WorkspaceMcpConnection`
   stores the built-in read-only document connection and Agent defaults in SQLite.
   Compatible Codex runs may reach only the server-owned loopback MCP gateway with
@@ -110,12 +119,11 @@ Deferred examples:
   content lives in existing message/run evidence; Skills grant no new tools,
   filesystem scope, network access or script execution permissions.
 
-- SQLite is the demo database. Do not require Postgres for the final demo.
-- The demo schema is limited to User, Workspace, Session, Message, Agent, Task,
-  TaskRun, TaskRunEvent, Artifact, Diff, Preview, Deployment,
-  SessionExecutionLedger, and Review.
-- `TaskRunEvent`, `SessionExecutionLedger`, and `Review` are the only support
-  entities beyond the core model.
+- SQLite remains the local database; do not require Postgres. The original P0
+  core is extended only by focused OpenSpec changes already recorded in
+  `docs/project-state.md` (queue/locks/jobs, targets, memory, profiles/runtime,
+  Skills/MCP, attachments and artifact versions). Current table authority is
+  `apps/api/app/models.py`; this is not permission to add unrelated entities.
 - Focused exception under `agenthub-message-attachments`: `MessageAttachment`
   stores bounded Session-owned upload bytes, extraction metadata and immutable
   Message bindings in SQLite. Attachment input does not grant new tool/write
@@ -174,6 +182,13 @@ pnpm demo:dev
 ```
 
 Expected P0 runtime command families:
+
+- Focused exception under `agenthub-backend-versioned-validation`: the server may
+  invoke its fixed Python syntax/ASGI contract harness with the installed isolated
+  interpreter in a disposable copy of built-in `demo-backend`. Never run edited
+  target tests/configuration, install dependencies, start a target listener or
+  expand adapter permissions. Bind actual check/test evidence to source, policy
+  and execution generation. Python audit guards are not an OS security sandbox.
 
 - Focused exception under `agenthub-requirement-validation`: after fixed demo
   build validation the server may run its trusted Playwright harness against

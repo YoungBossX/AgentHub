@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 
 from app.process_environment import adapter_process_env, redact_process_evidence
 from app.claude_executable import resolve_claude_executable
+from app.context_budget import ContextBudgetError, audit_planner, audit_planner_cli
 
 from app.config import Settings, get_settings
 from app.planner_contracts import (
@@ -369,6 +370,7 @@ class PlannerProviderResult:
     protocol: str | None = None
     model: str | None = None
     base_url: str | None = None
+    context_budget: dict[str, Any] | None = None
 
     def to_metadata(self) -> dict[str, Any]:
         metadata: dict[str, Any] = {
@@ -392,6 +394,8 @@ class PlannerProviderResult:
             metadata["model"] = self.model
         if self.base_url:
             metadata["baseUrl"] = self.base_url
+        if self.context_budget:
+            metadata["contextBudget"] = self.context_budget
         return metadata
 
 
@@ -533,8 +537,11 @@ class ClaudeCliPlannerProvider:
         self._timeout_sec = timeout_sec
 
     def create_plan(self, planner_input: dict[str, Any]) -> PlannerProviderResult:
-        command = self._build_command(planner_input)
         started = time.monotonic()
+        try:
+            command = self._build_command(planner_input)
+        except ContextBudgetError as exc:
+            return self._error_result(exc.error_code, exc.message, started)
         # Windows reports an overlong CreateProcess argument string as
         # FileNotFoundError (WinError 206), even when the binary exists. A longer
         # continuation context must use stdin, like attachments/configuration.
@@ -623,6 +630,7 @@ class ClaudeCliPlannerProvider:
             "PlannerRequest JSON:\n"
             f"{json.dumps(planner_input, ensure_ascii=False, sort_keys=True)}"
         )
+        audit_planner_cli(planner_input, prompt)
         custom_policy = planner_input.get("agentToolPolicy")
         if custom_policy not in {None, "planner_no_tools"}:
             raise ValueError("Unsupported custom Planner tool policy.")
@@ -716,6 +724,8 @@ class OpenAIResponsesPlannerProvider:
                 f"OpenAI Responses planner timed out after {self._timeout_sec} seconds.",
                 started,
             )
+        except ContextBudgetError as exc:
+            return self._api_error_result(exc.error_code, exc.message, started)
         except Exception as exc:
             return self._api_error_result(
                 _planner_error_code_for_text(str(exc)),
@@ -822,6 +832,8 @@ class OpenAICompatibleChatPlannerProvider:
                 f"OpenAI-compatible planner timed out after {self._timeout_sec} seconds.",
                 started,
             )
+        except ContextBudgetError as exc:
+            return self._api_error_result(exc.error_code, exc.message, started)
         except Exception as exc:
             return self._api_error_result(
                 _planner_error_code_for_text(str(exc)),
@@ -928,6 +940,8 @@ class AnthropicMessagesPlannerProvider:
                 f"Anthropic Messages planner timed out after {self._timeout_sec} seconds.",
                 started,
             )
+        except ContextBudgetError as exc:
+            return self._api_error_result(exc.error_code, exc.message, started)
         except Exception as exc:
             return self._api_error_result(
                 _planner_error_code_for_text(str(exc)),
@@ -1180,6 +1194,7 @@ def _openai_responses_payload(model: str, planner_input: Mapping[str, Any]) -> d
             {"type": "input_text", "text": f"Attachment image {image.attachment_id}:"},
             {"type": "input_image", "image_url": image.data_url()},
         ])
+    audit_planner(planner_input, payload, "openai_responses")
     return payload
 
 
@@ -1222,6 +1237,7 @@ def _openai_compatible_chat_payload(
                                     {"type": "image_url", "image_url": {"url": image.data_url()}}])
     if strategy["strategy"] == "json_object":
         payload["response_format"] = strategy["responseFormat"]
+    audit_planner(planner_input, payload, "openai_compatible_chat")
     return payload
 
 
@@ -1257,6 +1273,7 @@ def _anthropic_messages_payload(model: str, planner_input: Mapping[str, Any]) ->
         user["content"] = [{"type": "text", "text": user["content"]}]
         for image in images:
             user["content"].extend([{"type": "text", "text": f"Attachment image {image.attachment_id}:"}, image.anthropic_block()])
+    audit_planner(planner_input, payload, "anthropic_messages")
     return payload
 
 

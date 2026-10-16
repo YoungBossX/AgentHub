@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 from pydantic import ValidationError
@@ -48,9 +48,10 @@ LLM_PLANNER_VERSION = 1
 
 
 class LLMPlannerError(ValueError):
-    def __init__(self, message: str, *, memory_evidence: dict[str, Any] | None = None):
+    def __init__(self, message: str, *, memory_evidence: dict[str, Any] | None = None, error_code: str | None = None):
         super().__init__(message)
         self.memory_evidence = memory_evidence or {}
+        self.error_code = error_code
 
 
 class LLMPlannerProvider(PlannerProvider, Protocol):
@@ -312,21 +313,32 @@ def create_llm_conversation_outcome(
     try:
         provider_result = provider.create_plan(planner_input)
     except PlannerProviderError as exc:
+        from app.planner_observation import record_planner_call
+        record_planner_call(planner_input, provider, error=exc)
         raise LLMPlannerError(
             f"LLM planner provider failed: {exc.summary}",
             memory_evidence=memory_evidence,
         ) from exc
     except Exception as exc:
+        from app.planner_observation import record_planner_call
+        record_planner_call(planner_input, provider, error=exc)
         raise LLMPlannerError(
             f"LLM planner provider failed: {exc}",
             memory_evidence=memory_evidence,
         ) from exc
 
+    from app.planner_observation import record_planner_call
+    budget = getattr(planner_input, "context_budget", None)
+    if budget:
+        provider_result = replace(provider_result, context_budget=budget)
+        memory_evidence = {**memory_evidence, "contextBudget": budget}
+    record_planner_call(planner_input, provider, provider_result)
     if provider_result.status != "succeeded":
         raise LLMPlannerError(
             provider_result.error_summary
             or f"LLM planner provider did not succeed: {provider_result.status}",
             memory_evidence=memory_evidence,
+            error_code=provider_result.error_code,
         )
 
     try:
@@ -720,6 +732,9 @@ def _attach_planner_evidence(
         evidence["errorCode"] = provider_result.error_code
     if provider_result.error_summary:
         evidence["errorSummary"] = provider_result.error_summary
+    budget = getattr(planner_input, "context_budget", None)
+    if budget:
+        evidence["contextBudget"] = budget
 
     for task in tasks:
         plan = json.loads(task.plan_json)

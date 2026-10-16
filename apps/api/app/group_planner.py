@@ -7,7 +7,7 @@ from app.config import get_settings
 from app.custom_agents import require_custom_agent, selected_custom_planner
 from app.llm_planner import LLMPlannerError, create_llm_conversation_outcome
 from app.memory_usage import planner_memory_evidence
-from app.plan_validator import validate_task_graph
+from app.plan_validator import validate_task_graph, scoped_group_validation_expectations
 from app.planner_providers import PlannerProviderError, resolve_planner_provider
 from app.task_graph_builder import TaskGraphTaskSpec, task_key
 
@@ -76,7 +76,9 @@ def apply_native_group_plan(db, message, session, tasks, targets):
             expected_artifact_types=expected,
             plan={
                 "targetId": item["targetId"], "files": item["plannedFiles"],
-                "validationExpectations": [*output["validationExpectations"], *item["validationExpectations"]],
+                "validationExpectations": scoped_group_validation_expectations(
+                    output["validationExpectations"], item["validationExpectations"],
+                    target_id=item["targetId"], allowed_targets=targets),
                 "dependsOn": item["dependsOn"] or [],
             },
         )
@@ -111,6 +113,8 @@ def apply_native_group_plan(db, message, session, tasks, targets):
         "cliEffort": "low" if result.provider_type == "claude_cli" else None,
         **planner_memory_evidence(conversation.planner_input),
     }
+    if result.context_budget:
+        evidence["contextBudget"] = result.context_budget
     keys_to_ids = {task_key(index, spec): task.id for index, (spec, task) in enumerate(zip(specs, tasks))}
     for task, item, spec in zip(tasks, output["tasks"], specs):
         plan = json.loads(task.plan_json)
@@ -122,6 +126,7 @@ def apply_native_group_plan(db, message, session, tasks, targets):
             "acceptanceCriteria": item["acceptanceCriteria"],
             "groupAcceptanceCriteria": output["acceptanceCriteria"],
             "validationExpectations": spec.plan["validationExpectations"],
+            "groupValidationExpectations": output["validationExpectations"],
             "riskLevel": item["riskLevel"], "requiresApproval": False,
             "instructionMode": "llm_v1",
         })
