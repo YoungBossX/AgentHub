@@ -1,0 +1,2906 @@
+{
+  "agent": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "role",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "adapter_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "provider",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "default_model",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "system_prompt",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "capabilities_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "permission_profile_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "enabled",
+        "type": "BOOLEAN",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_agent_role",
+        "columns": [
+          "role"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "agentprofiledraft": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "workspace_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "workspace.id"
+        ]
+      },
+      {
+        "name": "display_name",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "avatar_initials",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "role",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "adapter_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "provider_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "capability_tags_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "supported_targets_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "supported_modes_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "safe_for_write",
+        "type": "BOOLEAN",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "safe_for_review",
+        "type": "BOOLEAN",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "description",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "system_prompt",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "mention_alias",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "tool_policy",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_agentprofiledraft_role",
+        "columns": [
+          "role"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_agentprofiledraft_workspace_id",
+        "columns": [
+          "workspace_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ux_custom_agent_workspace_alias",
+        "columns": [
+          "workspace_id",
+          "mention_alias"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "agentruntimeconfig": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "workspace_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "workspace.id"
+        ]
+      },
+      {
+        "name": "scope",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "roles_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_agentruntimeconfig_workspace_id",
+        "columns": [
+          "workspace_id"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "artifact": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "task_run_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "taskrun.id"
+        ]
+      },
+      {
+        "name": "artifact_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "version",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "storage_uri",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "meta_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_artifact_task_run_id",
+        "columns": [
+          "task_run_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "artifactversion": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "artifact_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "artifact.id"
+        ]
+      },
+      {
+        "name": "version",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "parent_version_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "artifactversion.id"
+        ]
+      },
+      {
+        "name": "source_task_run_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "taskrun.id"
+        ]
+      },
+      {
+        "name": "parent_artifact_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "artifact.id"
+        ]
+      },
+      {
+        "name": "git_base_ref",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "git_head_ref",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "changed_files_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "summary",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "content_md",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "content_hash",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "editor_source",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_artifactversion_artifact_id",
+        "columns": [
+          "artifact_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "deployment": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "artifact_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "artifact.id"
+        ]
+      },
+      {
+        "name": "provider",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "environment",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "commit_sha",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "url",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "deploy_log_uri",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_deployment_artifact_id",
+        "columns": [
+          "artifact_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "diff": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "artifact_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "artifact.id"
+        ]
+      },
+      {
+        "name": "base_ref",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "head_ref",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "patch_text",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "changed_files_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "stats_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_diff_artifact_id",
+        "columns": [
+          "artifact_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "externalprojecttarget": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "workspace_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "workspace.id"
+        ]
+      },
+      {
+        "name": "target_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "root_path",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "project_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "allowed_paths_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "denied_paths_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "dev_command",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "test_command",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "check_command",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "build_command",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "preview_command",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "staging_output_dir",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "staging_serve_command",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "deploy_provider_ids_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "package_manager",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "detected_framework",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "analysis_status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_externalprojecttarget_target_id",
+        "columns": [
+          "target_id"
+        ],
+        "unique": true
+      },
+      {
+        "name": "ix_externalprojecttarget_workspace_id",
+        "columns": [
+          "workspace_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "memoryitem": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "workspace_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "workspace.id"
+        ]
+      },
+      {
+        "name": "scope",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "memory_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "source",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "trust_level",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "content_md",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "content_hash",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "version",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "importance",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "target_ids_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "agent_roles_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "last_used_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "superseded_by",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "memoryitem.id"
+        ]
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_memoryitem_memory_type",
+        "columns": [
+          "memory_type"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_memoryitem_scope",
+        "columns": [
+          "scope"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_memoryitem_source",
+        "columns": [
+          "source"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_memoryitem_status",
+        "columns": [
+          "status"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_memoryitem_trust_level",
+        "columns": [
+          "trust_level"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_memoryitem_workspace_id",
+        "columns": [
+          "workspace_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "memorysnapshot": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "workspace_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "workspace.id"
+        ]
+      },
+      {
+        "name": "schema_version",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "agents_md_hash",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "claude_md_hash",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "project_memory_version",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "user_preference_version",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "target_registry_version",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "runtime_config_version",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "context_pack_hash",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "meta_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_memorysnapshot_workspace_id",
+        "columns": [
+          "workspace_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "message": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "session_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "session.id"
+        ]
+      },
+      {
+        "name": "sender_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "sender_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "content_md",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "message_kind",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "parent_message_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "message.id"
+        ]
+      },
+      {
+        "name": "stream_state",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "context_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "regeneration_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "pinned_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_message_session_id",
+        "columns": [
+          "session_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_message_session_order",
+        "columns": [
+          "session_id",
+          "created_at",
+          "id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_message_session_pins",
+        "columns": [
+          "session_id",
+          "pinned_at",
+          "created_at",
+          "id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "messageattachment": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "session_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "session.id"
+        ]
+      },
+      {
+        "name": "message_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "message.id"
+        ]
+      },
+      {
+        "name": "position",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "filename",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "kind",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "media_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "byte_size",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "sha256",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "extraction_status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "text_content",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "text_truncated",
+        "type": "BOOLEAN",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "image_width",
+        "type": "INTEGER",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "image_height",
+        "type": "INTEGER",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "image_media_type",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "image_sha256",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "payload",
+        "type": "BLOB",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "image_payload",
+        "type": "BLOB",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_messageattachment_message_id",
+        "columns": [
+          "message_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_messageattachment_session_id",
+        "columns": [
+          "session_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "preview": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "artifact_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "artifact.id"
+        ]
+      },
+      {
+        "name": "port",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "url",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "command",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "process_id",
+        "type": "INTEGER",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "health_status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "status_reason",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "expires_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "last_checked_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_preview_artifact_id",
+        "columns": [
+          "artifact_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "previewdeployjob": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "session_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "session.id"
+        ]
+      },
+      {
+        "name": "source_task_run_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "taskrun.id"
+        ]
+      },
+      {
+        "name": "job_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "state",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "attempt",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "port",
+        "type": "INTEGER",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "error_code",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "evidence_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "started_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "finished_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_previewdeployjob_job_type",
+        "columns": [
+          "job_type"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_previewdeployjob_session_id",
+        "columns": [
+          "session_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_previewdeployjob_source_task_run_id",
+        "columns": [
+          "source_task_run_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_previewdeployjob_state",
+        "columns": [
+          "state"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "review": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "artifact_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "artifact.id"
+        ]
+      },
+      {
+        "name": "reviewed_diff_artifact_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "artifact.id"
+        ]
+      },
+      {
+        "name": "reviewer_agent_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "agent.id"
+        ]
+      },
+      {
+        "name": "adapter_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "risk_level",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "summary",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "files_reviewed_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "findings_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "suggested_changes_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_review_artifact_id",
+        "columns": [
+          "artifact_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_review_reviewed_diff_artifact_id",
+        "columns": [
+          "reviewed_diff_artifact_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "session": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "workspace_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "workspace.id"
+        ]
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "session_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "bound_branch",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "worktree_path",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "active_frontend_target_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "active_backend_target_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "memory_snapshot_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "memorysnapshot.id"
+        ]
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "pinned_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "archived_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "last_message_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_session_workspace_id",
+        "columns": [
+          "workspace_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_session_worktree_path",
+        "columns": [
+          "worktree_path"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "sessionexecutionledger": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "session_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "session.id"
+        ]
+      },
+      {
+        "name": "current_goal",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "active_agents_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "latest_task_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "task.id"
+        ]
+      },
+      {
+        "name": "latest_task_run_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "taskrun.id"
+        ]
+      },
+      {
+        "name": "latest_diff_artifact_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "artifact.id"
+        ]
+      },
+      {
+        "name": "latest_changed_files_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "latest_preview_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "preview.id"
+        ]
+      },
+      {
+        "name": "latest_preview_url",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "latest_preview_health",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "latest_deployment_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "deployment.id"
+        ]
+      },
+      {
+        "name": "latest_deployment_provider",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "latest_deployment_status",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "last_successful_adapter",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "summary_md",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_sessionexecutionledger_session_id",
+        "columns": [
+          "session_id"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "sessionqueueentry": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "session_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "session.id"
+        ]
+      },
+      {
+        "name": "task_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "task.id"
+        ]
+      },
+      {
+        "name": "task_run_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "taskrun.id"
+        ]
+      },
+      {
+        "name": "queue_kind",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "access_mode",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "target_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "target_lock_key",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "position",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "state",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "blocked_reason",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "started_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "finished_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_sessionqueueentry_access_mode",
+        "columns": [
+          "access_mode"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_sessionqueueentry_position",
+        "columns": [
+          "position"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_sessionqueueentry_queue_kind",
+        "columns": [
+          "queue_kind"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_sessionqueueentry_session_id",
+        "columns": [
+          "session_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_sessionqueueentry_state",
+        "columns": [
+          "state"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_sessionqueueentry_target_id",
+        "columns": [
+          "target_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_sessionqueueentry_target_lock_key",
+        "columns": [
+          "target_lock_key"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_sessionqueueentry_task_id",
+        "columns": [
+          "task_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_sessionqueueentry_task_run_id",
+        "columns": [
+          "task_run_id"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "targetlock": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "lock_key",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "target_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "session_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "session.id"
+        ]
+      },
+      {
+        "name": "task_run_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "taskrun.id"
+        ]
+      },
+      {
+        "name": "worker_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "mode",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "state",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "lease_expires_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "acquired_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "released_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "release_reason",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_targetlock_lock_key",
+        "columns": [
+          "lock_key"
+        ],
+        "unique": true
+      },
+      {
+        "name": "ix_targetlock_session_id",
+        "columns": [
+          "session_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_targetlock_state",
+        "columns": [
+          "state"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_targetlock_target_id",
+        "columns": [
+          "target_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_targetlock_task_run_id",
+        "columns": [
+          "task_run_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_targetlock_worker_id",
+        "columns": [
+          "worker_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "task": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "session_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "session.id"
+        ]
+      },
+      {
+        "name": "created_by_message_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "message.id"
+        ]
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "intent_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "priority",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "plan_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "depends_on_task_ids",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "assigned_agent_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": [
+          "agent.id"
+        ]
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_task_session_id",
+        "columns": [
+          "session_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "taskrun": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "task_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "task.id"
+        ]
+      },
+      {
+        "name": "agent_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "agent.id"
+        ]
+      },
+      {
+        "name": "adapter_run_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "state",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "started_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "ended_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "runner_id",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "last_heartbeat_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "lease_expires_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "stale_detected_at",
+        "type": "DATETIME",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "stale_reason",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "worktree_path",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "base_ref",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "head_ref",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "error_code",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "error_message",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "metrics_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_taskrun_agent_id",
+        "columns": [
+          "agent_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_taskrun_task_id",
+        "columns": [
+          "task_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "taskrunevent": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "task_run_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "taskrun.id"
+        ]
+      },
+      {
+        "name": "event_type",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "payload_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "sequence",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_taskrunevent_created_at",
+        "columns": [
+          "created_at"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ix_taskrunevent_task_run_id",
+        "columns": [
+          "task_run_id"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "user": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "email",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "avatar_url",
+        "type": "VARCHAR",
+        "nullable": true,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_user_email",
+        "columns": [
+          "email"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "workspace": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "repo_url",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "root_path",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "default_branch",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_workspace_name",
+        "columns": [
+          "name"
+        ],
+        "unique": false
+      }
+    ]
+  },
+  "workspacemcpconnection": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "workspace_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "workspace.id"
+        ]
+      },
+      {
+        "name": "config_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_workspacemcpconnection_workspace_id",
+        "columns": [
+          "workspace_id"
+        ],
+        "unique": true
+      }
+    ]
+  },
+  "workspaceskill": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": true,
+        "references": []
+      },
+      {
+        "name": "workspace_id",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": [
+          "workspace.id"
+        ]
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "package_json",
+        "type": "VARCHAR",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "nullable": false,
+        "primary_key": false,
+        "references": []
+      }
+    ],
+    "indexes": [
+      {
+        "name": "ix_workspaceskill_workspace_id",
+        "columns": [
+          "workspace_id"
+        ],
+        "unique": false
+      },
+      {
+        "name": "ux_workspace_skill_name",
+        "columns": [
+          "workspace_id",
+          "name"
+        ],
+        "unique": true
+      }
+    ]
+  }
+}

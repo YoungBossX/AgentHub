@@ -189,15 +189,20 @@ def test_api_lease_excludes_an_independent_process(data_workspace):
 @pytest.mark.anyio
 async def test_api_lifespan_holds_and_releases_the_database_lease(data_workspace, monkeypatch):
     from contextlib import asynccontextmanager
-    from types import SimpleNamespace
     from app import main
-    _, _, database, _, _ = data_workspace
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import NullPool
+    from app.db_migrations import prepare_database
+    _, _, old_database, _, _ = data_workspace
+    database = old_database.with_name('api-lifecycle.sqlite3')
+    engine = create_engine('sqlite:///' + database.as_posix(), poolclass=NullPool)
+    prepare_database(engine)
     entered = []
     @asynccontextmanager
     async def runtime():
         entered.append(True)
         yield
-    monkeypatch.setattr(main, "engine", SimpleNamespace(url="sqlite:///" + database.as_posix()))
+    monkeypatch.setattr(main, "engine", engine)
     monkeypatch.setattr(main, "_runtime_lifespan", runtime)
     async with main.lifespan(main.app):
         assert entered == [True]

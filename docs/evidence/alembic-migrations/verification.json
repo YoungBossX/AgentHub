@@ -1,0 +1,287 @@
+{
+  "schema": "agenthub.alembic-verification.v1",
+  "date": "2026-10-18",
+  "status": "local-verification-complete",
+  "base": "ea0d3bc",
+  "branch": "codex/alembic-migrations",
+  "committed": false,
+  "pushed": false,
+  "environment": {
+    "os": "Windows",
+    "python": "3.12.7",
+    "sqlite": "3.45.3",
+    "alembic": "1.20.0",
+    "sqlalchemy": "2.0.51",
+    "sqlmodel": "0.0.27",
+    "node": "22.19.0",
+    "pnpm": "10.33.4"
+  },
+  "commands": {
+    "pnpm check": {
+      "exitCode": 0,
+      "logSha256": "152d8e087ad9dacbe3a6a901116b6d75390529d626bbe596873c23fdb433f651"
+    },
+    "pnpm test": {
+      "exitCode": 0,
+      "logSha256": "219117e21b36f7a693867ba8319d0c4398a4d96e0d2527d04bcd43f482f075de",
+      "pythonSuites": [
+        {
+          "tests": 2516,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1,
+          "passed": 2515,
+          "junitSha256": "79080e8c92863d1eea9a1bfb08f347e048174e4c35ed2a3ebec1a32acb1fdbc7",
+          "junitDirectory": "agenthub-pytest-api.AxpVdt",
+          "scope": "api",
+          "skips": [
+            {
+              "case": "test_posix_exact_case_semantics_keeps_distinct_git_spelling_ordinary",
+              "reason": "exact-case POSIX semantics regression"
+            }
+          ]
+        },
+        {
+          "scope": "demo-api",
+          "tests": 5,
+          "passed": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "evidence": "complete root log; no JUnit emitted"
+        }
+      ],
+      "localToolsPassed": 24,
+      "webPassed": 326,
+      "webFilesPassed": 43
+    }
+  },
+  "sourceSha256": {
+    "apps/api/alembic.ini": "d5bc114fe68813e83b863a6f45d816a6354fbfede50fb0597cdb41dfc2dedfd0",
+    "apps/api/app/config.py": "92b120cb4cdc9414dd98fb9f4f488b3dac89f63bc83a9f1db33ae4722a448b7b",
+    "apps/api/app/db.py": "533bc1466638de647d2b2be10fdd25111fb42198107021416fdcf1260ea5b00f",
+    "apps/api/app/db_migrations.py": "fd32759f0b1483ebea3971a0618793a883087db0601498096146281e27350771",
+    "apps/api/app/external_benchmark.py": "1913b90eccb6f5c76acf3901edf5fa8cc69928eb9977db12469c2f7b99023dba",
+    "apps/api/app/main.py": "066c9a991f4ce37abfb23f5ee9642aea2107295178254c137e8fca7698050803",
+    "apps/api/app/migration_backup.py": "4a89221da9979caa79741d625e839c5a4ff53b1df13c8a59497d4e6b8e8fdfcf",
+    "apps/api/app/migration_runtime.py": "fbd40ac59f8f60497d141a18d9e7506ee0b84a8a94a4894b0d5957b0960d782b",
+    "apps/api/app/p18b_workflow_rehearsal.py": "52b12477b214c80ab0f5684b54940b7817107b26d6696c6301579796968081de",
+    "apps/api/app/schema_contract.py": "4a130864f7ac62ed498667b92989c454a385011dd29f69dfa391415aa08afd59",
+    "apps/api/app/seed.py": "7fe67fac079b7ac70c36c467b6a12bc4b266453fe629487c25553f318bfcb2c8",
+    "apps/api/app/workflow_evaluation.py": "ce679f4c2be05f4f54a0903d2834474a4c89c4d42317ed1dee6f111e2e2cfa7d",
+    "apps/api/migrations/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "apps/api/migrations/baseline_v1.py": "3c9b7b8d295dfe5e9a38dfa370f55752bc9b1a0d0f9a2b1ea2706df3d3050d95",
+    "apps/api/migrations/env.py": "8dbd1fff6786b8ae667bd35e64e9ba8cd9872e689e689630261dd27d0d6f45b9",
+    "apps/api/migrations/schema_v1.json": "1395332d9e22ea5b41adc32d3a908fdc1316d9ee947ef029984f55794014b475",
+    "apps/api/migrations/script.py.mako": "4eb950053d814f58468206441e6335c273511f28d1f82803588da3237e1f3617",
+    "apps/api/migrations/versions/0001_local_baseline.py": "41067ae2f3f25c3e8cf7fca9a4e92d96b4624d9804e86571fb0a2c779250fb7a",
+    "apps/api/requirements.txt": "7732068c1b780cc96311eff1e69cc498f5ee9bc3ee2209e9da32d6f598fab620",
+    "apps/api/tests/fixtures/migration_legacy_v1.json": "9c1910e676ffe98513b983f1501f1ac954ea5681b6d06fca8927eb32a9364577",
+    "apps/api/tests/migration_fixtures.py": "f4d9844edd0e5792aeb23a8a883841e608fb4afde08f1fcf01e2e10484bf7a28",
+    "apps/api/tests/test_custom_agents.py": "dc85963e12d763c80d486cd33ab576663163df6ddd8e60d9a097c8ca08e299fb",
+    "apps/api/tests/test_db_migrations.py": "b9237e0c1fce0d7ef00dd5f3b75e8e564127e429dbf959d1e0ea79e951b6a3e2",
+    "apps/api/tests/test_external_benchmark.py": "943b8846b5efa0454162fa8eae3b310b72f8628bd263097beebd9f047f84b13a",
+    "apps/api/tests/test_local_data.py": "421c60cc31551f555cd14ffc69eadf9a0daa2eaef15dbdaf708581316b98aa85",
+    "apps/api/tests/test_message_history.py": "fc326876a61377d7bba80c8cdabea4cd435beb67c4add093523e08843851fd00",
+    "apps/api/tests/test_message_regeneration.py": "3c23f2b4f77350187142f8b9b73f635a2aa16519ece55c99e981383876e5010f",
+    "apps/api/tests/test_migration_backup.py": "85666c78a25cd992dc04598a56a39652e61fb76d43ebb61080420b33786c88c6",
+    "apps/api/tests/test_migration_lifecycle.py": "019485c70c1c37228670b479e32e55544c0993a21448a068c6a328e3b752c40b",
+    "apps/api/tests/test_models.py": "7eea3179dbc32d88a79f6005a49607c2d6c21d95c9778fcdf3bfdaf008dee4b1",
+    "apps/api/tests/test_schema_contract.py": "2f6052f07e75c2329aab165b3edceaceb144440961f7a6e5cfc8d4d4895b2617",
+    "apps/api/tests/test_seed_preservation.py": "8171594f0140c96aa6aa77546471bcce4aea58432ca9962d8f86f6f556fdd303",
+    "apps/api/tests/test_session_organization.py": "0f69262ea0fe2a679018d078ad75e988b103bbda4e4fc8ae2a54a90852d91658",
+    "package.json": "d8843b287329643a2a3f3bb02bfa114e6d8aedc5b0d335ab801e722a2ec893bb",
+    "scripts/db-migrations.sh": "66d5cb84bef69115bae5525fab28e9b36292f625912856b0cdc1c8aba755be62",
+    "scripts/db-migrations.test.mjs": "9f79eebcc0ec34cd88c0621a359744e0de3c2ba99541e10e09b151e5681f25e6",
+    "scripts/test-api.sh": "4fa31245998470e386074c130640073364c91263e2e9d138e9a4b96d413be6e8",
+    "scripts/preview-vite.config.mjs": "9c744acad74b5f35d26c610bc5f4e646743965b70cdd1c038afd97428eea9e6b",
+    "scripts/preview-serving-paths.test.mjs": "51efc2d10f828643330a02c20dbba2123fff0aeb08423e916c26848649041fe4"
+  },
+  "syntheticCliSmoke": {
+    "statusBefore": "legacy-compatible",
+    "statusBeforeExit": 2,
+    "upgrade": "upgraded",
+    "upgradeExit": 0,
+    "statusAfter": "current",
+    "statusAfterExit": 0,
+    "head": "0001_local_baseline",
+    "businessTables": 26,
+    "oldValuesAndBlobBytesPreserved": true,
+    "backupCopyIntegrity": "ok",
+    "backupSha256": "332901602d22a80f1efca22f81e19c6ea8f067deb757d3199456899e775d1c29",
+    "schemaFingerprint": "30d20c266fbae8f6b1e957008050336fb58c35bd0c28fab02e7c4cca0cdd2542",
+    "receipts": [
+      "backup-created",
+      "backup-verified",
+      "rehearsal-passed",
+      "upgrade-prepared",
+      "database-committed",
+      "verified"
+    ]
+  },
+  "syntheticInitSmoke": {
+    "statusBefore": "empty",
+    "statusCreatedDatabase": false,
+    "initExit": 0,
+    "repeatedInitExit": 0,
+    "statusAfter": "current",
+    "evidenceDirectory": "agenthub-alembic-init-55e965591c65428fb20e9bc2a0dbb7b7"
+  },
+  "review": {
+    "confirmedP2": 3,
+    "fixedP2": 3,
+    "deferredMinor": [],
+    "redAssertionsObserved": 5,
+    "combinedGreenPassed": 62,
+    "expandedContractPassed": 26
+  },
+  "previewRegressionFix": {
+    "redObserved": true,
+    "nodePassed": 3,
+    "realHttpBrowserPassed": 1,
+    "change": "Recognize canonical paths under existing dependency roots"
+  },
+  "historicalFullRuns": [
+    {
+      "logSha256": "210e9516cbfbf70d96cdea0a6c208cd92c3a9fc00b21a1198da74847cfad5ed1",
+      "passed": 2505,
+      "failed": 1,
+      "skipped": 1,
+      "source": "before review fixes",
+      "failure": "Vite client returned 500 for canonical shared dependency path"
+    },
+    {
+      "logSha256": "d5754b40def77a1c7090b65c331a2377b7fe8d660a0018944f32777e22e53a7c",
+      "passed": 2514,
+      "failed": 1,
+      "skipped": 1,
+      "source": "before preview regression fix",
+      "failure": "Vite client returned 500 for canonical shared dependency path"
+    }
+  ],
+  "namedPlanPythonTestsExecuted": 32,
+  "notVerified": [
+    "Linux",
+    "Python 3.11",
+    "remote CI",
+    "actual product database migration",
+    "real provider execution",
+    "fresh dependency installation"
+  ],
+  "productDatabaseTouched": false,
+  "validation": {
+    "openspecStrict": "passed",
+    "gitDiffCheck": "passed",
+    "localLinksChecked": 167,
+    "utf8FilesChecked": 55,
+    "frozenSourceFilesUnchanged": 39,
+    "databaseOrBackupFilesInChanges": []
+  },
+  "cleanupAudit": {
+    "removedSymbols": [
+      "ensure_demo_schema_columns",
+      "ensure_demo_schema_indexes",
+      "_ensure_sqlite_demo_schema_columns",
+      "_ensure_sqlite_demo_schema_indexes",
+      "_ensure_table_columns"
+    ],
+    "stalePrivateReferences": [],
+    "productionSchemaMutationMatches": [],
+    "retainedIsolatedTestMatches": {
+      "independent current-ORM reference fixture; legacy DDL remains static": [
+        "apps/api/tests/migration_fixtures.py:32"
+      ],
+      "isolated ORM unit-test setup": [
+        "apps/api/tests/test_adapters.py:94",
+        "apps/api/tests/test_agent_creation.py:31",
+        "apps/api/tests/test_agent_directory.py:107",
+        "apps/api/tests/test_agent_profile_drafts.py:20",
+        "apps/api/tests/test_agent_runtime_config.py:30",
+        "apps/api/tests/test_agent_runtime_config.py:815",
+        "apps/api/tests/test_agent_selection_policy.py:21",
+        "apps/api/tests/test_agent_system_prompt.py:26",
+        "apps/api/tests/test_artifact_scope_guards.py:53",
+        "apps/api/tests/test_artifact_workbench_api.py:84",
+        "apps/api/tests/test_artifact_workbench_edit_api.py:102",
+        "apps/api/tests/test_automatic_validation.py:249",
+        "apps/api/tests/test_chat_events.py:33",
+        "apps/api/tests/test_claude_code_adapter.py:112",
+        "apps/api/tests/test_codex_adapter.py:115",
+        "apps/api/tests/test_cross_provider_rehearsal.py:37",
+        "apps/api/tests/test_custom_agents.py:34",
+        "apps/api/tests/test_deployments.py:50",
+        "apps/api/tests/test_diffs.py:67",
+        "apps/api/tests/test_execution_worktrees.py:52",
+        "apps/api/tests/test_external_evidence.py:28",
+        "apps/api/tests/test_external_memory_scan.py:103",
+        "apps/api/tests/test_external_reviews.py:24",
+        "apps/api/tests/test_external_workspaces.py:41",
+        "apps/api/tests/test_failure_recovery.py:114",
+        "apps/api/tests/test_group_auto_execution.py:33",
+        "apps/api/tests/test_group_planning.py:31",
+        "apps/api/tests/test_guardrails.py:32",
+        "apps/api/tests/test_layered_qa.py:122",
+        "apps/api/tests/test_live_memory_compliance.py:316",
+        "apps/api/tests/test_llm_planner.py:28",
+        "apps/api/tests/test_memory_evals.py:134",
+        "apps/api/tests/test_memory_rehearsal.py:217",
+        "apps/api/tests/test_memory_retrieval.py:172",
+        "apps/api/tests/test_memory_rule_budget.py:21",
+        "apps/api/tests/test_memory_snapshot_consistency.py:40",
+        "apps/api/tests/test_memory_store.py:32",
+        "apps/api/tests/test_memory_write_policy.py:27",
+        "apps/api/tests/test_message_attachments.py:26",
+        "apps/api/tests/test_message_attachments.py:68",
+        "apps/api/tests/test_message_regeneration.py:20",
+        "apps/api/tests/test_models.py:61",
+        "apps/api/tests/test_native_review_artifacts.py:43",
+        "apps/api/tests/test_p18b_workflow_rehearsal.py:24",
+        "apps/api/tests/test_parallel_dispatcher.py:184",
+        "apps/api/tests/test_pinned_message_context.py:23",
+        "apps/api/tests/test_planner_contracts.py:34",
+        "apps/api/tests/test_planner_message_references.py:15",
+        "apps/api/tests/test_planning.py:54",
+        "apps/api/tests/test_pmo_decisions.py:32",
+        "apps/api/tests/test_pmo_decisions.py:44",
+        "apps/api/tests/test_previews.py:112",
+        "apps/api/tests/test_project_analyzer.py:22",
+        "apps/api/tests/test_project_provisioning.py:416",
+        "apps/api/tests/test_provider_gateway_contract.py:264",
+        "apps/api/tests/test_provider_gateway_contract.py:420",
+        "apps/api/tests/test_provider_gateway_contract.py:522",
+        "apps/api/tests/test_provider_gateway_contract.py:690",
+        "apps/api/tests/test_recovery.py:171",
+        "apps/api/tests/test_run_diagnostics.py:26",
+        "apps/api/tests/test_scheduler.py:1077",
+        "apps/api/tests/test_scripted_mock_adapter.py:41",
+        "apps/api/tests/test_sessions.py:55",
+        "apps/api/tests/test_session_organization.py:21",
+        "apps/api/tests/test_session_queue.py:224",
+        "apps/api/tests/test_skills.py:65",
+        "apps/api/tests/test_skills.py:190",
+        "apps/api/tests/test_target_locks.py:2126",
+        "apps/api/tests/test_target_locks.py:2273",
+        "apps/api/tests/test_target_registry.py:437",
+        "apps/api/tests/test_target_registry.py:521",
+        "apps/api/tests/test_task_runs.py:103",
+        "apps/api/tests/test_task_runs.py:1799",
+        "apps/api/tests/test_task_runs.py:2008",
+        "apps/api/tests/test_task_runs.py:16692",
+        "apps/api/tests/test_task_runs.py:16964",
+        "apps/api/tests/test_transactional_delivery.py:150"
+      ],
+      "assertion and patch forbidding runtime ORM create_all in migration history": [
+        "apps/api/tests/test_db_migrations.py:31",
+        "apps/api/tests/test_db_migrations.py:32"
+      ],
+      "controlled contract compatibility or drift fixture": [
+        "apps/api/tests/test_schema_contract.py:35",
+        "apps/api/tests/test_schema_contract.py:36",
+        "apps/api/tests/test_schema_contract.py:37",
+        "apps/api/tests/test_schema_contract.py:43",
+        "apps/api/tests/test_schema_contract.py:100",
+        "apps/api/tests/test_schema_contract.py:101"
+      ]
+    }
+  }
+}

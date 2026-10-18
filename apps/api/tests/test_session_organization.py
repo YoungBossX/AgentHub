@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import SQLModel, Session as DbSession, create_engine, select
 
-from app.db import _ensure_sqlite_demo_schema_columns
+from migration_fixtures import migrate_engine
 from app.main import app, get_db
 from app.models import Message, Session, Task, TaskRun, Workspace
 from app.repositories import next_session_title
@@ -123,7 +123,7 @@ def test_old_sqlite_upgrade_preserves_rows_and_is_idempotent(tmp_path):
         conn.execute(text("CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, sender_type TEXT NOT NULL, sender_id TEXT, content_md TEXT NOT NULL, message_kind TEXT NOT NULL, parent_message_id TEXT, stream_state TEXT NOT NULL, created_at DATETIME NOT NULL)"))
         conn.execute(text("INSERT INTO session VALUES ('s','ws','Legacy','demo','main','original-worktree','active',NULL,'2026-01-01','2026-01-01')"))
         conn.execute(text("INSERT INTO message VALUES ('m','s','user',NULL,'Original content','chat',NULL,'complete','2026-01-01')"))
-    _ensure_sqlite_demo_schema_columns(engine); _ensure_sqlite_demo_schema_columns(engine)
+    migrate_engine(engine); migrate_engine(engine)
     with DbSession(engine) as db:
         session, message = db.get(Session, "s"), db.get(Message, "m")
         assert session.title == "Legacy" and session.worktree_path == "original-worktree"

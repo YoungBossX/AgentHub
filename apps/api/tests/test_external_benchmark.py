@@ -44,6 +44,13 @@ def test_prepare_freezes_three_failing_inputs_without_invoking_worker(tmp_path, 
     assert report["summary"]["successRate"] is None
     assert report["summary"]["providerTurnsObserved"] == 0
     assert (output / "benchmark.sqlite3").is_file()
+    from sqlalchemy import create_engine
+    from app.db_migrations import require_current_schema
+    version_engine = create_engine('sqlite:///' + (output / 'benchmark.sqlite3').as_posix())
+    try:
+        require_current_schema(version_engine)
+    finally:
+        version_engine.dispose()
     assert (output / "report.json").is_file()
     for case in report["cases"]:
         target = output / case["caseId"] / "target"

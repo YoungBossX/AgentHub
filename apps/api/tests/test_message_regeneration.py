@@ -174,14 +174,15 @@ def test_request_shape_cannot_override_content_sender_or_metadata(regeneration):
     assert not calls
 
 
-def test_legacy_message_column_upgrade_is_idempotent(tmp_path):
-    from app.db import _ensure_sqlite_demo_schema_columns
+def test_incomplete_legacy_message_is_refused_without_changing_rows(tmp_path):
+    from app.schema_contract import inspect_schema
 
     engine = create_engine(f"sqlite:///{tmp_path / 'legacy.sqlite3'}")
     with engine.begin() as db:
         db.execute(text("CREATE TABLE message (id TEXT PRIMARY KEY, content_md TEXT)"))
         db.execute(text("INSERT INTO message VALUES ('legacy','unchanged')"))
-    _ensure_sqlite_demo_schema_columns(engine); _ensure_sqlite_demo_schema_columns(engine)
     with engine.connect() as db:
-        assert db.execute(text('SELECT content_md,regeneration_json FROM message')).one() == ('unchanged','{}')
+        assert inspect_schema(db).state == 'incompatible'
+        assert inspect_schema(db).state == 'incompatible'
+        assert db.execute(text('SELECT id,content_md FROM message')).one() == ('legacy','unchanged')
     engine.dispose()

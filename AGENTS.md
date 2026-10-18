@@ -97,6 +97,14 @@ Deferred examples:
 
 ## Data and Runtime Boundaries
 
+- Focused exception under `agenthub-alembic-migrations`: fixed Alembic revisions
+  own SQLite schema transitions. Developer-only `pnpm db:status` and
+  `pnpm db:migrate --backup-dir <new-external-directory>` do not expand Agent
+  commands. Existing databases require offline exclusive ownership, verified
+  WAL-aware backup and isolated rehearsal; API startup only initializes empty
+  databases or validates current schemas. Never drop records, blindly stamp,
+  rewrite existing seed settings or automatically overwrite a database restore.
+
 - Focused exception under `agenthub-local-data-maintenance`: the offline operator
   CLI may read the primary checkout's SQLite/Git metadata and registered managed
   worktrees to create a new external local snapshot. Restore never overwrites an

@@ -5,6 +5,11 @@
 
 ## 当前快照
 
+2026-10-18：`agenthub-alembic-migrations` 1.1 在独立分支完成本地实现和验收。
+固定 SQLite 迁移、离线备份/演练、启动版本检查、seed 原值保留和旧代码替换已验证；
+根检查和完整回归通过：API 2515 passed / 1 skipped；Web 326；本地工具 24；demo-api 5。实际产品库没有迁移。用户随后授权提交并推送 `codex/alembic-migrations`；Ubuntu/Python 3.11 与远程 CI 结果以该分支具体提交的 Actions 为准，以上数字仍是 Windows 本地验收快照。
+操作方式见[迁移说明](database-migrations.md)，证据边界见[验收记录](alembic-migrations-review.md)。
+
 截至 2026-10-17，AgentHub 仍是本地单用户 Agent Coding Workspace / 强演示 MVP。
 核心闭环为：
 
@@ -28,6 +33,7 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
+| `agenthub-alembic-migrations` | 1.1 Complete（交付分支 codex/alembic-migrations） | 固定 26 表/23 列兼容、独占备份与副本演练、原值/BLOB 和 seed 配置保留、版本启动检查及旧实现替换；根检查/完整回归通过。真实库未迁移，远程 CI 以具体提交为准，见 [迁移说明](database-migrations.md) / [验收记录](alembic-migrations-review.md) |
 | `agenthub-intent-boundaries` | 1.1–1.2 Complete（当前分支交付） | 统一 IntentDecision 和规则边界；人工语料 73/73、同 49 负例误命中 23→0，原 API 448/相邻 45。本次 CI 暴露两个群组工作流回归，修复为必须通过原生 Planner 后才保存复杂群组；260 路由与 53 完整工作流回归通过，原失败保留，后续远程结果以修复提交为准。非真实模型准确率。见 [说明](intent-recognition.md) / [记录](intent-boundaries-review.md) |
 | `agenthub-execution-card-modularity` | 1.1 Complete（本地未提交） | 引擎 4103→3743、卡片 1532→767；所有权与计划/制品职责独立。源码一致性、548/1 skip 生命周期安全、139 相邻、Web 326、根/strict 验证，见 [记录](execution-card-modularity-review.md)。三项总目标完成本地交付，非全部技术债清零 |
 | `agenthub-business-contract-coverage` | 1.1 Complete（本地未提交） | 13 组语法/API、旧 10/新 18 浏览器检查与双源码/策略绑定；70 最终专项、53 工作流/55 QA 回归（重叠），先复现再修复两类验收缺口。见 [记录](business-contract-coverage-review.md)；本轮有界大文件拆分另见对应记录 |

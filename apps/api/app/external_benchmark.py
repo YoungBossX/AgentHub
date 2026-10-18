@@ -17,8 +17,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, create_engine, select
 
+from app.db_migrations import prepare_database
 from app.external_workspaces import (
     ExternalWorkspaceRegistration, is_system_path, register_external_project_target,
 )
@@ -310,7 +311,7 @@ async def run_benchmark(output: Path, *, prepare_only: bool = False, case_id: st
     }
     save_report(root, report, prepare_only=prepare_only)
     engine = create_engine(f"sqlite:///{(root / 'benchmark.sqlite3').as_posix()}", connect_args={"check_same_thread": False})
-    SQLModel.metadata.create_all(engine)
+    prepare_database(engine)
     try:
         with DbSession(engine) as db:
             workspace = Workspace(name="External Task Benchmark", repo_url="local://benchmark", root_path=str(root), default_branch="main")

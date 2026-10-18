@@ -15,7 +15,7 @@ from app.custom_agents import (
     CustomAgentError, CustomAgentInput, custom_launch_permissions,
     custom_runtime_resolution, require_custom_agent, save_custom_agent,
 )
-from app.db import _ensure_sqlite_demo_schema_columns, _ensure_sqlite_demo_schema_indexes
+from app.schema_contract import inspect_schema
 from app.guardrails import evaluate_command
 from app.llm_planner import build_llm_planner_request
 from app.main import app, get_db, task_run_response
@@ -213,16 +213,15 @@ def test_api_create_edit_contacts_reload_duplicate_and_foreign_update(db, monkey
     finally: app.dependency_overrides.clear()
 
 
-def test_legacy_sqlite_columns_and_unique_index_preserve_drafts(tmp_path):
+def test_incomplete_legacy_draft_is_refused_without_inventing_fields(tmp_path):
     engine = create_engine(f"sqlite:///{(tmp_path / 'legacy.sqlite3').as_posix()}")
     with engine.begin() as connection:
         connection.execute(text("CREATE TABLE agentprofiledraft (id TEXT PRIMARY KEY, workspace_id TEXT, display_name TEXT)"))
         connection.execute(text("INSERT INTO agentprofiledraft VALUES ('legacy', 'workspace', 'Legacy')"))
     for _ in range(2):
-        _ensure_sqlite_demo_schema_columns(engine); _ensure_sqlite_demo_schema_indexes(engine)
-    assert {column["name"] for column in inspect(engine).get_columns("agentprofiledraft")} >= {"system_prompt", "mention_alias", "tool_policy"}
+        with engine.connect() as connection:
+            assert inspect_schema(connection).state == 'incompatible'
+    assert {column["name"] for column in inspect(engine).get_columns("agentprofiledraft")} == {"id", "workspace_id", "display_name"}
     with engine.begin() as connection:
-        assert connection.execute(text("SELECT display_name, system_prompt, mention_alias, tool_policy FROM agentprofiledraft")).one() == ("Legacy", "", None, "")
-        connection.execute(text("INSERT INTO agentprofiledraft (id,workspace_id,mention_alias) VALUES ('one','workspace','alias')"))
-        with pytest.raises(IntegrityError): connection.execute(text("INSERT INTO agentprofiledraft (id,workspace_id,mention_alias) VALUES ('two','workspace','alias')"))
+        assert connection.execute(text("SELECT id,workspace_id,display_name FROM agentprofiledraft")).one() == ("legacy", "workspace", "Legacy")
     engine.dispose()

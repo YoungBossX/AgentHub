@@ -1,5 +1,36 @@
 # AgentHub 变更日志
 
+## Alembic 迁移改动交付
+
+**日期:** 2026-10-18；用户授权提交、推送本次专项并跟踪对应提交的 GitHub CI，失败时修复后再推送。
+
+- 提交范围为已审核的 Alembic 迁移、数据保留、旧代码替换及必要的共享依赖预览兼容修复；运行/测试源码与完整本地验收的 39 项 SHA-256 保持一致。
+- 交付分支为 `codex/alembic-migrations`，以具体提交的 Actions 结果判定远程验证；下文“本地未提交/远程未验证”保留为前一验收阶段的事实，不代表后续交付状态。
+- 不迁移实际产品数据库，不停止运行服务，不将本次交付自动合入 `main`。
+
+## Alembic 数据库迁移本地验收完成
+
+**日期:** 2026-10-18；用户审核设计/计划并选择 Native 顺序实施；OpenSpec 1.1 完成本地验收。
+
+- 在独立 `codex/alembic-migrations` 工作树实现固定 26 张业务表、六组 23 列兼容契约与受控 Alembic 升级；已有库必须离线独占、一致备份、副本演练及旧值/BLOB 核验。
+- API 只初始化空库或校验 current；seed 仅补缺失记录，已有 Agent/Workspace 配置保留。移除旧启动补列/索引函数及失效引用，三个隔离评测入口统一走固定迁移。
+- 已告知并安装 Alembic 1.20.0 及必要新依赖，没有升级既有直接依赖。独立审查三项 P2 均通过红绿验证修复。
+- 全量回归还发现共享依赖工作树的 Vite 真实路径误拦截；仅补齐既有依赖允许根的识别，新增正反例及真实 HTTP/浏览器复验通过，旧全量失败保留。
+- 修复后 `pnpm check`、完整 `pnpm test` 通过：API 2515 passed / 1 skipped；Web 326；本地工具 24；demo-api 5。当前 Windows/Python 3.12.7，其他版本/OS 和远程 CI 未验证；早期重叠测试不累计。
+- 旧库升级和新库 `db:init` 命令演练均仅用新外部合成库；实际产品数据库未操作，未提交/推送，不删除运行数据。见 [迁移说明](database-migrations.md)、[验收记录](alembic-migrations-review.md) 和 [受限证据](evidence/alembic-migrations/README.md)。
+
+## Alembic 数据库迁移设计已审核、实施计划待审核
+
+**日期:** 2026-10-18；`agenthub-alembic-migrations` 1.1 尚未实施。
+
+- 按用户要求准备 [专项设计](../openspec/changes/agenthub-alembic-migrations/design.md)，明确冻结基线、旧库识别、离线独占迁移、一致备份/副本演练和失败恢复边界；保留 SQLite/SQLModel 与既有数据。
+- 明确 API 空库初始化、旧库 fail-fast 和迁移单一入口；旧清理仅限实际被替代的补列/索引代码、相关测试调用及当前指引，不删除数据库、维护锁、附件、备份、worktree 或历史证据。
+- 设计草案阶段只交付待审核设计；未增加或安装依赖，未改运行代码、读取业务数据库内容或迁移实际库，未提交/推送。任务仍未勾选；设计校验不能代表迁移实现或数据保留已经验收。
+- 本阶段 `openspec validate agenthub-alembic-migrations --strict`、设计本地链接检查及已有文件 diff 空白检查通过；未运行迁移或业务回归测试。
+- 用户随后审核同意设计，授权继续制定 [实施计划](superpowers/plans/2026-10-18-alembic-migrations.md)。计划覆盖固定 schema/旧库夹具、受控 Alembic runner、独占备份/演练/失败回执、生命周期和 seed 配置保留、开发者命令/测试库隔离、旧代码替换及最终回归，均属于 OpenSpec 1.1。
+- 源码核对发现 seed 会重写已有 Agent/Workspace 部分字段，计划纳入仅补缺失记录及首次启动原值对照；另明确 WAL 备份分离连接、提交后回执失败不能冒充回滚。当前仅改设计/计划及阶段记录，未执行其中的安装、代码修改、测试或数据库迁移；实施计划待用户审核和执行方式选择。
+- `.gitignore` 仅为本份计划增加精确白名单，避免现有 `docs/*` 规则漏掉计划文件；不扩大为所有计划或运行数据放行。
+
 ## 意图边界的群组 Planner CI 回归
 
 **日期:** 2026-10-18；`agenthub-intent-boundaries` 1.2 本地验证完成，按用户授权继续交付。

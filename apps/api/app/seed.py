@@ -31,11 +31,6 @@ def seed_demo_data(db: DbSession) -> None:
                 default_branch="main",
             )
         )
-    else:
-        workspace.repo_url = "local://apps/demo"
-        workspace.root_path = DEMO_WORKSPACE_ROOT
-        workspace.default_branch = "main"
-        db.add(workspace)
 
     agents = [
         {
@@ -83,22 +78,11 @@ def seed_demo_data(db: DbSession) -> None:
                     enabled=True,
                 )
             )
-        else:
-            agent.enabled = True
-            agent.name = agent_data["name"]
-            agent.adapter_type = agent_data["adapter_type"]
-            agent.provider = agent_data["provider"]
-            agent.default_model = agent_data["default_model"]
-            agent.system_prompt = agent_data["system_prompt"]
-            db.add(agent)
 
     db.commit()
 
 
 if __name__ == "__main__":
-    from app.db import create_db_and_tables, engine
-
-    create_db_and_tables()
-    with DbSession(engine) as session:
-        seed_demo_data(session)
-    print("Seeded demo user, workspace, and agents.")
+    from app.db import initialize_database_cli
+    initialize_database_cli()
+    print("Preserved existing records and inserted missing demo seeds.")

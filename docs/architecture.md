@@ -47,6 +47,7 @@ Message
 |---|---|
 | `apps/api/app/main.py` | FastAPI composition root，配置生命周期、CORS、领域 router，以及少量既有 helper 兼容桥接 |
 | `apps/api/app/dependencies.py` | FastAPI 共享依赖入口，集中提供数据库会话、worktree、preview 和 deploy service |
+| `apps/api/app/db_migrations.py` / `schema_contract.py` / `migration_runtime.py` / `migration_backup.py` | 固定 schema、版本检查、离线独占升级、一致备份与原值/附件核验；不扩展 Agent 权限 |
 | `apps/api/app/routes/health.py` | 基础健康检查路由 |
 | `apps/api/app/routes/registries.py` | Provider config 和 deployment provider registry 只读路由 |
 | `apps/api/app/routes/agent_settings.py` | Agent directory、profile draft、runtime config 和 memory settings 路由及响应映射 |
@@ -135,7 +136,8 @@ Message
 | PreviewDeployJob | 有界预览/交付后台作业状态，不是通用后台 Agent |
 | ArtifactVersion | 文档/制品版本，用户操作沿用既有证据来源 |
 
-SQLite 仍使用现有幂等增量初始化，没有新引入迁移框架。以上当前实体来自 `models.py`，
+SQLite 结构由固定 Alembic revision 管理；空库初始化与已有库离线迁移共用契约，
+API 不再隐式补列。见[迁移说明](database-migrations.md)。以上当前 ORM 实体来自 `models.py`，
 原 P0 核心表限制不代表后续已验收专项未增加支持实体。
 
 ## 验证、上下文和数据维护
@@ -194,7 +196,7 @@ AgentHub 当前采用“本地可验证、边界保守”的可靠性策略：
 | 选择 | 理由 |
 |---|---|
 | FastAPI | 适合快速构建清晰 API，Python 生态便于连接 CLI、文件系统和测试 |
-| SQLModel + SQLite | 单用户本地 demo 足够稳定，避免引入 Postgres/Alembic 运维复杂度 |
+| SQLModel + SQLite + Alembic | 保留本地单用户数据库，以固定版本和备份演练管理结构演进 |
 | Next.js + TypeScript | 前端状态复杂，TypeScript 能降低 API 类型漂移风险 |
 | SSE | 当前主要是服务端向前端推送 TaskRunEvent，SSE 比 WebSocket 更简单且足够 |
 | Session worktree | 比直接修改主仓库安全，能保留真实 Git Diff 和隔离每个会话 |

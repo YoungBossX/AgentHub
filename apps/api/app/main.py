@@ -11,6 +11,7 @@ from app.config import get_settings, sqlite_path_from_url
 from app.maintenance_lease import database_lease
 from app.local_request_guard import LocalRequestGuard
 from app.db import engine, init_database
+from app.db_migrations import prepare_database, require_current_schema
 from app.message_regeneration import recover_interrupted_requests
 from app.user_code_edits import recover_user_edits
 from app.dependencies import get_db, get_deploy_service, get_preview_service
@@ -65,8 +66,10 @@ from app.windows_connection_cleanup import install_windows_connection_cleanup
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     from contextlib import nullcontext
+    prepare_database(engine)
     path = sqlite_path_from_url(str(engine.url))
     with database_lease(path, exclusive=False) if path and str(path) != ":memory:" else nullcontext():
+        require_current_schema(engine)
         async with _runtime_lifespan():
             yield
 

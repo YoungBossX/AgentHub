@@ -278,7 +278,8 @@ Windows 下已针对连接关闭时的一个已确认 10054 清理失败补全�
 ## 数据与 Agent 配置
 
 首次 API 启动自动建表并初始化本地用户/工作区/Agent，首次会话由用户创建。
-后续启动复用 SQLite 并执行已有的增量初始化。默认库位于
+后续启动复用 SQLite 并检查固定 Alembic 版本；旧库必须先停机、备份并显式升级。
+现有配置和种子记录不会在启动时重置，详见[数据库迁移说明](database-migrations.md)。默认库位于
 `apps/api/data/agenthub.sqlite3`；会话工作树位于仓库 `.worktrees/`。
 
 Python 环境按显式 `AGENTHUB_PYTHON_BIN`、本 checkout `.venv`、主 checkout

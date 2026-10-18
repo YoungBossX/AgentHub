@@ -16,8 +16,9 @@ import threading
 import time
 
 from fastapi import BackgroundTasks
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, create_engine, select
 
+from app.db_migrations import prepare_database
 from app.automatic_validation import validation_for_run
 from app.external_benchmark import reserve_output, git, file_hash
 from app.group_execution import enqueue_ready_group_tasks
@@ -305,7 +306,7 @@ async def run_scenario(directory, scenario, *, prepare_only=False, adapter="code
     if not result["baselineFailing"]:
         return {**result, "verdict": "failed", "failureGates": ["baseline_not_failing"]}
     engine = create_engine(f"sqlite:///{(directory / 'workflow.sqlite3').as_posix()}", connect_args={"check_same_thread": False})
-    SQLModel.metadata.create_all(engine)
+    prepare_database(engine)
     started = time.monotonic()
     try:
         with DbSession(engine) as db:

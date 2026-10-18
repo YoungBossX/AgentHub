@@ -9,8 +9,9 @@ from typing import Any
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import create_engine, select
 
+from app.db_migrations import prepare_database
 from app.context_pack import build_session_context_pack
 from app.llm_planner import build_llm_planner_input
 from app.memory_store import MemoryItemInput, create_memory_item
@@ -330,7 +331,7 @@ def _main() -> int:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    SQLModel.metadata.create_all(engine)
+    prepare_database(engine)
     with DbSession(engine) as db:
         payload = run_bounded_p18b_workflow_rehearsal(
             db,

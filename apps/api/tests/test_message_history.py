@@ -110,13 +110,13 @@ def test_http_bounds_unicode_segments_and_wrong_session_content(history):
 
 
 def test_existing_database_history_indexes_upgrade_idempotently(history):
-    from app.db import _ensure_sqlite_demo_schema_indexes
+    from migration_fixtures import migrate_engine
     db, sid, _ = history
     engine = db.get_bind()
     with engine.begin() as connection:
         connection.execute(text("DROP INDEX ix_message_session_order"))
         connection.execute(text("DROP INDEX ix_message_session_pins"))
-    _ensure_sqlite_demo_schema_indexes(engine); _ensure_sqlite_demo_schema_indexes(engine)
+    migrate_engine(engine); migrate_engine(engine)
     assert {"ix_message_session_order", "ix_message_session_pins"}.issubset({row["name"] for row in inspect(engine).get_indexes("message")})
     plan = db.execute(text("EXPLAIN QUERY PLAN SELECT id FROM message WHERE session_id=:sid ORDER BY created_at DESC, id DESC LIMIT 80"), {"sid": sid}).all()
     assert "ix_message_session_order" in str(plan) and "TEMP B-TREE" not in str(plan)

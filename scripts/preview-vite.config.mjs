@@ -38,7 +38,7 @@ function permitted(filename) {
     try { canonical = path.join(fs.realpathSync(ancestor), path.relative(ancestor, lexical)); } catch { return false; }
   }
   if (protectedPath(canonical) || !roots.some(base => inside(base, canonical))) return false;
-  const dependency = dependencyAliases.some(base => inside(base, lexical)) && dependencies.some(base => inside(base, canonical));
+  const dependency = [...dependencyAliases, ...dependencies].some(base => inside(base, lexical)) && dependencies.some(base => inside(base, canonical));
   if (!dependency && (!inside(root, canonical) || denyTargetPath(path.relative(root, lexical).replaceAll("\\", "/"))
     || denyTargetPath(path.relative(root, canonical).replaceAll("\\", "/")))) return false;
   // Dependency stores may use hardlinks; ordinary project source must not alias

@@ -1,15 +1,12 @@
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
-from sqlalchemy import inspect, text
-from sqlalchemy.engine import Engine
+from sqlmodel import create_engine
 
 from app.config import get_settings, sqlite_path_from_url
 from app.seed import seed_demo_data
+from app.db_migrations import prepare_database, require_current_schema
 
 settings = get_settings()
 sqlite_path = sqlite_path_from_url(settings.database_url)
-if sqlite_path is not None:
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
 
 engine = create_engine(
     settings.database_url,
@@ -21,156 +18,24 @@ engine = create_engine(
 
 
 def create_db_and_tables() -> None:
-    SQLModel.metadata.create_all(engine)
-    ensure_demo_schema_columns()
-    ensure_demo_schema_indexes()
-
-
-def ensure_demo_schema_columns() -> None:
-    _ensure_sqlite_demo_schema_columns(engine)
-
-
-def ensure_demo_schema_indexes() -> None:
-    _ensure_sqlite_demo_schema_indexes(engine)
-
-
-def _ensure_sqlite_demo_schema_indexes(db_engine: Engine) -> None:
-    if not str(db_engine.url).startswith("sqlite"):
-        return
-    tables = set(inspect(db_engine).get_table_names())
-    with db_engine.begin() as connection:
-        if "message" in tables:
-            columns = {column["name"] for column in inspect(db_engine).get_columns("message")}
-            if {"session_id", "created_at", "id"}.issubset(columns):
-                connection.execute(text("CREATE INDEX IF NOT EXISTS ix_message_session_order ON message (session_id, created_at, id)"))
-                if "pinned_at" in columns:
-                    connection.execute(text("CREATE INDEX IF NOT EXISTS ix_message_session_pins ON message (session_id, pinned_at, created_at, id)"))
-        if "taskrunevent" in tables:
-            connection.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_taskrunevent_created_at "
-                    "ON taskrunevent (created_at)"
-                )
-            )
-        if "agentprofiledraft" in tables:
-            connection.execute(text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS ux_custom_agent_workspace_alias "
-                "ON agentprofiledraft (workspace_id, mention_alias)"
-            ))
-
-
-def _ensure_sqlite_demo_schema_columns(db_engine: Engine) -> None:
-    if not str(db_engine.url).startswith("sqlite"):
-        return
-
-    inspector = inspect(db_engine)
-    table_names = set(inspector.get_table_names())
-
-    _ensure_table_columns(
-        db_engine,
-        inspector,
-        table_names,
-        "message",
-        {
-            "context_json": "TEXT NOT NULL DEFAULT '{}'",
-            "regeneration_json": "TEXT NOT NULL DEFAULT '{}'",
-            "pinned_at": "DATETIME",
-        },
-    )
-    _ensure_table_columns(
-        db_engine,
-        inspector,
-        table_names,
-        "session",
-        {
-            "active_frontend_target_id": "TEXT",
-            "active_backend_target_id": "TEXT",
-            "memory_snapshot_id": "TEXT",
-            "pinned_at": "DATETIME",
-            "archived_at": "DATETIME",
-        },
-    )
-    _ensure_table_columns(
-        db_engine,
-        inspector,
-        table_names,
-        "externalprojecttarget",
-        {
-            "staging_output_dir": "TEXT",
-            "staging_serve_command": "TEXT",
-            "deploy_provider_ids_json": "TEXT NOT NULL DEFAULT '[]'",
-        },
-    )
-    _ensure_table_columns(
-        db_engine,
-        inspector,
-        table_names,
-        "artifactversion",
-        {
-            "parent_version_id": "TEXT",
-            "content_md": "TEXT NOT NULL DEFAULT ''",
-            "content_hash": "TEXT NOT NULL DEFAULT ''",
-            "editor_source": "TEXT NOT NULL DEFAULT 'system'",
-        },
-    )
-    _ensure_table_columns(
-        db_engine,
-        inspector,
-        table_names,
-        "taskrun",
-        {
-            "runner_id": "TEXT",
-            "last_heartbeat_at": "DATETIME",
-            "lease_expires_at": "DATETIME",
-            "stale_detected_at": "DATETIME",
-            "stale_reason": "TEXT",
-        },
-    )
-    _ensure_table_columns(
-        db_engine, inspector, table_names, "agentprofiledraft",
-        {
-            "system_prompt": "TEXT NOT NULL DEFAULT ''",
-            "mention_alias": "TEXT",
-            "tool_policy": "TEXT NOT NULL DEFAULT ''",
-        },
-    )
-
-
-def _ensure_table_columns(
-    db_engine: Engine,
-    inspector,
-    table_names: set[str],
-    table_name: str,
-    column_definitions: dict[str, str],
-) -> None:
-    if table_name not in table_names:
-        return
-
-    existing_columns = {
-        column["name"] for column in inspector.get_columns(table_name)
-    }
-    missing_columns = [
-        (column_name, column_type)
-        for column_name, column_type in column_definitions.items()
-        if column_name not in existing_columns
-    ]
-    if not missing_columns:
-        return
-
-    with db_engine.begin() as connection:
-        for column_name, column_type in missing_columns:
-            connection.execute(
-                text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
-            )
+    prepare_database(engine)
 
 
 def init_database(seed: bool = True) -> None:
-    create_db_and_tables()
+    require_current_schema(engine)
     if seed:
         with DbSession(engine) as session:
             seed_demo_data(session)
 
 
+def initialize_database_cli() -> None:
+    from contextlib import nullcontext
+    from app.maintenance_lease import database_lease
+    prepare_database(engine)
+    with database_lease(sqlite_path, exclusive=False) if sqlite_path else nullcontext():
+        init_database(seed=True)
+
+
 if __name__ == "__main__":
-    init_database(seed=True)
-    print(f"Initialized and seeded database at {settings.database_url}")
+    initialize_database_cli()
+    print("Initialized current database and preserved existing seed records.")

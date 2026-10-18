@@ -370,9 +370,10 @@ pnpm doctor:local
 pnpm dev:local
 ```
 
-打开 `http://127.0.0.1:3000`。统一入口无需 Bash，自动初始化/增量升级 SQLite，
+打开 `http://127.0.0.1:3000`。统一入口无需 Bash，自动初始化空 SQLite 或检查已有库版本，
 启动产品 API 和 Web，等待实际就绪后给出地址；按 Ctrl+C 清理本次启动的服务。
 启动不会安装依赖、重置数据库或执行模型。首次需要在界面新建会话。
+已有无版本库须先停机并按[数据库迁移说明](docs/database-migrations.md)创建一致备份、离线升级；启动不再自动补列。
 
 端口被其他服务占用时可显式指定，前后端地址及 CORS 会一起同步：
 
@@ -432,7 +433,9 @@ pnpm test:local    # 启动器定向测试，亦包含在 pnpm test
 pnpm dev:web       # 启动 Web Workspace
 pnpm dev:api       # 启动 FastAPI
 pnpm demo:dev      # 启动 Demo App
-pnpm db:init       # 初始化 SQLite
+pnpm db:init       # 初始化空库或为 current 库补缺失种子
+pnpm db:status     # 只读检查数据库版本
+pnpm db:migrate --backup-dir <新建的外部绝对目录> # 停机、一致备份与离线升级
 pnpm check         # 代码检查
 pnpm test          # 运行测试
 ```

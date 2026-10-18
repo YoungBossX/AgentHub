@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 
 class Settings(BaseSettings):
@@ -26,6 +27,7 @@ def get_settings() -> Settings:
 
 
 def sqlite_path_from_url(database_url: str) -> Optional[Path]:
-    if not database_url.startswith("sqlite:///"):
+    url = make_url(database_url)
+    if url.drivername not in {"sqlite", "sqlite+pysqlite"} or not url.database or url.database == ":memory:":
         return None
-    return Path(database_url.removeprefix("sqlite:///"))
+    return Path(url.database)
