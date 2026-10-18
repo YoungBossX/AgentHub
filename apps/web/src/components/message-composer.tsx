@@ -144,35 +144,32 @@ export function MessageComposer({
         </div>
       ) : null}
       <form
-        className="flex items-end gap-2 rounded-xl border border-[var(--border)] bg-white p-2 shadow-sm"
+        className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm focus-within:border-[var(--primary)]"
         data-region="composer"
         onSubmit={onSubmit}
       >
-        {onAttach ? <>
-          <input ref={fileInput} aria-label="选择附件" type="file" multiple hidden disabled={isPending} accept=".txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.yaml,.yml,.xml,.py,.js,.jsx,.ts,.tsx,.css,.html,.sql,.java,.go,.rs,.c,.cpp,.h,.log,.pdf,.png,.jpg,.jpeg,.webp" onChange={(event) => { const files = Array.from(event.target.files ?? []); const available = Math.max(0, 4 - attachments.length); setAttachmentNotice(files.length > available ? `每条消息最多 4 个附件，本次仅添加前 ${available} 个。` : ""); onAttach(files); event.target.value = "" }} />
-          <button type="button" aria-label="添加附件" title="最多 4 个附件，每个不超过 8 MiB；文本不超过 512 KiB" disabled={isPending || attachments.length >= 4} onClick={() => fileInput.current?.click()} className="mb-1 shrink-0 rounded-md p-2 text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-30"><Paperclip size={18} /></button>
-        </> : null}
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md bg-[var(--surface-muted)] px-3">
-          <MessageSquare
-            aria-hidden="true"
-            className="shrink-0 text-[var(--muted-foreground)]"
-            size={16}
-          />
-          <textarea
-            ref={inputRef}
-            aria-label="消息"
-            rows={2}
-            className="min-w-0 flex-1 resize-none bg-transparent py-3 text-sm outline-none"
-            onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isPending && !attachmentsBlocked && draft.trim()) event.currentTarget.form?.requestSubmit() } }}
-            onChange={(event) => onDraftChange(event.target.value)}
-            placeholder="@orchestrator 为演示应用构建登录页"
-            value={draft}
-          />
+        <textarea
+          ref={inputRef}
+          aria-label="消息"
+          rows={2}
+          className="min-h-14 min-w-0 w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 outline-none placeholder:text-[var(--muted-foreground)]"
+          onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isPending && !attachmentsBlocked && draft.trim()) event.currentTarget.form?.requestSubmit() } }}
+          onChange={(event) => onDraftChange(event.target.value)}
+          placeholder="@orchestrator 为演示应用构建登录页"
+          value={draft}
+        />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex h-10 items-center">
+            {onAttach ? <>
+              <input ref={fileInput} aria-label="选择附件" type="file" multiple hidden disabled={isPending} accept=".txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.yaml,.yml,.xml,.py,.js,.jsx,.ts,.tsx,.css,.html,.sql,.java,.go,.rs,.c,.cpp,.h,.log,.pdf,.png,.jpg,.jpeg,.webp" onChange={(event) => { const files = Array.from(event.target.files ?? []); const available = Math.max(0, 4 - attachments.length); setAttachmentNotice(files.length > available ? `每条消息最多 4 个附件，本次仅添加前 ${available} 个。` : ""); onAttach(files); event.target.value = "" }} />
+              <button type="button" aria-label="添加附件" title="最多 4 个附件，每个不超过 8 MiB；文本不超过 512 KiB" disabled={isPending || attachments.length >= 4} onClick={() => fileInput.current?.click()} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] disabled:opacity-30"><Paperclip size={18} /></button>
+            </> : null}
+          </div>
+          <Button className="h-10 shrink-0 rounded-lg" disabled={isPending || attachmentsBlocked || draft.trim().length === 0} type="submit">
+            <Send aria-hidden="true" size={16} />
+            发送
+          </Button>
         </div>
-        <Button className="mb-1" disabled={isPending || attachmentsBlocked || draft.trim().length === 0} type="submit">
-          <Send aria-hidden="true" size={16} />
-          发送
-        </Button>
       </form>
       {attachmentNotice ? <p role="status" className="text-xs text-[var(--muted-foreground)]">{attachmentNotice}</p> : null}
     </div>

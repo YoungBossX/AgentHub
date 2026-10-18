@@ -18,6 +18,13 @@ Planner result or clarification rather than generic fallback.
 - **WHEN** an explicit group request requires Planner understanding
 - **THEN** the existing native group Planner may resolve it, but no detached tasks or rule-based fallback are persisted if a valid native plan is unavailable.
 
+#### Scenario: A neutral introduction precedes one action
+- **WHEN** a supported scope or politeness introduction ends with an English or
+  Chinese comma before a single supported request
+- **THEN** the introduction is not counted as a separate action, the original
+  parameter text is preserved, and negation, explanation and genuine multiple
+  actions in the remaining request retain the same no-partial-write boundaries.
+
 ### Requirement: Uniform bounded recognition evidence
 The server SHALL record versioned request type, source, routing, action/target,
 bounded parameters and reason codes from server decisions in existing message and

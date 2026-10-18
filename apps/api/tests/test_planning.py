@@ -563,6 +563,10 @@ def test_parse_followup_change_supports_english_and_chinese_copy_requests() -> N
 
 
 @pytest.mark.parametrize("content", [
+    '@frontend In the demo app, change title to Hello, add OAuth',
+    "@frontend In the demo app, don't change title to Hello",
+    '@frontend In the demo app, explain how to change title to Hello',
+    '@frontend 在演示应用中，不要把标题改成欢迎',
     "@frontend 不要把标题改成欢迎", "@backend 请解释怎么修复接口",
     "@frontend @backend explain how to build the demo app",
     "@frontend change title to Hello and add OAuth",
@@ -588,6 +592,26 @@ def test_intent_boundary_prevents_persisted_writers(client, monkeypatch, content
     with next(db_from_override()) as db:
         assert db.exec(select(TaskRun)).all() == []
         assert len(db.exec(select(Message).where(Message.parent_message_id == response.json()["id"])).all()) == 1
+
+
+@pytest.mark.parametrize("content", [
+    '@frontend In the demo app, change the title to "AgentHub Workspace"',
+    '@frontend 在演示应用中，把标题改成“AgentHub Workspace”',
+])
+def test_comma_introduction_creates_one_bounded_frontend_task(client, monkeypatch, content):
+    monkeypatch.setattr(messages_module, "schedule_task_run_execution", lambda tasks: pytest.fail("Unexpected execution"))
+    with next(db_from_override()) as db:
+        session_id = db.exec(select(Session)).one().id
+    response = client.post(f"/sessions/{session_id}/messages", json={"contentMd": content})
+    assert response.status_code == 201, response.text
+    decision = response.json()["intentDecision"]
+    assert (decision["requestType"], decision["route"]) == ("change", "continue")
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert len(tasks) == 1
+    assert tasks[0]["assignedAgentRole"] == "frontend"
+    assert tasks[0]["planJson"]["targetText"] == "AgentHub Workspace"
+    with next(db_from_override()) as db:
+        assert db.exec(select(TaskRun)).all() == []
 
 
 @pytest.mark.parametrize("failed", [False, True])

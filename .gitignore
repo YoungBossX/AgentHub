@@ -100,6 +100,7 @@ agenthub_design_v_2.md
 
 # Internal project docs (for AI/dev workflow, not for public users)
 docs/*
+!docs/sandbox-options.md
 !docs/backend-versioned-validation-review.md
 !docs/review-repair-loop-review.md
 !docs/final-context-budget-review.md

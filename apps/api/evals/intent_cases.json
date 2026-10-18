@@ -74,6 +74,18 @@
     {"id":"quoted-punctuation","category":"supported","content":"把标题改成“欢迎！”","expected":{"requestType":"change","route":"continue","parameters":{"targetText":"欢迎！"}}},
     {"id":"two-copy-elided","category":"multiple","content":"change title to Hello and button to Sign in","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner"}},
     {"id":"two-copy-zh-elided","category":"multiple","content":"把标题改成欢迎，按钮改成登录","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner"}},
-    {"id":"review-nested-command","category":"review","content":"review how to change title to Hello","mustNotRuleExecute":true,"expected":{"requestType":"review","route":"continue"}}
+    {"id":"review-nested-command","category":"review","content":"review how to change title to Hello","mustNotRuleExecute":true,"expected":{"requestType":"review","route":"continue"}},
+    {"id":"intro-en-comma","category":"introduction","content":"@frontend In the demo app, change the title to \"AgentHub Workspace\"","expected":{"requestType":"change","route":"continue","target":"demo_heading_text","parameters":{"targetText":"AgentHub Workspace"}}},
+    {"id":"intro-en-wide-comma","category":"introduction","content":"In the demo app，change title to Hello","expected":{"requestType":"change","route":"continue","target":"demo_heading_text","parameters":{"targetText":"Hello"}}},
+    {"id":"intro-zh-comma","category":"introduction","content":"在演示应用中，把标题改成欢迎","expected":{"requestType":"change","route":"continue","target":"demo_heading_text","parameters":{"targetText":"欢迎"}}},
+    {"id":"intro-polite","category":"introduction","content":"Please, in the demo app, change title to Hello","expected":{"requestType":"change","route":"continue","target":"demo_heading_text","parameters":{"targetText":"Hello"}}},
+    {"id":"intro-two-actions","category":"multiple","content":"In the demo app, change title to Hello, add a phone input field","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner"}},
+    {"id":"intro-two-copy","category":"multiple","content":"In the demo app, change title to Hello and button to Continue","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner"}},
+    {"id":"intro-neg-en","category":"negation","content":"In the demo app, don't change title to Hello","mustNotRuleExecute":true,"expected":{"requestType":"no_action","route":"reply"}},
+    {"id":"intro-neg-zh","category":"negation","content":"在演示应用中，不要把标题改成欢迎","mustNotRuleExecute":true,"expected":{"requestType":"no_action","route":"reply"}},
+    {"id":"intro-info","category":"information","content":"In the demo app, explain how to change title to Hello","mustNotRuleExecute":true,"expected":{"requestType":"explain","route":"reply"}},
+    {"id":"intro-status-write","category":"multiple","content":"In the demo app, show task status and fix the button","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner"}},
+    {"id":"intro-quoted-action","category":"introduction","content":"In the demo app, change title to \"Welcome, add a phone field\"","expected":{"requestType":"change","route":"continue","parameters":{"targetText":"Welcome, add a phone field"}}},
+    {"id":"intro-missing-value","category":"slots","content":"In the demo app, change title to","mustNotRuleExecute":true,"expected":{"requestType":"clarification","route":"clarify"}}
   ]
 }

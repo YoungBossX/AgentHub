@@ -51,6 +51,8 @@ export function SessionSidebar({
   taskCount,
   workspace,
 }: SessionSidebarProps) {
+  // Keep the legacy database lookup name while presenting current branding.
+  const workspaceName = workspace.name === "AgentHub Demo" ? "AgentHub" : workspace.name
   const [sessionSearch, setSessionSearch] = useState("")
   const timeZone = useLocalTimeZone() ?? "UTC"
   const [sessionView, setSessionView] = useState<"active" | "archived">(() => sessions.some((session) => session.id === selectedSessionId && session.archivedAt) ? "archived" : "active")
@@ -77,7 +79,7 @@ export function SessionSidebar({
             </span>
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold text-slate-950">
-                {workspace.name}
+                {workspaceName}
               </h2>
             </div>
           </div>
@@ -228,7 +230,7 @@ export function SessionSidebar({
             meta="预留"
           />
         </section></details>
-        <p className="mt-2 px-2 text-[10px] text-slate-400">本地工作区 · {workspace.name}</p>
+        <p className="mt-2 px-2 text-[10px] text-slate-400">本地工作区 · {workspaceName}</p>
         <TimeZoneLabel className="mt-1 block truncate px-2 text-[10px] text-[var(--muted-foreground)]" />
       </div>
     </aside>

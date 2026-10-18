@@ -40,6 +40,14 @@ class IntentDecision:
 # Only matched quote pairs are removed. Apostrophes in don't/it's are prose.
 QUOTED = re.compile(r"```[\s\S]*?```|`[^`\n]*`|\"[^\"\n]*\"|“[^”\n]*”|‘[^’\n]*’|(?<!\w)'[^'\n]*'(?!\w)")
 MENTION = re.compile(r"@[A-Za-z][A-Za-z0-9_-]*")
+# Strip only explicit neutral scope/politeness clauses. Arbitrary prose before
+# a comma may contain another action, negation or a question and must stay.
+INTRODUCTION = re.compile(
+    r"^(?:(?:(?:in|on|inside|within|for)\s+(?:(?:the|this|current|a)\s+)*"
+    r"(?:demo(?:\s+(?:app|application|frontend))?|apps/demo|page|login\s+page|task)|"
+    r"(?:在|针对|对于|为)(?:当前|本次|这个)?(?:演示应用|demo(?:\s+app)?|apps/demo|页面|登录页|任务)(?:中|里)?|"
+    r"please|请)\s*[,，]\s*)+", re.I,
+)
 NEGATION = re.compile(r"^(?:please\s+|请\s*)?(?:先|暂时)?(?:do\s+not\b|don't\b|never\b|不要|不用|别|禁止|我不想|我不需要|我不是要)", re.I)
 EXPLAIN = re.compile(r"^(?:(?:please|could you|would you|can you)\s+|请\s*|帮我\s*|先\s*|(?:你能|能否|可以)(?:不能)?\s*)?(?:explain\b|describe\b|tell me\b|how\s+(?:to|do|can)\b|what\s+(?:is|does|are)\b|why\b|解释|说明|讲解|介绍|为什么|如何|怎么|请问|我想知道|想了解)", re.I)
 STATUS = re.compile(r"^(?:(?:please\s+)?(?:show|check)\s+(?:the\s+)?(?:task|run|execution)\s+status\b|(?:查看|查询)(?:一下)?(?:任务|运行|执行)(?:的)?(?:状态|进度)|(?:任务|运行|执行)(?:完成了吗|到哪了|的进度))", re.I)
@@ -74,6 +82,7 @@ def request_boundary(content: str) -> IntentDecision:
     if content.count("```") % 2:
         return IntentDecision("clarification", "clarify", reason_codes=("UNCLOSED_CODE_REFERENCE",))
     text = MENTION.sub("", routing_text(content)).strip().strip(".!。！ ")
+    text = INTRODUCTION.sub("", text)
     if not text:
         return IntentDecision("clarification", "clarify", reason_codes=("NO_ACTION_OUTSIDE_REFERENCE",), missing_fields=("request",))
     if NEGATION.search(text):

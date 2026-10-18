@@ -5,7 +5,26 @@
 
 ## 当前快照
 
-2026-10-18：`agenthub-alembic-migrations` 1.1 在独立分支完成本地实现和验收。
+2026-10-18 交付：用户授权将工作台与意图边界修复提交并推送当前 `main`，随后核验对应
+提交的 Actions。提交前根检查通过，完整测试组成分别为 API 2551 passed / 1 skipped、
+Web 329（串行）、本地工具 24、demo-api 5；两份专项 strict 验证通过。测试使用外部临时库，
+没有操作产品数据、安装依赖或重启服务。远程结论以本次提交的 CI 为准；以下“未提交”
+及局部测试数量保留为交付前的历史验收快照。
+
+2026-10-18 后续：`agenthub-intent-boundaries` 1.3 修复中性逗号引导语，保留原有否定/
+解释/多动作边界。227 项识别/规划回归、85/85 语料通过；相邻回归 123/124 首轮通过，
+1 条临时环境失败隔离复跑通过。原失败措辞的真实 Codex 新运行、Diff、绑定版本的
+检查/构建/测试、桌面窄屏标题契约和实际浏览器预览通过。界面默认品牌已显示 AgentHub，
+自定义名称和数据保留；29 项 Web 组件串行通过，根检查通过。模型评审未运行，QA
+仍为 incomplete，尚未提交或推送。详见 [修复记录](../openspec/changes/agenthub-intent-boundaries/comma-verification.md)。
+沙箱目前只完成[候选设计](sandbox-options.md)，本机未检测到 Docker 且 WSL 未安装；
+不将现有原生 CLI 限制或工作树隔离称为 Docker 沙箱。
+
+2026-10-18：Alembic 提交 `2072231` 已同步并推送 main，对应 [main CI](https://github.com/YoungBossX/AgentHub/actions/runs/39101829077) 通过。用户随后授权迁移本地现有库，停机前原始备份和迁移前一致备份均保存于仓库外；26 表数据保留、完整性/外键和启动检查通过，实际库现为 `0001_local_baseline`。停机收尾通过现有流程中断 81 个未执行历史任务并核验两条失效预览，记录均保留。
+
+上一轮 `agenthub-post-migration-workbench` 1.1 完成本地验收（尚未提交）：两个历史预览输出重新启动，真实 Codex 新运行完成单文件 Diff 和健康预览；版本绑定 check/build/3 项产物测试及四项标题交互检查通过。发送框改为上下分区与对齐工具栏，26 项组件回归、Web 检查和桌面/390px 亮暗视觉通过。模型评审未运行、QA incomplete；首轮指令误判现由 1.3 修复，失败历史保留，详见 [记录](../openspec/changes/agenthub-post-migration-workbench/verification.md)。
+
+以下保留 Alembic 首次实现验收快照：`agenthub-alembic-migrations` 1.1 在独立分支完成本地实现和验收。
 固定 SQLite 迁移、离线备份/演练、启动版本检查、seed 原值保留和旧代码替换已验证；
 根检查和完整回归通过：API 2515 passed / 1 skipped；Web 326；本地工具 24；demo-api 5。实际产品库没有迁移。用户随后授权提交并推送 `codex/alembic-migrations`；Ubuntu/Python 3.11 与远程 CI 结果以该分支具体提交的 Actions 为准，以上数字仍是 Windows 本地验收快照。
 操作方式见[迁移说明](database-migrations.md)，证据边界见[验收记录](alembic-migrations-review.md)。
@@ -33,8 +52,9 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
-| `agenthub-alembic-migrations` | 1.1 Complete（交付分支 codex/alembic-migrations） | 固定 26 表/23 列兼容、独占备份与副本演练、原值/BLOB 和 seed 配置保留、版本启动检查及旧实现替换；根检查/完整回归通过。真实库未迁移，远程 CI 以具体提交为准，见 [迁移说明](database-migrations.md) / [验收记录](alembic-migrations-review.md) |
-| `agenthub-intent-boundaries` | 1.1–1.2 Complete（当前分支交付） | 统一 IntentDecision 和规则边界；人工语料 73/73、同 49 负例误命中 23→0，原 API 448/相邻 45。本次 CI 暴露两个群组工作流回归，修复为必须通过原生 Planner 后才保存复杂群组；260 路由与 53 完整工作流回归通过，原失败保留，后续远程结果以修复提交为准。非真实模型准确率。见 [说明](intent-recognition.md) / [记录](intent-boundaries-review.md) |
+| `agenthub-post-migration-workbench` | 1.1–1.2 Complete（本轮 main 交付） | 历史预览恢复；真实 Codex/Diff/预览与版本验收；发送框对齐和默认品牌显示 AgentHub。本轮完整 Web 329、API 2551/1 skip、根检查通过，自定义名和数据保留，模型 QA 未运行，见 [记录](../openspec/changes/agenthub-post-migration-workbench/verification.md) |
+| `agenthub-alembic-migrations` | 1.1 Complete（2072231 已同步 main） | 固定 26 表/23 列兼容、独占备份与副本演练、原值/BLOB 和 seed 配置保留、版本启动检查及旧实现替换；完整实现回归和 main CI 通过。本地真实库随后经用户授权备份、迁移至 current 并启动验证通过，见 [迁移说明](database-migrations.md) / [原实现验收](alembic-migrations-review.md) |
+| `agenthub-intent-boundaries` | 1.1–1.2 已交付；1.3 Complete（本轮 main 交付） | 统一结果/保守边界；1.3 修复逗号引导语，85/85 人工语料与真实 Codex 原措辞闭环通过，本轮完整 API 2551/1 skip。首轮环境失败与隔离重跑、模型 QA 未运行等边界见 [1.3 记录](../openspec/changes/agenthub-intent-boundaries/comma-verification.md)；历史指标仍见 [原记录](intent-boundaries-review.md) |
 | `agenthub-execution-card-modularity` | 1.1 Complete（本地未提交） | 引擎 4103→3743、卡片 1532→767；所有权与计划/制品职责独立。源码一致性、548/1 skip 生命周期安全、139 相邻、Web 326、根/strict 验证，见 [记录](execution-card-modularity-review.md)。三项总目标完成本地交付，非全部技术债清零 |
 | `agenthub-business-contract-coverage` | 1.1 Complete（本地未提交） | 13 组语法/API、旧 10/新 18 浏览器检查与双源码/策略绑定；70 最终专项、53 工作流/55 QA 回归（重叠），先复现再修复两类验收缺口。见 [记录](business-contract-coverage-review.md)；本轮有界大文件拆分另见对应记录 |
 | `agenthub-native-qa-evaluation` | 1.1–1.2 Complete（本地未提交） | 十个冻结样本，首次 4/10、最终 6/10，10 次原生 QA 证据已复核；自然/注入与重试/分角色耗时分开，四次失败保留。最后计数修正 37 专项通过，见 [记录](native-qa-evaluation-review.md)。本轮三项有序目标已完成，历史版本与测试范围分别保留 |

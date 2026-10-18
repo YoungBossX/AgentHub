@@ -1,5 +1,18 @@
 ## 1. Intent recognition boundaries
 
+- [x] 1.3 Fix neutral comma introductions without treating their first imperative
+  as a second action; retain negative/informational/multi-action/quoted/slot
+  boundaries, add parser/corpus/production planning regressions, and verify a
+  fresh real execution/Diff/preview flow using the original comma wording.
+
+1.3 verified locally: 227 parser/planning tests, 85/85 authored corpus cases with
+0 unsafe rule executions among 56 negatives, and real Codex run
+`12f2b4d5-a42d-4307-b28e-9b7ef7cfe605` using the original failed sentence.
+Version-bound check/build/3 smoke tests and 4 heading checks passed; browser
+rendered the expected heading. Adjacent batch: 123/124 passed, one temporary
+PermissionError retained and its isolated rerun passed. Model QA was not run.
+See [comma-verification.md](comma-verification.md).
+
 - [x] 1.1 Implement shared decision/evidence, conservative rule boundaries and routing enforcement; verify negation, questions, quoted/code input, multi-action and missing/oversized slots through parsers and production planning, preserve supported demo/direct/group/LLM paths, run the frozen offline corpus and relevant regressions, and document results and limitations.
 
 Verified locally: authored corpus 73/73; same 49 negative parser cases 23 baseline
