@@ -29,12 +29,17 @@ from app.task_graph_builder import TaskGraphTaskSpec, task_graph_metadata, task_
 GROUP_PLANNER = "explicit_group_v1"
 
 
+class GroupPlanUnavailableError(ValueError):
+    """A required native plan was unavailable; detached tasks must not persist."""
+
+
 def create_explicit_group_tasks(
     db: DbSession,
     message: Message,
     parsed: ParsedMentions,
     *,
     existing_tasks: list[Task],
+    require_native_plan: bool = False,
 ) -> list[Task]:
     session = _session_for_message(db, message)
     coordinator = _enabled_agent_or_raise(db, "orchestrator")
@@ -125,7 +130,14 @@ def create_explicit_group_tasks(
             if role in writers:
                 write_ids.append(task.id)
 
-        native = apply_native_group_plan(db, message, session, tasks, targets)
+        try:
+            native = apply_native_group_plan(db, message, session, tasks, targets)
+        except LLMPlannerError as exc:
+            if require_native_plan:
+                raise GroupPlanUnavailableError("A valid group Planner result is required.") from exc
+            raise
+        if require_native_plan and native is None:
+            raise GroupPlanUnavailableError("A group Planner must resolve this request before task creation.")
         from app.group_summaries import STATE_KEY, SUMMARY_SCHEMA, deterministic_summary_policy
 
         summary_policy = native.pop("_summaryPolicy") if native else deterministic_summary_policy(db, session, coordinator)

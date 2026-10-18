@@ -28,7 +28,7 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
-| `agenthub-intent-boundaries` | 1.1 Complete（本地未提交） | 统一 IntentDecision 和否定/询问/引用/多动作/参数边界；人工语料 73/73，同 49 负例旧解析器误命中 23→0，最终 API 448、相邻契约 45、根/语法/strict 检查通过。保留原 Planner/Adapter/执行范围，非真实模型准确率。见 [说明](intent-recognition.md) / [记录](intent-boundaries-review.md) |
+| `agenthub-intent-boundaries` | 1.1–1.2 Complete（当前分支交付） | 统一 IntentDecision 和规则边界；人工语料 73/73、同 49 负例误命中 23→0，原 API 448/相邻 45。本次 CI 暴露两个群组工作流回归，修复为必须通过原生 Planner 后才保存复杂群组；260 路由与 53 完整工作流回归通过，原失败保留，后续远程结果以修复提交为准。非真实模型准确率。见 [说明](intent-recognition.md) / [记录](intent-boundaries-review.md) |
 | `agenthub-execution-card-modularity` | 1.1 Complete（本地未提交） | 引擎 4103→3743、卡片 1532→767；所有权与计划/制品职责独立。源码一致性、548/1 skip 生命周期安全、139 相邻、Web 326、根/strict 验证，见 [记录](execution-card-modularity-review.md)。三项总目标完成本地交付，非全部技术债清零 |
 | `agenthub-business-contract-coverage` | 1.1 Complete（本地未提交） | 13 组语法/API、旧 10/新 18 浏览器检查与双源码/策略绑定；70 最终专项、53 工作流/55 QA 回归（重叠），先复现再修复两类验收缺口。见 [记录](business-contract-coverage-review.md)；本轮有界大文件拆分另见对应记录 |
 | `agenthub-native-qa-evaluation` | 1.1–1.2 Complete（本地未提交） | 十个冻结样本，首次 4/10、最终 6/10，10 次原生 QA 证据已复核；自然/注入与重试/分角色耗时分开，四次失败保留。最后计数修正 37 专项通过，见 [记录](native-qa-evaluation-review.md)。本轮三项有序目标已完成，历史版本与测试范围分别保留 |

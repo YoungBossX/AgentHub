@@ -248,12 +248,20 @@ def _plan_for_message(
         _create_orchestrator_boundary_message(db, message, boundary_reply(decision))
         return []
     if len(parsed.roles) > 1:
-        if not decision.allows_rule_fallback:
+        require_native_plan = decision.route == "planner"
+        if not decision.allows_rule_fallback and not require_native_plan:
             _create_orchestrator_boundary_message(db, message, boundary_reply(decision))
             return []
-        from app.group_planning import create_explicit_group_tasks
+        from app.group_planning import GroupPlanUnavailableError, create_explicit_group_tasks
 
-        return create_explicit_group_tasks(db, message, parsed, existing_tasks=existing_tasks)
+        try:
+            return create_explicit_group_tasks(db, message, parsed, existing_tasks=existing_tasks,
+                                               require_native_plan=require_native_plan)
+        except GroupPlanUnavailableError:
+            unresolved = replace(decision, route="clarify", reason_codes=(*decision.reason_codes, "GROUP_PLANNER_REQUIRED"))
+            _record_intent_decision(db, message, unresolved)
+            _create_orchestrator_boundary_message(db, message, boundary_reply(unresolved))
+            return []
     llm_fallback = None
     if routed_role == "orchestrator":
         try:

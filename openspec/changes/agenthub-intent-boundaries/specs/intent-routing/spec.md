@@ -14,6 +14,10 @@ Planner result or clarification rather than generic fallback.
 - **WHEN** rule input is ambiguous and the Planner is absent, fails or returns a non-task result
 - **THEN** the server preserves that boundary and does not execute a partial rule match.
 
+#### Scenario: Explicit group requires semantic planning
+- **WHEN** an explicit group request requires Planner understanding
+- **THEN** the existing native group Planner may resolve it, but no detached tasks or rule-based fallback are persisted if a valid native plan is unavailable.
+
 ### Requirement: Uniform bounded recognition evidence
 The server SHALL record versioned request type, source, routing, action/target,
 bounded parameters and reason codes from server decisions in existing message and

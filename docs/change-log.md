@@ -1,5 +1,14 @@
 # AgentHub 变更日志
 
+## 意图边界的群组 Planner CI 回归
+
+**日期:** 2026-10-18；`agenthub-intent-boundaries` 1.2 本地验证完成，按用户授权继续交付。
+
+- `531bb89` 的 [首轮 CI](https://github.com/YoungBossX/AgentHub/actions/runs/39089790794) 在测试步骤失败：2 failed / 2396 passed / 48 skipped。两个失败为多文件修改与前后端协作的完整工作流；浏览器和代码检查通过，不把这些测试替身结果称为真实模型能力。
+- 原因是群组入口将 `route=planner` 当成无法继续，未调用已有原生群组 Planner。多文件请求因 repair 不在简单规则词表而升级，前后端请求因多动作升级；这两种情况应禁止规则兜底，而不是禁止原生规划。
+- 显式群组现在可经既有原生 Planner 处理完整请求，只有有效计划才能保存任务；禁用、失败或非任务返回时回滚未持久化任务并澄清。明确否定/解释仍不调用群组写规划，目标、角色、路径、审批和执行约束不变。
+- 群组/识别/消息规划 **260 passed**，完整工作流/原生 QA/计分 **53 passed**（425.31 秒），包含上述两项失败场景复验；API 语法、strict OpenSpec 和空白检查通过。原始失败与更新源码/JUnit 哈希见 [后续证据](evidence/intent-boundaries/ci-followup.json)。未以测试替身声明真实模型能力；后续远程结果以修复提交的 Actions 为准。
+
 ## 意图识别规则边界与统一结果
 
 **日期:** 2026-10-17；`agenthub-intent-boundaries` 1.1 本地完成，未提交/推送。

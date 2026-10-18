@@ -44,3 +44,25 @@
 
 本次只完成这一项 OpenSpec，本地未提交/推送，不宣称新 GitHub CI、真实 Provider
 或产品运行环境已经通过。
+
+## 2026-10-18 CI 后续：原生群组规划
+
+提交 `531bb89` 已推送当前改进分支，[首轮远程 CI](https://github.com/YoungBossX/AgentHub/actions/runs/39089790794)
+代码/浏览器检查通过，但完整 API 测试 **2 failed / 2396 passed / 48 skipped**。
+失败场景是 `multi-file` 和 `coordinated-contacts` 的测试替身端到端流程。
+
+根因是群组入口拒绝所有 `route=planner` 请求，连已配置的原生群组 Planner 也无法
+运行。多文件修复中的 repair 不属于简单规则动作词，前后端联调包含多个动作；
+两者升级到 Planner 合理，但不应因此禁止已有原生规划。
+
+修复将“不能使用规则兜底”与“可以请求原生 Planner”分开：群组中只有有效原生
+计划才可保存候选任务。禁用、失败或非任务返回时回滚未保存候选并澄清；明确的
+解释/否定仍不调用群组写规划。原角色、目标、范围、审批和图验证全部保留。
+相关负例要求 Provider 调用时数据库内没有提前持久化的 Task。
+
+本节后续验证与当前源码回执见 [CI 后续证据](evidence/intent-boundaries/ci-followup.json)。
+群组/识别/消息规划 **260 passed**，完整工作流/原生 QA/计分 **53 passed**
+（425.31 秒），包含首轮失败的两个场景和 Provider 禁用/非任务/失败负例；API 语法、
+strict OpenSpec 及空白检查通过。没有跳过或放宽失败断言，也没有运行真实模型。
+原 1.1 验证 JSON 保留原始快照，不冒充后续源码或真实模型评测结果。最终远程状态
+以修复提交对应的 Actions 记录为准。

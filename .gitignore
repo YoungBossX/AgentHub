@@ -390,6 +390,7 @@ docs/evidence/intent-boundaries/*
 !docs/evidence/intent-boundaries/README.md
 !docs/evidence/intent-boundaries/offline.json
 !docs/evidence/intent-boundaries/verification.json
+!docs/evidence/intent-boundaries/ci-followup.json
 
 *.local
 *.local.*

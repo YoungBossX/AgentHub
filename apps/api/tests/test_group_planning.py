@@ -178,6 +178,51 @@ def native_provider(db, monkeypatch, mutate=None, callback=None):
     return captured
 
 
+@pytest.mark.parametrize("case_id", ["multi-file", "coordinated-contacts"])
+def test_planner_required_workflow_groups_use_one_valid_native_plan(db, monkeypatch, case_id):
+    from app.workflow_suite import select_scenarios
+    captured = native_provider(db, monkeypatch)
+    content = select_scenarios(case_id)[0].prompts[0]
+    tasks = plan(db, content)
+    assert tasks and len(captured) == 1
+    assert captured[0]["originalUserRequest"] == content
+    assert all(json.loads(task.plan_json)["intentDecision"]["source"] == "llm" for task in tasks)
+    assert all(json.loads(task.plan_json)["groupAssignment"]["coordinationSource"] == "fake_test" for task in tasks)
+
+
+@pytest.mark.parametrize("unavailable", ["disabled", "non-task", "failed"])
+def test_planner_required_group_never_persists_rule_fallback(db, monkeypatch, unavailable):
+    from app.planner_providers import DisabledPlannerProvider, PlannerProviderError
+    if unavailable == "disabled":
+        monkeypatch.setattr("app.group_planner.resolve_planner_provider", lambda *args, **kwargs: DisabledPlannerProvider())
+    elif unavailable == "non-task":
+        def non_task(value):
+            value.clear()
+            value.update({"outcomeType": "assistant_reply", "reply": "Need clarification"})
+        native_provider(db, monkeypatch, mutate=non_task)
+    else:
+        def fail(payload):
+            raise PlannerProviderError(code="TEST_UNAVAILABLE", summary="Explicit failure")
+        native_provider(db, monkeypatch, callback=fail)
+    tasks = plan(db, "@frontend @qa change demo app title to Hello and add a phone input field")
+    assert tasks == [] and db.exec(select(Task)).all() == []
+    assert db.exec(select(TaskRun)).all() == []
+    user = db.exec(select(Message).where(Message.sender_type == "user")).one()
+    decision = json.loads(user.context_json)["_intentDecision"]
+    assert decision["route"] == "clarify" and "GROUP_PLANNER_REQUIRED" in decision["reasonCodes"]
+    assert db.exec(select(Message).where(Message.sender_type == "orchestrator")).one().message_kind == "chat"
+
+
+@pytest.mark.parametrize("content", [
+    "@frontend @qa explain how to change demo app title to Hello",
+    "@frontend @backend 不要把标题改成 欢迎",
+])
+def test_native_group_does_not_bypass_non_write_boundary(db, monkeypatch, content):
+    captured = native_provider(db, monkeypatch)
+    assert plan(db, content) == []
+    assert captured == [] and db.exec(select(Task)).all() == []
+
+
 def custom_planner(db, **kwargs):
     return custom(db, display_name="规划", mention_alias="team-planner", role="orchestrator", provider_id="claude-cli-planner", tool_policy="planner_no_tools", capability_tags=["code_review", "diff_analysis"], **kwargs)
 

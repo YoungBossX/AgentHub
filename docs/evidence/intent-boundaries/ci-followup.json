@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "originalValidationReceiptSha256": "12ed01a69714fac67a22fd7a7eccf4b00d0ea8c7c4cb1793cfd93f266484f290",
+  "remoteFailure": {
+    "commit": "531bb89e71fdd2d8739acf3e02cf30d2bed60918",
+    "url": "https://github.com/YoungBossX/AgentHub/actions/runs/39089790794",
+    "conclusion": "failure",
+    "failed": 2,
+    "passed": 2396,
+    "skipped": 48,
+    "failedCases": [
+      "test_real_dispatch_queue_diff_acceptance_with_explicit_test_provider[multi-file]",
+      "test_real_dispatch_queue_diff_acceptance_with_explicit_test_provider[coordinated-contacts]"
+    ]
+  },
+  "sourceSha256": {
+    "apps/api/app/custom_agents.py": "fbad899c8d06a2fb8cccf5a13f9060810cb16e2db8abf70bab4cbe4f7eb42fb3",
+    "apps/api/app/group_planning.py": "dd21df060cdbbbf7381c326daad7162435e305db21c065a94691d198d4cd338a",
+    "apps/api/app/intent_decisions.py": "8aba36cf62279eed65300b0e168f6567bb8c945727c9d37573b99ad519a901a3",
+    "apps/api/app/intent_evaluation.py": "2bc1cd4f4901b2faefa3d2deb0b5b20aa9e32a2b45d75b50ccf1167e92f4bd0c",
+    "apps/api/app/planning.py": "eed0bc9483efc85bbec039fbdae0cca7bac2f10dcd2f6a19dca84f009cc36d8b",
+    "apps/api/app/planning_intents.py": "d556f7c528be77b41a4ea7caeb4d3435875c1a1336282d3efa1255aa8ebb1fc4",
+    "apps/api/app/routes/messages.py": "6183682fe1ed66d7402e8ddd8cde0f723ccdca43b89a6e416469cdd7013dacb3",
+    "apps/api/app/schemas.py": "f0777ac1635e37191617b6cdf5a4c2e9ed2fe7719dc60a243c5bd590ef17ca27",
+    "apps/api/evals/intent_cases.json": "d264c48bfc45f58990d715fd9ee73920912ba6249f8c660580e113fef0e9b657",
+    "apps/api/tests/test_group_planning.py": "fb2aa5be86c5ea48a6f7c91331e0da430f94d2b3dbabc3f8578557ad41dc00a5",
+    "apps/api/tests/test_intent_recognition.py": "8637ff09cc89c44d1aa71eb6b80beac807d29080d935e7432bc1e26c9ef3fcbb",
+    "apps/api/tests/test_planning.py": "374590481ebe3ce05cec6730c6a9c97638b3e7a41456a81ce267a223005ee4e6",
+    "apps/api/tests/test_workflow_evaluation.py": "9acb428bbb9f9c33702afa1826d6123ae22f141f8693dade76b93e14e337a366",
+    "apps/api/tests/test_workflow_native_qa.py": "b9b42234f1a9ce371672b122f91268b073541f2b4c1aaf3e18a9373b2f1afbf1",
+    "apps/api/tests/test_workflow_scoring.py": "58ba58adb3cc5d1605c972068a0c7afa78adea596f4f759bd6841383eda811c7"
+  },
+  "routingRegression": {
+    "filename": "agenthub-intent-ci-group-20261018.xml",
+    "sha256": "d600eab78481404140c1f8434ec4721dd5925988027a8183cbf7e1d210c1927e",
+    "tests": 260,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "workflowRegression": {
+    "filename": "agenthub-intent-ci-workflow-20261018.xml",
+    "sha256": "3bb272429bdfd01e002d2e800277a2f0b61d337da4f10a0792523be61cd79e22",
+    "tests": 53,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "apiSyntax": {
+    "command": "pnpm check:api",
+    "exitCode": 0,
+    "logSha256": "b982d6b47fafc3f7cf4ea58dfbda5584a106135bbb01f1299ae4b3387bb2fbca"
+  },
+  "limits": [
+    "Provider test doubles, no real model performance claim",
+    "No product runtime or database changes",
+    "Follow-up remote run must be checked after push"
+  ]
+}
