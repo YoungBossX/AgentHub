@@ -51,6 +51,7 @@ def message_response(db: DbSession, message: Message, *, view: dict | None = Non
         "regeneration_action": action,
         "attachments": (attachments if attachments is not None else metadata_for_messages(db, message.session_id, [owner])).get(owner, []),
         "context_budget": budget if isinstance(budget, dict) else None,
+        "intent_decision": context.get("_intentDecision") if isinstance(context, dict) else None,
     })
     if preview:
         from app.message_history import PREVIEW_CHARACTERS
@@ -155,6 +156,7 @@ def create_message(
 
     context = dict(request.context)
     context.pop("_plannerContextBudget", None)
+    context.pop("_intentDecision", None)
     from app.review_repairs import bind_message
 
     context = bind_message(db, message, context)

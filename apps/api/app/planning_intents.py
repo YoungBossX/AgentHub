@@ -9,6 +9,7 @@ from sqlmodel import select
 from app.models import Agent, Message
 from app.models import Session as AgentHubSession
 from app.repositories import list_session_tasks
+from app.intent_decisions import IntentDecision, command_match, request_boundary, routing_text, strip_mentions
 from app.target_registry import (
     DEMO_BACKEND_TARGET_ID,
     TargetProject,
@@ -27,18 +28,18 @@ CHANGE_TO_PATTERN = re.compile(
     r"(?P<english_target>button|button text|primary button text|title|heading)"
     r"(?:\s+(?:text|copy))?\s+to\s+|"
     r"(?:把|再把)?(?:登录页)?(?P<chinese_target>按钮文案|按钮|标题|标题文案)"
-    r"改成\s+)"
+    r"改成\s*)"
     r"(?P<value>.+)",
     re.IGNORECASE,
 )
 THEME_COLOR_PATTERN = re.compile(
     r"(?:change\s+(?:the\s+)?(?:theme|accent|primary|brand)\s+color\s+to\s+|"
     r"(?:把|将)?(?:主题色|主色|强调色|品牌色)改成\s+)"
-    r"(?P<value>#[0-9a-fA-F]{3,8}|[A-Za-z][A-Za-z0-9\s-]{0,40})",
+    r"(?P<value>#[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9\s-]*)",
     re.IGNORECASE,
 )
 INPUT_FIELD_PATTERN = re.compile(
-    r"(?:add\s+(?:a\s+)?(?P<english_label>[A-Za-z][A-Za-z0-9\s-]{1,40})\s+"
+    r"(?:add\s+(?:a\s+)?(?P<english_label>[A-Za-z][A-Za-z0-9\s-]{1,40}?)\s+"
     r"(?:input\s+)?field|"
     r"(?:添加|新增)(?:一个)?(?P<chinese_label>[\u4e00-\u9fffA-Za-z0-9\s-]{1,40})(?:输入框|字段))",
     re.IGNORECASE,
@@ -119,6 +120,7 @@ class AppContractIntent:
 def parse_mentions(db: DbSession, content: str, workspace_id: str | None = None) -> ParsedMentions:
     from app.custom_agents import CustomAgentError, custom_agent_mentions
 
+    content = routing_text(content)
     roles: list[str] = []
     profile_ids: dict[str, str] = {}
     selected_actors: dict[str, str] = {}
@@ -155,6 +157,8 @@ def parse_mentions(db: DbSession, content: str, workspace_id: str | None = None)
 def parse_frontend_intent(
     content: str, *, include_login_creation: bool = False,
 ) -> Optional[FrontendIntent]:
+    if not request_boundary(content).allows_rule_mutation:
+        return None
     followup = parse_followup_change(content)
     if followup is not None:
         target_label = (
@@ -172,12 +176,13 @@ def parse_frontend_intent(
             summary=f"Change only the {target_label}.",
         )
 
-    normalized = MENTION_PATTERN.sub("", content).strip()
+    normalized = strip_mentions(content).strip()
 
-    color_match = THEME_COLOR_PATTERN.search(normalized)
+    color_match = command_match(THEME_COLOR_PATTERN, normalized)
     if color_match is not None:
         value = _clean_target_text(color_match.group("value"))
-        if value:
+        remainder = normalized[color_match.end():].strip(" .!。！")
+        if value and not remainder:
             return FrontendIntent(
                 intent="theme_accent_color_change",
                 target="theme_accent_color",
@@ -186,7 +191,7 @@ def parse_frontend_intent(
                 summary="Change only the demo app accent color tokens.",
             )
 
-    input_match = INPUT_FIELD_PATTERN.search(normalized)
+    input_match = command_match(INPUT_FIELD_PATTERN, normalized)
     if input_match is not None:
         label = _clean_target_text(
             input_match.group("english_label") or input_match.group("chinese_label") or ""
@@ -200,7 +205,7 @@ def parse_frontend_intent(
                 summary="Add one simple input field inside the demo mutation area.",
             )
 
-    status_match = STATUS_TEXT_PATTERN.search(normalized)
+    status_match = command_match(STATUS_TEXT_PATTERN, normalized)
     if status_match is not None:
         value = _clean_target_text(status_match.group("value"))
         if value:
@@ -212,7 +217,7 @@ def parse_frontend_intent(
                 summary="Add one short status or help text line to the demo app.",
             )
 
-    layout_match = LAYOUT_COPY_PATTERN.search(normalized)
+    layout_match = command_match(LAYOUT_COPY_PATTERN, normalized)
     if layout_match is not None:
         value = _clean_target_text(layout_match.group("value"))
         if value:
@@ -244,22 +249,33 @@ def parse_frontend_intent(
 
 
 def parse_app_contract_intent(content: str) -> Optional[AppContractIntent]:
-    normalized = MENTION_PATTERN.sub("", content).lower()
+    if not request_boundary(content).allows_rule_mutation:
+        return None
+    normalized = routing_text(strip_mentions(content)).lower()
+    creation = re.search(
+        r"(?:\b(?:build|create|implement|make|develop)\s+(?:(?:a|an|the|simple|demo|mini)\s+)*|"
+        r"(?:做|创建|构建|实现|开发)(?:一个|个)?\s*(?:mini\s+)?)"
+        r"(?P<kind>todo\b|to-do\b|待办|任务清单|notes\b|note\b|笔记|备注|crm\b|contacts\b|联系人)",
+        normalized, re.I,
+    )
+    if creation is None:
+        return None
+    requested_kind = creation.group("kind")
     if _is_unsupported_broad_request(normalized):
         return None
-    if any(signal in normalized for signal in ["mini crm", "crm", "联系人", "contacts"]):
+    if requested_kind in {"crm", "联系人", "contacts"}:
         return AppContractIntent(
             app_type="mini_crm_contacts",
             app_name="Mini CRM Contacts",
             summary="Mini CRM contacts app with contacts and notes.",
         )
-    if any(signal in normalized for signal in ["todo", "to-do", "待办", "任务清单"]):
+    if requested_kind in {"todo", "to-do", "待办", "任务清单"}:
         return AppContractIntent(
             app_type="todo",
             app_name="Todo App",
             summary="Todo app with items, completion state, and simple filtering.",
         )
-    if any(signal in normalized for signal in ["notes", "note app", "笔记", "备注"]):
+    if requested_kind in {"notes", "note", "笔记", "备注"}:
         return AppContractIntent(
             app_type="notes",
             app_name="Notes App",
@@ -269,8 +285,10 @@ def parse_app_contract_intent(content: str) -> Optional[AppContractIntent]:
 
 
 def parse_followup_change(content: str) -> Optional[FollowupChange]:
-    normalized = MENTION_PATTERN.sub("", content).strip()
-    match = CHANGE_TO_PATTERN.search(normalized)
+    if not request_boundary(content).allows_rule_mutation:
+        return None
+    normalized = strip_mentions(content).strip()
+    match = command_match(CHANGE_TO_PATTERN, normalized)
     if match is None:
         return None
 
@@ -285,9 +303,57 @@ def parse_followup_change(content: str) -> Optional[FollowupChange]:
 
 
 def _clean_target_text(value: str) -> str:
-    cleaned = value.strip().strip("\"'“”‘’")
-    cleaned = re.sub(r"[。.!?]+$", "", cleaned).strip()
-    return cleaned[:60]
+    cleaned = value.strip()
+    pairs = {'"': '"', "'": "'", '“': '”', '‘': '’'}
+    if cleaned and cleaned[0] in pairs:
+        # Sentence punctuation after a closed quote is not part of the value.
+        cleaned = re.sub(r"[。.!?]+$", "", cleaned).rstrip()
+        if len(cleaned) < 2 or cleaned[-1] != pairs[cleaned[0]]:
+            return ""
+        cleaned = cleaned[1:-1]
+    else:
+        cleaned = re.sub(r"[。.!?]+$", "", cleaned).strip()
+    return cleaned if len(cleaned) <= 60 else ""
+
+
+def recognize_intent(content: str, *, roles: tuple[str, ...] = ()) -> IntentDecision:
+    """Pure offline rule decision; unknown is not a claim of semantic certainty."""
+    from dataclasses import replace
+
+    boundary = replace(request_boundary(content), roles=roles)
+    if not boundary.allows_rule_fallback or boundary.request_type == "review":
+        return boundary
+    frontend = parse_frontend_intent(content, include_login_creation=True)
+    if frontend is not None:
+        return replace(boundary, request_type="change", action=frontend.intent,
+                       target=frontend.target,
+                       parameters=(("targetText", frontend.target_text),) if frontend.target_text else (),
+                       reason_codes=("BOUNDED_FRONTEND_RULE",))
+    contract = parse_app_contract_intent(content)
+    if contract is not None:
+        return replace(boundary, request_type="change", action="create_app",
+                       target=contract.app_type, reason_codes=("BOUNDED_APP_RULE",))
+    # An incomplete or oversized supported slot must not enter generic fallback.
+    normalized = strip_mentions(content).strip().rstrip(".!?。！？")
+    slot_match = (command_match(CHANGE_TO_PATTERN, normalized)
+                  or command_match(THEME_COLOR_PATTERN, normalized)
+                  or command_match(STATUS_TEXT_PATTERN, normalized)
+                  or command_match(LAYOUT_COPY_PATTERN, normalized))
+    empty_copy = re.search(r"(?:改成|\b(?:title|heading|button)(?:\s+text)?\s+to)\s*[\"'“”‘’]*\s*$", normalized, re.I)
+    malformed_field = re.search(r"(?:\badd\s+(?:a\s+)?[^;；\n]*\bfield|(?:添加|新增)[^;；\n]*输入框)\s*$", normalized, re.I)
+    empty_color = re.search(r"(?:\bchange\s+(?:the\s+)?(?:theme|accent|primary|brand)\s+color\s+to|(?:主题色|主色|强调色|品牌色)改成)\s*$", normalized, re.I)
+    if slot_match is not None or empty_copy or malformed_field or empty_color:
+        return replace(boundary, request_type="clarification", route="clarify",
+                       reason_codes=("INVALID_TARGET_TEXT",), missing_fields=("targetText",))
+    if roles and all(role in {"qa", "review", "orchestrator"} for role in roles) and any(role in {"qa", "review"} for role in roles):
+        return replace(boundary, request_type="review", reason_codes=("EXPLICIT_REVIEW_ROLE",))
+    if not _is_explicit_platform_mode_request(content) and not re.search(
+        r"\b(?:build|create|implement|make|develop|change|add|fix|update|adjust|remove|delete|rename|refactor|improve|replace)\b|"
+        r"构建|创建|实现|开发|改成|修改|添加|新增|修复|更新|调整|删除|移除|重命名|重构|优化|做一个|做成",
+        routing_text(normalized), re.I,
+    ):
+        return replace(boundary, route="planner", reason_codes=("UNRESOLVED_REQUEST_TYPE",), missing_fields=("requestType",))
+    return boundary
 
 
 def _is_safe_demo_frontend_request(content: str) -> bool:

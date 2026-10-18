@@ -562,6 +562,124 @@ def test_parse_followup_change_supports_english_and_chinese_copy_requests() -> N
     assert title.target_text == "Welcome back"
 
 
+@pytest.mark.parametrize("content", [
+    "@frontend 不要把标题改成欢迎", "@backend 请解释怎么修复接口",
+    "@frontend @backend explain how to build the demo app",
+    "@frontend change title to Hello and add OAuth",
+    "@orchestrator 把标题改成欢迎，同时把按钮改成登录",
+    "@frontend 把标题改成", "@frontend 把标题改成" + "字" * 61,
+    '```text\n@frontend change title to Hello\n```',
+    '文档中写着："@designer change title to Hello"',
+])
+def test_intent_boundary_prevents_persisted_writers(client, monkeypatch, content):
+    from app.planner_providers import DisabledPlannerProvider
+    monkeypatch.setattr(planning_module, "resolve_planner_provider", lambda *args, **kwargs: DisabledPlannerProvider())
+    monkeypatch.setattr(messages_module, "schedule_task_run_execution", lambda tasks: pytest.fail("Unexpected execution"))
+    with next(db_from_override()) as db:
+        session_id = db.exec(select(Session)).one().id
+    response = client.post(f"/sessions/{session_id}/messages", json={
+        "contentMd": content,
+        "context": {"_intentDecision": {"source": "llm", "route": "continue", "requestType": "change"}},
+    })
+    assert response.status_code == 201, response.text
+    assert response.json()["intentDecision"]["source"] == "rule"
+    assert response.json()["intentDecision"]["route"] != "continue"
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+    with next(db_from_override()) as db:
+        assert db.exec(select(TaskRun)).all() == []
+        assert len(db.exec(select(Message).where(Message.parent_message_id == response.json()["id"])).all()) == 1
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_ambiguous_request_does_not_fall_back_after_llm_non_task_or_failure(client, monkeypatch, failed):
+    from app.planner_providers import PlannerProviderError
+    class Provider(FakePlannerProvider):
+        def create_plan(self, planner_input):
+            if failed:
+                raise PlannerProviderError(code="TEST_FAILURE", summary="test provider unavailable")
+            return super().create_plan(planner_input)
+    monkeypatch.setattr(planning_module, "resolve_planner_provider", lambda *args, **kwargs: Provider({"outcomeType": "assistant_reply", "reply": "需要更多信息"}))
+    with next(db_from_override()) as db:
+        session_id = db.exec(select(Session)).one().id
+    response = client.post(f"/sessions/{session_id}/messages", json={"contentMd": "把标题改成欢迎，同时把按钮改成登录"})
+    assert response.status_code == 201, response.text
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+    assert response.json()["intentDecision"]["source"] == ("rule" if failed else "llm")
+
+
+def test_rules_persist_matching_message_and_task_decisions(client, monkeypatch):
+    from app.planner_providers import DisabledPlannerProvider
+    monkeypatch.setattr(planning_module, "resolve_planner_provider", lambda *args, **kwargs: DisabledPlannerProvider())
+    monkeypatch.setattr(messages_module, "schedule_task_run_execution", lambda tasks: None)
+    with next(db_from_override()) as db:
+        session_id = db.exec(select(Session)).one().id
+    response = client.post(f"/sessions/{session_id}/messages", json={"contentMd": '@frontend 为演示应用把按钮文案改成“联系 @designer”'})
+    assert response.status_code == 201, response.text
+    evidence = response.json()["intentDecision"]
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert len(tasks) == 1
+    assert tasks[0]["planJson"]["targetText"] == "联系 @designer"
+    assert tasks[0]["planJson"]["intentDecision"] == evidence
+    assert evidence["roles"] == ["frontend"]
+
+
+def test_orchestrator_review_fallback_creates_review_not_writer(client, monkeypatch):
+    from app.planner_providers import DisabledPlannerProvider
+    monkeypatch.setattr(planning_module, "resolve_planner_provider", lambda *args, **kwargs: DisabledPlannerProvider())
+    with next(db_from_override()) as db:
+        session_id = db.exec(select(Session)).one().id
+    response = client.post(f"/sessions/{session_id}/messages", json={"contentMd": "review the login page for the demo app"})
+    assert response.status_code == 201
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert len(tasks) == 1 and tasks[0]["intentType"] == "review"
+    assert tasks[0]["planJson"]["intentDecision"]["requestType"] == "review"
+
+
+def _intent_test_writer_plan():
+    return {"outcomeType": "task_plan", "planDraft": {
+        "planId": "intent-test", "planner": "llm_v1", "plannerMode": "llm_v1",
+        "rationale": "Handle the complete title and button request.",
+        "acceptanceCriteria": ["Title and button match the complete request"],
+        "validationExpectations": ["pnpm build"],
+        "tasks": [{"title": "Update title and button", "role": "frontend",
+            "targetId": DEMO_FRONTEND_TARGET_ID, "intentType": "frontend_change",
+            "plannedFiles": ["apps/demo/src/App.tsx"], "dependsOn": [],
+            "expectedArtifactTypes": ["diff", "review"],
+            "acceptanceCriteria": ["Title and button match the complete request"],
+            "validationExpectations": ["pnpm build"], "riskLevel": "low", "requiresApproval": False}]}}
+
+
+@pytest.mark.parametrize("content", ["explain how to change the demo app title to Hello", "review the login page for the demo app"])
+def test_llm_writer_plan_cannot_override_non_write_intent(client, monkeypatch, content):
+    monkeypatch.setattr(planning_module, "resolve_planner_provider", lambda *args, **kwargs: FakePlannerProvider(_intent_test_writer_plan()))
+    with next(db_from_override()) as db:
+        session_id = db.exec(select(Session)).one().id
+    response = client.post(f"/sessions/{session_id}/messages", json={"contentMd": content})
+    assert response.status_code == 201, response.text
+    assert client.get(f"/sessions/{session_id}/tasks").json() == []
+    assert "LLM_ACTION_CONFLICT" in response.json()["intentDecision"]["reasonCodes"]
+
+
+def test_valid_llm_plan_can_resolve_multiple_actions_without_rule_truncation(client, monkeypatch):
+    seen = []
+    class Provider(FakePlannerProvider):
+        def create_plan(self, planner_input):
+            seen.append(planner_input["originalUserRequest"])
+            return super().create_plan(planner_input)
+    monkeypatch.setattr(planning_module, "resolve_planner_provider", lambda *args, **kwargs: Provider(_intent_test_writer_plan()))
+    monkeypatch.setattr(messages_module, "schedule_task_run_execution", lambda tasks: None)
+    with next(db_from_override()) as db:
+        session_id = db.exec(select(Session)).one().id
+    content = "把标题改成欢迎，同时把按钮改成登录"
+    response = client.post(f"/sessions/{session_id}/messages", json={"contentMd": content})
+    assert response.status_code == 201, response.text
+    tasks = client.get(f"/sessions/{session_id}/tasks").json()
+    assert len(tasks) == 1 and seen == [content]
+    assert response.json()["intentDecision"]["source"] == "llm"
+    assert tasks[0]["planJson"]["intentDecision"] == response.json()["intentDecision"]
+    assert "targetText" not in tasks[0]["planJson"]
+
+
 def test_parse_frontend_intent_supports_bounded_p5_dynamic_intents() -> None:
     title = parse_frontend_intent("change the title to Welcome back")
     button = parse_frontend_intent("把按钮文案改成 Sign in")
@@ -642,7 +760,6 @@ def test_login_mentions_keep_specific_frontend_intent_precedence(change: str, ta
 @pytest.mark.parametrize("content,target,count", [
     ("@orchestrator 为演示应用创建登录页", "login_page", 3),
     ("@orchestrator build a login page for the demo app with OAuth", "demo_frontend_request", 1),
-    ("@orchestrator review the login page for the demo app", "demo_frontend_request", 1),
     ("@orchestrator for the demo app login page change button text to Sign in", "primary_action_button_text", 3),
 ])
 def test_orchestrator_login_branch_uses_bounded_creation_intent(client, monkeypatch, content, target, count):
@@ -1243,6 +1360,8 @@ def test_no_mention_message_uses_configured_llm_planner_provider(
         == "note:acceptance"
     )
     assert task["planJson"]["originalRequest"] == "帮我在当前前端项目里实现一个 Breakout / 打砖块游戏"
+    assert task["planJson"]["intentDecision"] == response.json()["intentDecision"]
+    assert response.json()["intentDecision"]["source"] == "llm"
 
     trace = client.get(f"/sessions/{session_id}/mission-trace").json()
     assert trace["tasks"][0]["contextHandoff"]["itemCount"] == 1

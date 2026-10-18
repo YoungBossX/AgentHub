@@ -481,6 +481,7 @@ class MessageResponse(ApiModel):
     regeneration: Optional[dict[str, Any]] = None
     regeneration_action: Optional[dict[str, Any]] = Field(default=None, alias="regenerationAction")
     context_budget: Optional[dict[str, Any]] = Field(default=None, alias="contextBudget")
+    intent_decision: Optional[dict[str, Any]] = Field(default=None, alias="intentDecision")
     content_truncated: bool = Field(default=False, alias="contentTruncated")
     content_characters: Optional[int] = Field(default=None, alias="contentCharacters")
 

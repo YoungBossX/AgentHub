@@ -1,0 +1,323 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "bc839966e3bb56a48f65f71bf56484e25646efb8",
+  "baselineParserSha256": "a1c2d45ee0d4fb5e1381cf40c0d56cab923728d2e8f369614d4dd95283d4ffb4",
+  "comparisonKind": "same_authored_negative_cases_parser_only",
+  "negativeCases": 49,
+  "baselineUnsafeMatches": 23,
+  "currentUnsafeMatches": 0,
+  "cases": [
+    {
+      "id": "neg-title-zh",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "neg-button-en",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "neg-color",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "neg-field",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "neg-app",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "neg-login",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "how-title",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "explain-button",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "explain-frontend",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "explain-group",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "what-todo",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "explain-notes",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "why-title",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "status-zh",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "status-en",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "status-backend",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "quoted-title",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "quoted-button",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "code-only",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "inline-only",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "reference-doc",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "reference-example",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "two-copy",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "two-en",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "two-color",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "mixed-neg",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "mixed-info",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "missing-title",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "missing-button",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "empty-title",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "reference-it",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "reference-en",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "hello-en",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "hello-zh",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "capabilities",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "keyword-only",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "keyword-list",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "neg-intro",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "neg-later",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "polite-info",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "could-explain",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "unclosed-code",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "mixed-review",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "mixed-status",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "missing-color",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "unclosed-value",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "two-copy-elided",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "two-copy-zh-elided",
+      "baselineRuleMatched": false,
+      "currentRuleMatched": false
+    },
+    {
+      "id": "review-nested-command",
+      "baselineRuleMatched": true,
+      "currentRuleMatched": false
+    }
+  ],
+  "current": {
+    "schemaVersion": 1,
+    "evaluationKind": "offline_rule_only",
+    "corpusSha256": "d264c48bfc45f58990d715fd9ee73920912ba6249f8c660580e113fef0e9b657",
+    "total": 73,
+    "passed": 73,
+    "requestTypeChecked": 73,
+    "requestTypeCorrect": 73,
+    "routeChecked": 73,
+    "routeCorrect": 73,
+    "targetChecked": 23,
+    "targetCorrect": 23,
+    "parametersChecked": 10,
+    "parametersCorrect": 10,
+    "nonExecutableCases": 49,
+    "unsafeRuleExecutionErrors": 0,
+    "missingFieldsChecked": 5,
+    "missingFieldsCorrect": 5,
+    "categories": {
+      "supported": {
+        "total": 20,
+        "passed": 20
+      },
+      "negation": {
+        "total": 8,
+        "passed": 8
+      },
+      "information": {
+        "total": 9,
+        "passed": 9
+      },
+      "status": {
+        "total": 3,
+        "passed": 3
+      },
+      "reference": {
+        "total": 7,
+        "passed": 7
+      },
+      "multiple": {
+        "total": 9,
+        "passed": 9
+      },
+      "slots": {
+        "total": 5,
+        "passed": 5
+      },
+      "context": {
+        "total": 2,
+        "passed": 2
+      },
+      "review": {
+        "total": 4,
+        "passed": 4
+      },
+      "chat": {
+        "total": 3,
+        "passed": 3
+      },
+      "unknown": {
+        "total": 3,
+        "passed": 3
+      }
+    },
+    "mismatches": [],
+    "limits": "Authored regression corpus; no real LLM accuracy, latency, generalization or task execution claim."
+  }
+}

@@ -155,6 +155,9 @@ def require_custom_agent(
 
 
 def custom_agent_mentions(db: DbSession, workspace_id: str, content: str) -> dict[str, AgentProfileDraft]:
+    from app.intent_decisions import routing_text
+
+    content = routing_text(content)
     selected: dict[str, AgentProfileDraft] = {}
     for alias in MENTION_PATTERN.findall(content):
         profile = db.exec(select(AgentProfileDraft).where(

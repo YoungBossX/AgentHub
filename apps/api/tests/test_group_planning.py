@@ -209,6 +209,8 @@ def test_native_custom_planner_group_uses_actual_content_prompt_scope_and_atomic
     assert "Implement meaningful coding" not in instruction
     assert first["agentProfileId"] == writer.id
     assert first["groupAssignment"]["coordinationSource"] == "fake_test"
+    assert first["intentDecision"]["source"] == "llm"
+    assert first["intentDecision"] == json.loads(tasks[1].plan_json)["intentDecision"]
     assert first["plannerEvidence"]["agentInstruction"]["sha256"] == hashlib.sha256(b"NATIVE_GROUP_PROMPT_MARKER").hexdigest()
     assert first["plannerEvidence"]["createdTaskIds"] == [task.id for task in tasks]
     assert json.loads(tasks[1].depends_on_task_ids) == [tasks[0].id]

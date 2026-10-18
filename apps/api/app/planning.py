@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from typing import Any
 
 from sqlmodel import Session as DbSession
@@ -22,6 +23,7 @@ from app.memory_snapshots import (
 from app.models import Message, Task
 from app.models import Session as AgentHubSession
 from app.planner_providers import PlannerProviderError, resolve_planner_provider
+from app.intent_decisions import IntentDecision, boundary_reply, decision_from_outcome, routing_text
 from app.repositories import list_session_tasks
 from app.planning_intents import (
     AppContractIntent,
@@ -33,6 +35,7 @@ from app.planning_intents import (
     parse_followup_change,
     parse_frontend_intent,
     parse_mentions,
+    recognize_intent,
     _active_external_target_for_role,
     _clean_target_text,
     _demo_backend_target_exists,
@@ -96,8 +99,8 @@ def _planner_runtime_resolution(db: DbSession, message: Message):
     if session is None:
         return None
     try:
-        selected_custom_planner(db, session.workspace_id, message.content_md)
-        profile = custom_agent_mentions(db, session.workspace_id, message.content_md).get("orchestrator")
+        selected_custom_planner(db, session.workspace_id, routing_text(message.content_md))
+        profile = custom_agent_mentions(db, session.workspace_id, routing_text(message.content_md)).get("orchestrator")
     except CustomAgentError as exc:
         raise MentionParseError(str(exc)) from exc
     if profile is not None:
@@ -189,6 +192,42 @@ def plan_for_message(
 ) -> list[Task]:
     session = db.get(AgentHubSession, message.session_id)
     parsed = parse_mentions(db, content, session.workspace_id if session else None)
+    decision = recognize_intent(content, roles=tuple(parsed.roles))
+    _record_intent_decision(db, message, decision)
+    tasks = _plan_for_message(db, message, content, parsed=parsed, decision=decision)
+    if tasks:
+        first_plan = json.loads(tasks[0].plan_json)
+        group = first_plan.get("groupAssignment", {})
+        if group.get("coordinationSource") not in {None, "deterministic"}:
+            group_outcome = {"outcomeType": "task_plan", "planDraft": {
+                "tasks": [{"role": json.loads(task.plan_json)["assignedRole"]} for task in tasks]}}
+            _record_intent_decision(db, message, decision_from_outcome(decision, group_outcome))
+    # Attach the actual final server decision, including the validated LLM path.
+    evidence = json.loads(message.context_json)["_intentDecision"]
+    for task in tasks:
+        plan = json.loads(task.plan_json)
+        plan["intentDecision"] = evidence
+        task.plan_json = json.dumps(plan, separators=(",", ":"))
+        db.add(task)
+    if tasks:
+        db.commit()
+        for task in tasks:
+            db.refresh(task)
+    return tasks
+
+
+def _record_intent_decision(db: DbSession, message: Message, decision: IntentDecision) -> None:
+    context = json.loads(message.context_json)
+    context["_intentDecision"] = decision.to_payload()
+    message.context_json = json.dumps(context, separators=(",", ":"))
+    db.add(message)
+    db.commit()
+
+
+def _plan_for_message(
+    db: DbSession, message: Message, content: str, *,
+    parsed: ParsedMentions, decision: IntentDecision,
+) -> list[Task]:
     existing_tasks = list_session_tasks(db, message.session_id)
     active_tasks = _active_planning_tasks(existing_tasks)
     routed_role = parsed.roles[0] if parsed.roles else "orchestrator"
@@ -200,7 +239,18 @@ def plan_for_message(
     if session is not None:
         # Reject invalid memory before persisting any direct or fallback tasks.
         ensure_session_memory_snapshot(db, session)
+    if decision.request_type == "no_action" or decision.route == "clarify":
+        _create_orchestrator_boundary_message(db, message, boundary_reply(decision))
+        return []
+    if (decision.route == "reply" and routed_role != "orchestrator") or (
+        decision.request_type == "review" and any(role in {"frontend", "backend"} for role in parsed.roles)
+    ):
+        _create_orchestrator_boundary_message(db, message, boundary_reply(decision))
+        return []
     if len(parsed.roles) > 1:
+        if not decision.allows_rule_fallback:
+            _create_orchestrator_boundary_message(db, message, boundary_reply(decision))
+            return []
         from app.group_planning import create_explicit_group_tasks
 
         return create_explicit_group_tasks(db, message, parsed, existing_tasks=existing_tasks)
@@ -254,6 +304,17 @@ def plan_for_message(
                         message,
                         provider=planner_provider,
                     )
+                    kind = conversation.outcome["outcomeType"]
+                    if kind == "task_plan" and (decision.route == "reply" or (
+                        decision.request_type == "review" and any(
+                            task.get("role") not in {"qa", "review"}
+                            for task in conversation.outcome.get("planDraft", {}).get("tasks", [])
+                        )
+                    )):
+                        conflict = replace(decision, route="clarify", reason_codes=(*decision.reason_codes, "LLM_ACTION_CONFLICT"))
+                        _record_intent_decision(db, message, conflict)
+                        _create_orchestrator_boundary_message(db, message, boundary_reply(conflict))
+                        return []
                     if conversation.outcome["outcomeType"] != "task_plan":
                         fallback_tasks = _fallback_tasks_for_non_task_llm_outcome(
                             db,
@@ -262,10 +323,12 @@ def plan_for_message(
                             conversation.outcome,
                             planner_provider,
                             planner_memory_evidence=conversation.planner_input,
-                        )
+                        ) if decision.allows_rule_fallback and decision.request_type != "review" else []
                         if fallback_tasks:
+                            _record_intent_decision(db, message, replace(decision, reason_codes=("NON_TASK_RULE_FALLBACK",)))
                             _attach_planner_runtime_evidence(db, fallback_tasks, planner_runtime)
                             return fallback_tasks
+                        _record_intent_decision(db, message, decision_from_outcome(decision, conversation.outcome))
                         if _should_request_target_setup_for_non_task_llm_outcome(
                             db,
                             message,
@@ -292,6 +355,7 @@ def plan_for_message(
                     )
                     llm_tasks = llm_outcome.tasks
                     if llm_tasks:
+                        _record_intent_decision(db, message, decision_from_outcome(decision, conversation.outcome))
                         _attach_planner_runtime_evidence(
                             db,
                             llm_tasks,
@@ -345,6 +409,13 @@ def plan_for_message(
                 "errorCode": exc.code,
                 "errorSummary": exc.summary,
             }
+
+    if not decision.allows_rule_fallback:
+        reply = _friendly_chat_fallback_reply(llm_fallback) if _is_pure_chat_request(content) else boundary_reply(decision)
+        _create_orchestrator_boundary_message(db, message, reply)
+        return []
+    if decision.request_type == "review" and routed_role == "orchestrator":
+        return _create_direct_assignment_tasks(db, message, "review", existing_tasks=existing_tasks)
 
     if routed_role in {"frontend", "backend", "qa", "review"}:
         custom_id = parsed.profile_ids.get(routed_role)

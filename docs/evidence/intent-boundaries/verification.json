@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "scope": "local_intent_boundaries",
+  "sourceSha256": {
+    "apps/api/app/custom_agents.py": "fbad899c8d06a2fb8cccf5a13f9060810cb16e2db8abf70bab4cbe4f7eb42fb3",
+    "apps/api/app/intent_decisions.py": "8aba36cf62279eed65300b0e168f6567bb8c945727c9d37573b99ad519a901a3",
+    "apps/api/app/intent_evaluation.py": "2bc1cd4f4901b2faefa3d2deb0b5b20aa9e32a2b45d75b50ccf1167e92f4bd0c",
+    "apps/api/app/planning.py": "1fb99459dafaf17bfc8957a682aab5d0759a04a200523b52524349d18764bf1c",
+    "apps/api/app/planning_intents.py": "d556f7c528be77b41a4ea7caeb4d3435875c1a1336282d3efa1255aa8ebb1fc4",
+    "apps/api/app/routes/messages.py": "6183682fe1ed66d7402e8ddd8cde0f723ccdca43b89a6e416469cdd7013dacb3",
+    "apps/api/app/schemas.py": "f0777ac1635e37191617b6cdf5a4c2e9ed2fe7719dc60a243c5bd590ef17ca27",
+    "apps/api/tests/test_group_planning.py": "d42d590352fc573dbf3744d441749489080af41440875270f4df85d567bb1380",
+    "apps/api/tests/test_intent_recognition.py": "8637ff09cc89c44d1aa71eb6b80beac807d29080d935e7432bc1e26c9ef3fcbb",
+    "apps/api/tests/test_planning.py": "374590481ebe3ce05cec6730c6a9c97638b3e7a41456a81ce267a223005ee4e6",
+    "apps/api/evals/intent_cases.json": "d264c48bfc45f58990d715fd9ee73920912ba6249f8c660580e113fef0e9b657"
+  },
+  "apiRegression": {
+    "report": "agenthub-intent-delivery-20261017.xml",
+    "sha256": "ff6444a2e30aae7bfa5c776eb90022b8488fe3d1f1e31eb20584d80a67ed1f7b",
+    "tests": 448,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 135.979
+  },
+  "contextAndSelectionRegression": {
+    "report": "agenthub-intent-context-20261017.xml",
+    "sha256": "32bf4adca6c550efa6c65b9a6efb332188f3f3db0bfe07e0f732cb365f6fcd82",
+    "tests": 45,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 2.093
+  },
+  "rootCheck": {
+    "command": "pnpm check",
+    "exitCode": 0,
+    "logSha256": "3c96627c3e57237fba787e4dc48835db5ecdd27a2d8dc667f046504643f533b0"
+  },
+  "finalApiSyntax": {
+    "command": "python -m compileall -q app",
+    "exitCode": 0
+  },
+  "openspec": {
+    "command": "openspec validate agenthub-intent-boundaries --strict",
+    "exitCode": 0
+  },
+  "limits": [
+    "No real provider or browser run",
+    "No production data or runtime changes",
+    "No commit or push",
+    "Authored regression corpus only"
+  ]
+}

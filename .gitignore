@@ -382,6 +382,15 @@ docs/evidence/local-final-workflow/*
 !docs/evidence/local-final-workflow/*.py
 !docs/evidence/local-final-workflow/*.mjs
 
+# Bounded intent-recognition documentation and offline receipts
+!docs/intent-recognition.md
+!docs/intent-boundaries-review.md
+!docs/evidence/intent-boundaries/
+docs/evidence/intent-boundaries/*
+!docs/evidence/intent-boundaries/README.md
+!docs/evidence/intent-boundaries/offline.json
+!docs/evidence/intent-boundaries/verification.json
+
 *.local
 *.local.*
 *.dev
