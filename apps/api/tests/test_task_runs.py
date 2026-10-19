@@ -11984,9 +11984,11 @@ async def test_interrupt_exact_supervised_run_propagates_cancellation_without_pr
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("startup_delay", [0, 1.1])
 async def test_write_execution_lease_renews_exact_lock_generation_while_adapter_streams(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
+    startup_delay: float,
 ) -> None:
     with db_from_override() as db:
         task = db.get(Task, task_id())
@@ -12061,16 +12063,20 @@ async def test_write_execution_lease_renews_exact_lock_generation_while_adapter_
         raising=False,
     )
 
-    execution = asyncio.create_task(
-        run_engine_module.execute_task_run_background(
+    async def execute_after_scheduling_delay():
+        await asyncio.sleep(startup_delay)
+        await run_engine_module.execute_task_run_background(
             db_from_override(),
             run_id,
             "codex",
             worker_id="worker:periodic-renewal",
         )
-    )
+
+    execution = asyncio.create_task(execute_after_scheduling_delay())
     try:
-        await asyncio.wait_for(stream_started.wait(), timeout=1)
+        # Startup is coordination, not a one-second Provider latency contract.
+        # Exact lock-generation and renewal assertions below remain unchanged.
+        await asyncio.wait_for(stream_started.wait(), timeout=5)
         with db_from_override() as db:
             initial_run = db.get(TaskRun, run_id)
             initial_lock = held_lock_for_target(db, DEMO_FRONTEND_TARGET_ID)

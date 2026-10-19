@@ -134,6 +134,11 @@ def test_cancellation_during_browser_phase_cannot_pass(app_copy):
     calls = []
     def runner(argv, *_args):
         calls.append(argv)
+        if len(calls) == 2:
+            # The trusted browser handoff now fingerprints actual build bytes.
+            output = _args[0] / "dist"
+            output.mkdir()
+            (output / "index.html").write_text("<div id='root'></div>")
         if len(calls) == 4:
             cancelled.set()
             return {"status": "cancelled", "exitCode": -1, "log": "", "durationMs": 1}

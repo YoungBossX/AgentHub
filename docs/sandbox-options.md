@@ -1,7 +1,17 @@
 # AgentHub 沙箱候选方案
 
 日期：2026-10-18。本文是用户要求的可行性与选型分析，尚非已批准的实施规格。
-没有安装 Docker/WSL、拉取镜像、创建容器或扩展执行权限；Docker 专项仍需单独 OpenSpec。
+候选分析当时没有安装 Docker/WSL、拉取镜像、创建容器或扩展执行权限；后续专项状态见下文。
+
+用户随后要求第一阶段设计与实施计划，已形成
+[固定验证容器专项设计](../openspec/changes/agenthub-container-validation/design.md) 和
+[实施计划](superpowers/plans/2026-10-18-container-validation.md)，随后批准 Native 顺序实现。
+随后用户准备Docker并授权实际验收。2026-10-19两类镜像正式构建/inspect和本机
+真实资格18项已通过，数据与临时文件在E:/Docker；最后完整原生API2714通过/19环境跳过、无失败，
+第一阶段本机验收完成，代码未提交/合并或启用到主工作区。
+结果及限定环境见[实际验收记录](../openspec/changes/agenthub-container-validation/verification.md)。
+第一阶段限定两个固定 Profile，默认 native，不迁移 Provider CLI、预览或数据库；
+后续容器预览/Provider候选路线仍未实施，不能把全部方案描述为已经完成。
 
 ## 结论
 
@@ -12,7 +22,7 @@
 这条路线适合本地单用户个人项目：先交付一个能验证隔离效果的最小闭环，再逐步覆盖
 其他执行路径。第一阶段完成后只能描述“检查/测试容器化”，不能称所有 Agent 已隔离。
 
-## 已核实的现状
+## 候选分析时的核对（2026-10-18）
 
 | 项目 | 本次证据 | 对设计的影响 |
 |---|---|---|

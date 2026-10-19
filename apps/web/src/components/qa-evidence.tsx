@@ -20,6 +20,7 @@ export function qaLabel(review: ReviewArtifact): string {
 export function QaEvidence({ review }: { review: ReviewArtifact }) {
   const qa = review.qaAssessment
   const backend = qa?.validation?.profile === "fastapi-contract-v1"
+  const execution = qa?.validation?.execution
   if (!qa) return (
     <p className="mt-3 rounded-md border border-[var(--border)] p-3 text-xs text-[var(--muted-foreground)]">
       历史报告缺少分项 QA 证据，不能据此确认功能验收通过。
@@ -29,6 +30,9 @@ export function QaEvidence({ review }: { review: ReviewArtifact }) {
     <section aria-label="QA 分项证据" className="mt-3 min-w-0 rounded-md border border-[var(--border)] p-3 text-xs">
       <p className="font-semibold">{qaLabel(review)}</p>
       {qa.validation ? <div className="mt-2 space-y-1 text-[var(--muted-foreground)]">
+        <p>{!execution ? "历史验证（环境未记录）" : execution.commandsBackend === "docker" ? "Docker 固定验证"
+          : execution.commandsBackend === "native" ? "原生固定验证"
+          : execution.backend === "docker" ? "请求 Docker · 未运行/环境不可用" : "请求原生验证 · 未运行/环境不可用"}</p>
         <p>{backend ? "验证范围：Python 语法、FastAPI 健康检查、联系人接口、输入校验、重复拦截、CORS 与 OpenAPI" : "验证范围：类型检查、构建、构建产物冒烟测试"}</p>
         <p>版本状态：{{ current: "与当前源码一致", expired: "源码或验证策略已变化，需重新运行", unverifiable: "无法核对，需重新运行" }[qa.currentness ?? "unverifiable"]}</p>
         {qa.validation.sourceFingerprint ? <p>源码指纹：<code>{qa.validation.sourceFingerprint.slice(0, 12)}</code></p> : null}
@@ -44,6 +48,7 @@ export function QaEvidence({ review }: { review: ReviewArtifact }) {
         ))}
       </dl>
       {qa.functional && !backend ? <div className="mt-3 border-t border-[var(--border)] pt-3">
+        {qa.functional.execution ? <p className="text-[var(--muted-foreground)]">原生浏览器检查</p> : null}
         <p className="font-medium">需求交互验收：{labels[qa.functional.status]}</p>
         {qa.functional.contract ? <p className="mt-1 text-[var(--muted-foreground)]">
           {({ login_page: "登录表单校验与提交", demo_heading_text: "标题文案", primary_action_button_text: "按钮文案与点击" } as Record<string, string>)[qa.functional.contract.target] ?? "指定需求"}

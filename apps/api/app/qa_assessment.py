@@ -66,6 +66,7 @@ def build_qa_assessment(
                                  "log": entry.get("log", ""), "durationMs": entry.get("durationMs", 0)}] if entry else [])
     functional = validation.get("functional") if validation else None
     blocked = (rule_status == "failed" or model_status == "failed"
+               or (currentness == "current" and validation and validation.get("status") == "failed")
                or (currentness == "current" and functional and functional.get("status") == "failed")
                or any(item["status"] in {"recorded_failed", "failed", "timeout", "cancelled"} for item in commands))
     passed = (not blocked and rule_status == "passed" and model_status == "passed"

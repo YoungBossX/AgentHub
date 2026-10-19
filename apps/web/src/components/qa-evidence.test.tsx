@@ -22,6 +22,32 @@ function snapshot(): QaAssessment {
 }
 
 describe("layered QA evidence", () => {
+  it.each([
+    ["native", "native", "原生固定验证"],
+    ["docker", "docker", "Docker 固定验证"],
+    ["docker", "not_run", "请求 Docker · 未运行/环境不可用"],
+  ] as const)("distinguishes requested and executed environment: %s/%s", (backend, commandsBackend, text) => {
+    const qa = snapshot()
+    qa.validation = { eventId: "validation-1", status: commandsBackend === "not_run" ? "unavailable" : "passed",
+      profile: "vite-build-smoke-v1", execution: { backend, commandsBackend, operationId: "operation-1",
+        generationFingerprint: "f".repeat(64), runtimePolicyId: "container-validation-v1" } }
+    qa.functional = { status: "unavailable", contract: { schemaVersion: "v1", target: "login_page" }, checks: [],
+      execution: { backend: "native", inputArtifactFingerprint: "a".repeat(64) } }
+    render(createElement(QaEvidence, { review: { ...sampleReviewArtifact, qaAssessment: qa } }))
+    expect(screen.getByText(text)).toBeTruthy()
+    expect(screen.getByText("原生浏览器检查")).toBeTruthy()
+    expect(screen.getByText("QA 待验证")).toBeTruthy()
+    if (commandsBackend === "not_run") expect(screen.queryByText("Docker 固定验证")).toBeNull()
+  })
+
+  it("shows missing legacy execution without inventing an environment", () => {
+    const qa = snapshot()
+    qa.validation = { eventId: "legacy", status: "passed", profile: "vite-build-smoke-v1" }
+    render(createElement(QaEvidence, { review: { ...sampleReviewArtifact, qaAssessment: qa } }))
+    expect(screen.getByText("历史验证（环境未记录）")).toBeTruthy()
+    expect(screen.queryByText("原生固定验证")).toBeNull()
+    expect(screen.queryByText("Docker 固定验证")).toBeNull()
+  })
   it.each(["passed", "expired"] as const)("shows the backend scope without inventing a build: %s", (status) => {
     const qa = snapshot()
     qa.status = status

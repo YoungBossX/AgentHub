@@ -230,7 +230,12 @@ def test_native_lifecycle_with_real_validation_and_stale_api_overlay(fixture, mo
         adapter=ClaudeCodeAdapter(process_runner=native_tests.ReviewRunner(), read_only=True), supervisor=RunSupervisor()))
     assert completed.state == "completed", completed.error_message
     report = list_task_run_reviews(db, run.id)[0]
-    assert report.qa_assessment["status"] == "passed"
+    assert report.qa_assessment["status"] == "passed", {
+        "receiptStatus": validation.validation_for_run(db, run.id).get("status"),
+        "receiptReason": validation.validation_for_run(db, run.id).get("reason"),
+        "binding": json.loads(run.metrics_json).get("taskRunExecutionAccessBinding"),
+        "startedAt": run.started_at, "runner": run.runner_id,
+    }
     assert report.qa_assessment["acceptance"] == "configured_checks_passed"
     snapshot = db.get(Artifact, report.artifact_id).meta_json
     source.write_text('export const title = "changed after validation"')

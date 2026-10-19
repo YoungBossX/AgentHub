@@ -191,6 +191,14 @@ pnpm demo:dev
 
 Expected P0 runtime command families:
 
+- Focused exception under `agenthub-container-validation`: server-owned fixed
+  check/test profiles may use the explicitly selected local Docker backend with
+  operator-prepared immutable images, bounded snapshots, no network, fixed
+  resource budgets and verified ownership cleanup. Native remains the default;
+  unavailable Docker never silently falls back. Developer `sandbox:doctor`,
+  `sandbox:prepare` and `sandbox:verify` are not Agent commands. This exception
+  grants no Docker access to adapters and makes no database or preview changes.
+
 - Focused exception under `agenthub-backend-versioned-validation`: the server may
   invoke its fixed Python syntax/ASGI contract harness with the installed isolated
   interpreter in a disposable copy of built-in `demo-backend`. Never run edited

@@ -32,6 +32,17 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def same_validation_policy(previous, current):
+    """Compare checks without treating added native launch metadata as new checks."""
+    policy = previous.get("policyFingerprint")
+    execution = current.get("execution")
+    if not isinstance(policy, str) or not policy or previous.get("profile") != current.get("profile"):
+        return False
+    return policy == current.get("policyFingerprint") or (
+        "execution" not in previous and isinstance(execution, dict) and execution.get("backend") == "native"
+        and policy == current.get("nativePolicyFingerprint"))
+
+
 def _review(db, session_id, artifact_id):
     session, artifact = db.get(Session, session_id), db.get(Artifact, artifact_id)
     run = db.get(TaskRun, artifact.task_run_id) if artifact else None
@@ -295,7 +306,7 @@ def repair_history(db, session_id, artifact_id):
         if current and diffs and latest.state == "completed":
             old_qa = obj(db.get(Artifact, artifact_id).meta_json).get("qaAssessment") or {}
             old_validation = old_qa.get("validation") or {}
-            if receipt.get("profile") == old_validation.get("profile") and receipt.get("policyFingerprint") == old_validation.get("policyFingerprint"):
+            if same_validation_policy(old_validation, receipt):
                 for issue in binding["issues"]:
                     if not issue["autoVerifiable"]:
                         continue

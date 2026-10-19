@@ -395,6 +395,8 @@ docs/superpowers/*
 !docs/superpowers/plans/
 docs/superpowers/plans/*
 !docs/superpowers/plans/2026-10-18-alembic-migrations.md
+!docs/superpowers/plans/2026-10-18-container-validation.md
+!docs/container-validation.md
 
 # Bounded intent-recognition documentation and offline receipts
 !docs/intent-recognition.md

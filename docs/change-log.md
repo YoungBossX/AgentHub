@@ -1,5 +1,11 @@
 # AgentHub 变更日志
 
+## 归并开发分支与固定验证容器
+
+2026-10-19：用户要求保留唯一 `dev` 分支，先合并全部已提交内容，并明确授权将未提交沙箱实现验证后纳入。已提交分支线性快进至 `c13ebb9`，默认分支改为 `dev`；旧分支和未提交源码已备份到 E 盘。合并保留数据库 v2 与固定验证容器；数据兼容测试从写死 v1 改为当前 HEAD，真实写入测试统一使用开启外键的业务引擎，保留原值/BLOB/schema 和旧回执断言。
+
+合并版根检查、本地工具24、Web333、demo-api5、控制器3通过；后端定向721 passed/17 skipped，真实 Docker 强制资格18 passed/0 skipped。独立审阅无阻断问题；旧完整回归和临时 Git 对象失败记录均保留，不与本批相加。产品数据保持原位，不自动迁移、启用 Docker 后端或调整现有 Agent。验收范围及交付记录见 [归并验收](../openspec/changes/agenthub-container-validation/integration-verification.md)。
+
 ## 数据库完整性修复本地实施
 
 2026-10-19：用户审核计划并选择 Native；在独立 E 盘工作树实施 OpenSpec 1.1。
@@ -12,6 +18,111 @@
 - E 盘 CLI 升级/重复升级及最小 Vite 真实 HTTP 闭环通过；独立审阅的一项 P2 已经实际接口红绿验证修复。根检查、本地工具 24、Web 329、demo-api 5 通过；三次完整 API 均为 2595 passed / 2 skipped / 1 failed，失败发生在不同新建流程 Git 仓库的同一 lockfile 对象损坏，已有新版 Git 未消除问题，根因未确认。
 - 全量验收未通过，OpenSpec 1.1 保持未勾选，尚未提交/推送/升级产品库。编译缓存删除被自动策略拒绝，未绕过。完整仓库范围扫描超时另列为限制，详见[验收记录](database-integrity-verification.md)。
 
+
+## 固定验证容器：前端镜像构建修复与真实验收
+
+**日期:** 2026-10-19；用户授权完成镜像准备后继续真实沙箱资格，数据与临时文件继续使用 `E:/Docker`。
+
+- 同一最小构建 context 的诊断确认：下载可成功，但 legacy deploy 对 demo 子集报 `ERR_PNPM_UNUSED_PATCH`；固定 pnpm10.33.4 的 legacy 实现还会关闭 frozen lock。改为仅在 deploy 命令选择共享锁文件策略并离线复制依赖，不改全项目补丁、依赖锁或 workspace 配置。
+- 将固定版本 Corepack 下载与依赖安装拆为可独立复用的构建层；单次下载45秒、5秒强制结束余量，最多3次。pnpm 安装保持 frozen lock，请求30秒、2次重试；另限制整次安装180秒加5秒强制结束、最多3次，关闭无关版本更新请求。实际正式准备07已成功生成两个镜像及完整 `images.json`，doctor 为 metadata_ready。
+- 镜像准备复用已有进程树管理和有界输出；超时也保存已捕获诊断，并拒绝输出成功回执。新增失败回归先复现超时丢日志，再通过相关27项测试。长日志仍可能丢失末尾错误，局部只读审查记录为一项非阻断限制，无 Critical/Important。
+- 真实资格最终18 passed/0 skipped/0 failed（301.11秒）：两类源码正反例、只读/网络/凭据边界、CPU/PID/OOM、真实跨进程容量竞争、前端超限产物、取消和五个同步崩溃/中断窗口、旧数据保留、ScriptedMock 写文件→Diff→Docker验证→原生浏览器/预览通过。修复了资格测试的内存计数换行和临时预览项目缺少依赖链接；不改生产预览、不安装依赖。
+- 最后冻结后的完整原生API2714 passed/19 skipped/0 failed/0 errors（1261.91秒），Web333、本地工具24、demo-api5、Node控制3、根检查和专项strict通过。首轮API2711通过/3失败/19跳过的记录保留：两个临时Git压缩对象损坏，一项原生Python异常退出；3项原样复验通过，随后完整复验通过，底层环境原因未确认。没有拼接成单次通过。
+- 本机1.3/1.6已完成；既有产品数据、Adapter、默认native与服务配置未修改，未提交、合并、推送或触发远程CI。Docker数据/临时文件继续在E:/Docker。仅确认当前Windows Docker Desktop/Linux引擎环境，不声明真实Provider或所有宿主平台通过。
+
+## Docker 本机准备：E 盘存储与 Windows 构建兼容
+
+**日期:** 2026-10-19；用户已安装 Docker 并指定 `E:/Docker`。
+
+- 确认 Desktop 4.95.0/Engine 29.8.2 已安装于 E 盘；启动 Linux/amd64 daemon。数据 VHD、WSL 系统盘在 `E:/Docker/wsl-data`，新建用户 `.wslconfig` 将交换盘及崩溃文件指定到该目录；未覆盖既有配置、迁移或删除数据。新临时文件和验证证据使用 `E:/Docker/agenthub-temp` / `E:/Docker/AgentHub`。Windows/Docker 小型用户配置与日志仍可能在 C 盘。
+- 实际准备发现过滤后的客户端环境缺少 Windows 插件查找依赖，导致已安装 Buildx 不可见。固定白名单只补入 `PROGRAMFILES`，仍排除 API 密钥、用户代理及 DOCKER_* 覆盖；显式使用 `buildx build --load`，保留空私有配置、冻结本机 endpoint、最小 context 和不可变镜像核验。
+- 两项失败回归已复现后修复，准备/运行时/doctor 相邻39项通过；一次局部只读审查无可报告问题。冻结后完整 API2712 passed/17 skipped/0 failed/0 errors（1303.92s）、Web333、本地工具24、demo-api5、Node控制3、根检查及 strict 通过。48个工程文件在全量期间保持不变；两项既有表达式索引警告保留。
+- 后端镜像已按固定配方、最小 context 和依赖哈希实际构建并 inspect，部分回执在 `E:/Docker/AgentHub/backend-image-20261019`。前端准备仍有 pnpm 下载长时间停滞，主动中断的03–05轮及诊断日志保留；备用构建网络也在360秒超时，已结束。未生成双镜像成功回执，doctor如实返回 image_missing，1.3/1.6 保持未完成。普通临时容器和最小 BuildKit 下载探针均有成功记录，尚不能确认最终网络根因；没有修改全局代理或 DNS。
+- 仅清理首轮失败构建生成的一个已退出、无挂载容器，按完整ID核对来源并删除；没有全局 prune。没有启用产品 Docker 后端、改库、重启服务、提交或推送。
+
+## 固定验证容器：目录兼容与运行中中断测试
+
+**日期:** 2026-10-19；按用户要求先修目录问题，再补运行中中断测试，Docker 环境继续后置。
+
+- 输入快照及导出产物共用完整路径树检查，拒绝各级目录大小写别名、重复文件及文件/目录冲突；先验证完整输入再创建目录，不自动改名或合并路径。
+- 目录回归先复现 8 项失败，修复后相邻 72 项通过。补充真实宿主客户端运行中取消（含子进程退出）与创建/检查/导出调用未返回时结束工作进程后的锁、持久化 journal 恢复及无关资源保留测试。
+- 真实 Docker 资格入口改为创建响应仍在传输时结束工作进程、检查/导出 exec 内固定探针确认运行后再取消或结束进程；测试探针仅在 tests 中，不增加运行时命令、Agent 权限或镜像功能。实际 Docker 测试尚未执行。
+- 局部审查修复同步标记发布竞争（原子改名）及外来资源状态副本断言，更新过期延期描述。修复后专项62 passed/14 skipped；此前87项和7项相邻批次有重叠，不相加。
+- 最终冻结后完整 API2711 passed/17 skipped，无失败，1996.77s；15个真实Docker资格、1个POSIX大小写语义、1个未暴露瞬态属性的Windows探针明确跳过。2项既有表达式索引SAWarning保留。2728个用例对比上一轮仅替换3个崩溃用例为5个同步中断用例，新增16项，无意外移除。
+- Web333、启动工具24、demo-api5、Node控制3、根检查和API编译通过；48个代码/工程文件在最终完整回归中保持不变。产品库、三个 Adapter、依赖与主工作区运行服务未改动，没有提交或推送，真实Docker资格仍未完成。
+
+## 固定验证容器：完整回归兼容修复
+
+**日期:** 2026-10-19；首轮完整 API 为 2688 passed/3 failed/14 skipped，失败记录保留。
+
+- 旧原生报告使用原始检查策略摘要，新运行增加执行包装摘要，导致同一检查的修复无法标记恢复。新增并核验 nativePolicyFingerprint，仅同 profile/原生检查策略允许旧报告恢复；Docker、不同策略或 profile 不可借用，执行代次和完整策略绑定保持严格。
+- 镜像准备测试隔离 get_settings 缓存，修复完整顺序运行时忽略测试 context 的问题，不改变生产配置缓存。
+- 旧续租测试在一秒启动同步等待处超时，单独复跑通过；新增任务调度延迟负例先复现，再将该同步等待改为五秒。原续租间隔、精确锁代次/到期与恢复断言保持不变，不修改生产超时或调度代码。
+- 126 项兼容专项及最终46项失败/相邻用例通过（批次重叠）；冻结后完整 API2696 passed/14 skipped、根检查通过。Web333、本地工具24、demo-api5、Node控制3与专项 strict 同样通过，源码在完整重跑中保持不变。
+- 14个跳过包括13个显式真实 Docker 资格和1个 POSIX大小写语义；两项既有表达式索引 SAWarning 不计作失败。没有执行真实 Docker 构建/隔离，1.3/1.6 保持未完成；没有安装、操作产品库、提交、推送或合并到主工作区。
+
+## 固定验证容器：最终审查修复
+
+**日期:** 2026-10-18；一次独立只读审查后修复三项重要问题，未执行 Docker。
+
+- 最初解析本机 context 后冻结 socket/npipe，所有 daemon 操作显式 --host，不按可变 context 名称重新选址；私有 journal 持久化 endpoint。
+- 使用服务器临时空 Docker 客户端配置，避免用户代理/注册表凭据被自动带入；核对实际容器 Env 与不可变镜像及固定变量，无意外变量时才允许 start/exec/cleanup。
+- create 前记录 creating/createAttempted，超时/断连后的空查询保留 journal/输入和 cleanup_required，后续资源出现后按原归属恢复。
+- 六个回归先失败后通过；扩展专项 138 passed/13 个真实资格跳过。Web333、本地工具24、demo-api5、Node控制3及根检查已通过，全量 API 正在运行。目录组件大小写别名的跨平台一致性问题列为延期 Minor；镜像构建/实际资源隔离、进行中的真实崩溃窗口和 macOS 仍无资格证据。
+
+## 固定验证容器：1.6 验收入口与数据兼容
+
+**日期:** 2026-10-18；实现继续，环境由用户稍后准备。
+
+- 增加 `sandbox:verify` 强制入口，复用外部测试库/JUnit 包装；缺环境必须失败，默认 native CI 显式跳过真实 Docker 用例。新增专用 workflow_dispatch 工作流，不修改默认 CI。
+- 增加真实前后端正反例、边界/资源/取消/崩溃恢复和 ScriptedMock → Diff → Docker 验证 → 原生浏览器/预览资格测试；尚未实际运行，不写成已通过。
+- 独立 current SQLite 预置所有旧表代表行和附件 BLOB，原生新验证后旧行/ID/字节、schema/head、完整性和外键保持；初步本地 2 passed/13 个明确环境跳过。强制缺环境入口的预期失败另由子进程断言。
+- Docker 元数据缺字段/超时由失败回归复现并改为结构化 unavailable；不回退 native。完整回归与只读独立审查进行中，1.3/1.6 整体验收仍未勾选。
+
+## 固定验证容器：1.5 版本回执与环境展示
+
+**日期:** 2026-10-18。TaskRun 在原线程冻结启动身份/源码/策略，阻塞后端不持有数据库，失去租约时取消并核对最终发布；未改 Adapter 协议、models/migrations/seed。
+
+- execution 增量记录请求与实际环境、镜像、配方和代次；currentness 只做本地核对，不访问 daemon 或回写旧记录。旧回执切换 Docker 后过期。
+- 共用原生浏览器封装并绑定产物指纹；Docker 命令通过但缺浏览器仍 incomplete。UI 区分原生、Docker、请求但未运行及历史环境缺失。
+- 修正实际 readonly 枚举与非法绑定长期 running；Windows taskkill 孙进程残留经失败回归复现，改为挂起、加入私有 Job Object 后恢复，关闭时终止自有子树。此为生命周期管理，不称 OS 沙箱。
+- 143 项验证/QA/原生浏览器回归、125 项 Adapter/恢复/生命周期回归、18 项 UI 及根 pnpm check 通过；数量重叠，不相加为独立用例。未安装、操作产品库、提交或推送。
+
+## 固定验证容器：1.4 runtime 与归属清理
+
+**日期:** 2026-10-18；容器 CLI 仍只通过测试替身调用，没有本机 Docker 执行。
+
+- 增加固定无网络/资源/挂载 argv、单阶段与总超时、有界持续日志排空、精确取消；退出 137 只记 process_killed，只有 daemon OOM 证据才记确认 OOM。
+- 增加独立跨进程容量锁、创建前私有 journal、PID 启动身份、操作 nonce 与镜像/挂载/策略核对；context 漂移、外来资源或未知 journal 一律拒绝清理，不调用 prune。
+- 严格解析 UTF-8 JSON/base64 产物，逐项核对源码、路径和摘要，拒绝冲突/链接/覆盖/超限；只向新服务器目录独占写入，不使用 tar/docker cp。
+- 专项 62 项通过；额外失败窗口回归先复现并修复 Windows 只读输入清理、镜像不可用时无 journal 残留目录。镜像准备/doctor 相邻回归亦通过，真实隔离、资源 enforcement 和真实重启资格仍待环境。
+
+## 固定验证容器：1.3 镜像准备代码
+
+**日期:** 2026-10-18；按已批准计划继续，真实环境由用户稍后准备。
+
+- 增加 Node/Python 独立 Dockerfile、固定阶段控制程序、纯清单构建 context 和仅操作员可调用的 `sandbox:prepare --output`；拒绝已有、仓库内及链接输出目录，不写 `.env`。
+- 从 Docker Hub 官方 API 取得 Node 22.23.2 / Python 3.12.15 的 linux/amd64 manifest 摘要；从 PyPI JSON 锁定 FastAPI 0.121.3、HTTPX 0.28.1 及传递依赖 wheel 哈希，保存来源及元数据摘要。只查询元数据，没有安装或下载运行依赖。
+- 50 项 API 策略/准备/控制测试及 3 项 Node 控制测试通过。替身覆盖最小 context、宿主依赖不发送、实际 ID 核对和固定 CLI；不证明镜像已成功构建。
+- 本机未运行 prepare、build/pull/container；镜像准备与实际隔离验收保留未完成。
+
+## 固定验证容器：1.2 输入策略与只读 doctor
+
+**日期:** 2026-10-18；用户批准设计和 Native 顺序实现，选择先完成代码、稍后准备环境。
+
+- 提取两种 Profile 共用的受限源码快照，防御性复制并冻结映射；原生 facade 保留 runner 注入、路径/配置/文件预算及宿主依赖策略，Docker 输入捕获不查询宿主运行时依赖。
+- 增加默认 native 的显式后端、不可变 image ID 和本机 context 策略；只读 `sandbox:doctor` 不导入数据库、创建容器或自动修复环境，区分元数据准备与实际隔离。
+- 新测试 29 项及旧验证 67 项，共 96 项通过；测试库/JUnit 均位于外部临时目录。当前 doctor 退出 1、context_missing、runtimeIsolationVerified=false；没有真实 Docker 验收。
+- 在 `codex/container-validation` 隔离工作区实现，未修改产品库、Adapter、models/migrations/seed，未安装、提交或推送。
+
+## 固定验证容器第一阶段：设计与计划草案
+
+**日期:** 2026-10-18；用户要求先完成设计及实施计划，兼容现有 Adapter、保留已有数据。
+
+- 新建 `agenthub-container-validation` 专项：两种内置固定 Profile、默认 native/显式 Docker、双可信镜像、只读 doctor、显式准备、无网络与资源预算、私有归属 journal/取消恢复、受限产物导出和版本绑定回执。
+- 明确 Provider CLI、浏览器和预览仍为原生；旧回执不回写、不增表/列或新迁移，不修改已有工作区、Agent、附件或业务数据。新旧配置和真实 Docker 分别验收，mock/默认 CI 不能证明 OS 隔离。
+- 配套顺序实施计划覆盖 1.2–1.6 的接口、文件、红绿回归、真实容器/数据保留验证与回退；当前只进行文档任务 1.1。`.gitignore` 仅增加这份计划的精确白名单。
+- 本轮只读检查和文档修改，无 Docker/WSL 安装、镜像构建、容器执行、运行代码或产品数据库操作，未提交/推送。文档核验结果见专项 [verification](../openspec/changes/agenthub-container-validation/verification.md)。
 
 ## 工作台与意图边界修复交付
 

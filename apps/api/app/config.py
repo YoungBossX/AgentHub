@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     llm_planner_enabled: bool = False
     llm_planner_provider: str = "disabled"
     llm_planner_timeout_sec: int = 60
+    validation_backend: Literal["native", "docker"] = "native"
+    validation_frontend_image_id: str | None = None
+    validation_backend_image_id: str | None = None
+    validation_docker_context: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

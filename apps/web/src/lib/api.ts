@@ -560,6 +560,18 @@ export type DiffArtifact = {
   stats: DiffStats
 }
 
+export type ValidationExecution = {
+  backend: "native" | "docker"
+  commandsBackend: "native" | "docker" | "not_run"
+  operationId: string
+  runtimePolicyId: string
+  generationFingerprint: string | null
+  imageId?: string | null
+  recipeFingerprint?: string | null
+  contextFingerprint?: string | null
+  reasonCode?: string
+}
+
 export type QaAssessment = {
   schemaVersion: "agenthub.qa.v1"
   taskRunId: string
@@ -574,9 +586,10 @@ export type QaAssessment = {
     checks: Array<{ id: string; status: "passed" | "failed"; detail?: string }>
     browserVersion?: string
     reason?: string
+    execution?: { backend: "native"; inputArtifactFingerprint: string }
   }
   currentness?: "current" | "expired" | "unverifiable"
-  validation?: { eventId: string; status: string; profile: string; sourceFingerprint?: string; policyFingerprint?: string }
+  validation?: { eventId: string; status: string; profile: string; sourceFingerprint?: string; policyFingerprint?: string; execution?: ValidationExecution }
   rules: { status: string; violations: string[]; findings: Array<Record<string, unknown>> }
   model: { status: string; source: "native" | "none" }
   commands: Array<{

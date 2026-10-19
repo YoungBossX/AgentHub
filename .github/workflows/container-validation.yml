@@ -1,0 +1,53 @@
+name: Fixed validation containers (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      AGENTHUB_VALIDATION_DOCKER_CONTEXT: default
+      AGENTHUB_VALIDATION_BROWSER_CHANNEL: chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prepare installed platform dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          python -m venv .venv
+          .venv/bin/python -m pip install -r apps/api/requirements.txt
+      - name: Explicitly prepare trusted images
+        run: pnpm sandbox:prepare --output "$RUNNER_TEMP/agenthub-validation-images"
+      - name: Bind actual local image IDs
+        run: |
+          .venv/bin/python - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          receipt = json.loads((Path(os.environ['RUNNER_TEMP']) / 'agenthub-validation-images/images.json').read_text())
+          keys = {'vite-build-smoke-v1': 'FRONTEND', 'fastapi-contract-v1': 'BACKEND'}
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as stream:
+              stream.write('AGENTHUB_VALIDATION_BACKEND=docker\n')
+              for profile, key in keys.items():
+                  image = receipt['profiles'][profile]['imageId']
+                  assert re.fullmatch(r'sha256:[0-9a-f]{64}', image)
+                  stream.write(f'AGENTHUB_VALIDATION_{key}_IMAGE_ID={image}\n')
+          PY
+      - name: Read-only metadata readiness
+        run: pnpm sandbox:doctor
+      - name: Force real Docker and data qualification
+        run: pnpm sandbox:verify

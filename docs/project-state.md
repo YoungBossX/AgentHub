@@ -5,12 +5,44 @@
 
 ## 当前快照
 
+2026-10-19 分支归并：用户要求只保留 `dev`，并授权验证后纳入本地沙箱实现。
+已提交内容已快进至 `c13ebb9`，GitHub 默认及唯一远程分支为 `dev`；
+该提交的数据库修复 [CI 已通过](https://github.com/YoungBossX/AgentHub/actions/runs/39258085751)。
+以下数据库与容器测试数量分别属于各自原始版本，不能相加或视为合并版本通过。
+合并版本本地根检查、工具24、Web333、demo-api5、控制器3通过；
+后端定向721 passed/17 skipped，真实 Docker 强制资格18 passed/0 skipped，独立审阅无阻断问题。
+产品库未升级，默认仍为 native。后续“未提交”等描述属于原始验收快照；
+当前交付状态以本节及[归并验收](../openspec/changes/agenthub-container-validation/integration-verification.md)为准。
+
 2026-10-19 数据库专项：用户批准 Native 计划，在 E 盘独立 `codex/database-integrity`
 工作树实施外键与事件并发修复，未提交或集成 main。固定 v2、离线升级保留数据、
 跨连接/进程编号和请求锁冲突处理已实现；CLI 和最小 Vite HTTP 闭环通过。
 最终全量验收尚未通过：API 三次均 2595 passed / 2 skipped / 1 个临时 Git 对象损坏失败，
 现有两个 Git 版本均出现该问题，根因未确认。源码、冻结 v1 和备份哈希正常，需独立环境对照。
 产品库仍保留原位且本次未升级，PostgreSQL 尚未实施。详见[本地验收记录](database-integrity-verification.md)。
+
+2026-10-19 沙箱第一阶段：两个可信镜像已正式构建并 inspect，本机真实资格
+**18 passed / 0 skipped / 0 failed**，包括前后端正反例、资源/网络/只读边界、
+跨进程容量、超限导出、运行中取消和 create/check/export 崩溃恢复。
+ScriptedMock 真实修改→Diff→Docker固定验证→原生浏览器需求检查及 Vite 预览通过；
+独立 current 测试库原有行/BLOB、schema 和旧回执保持不变。根检查、完整 Web333、
+本地工具24、demo-api5、Node控制3及strict通过；最后完整原生API **2714 passed /
+19 skipped / 0 failed / 0 errors**，1261.91秒。19项为17项由独立强制入口执行的真实Docker资格、
+1项POSIX大小写语义、1项本轮未暴露瞬态目录属性的Windows探针。首次临时环境异常记录保留。
+
+pnpm 构建已修复有界下载/安装重试及 legacy deploy 的未使用补丁错误；
+固定锁与全局补丁保留，离线生成 demo 依赖子集。局部独立审查无 Critical/Important，
+一项长日志末尾诊断丢失的 Minor 保留。此前失败和回归记录见
+[验收证据](../openspec/changes/agenthub-container-validation/verification.md)。
+
+实际验收环境为 Desktop4.95.0/Engine29.8.2 的 Linux/amd64/cgroup v2，
+不等同独立 Linux/macOS 或真实 Provider 验收。Docker 数据/系统/交换盘、新临时文件和回执
+继续位于 `E:/Docker`；系统少量配置/日志仍可能在 C 盘。1.3/1.6本机验收已完成。
+原沙箱实现位于 `codex/container-validation` 隔离工作区，现已纳入 `dev` 归并版本。
+产品库、三个 Adapter 和默认 native 配置未切换，冻结 v1/v2 迁移未被沙箱改写。
+远程手动容器 CI 尚未触发；合并提交另检查常规完整 CI。见 [操作说明](container-validation.md) /
+[计划](superpowers/plans/2026-10-18-container-validation.md)。上一轮 `8392b7f` 已推送 main，
+[对应 CI](https://github.com/YoungBossX/AgentHub/actions/runs/39125250742) 是旧提交的通过记录。
 
 2026-10-18 交付：用户授权将工作台与意图边界修复提交并推送当前 `main`，随后核验对应
 提交的 Actions。提交前根检查通过，完整测试组成分别为 API 2551 passed / 1 skipped、
@@ -24,8 +56,8 @@ Web 329（串行）、本地工具 24、demo-api 5；两份专项 strict 验证�
 检查/构建/测试、桌面窄屏标题契约和实际浏览器预览通过。界面默认品牌已显示 AgentHub，
 自定义名称和数据保留；29 项 Web 组件串行通过，根检查通过。模型评审未运行，QA
 仍为 incomplete，尚未提交或推送。详见 [修复记录](../openspec/changes/agenthub-intent-boundaries/comma-verification.md)。
-沙箱目前只完成[候选设计](sandbox-options.md)，本机未检测到 Docker 且 WSL 未安装；
-不将现有原生 CLI 限制或工作树隔离称为 Docker 沙箱。
+当时沙箱只完成[候选设计](sandbox-options.md)，未安装 Docker/WSL；
+后续本机容器准备及真实资格以本文最新快照为准，原生 CLI 限制和工作树隔离本身仍不是 Docker 沙箱。
 
 2026-10-18：Alembic 提交 `2072231` 已同步并推送 main，对应 [main CI](https://github.com/YoungBossX/AgentHub/actions/runs/39101829077) 通过。用户随后授权迁移本地现有库，停机前原始备份和迁移前一致备份均保存于仓库外；26 表数据保留、完整性/外键和启动检查通过，实际库现为 `0001_local_baseline`。停机收尾通过现有流程中断 81 个未执行历史任务并核验两条失效预览，记录均保留。
 
@@ -59,6 +91,7 @@ Web 109 passed，demo-api 5 passed。详见
 
 | Change | 当前状态 | 关键证据 |
 |---|---:|---|
+| `agenthub-container-validation` | 1.1–1.6及F1/F2本机完成，未提交/合并 | 正式双镜像、真实Docker18项/零跳过，资源/中断/数据/写Diff预览通过；最后API2714/19环境跳过、Web333、本地工具24、demo-api5、Node控制3、根/strict通过。首轮临时环境异常和成功复验分别保留；数据/临时文件在E盘，未启用产品Docker后端，远程CI未触发。见 [说明](container-validation.md) / [证据](../openspec/changes/agenthub-container-validation/verification.md) |
 | `agenthub-post-migration-workbench` | 1.1–1.2 Complete（本轮 main 交付） | 历史预览恢复；真实 Codex/Diff/预览与版本验收；发送框对齐和默认品牌显示 AgentHub。本轮完整 Web 329、API 2551/1 skip、根检查通过，自定义名和数据保留，模型 QA 未运行，见 [记录](../openspec/changes/agenthub-post-migration-workbench/verification.md) |
 | `agenthub-alembic-migrations` | 1.1 Complete（2072231 已同步 main） | 固定 26 表/23 列兼容、独占备份与副本演练、原值/BLOB 和 seed 配置保留、版本启动检查及旧实现替换；完整实现回归和 main CI 通过。本地真实库随后经用户授权备份、迁移至 current 并启动验证通过，见 [迁移说明](database-migrations.md) / [原实现验收](alembic-migrations-review.md) |
 | `agenthub-intent-boundaries` | 1.1–1.2 已交付；1.3 Complete（本轮 main 交付） | 统一结果/保守边界；1.3 修复逗号引导语，85/85 人工语料与真实 Codex 原措辞闭环通过，本轮完整 API 2551/1 skip。首轮环境失败与隔离重跑、模型 QA 未运行等边界见 [1.3 记录](../openspec/changes/agenthub-intent-boundaries/comma-verification.md)；历史指标仍见 [原记录](intent-boundaries-review.md) |

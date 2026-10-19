@@ -4,7 +4,6 @@ import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
-import stat
 import sys
 import tempfile
 
@@ -12,8 +11,7 @@ from app.automatic_validation import (
     BACKEND_PROFILE, SCHEMA, MAX_BYTES, MAX_FILES, ValidationUnavailable,
     digest, run_command, validation_environment,
 )
-from app.native_reviews import _no_link, _read_file
-from app.target_registry import protected_repository_path_category
+from app.validation_inputs import capture_profile_inputs
 from app.worktrees import repo_root
 
 RESULT_SCHEMA = "agenthub.backend_contract.v2"
@@ -26,42 +24,8 @@ CHECKS = {
 
 
 def capture_backend_source(root):
-    root = root.absolute()
-    for parent in (root, *root.parents):
-        _no_link(parent)
-    if root.resolve() != root:
-        raise ValidationUnavailable("Validation source must be a canonical worktree.")
-    pending = [root / "apps/demo-api"]
-    files, contents = {}, {}
-    seen, size = 0, 0
-    while pending:
-        path = pending.pop()
-        seen += 1
-        if seen > 1024:
-            raise ValidationUnavailable("Backend validation exceeds entry budget.")
-        relative = path.relative_to(root).as_posix()
-        if protected_repository_path_category(relative) is not None:
-            raise ValidationUnavailable("Protected input is not supported by backend validation.")
-        info = _no_link(path)
-        if stat.S_ISDIR(info.st_mode):
-            if path.name in {"__pycache__", ".pytest_cache"}:
-                continue
-            pending.extend(path.iterdir())
-            if seen + len(pending) > 1024:
-                raise ValidationUnavailable("Backend validation exceeds entry budget.")
-            continue
-        if not stat.S_ISREG(info.st_mode):
-            raise ValidationUnavailable("Backend validation requires regular files.")
-        receipt = _read_file(root, path, include_bytes=True)
-        files[relative], contents[relative] = receipt["sha256"], receipt["content"]
-        size += len(receipt["content"])
-        if len(files) > MAX_FILES or size > MAX_BYTES:
-            raise ValidationUnavailable("Backend validation exceeds byte/file budget.")
-    if "apps/demo-api/app/main.py" not in files:
-        raise ValidationUnavailable("Backend application entry is missing.")
-    # Native modules must come from the trusted installed runtime, never the target.
-    if any(Path(path).suffix.lower() in {".pyd", ".so", ".dll", ".pyc", ".pth"} for path in files):
-        raise ValidationUnavailable("Executable dependency inputs are unsupported by the backend profile.")
+    snapshot = capture_profile_inputs(root, BACKEND_PROFILE)
+    files, contents = dict(snapshot.files), dict(snapshot.contents)
     try:
         versions = {name: importlib.metadata.version(name)
                     for name in ("fastapi", "pydantic", "starlette", "httpx", "anyio")}
@@ -69,6 +33,7 @@ def capture_backend_source(root):
         raise ValidationUnavailable("Installed FastAPI validation dependencies are unavailable.") from exc
     platform = repo_root()
     policy = {
+        "inputPolicy": dict(snapshot.policy_inputs),
         "profile": BACKEND_PROFILE, "checks": CHECKS, "python": sys.version,
         "executable": hashlib.sha256(Path(sys.executable).read_bytes()).hexdigest(),
         "dependencies": versions,

@@ -4,7 +4,10 @@
 基线为 `8392b7fb02584ba6b6210705d4c8d4d5513b794e`；工作树位于
 `E:\Docker\AgentHub\worktrees\database-integrity`，分支 `codex/database-integrity`。
 用户已授权提交、推送本独立分支，并检查 GitHub CI，作为本地失败的独立环境对照。
-远程验证结果待记录；不合并 main，不升级或搬动产品库，不实施 PostgreSQL。
+`c13ebb9` 的 [独立 CI 已通过](https://github.com/YoungBossX/AgentHub/actions/runs/39258085751)：
+API2550 passed/48 skipped、Web329、工具24、demo-api5；本机 Git 对象问题未被认定已修复。
+用户随后授权归并到唯一 `dev` 并纳入沙箱实现；该归并版另行验证。
+不升级或搬动产品库，不实施 PostgreSQL。
 
 ## 实现边界
 
