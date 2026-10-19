@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 import subprocess
 import sys
@@ -8,7 +9,8 @@ from typing import Optional
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 import pytest
 import app.main as main_module
@@ -102,13 +104,14 @@ def create_preview_fixture(db: DbSession, worktree_path: Path) -> tuple[str, str
         health_status="healthy",
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(task)
     db.add(task_run)
     db.add(preview_artifact)
     db.add(preview)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(task_run)
     db.refresh(preview)
     return preview.id, task_run.id
@@ -130,7 +133,7 @@ def add_diff_and_review(
         status="ready",
     )
     db.add(diff_artifact)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(diff_artifact)
     diff = Diff(
         artifact_id=diff_artifact.id,
@@ -148,7 +151,7 @@ def add_diff_and_review(
     )
     db.add(diff)
     db.add(review_artifact)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(review_artifact)
     review = Review(
         artifact_id=review_artifact.id,
@@ -162,7 +165,7 @@ def add_diff_and_review(
         suggested_changes_json="[]",
     )
     db.add(review)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     return diff_artifact.id, review_artifact.id
 
 

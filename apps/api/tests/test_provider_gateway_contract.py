@@ -5,9 +5,11 @@ from typing import Optional
 import pytest
 
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, Session as DbSession, create_engine, select
+from sqlmodel import SQLModel, Session as DbSession, select
+from app.db_engine import create_runtime_engine as create_engine
 
-from app.models import TaskRun, TaskRunEvent
+from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
+from fixture_database import flush_fixture_rows
 from app.provider_configs import list_provider_configs
 from app.provider_gateway import (
     CODING_ADAPTER_TYPES,
@@ -255,6 +257,15 @@ def test_provider_resolver_does_not_use_planner_runtime_provider() -> None:
     )
 
 
+def seed_provider_task(db):
+    workspace = Workspace(name='Provider fixture', root_path='apps/demo', repo_url='local://apps/demo', default_branch='main')
+    session = Session(workspace_id=workspace.id, title='Provider fixture', bound_branch='main', worktree_path='.worktrees/session')
+    agent = Agent(id='agent-1', name='Provider fixture', role='frontend', adapter_type='codex', provider='local')
+    task = Task(id='task-1', session_id=session.id, assigned_agent_id=agent.id, title='Provider fixture', intent_type='frontend_change')
+    db.add_all([workspace, session, agent, task])
+    flush_fixture_rows(db)
+
+
 def test_record_provider_resolution_event_updates_task_run_metrics() -> None:
     engine = create_engine(
         "sqlite://",
@@ -265,6 +276,7 @@ def test_record_provider_resolution_event_updates_task_run_metrics() -> None:
     plan = ProviderResolver().resolve(_context(role="frontend"))
 
     with DbSession(engine) as db:
+        seed_provider_task(db)
         task_run = TaskRun(
             task_id="task-1",
             agent_id="agent-1",
@@ -428,6 +440,7 @@ def test_record_provider_health_check_event_updates_task_run_metrics() -> None:
     )
 
     with DbSession(engine) as db:
+        seed_provider_task(db)
         task_run = TaskRun(
             task_id="task-1",
             agent_id="agent-1",
@@ -539,6 +552,7 @@ def test_provider_capacity_circuit_and_rate_limit_events_update_metrics() -> Non
     )
 
     with DbSession(engine) as db:
+        seed_provider_task(db)
         task_run = TaskRun(
             task_id="task-1",
             agent_id="agent-1",
@@ -701,6 +715,7 @@ def test_provider_error_and_fallback_events_are_recorded_honestly() -> None:
     )
 
     with DbSession(engine) as db:
+        seed_provider_task(db)
         task_run = TaskRun(
             task_id="task-1",
             agent_id="agent-1",

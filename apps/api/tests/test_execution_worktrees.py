@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import asyncio
 import json
 import subprocess
@@ -6,7 +7,8 @@ from pathlib import Path
 import pytest
 from fastapi import BackgroundTasks
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 import app.run_engine as run_engine
 from app.adapters import AdapterRun
@@ -54,10 +56,11 @@ def branch_db(tmp_path, monkeypatch):
         workspace = Workspace(name="Isolated writes", repo_url="local://test", root_path=str(source), default_branch="main")
         session = Session(workspace_id=workspace.id, title="Branch session", worktree_path=str(source), bound_branch="main")
         db.add(workspace)
+        db.flush([workspace])
         db.add(session)
         for role in ("frontend", "backend"):
             db.add(Agent(name=role, role=role, adapter_type="scripted_mock", provider="local"))
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         yield db, session, source
     engine.dispose()
 
@@ -75,7 +78,7 @@ def task_for(db, session, role, *, isolated=True, dependencies=()):
         }),
     )
     db.add(task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     return task
 
 

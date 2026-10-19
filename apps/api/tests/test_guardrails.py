@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -6,7 +7,8 @@ import pytest
 import app.guardrails as guardrails_module
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.guardrails import (
     ApprovalRequestPayload,
@@ -66,11 +68,12 @@ def create_task_run(db: DbSession, role: str = "frontend") -> tuple[Task, TaskRu
         worktree_path=session.worktree_path,
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(task)
     db.add(task_run)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(task)
     db.refresh(task_run)
     return task, task_run

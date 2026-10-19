@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from dataclasses import replace
 
@@ -6,7 +7,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.agent_profiles import profile_for_draft
 from app.agent_runtime_config import validate_runtime_config, upsert_runtime_config
@@ -36,7 +38,7 @@ def db():
         workspace = Workspace(name="Custom workspace", root_path="apps/demo", repo_url="local://apps/demo", default_branch="main")
         session = Session(workspace_id=workspace.id, title="Custom session", bound_branch="main", worktree_path=".worktrees/custom-test")
         agents = [Agent(name=role, role=role, adapter_type="codex" if role == "frontend" else "scripted_mock", provider="local") for role in ["frontend", "qa", "orchestrator"]]
-        db.add_all([workspace, session, *agents]); db.commit()
+        db.add_all([workspace, session, *agents]); flush_fixture_rows(db); db.commit()
         yield db
     engine.dispose()
 
@@ -63,7 +65,7 @@ def task(db, profile, *, explicit=True):
     plan = {"targetId": "demo-frontend", "assignedRole": profile.role, "files": ["apps/demo/src/App.tsx"]}
     if explicit: plan["agentProfileId"] = profile.id
     result = Task(session_id=db.exec(select(Session)).first().id, title="Change demo button", intent_type="review" if role == "qa" else "frontend_change", assigned_agent_id=agent.id, plan_json=json.dumps(plan))
-    db.add(result); db.commit()
+    db.add(result); flush_fixture_rows(db); db.commit()
     return result
 
 

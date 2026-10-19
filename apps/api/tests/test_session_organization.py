@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -5,11 +6,12 @@ from datetime import datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlmodel import SQLModel, Session as DbSession, create_engine, select
+from sqlmodel import SQLModel, Session as DbSession, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from migration_fixtures import migrate_engine
 from app.main import app, get_db
-from app.models import Message, Session, Task, TaskRun, Workspace
+from app.models import Agent, Message, Session, Task, TaskRun, Workspace
 from app.repositories import next_session_title
 from app.routes.sessions import organize_session
 from app.schemas import SessionOrganizationRequest
@@ -26,7 +28,7 @@ def organization(tmp_path):
         sessions = [Session(workspace_id=workspace.id, title=f"Session {index}", bound_branch="main", worktree_path=str(tmp_path / str(index)), created_at=now, updated_at=now, last_message_at=now+timedelta(minutes=index)) for index in range(3)]
         foreign = Session(workspace_id=other.id, title="Foreign", bound_branch="main", worktree_path=str(tmp_path / "other"))
         messages = [Message(session_id=session.id, sender_type="user", content_md=f"Key {index}", context_json=json.dumps({"lineage": index}), created_at=now+timedelta(minutes=index)) for index, session in enumerate(sessions)]
-        db.add_all([workspace, other, *sessions, foreign, *messages]); db.commit()
+        db.add_all([workspace, other, *sessions, foreign, *messages]); flush_fixture_rows(db); db.commit()
         ids = {"workspace": workspace.id, "sessions": [s.id for s in sessions], "messages": [m.id for m in messages]}
     def provide():
         with DbSession(engine) as db: yield db
@@ -103,9 +105,12 @@ def test_missing_and_foreign_message_boundaries(organization):
 def test_concurrent_column_edits_merge_and_leave_running_task_unchanged(organization):
     client, engine, ids = organization; sid = ids["sessions"][0]
     with DbSession(engine) as db:
-        task = Task(session_id=sid, title="Live", intent_type="frontend_change", assigned_agent_id="agent", plan_json='{"targetId":"demo-frontend"}')
-        run = TaskRun(task_id=task.id, agent_id="agent", state="streaming", worktree_path=db.get(Session, sid).worktree_path)
-        db.add_all([task, run]); db.commit(); run_id = run.id; before = run.model_dump()
+        agent = Agent(name="Live fixture", role="frontend", adapter_type="scripted_mock", provider="local")
+        task = Task(session_id=sid, title="Live", intent_type="frontend_change", assigned_agent_id=agent.id, plan_json='{"targetId":"demo-frontend"}')
+        run = TaskRun(task_id=task.id, agent_id=agent.id, state="streaming", worktree_path=db.get(Session, sid).worktree_path)
+        db.add_all([agent, task, run])
+        flush_fixture_rows(db)
+        db.commit(); run_id = run.id; before = run.model_dump()
     def organize(field):
         with DbSession(engine) as db: return organize_session(sid, SessionOrganizationRequest(**{field: True}), db).id
     with ThreadPoolExecutor(max_workers=2) as pool: assert list(pool.map(organize, ["pinned", "archived"])) == [sid, sid]
@@ -117,8 +122,12 @@ def test_concurrent_column_edits_merge_and_leave_running_task_unchanged(organiza
 
 
 def test_old_sqlite_upgrade_preserves_rows_and_is_idempotent(tmp_path):
+    from migrations.baseline_v1 import frozen_metadata
     engine = create_engine(f"sqlite:///{tmp_path / 'legacy.sqlite3'}")
     with engine.begin() as conn:
+        workspace_table = frozen_metadata().tables['workspace']
+        workspace_table.create(conn)
+        conn.execute(workspace_table.insert().values(id='ws', name='Legacy', root_path='apps/demo', repo_url='local://apps/demo', default_branch='main', created_at=datetime(2026, 1, 1)))
         conn.execute(text("CREATE TABLE session (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, title TEXT NOT NULL, session_type TEXT NOT NULL, bound_branch TEXT NOT NULL, worktree_path TEXT NOT NULL, status TEXT NOT NULL, last_message_at DATETIME, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)"))
         conn.execute(text("CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, sender_type TEXT NOT NULL, sender_id TEXT, content_md TEXT NOT NULL, message_kind TEXT NOT NULL, parent_message_id TEXT, stream_state TEXT NOT NULL, created_at DATETIME NOT NULL)"))
         conn.execute(text("INSERT INTO session VALUES ('s','ws','Legacy','demo','main','original-worktree','active',NULL,'2026-01-01','2026-01-01')"))

@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 import shutil
 import subprocess
@@ -10,7 +11,8 @@ import app.main as main_module
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.artifact_versions import record_artifact_version
 from app.diffs import (
@@ -108,10 +110,11 @@ def create_run_fixture(db: DbSession, worktree_path: Path) -> str:
         assigned_agent_id=agent.id,
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
 
     task_run = create_task_run(db, task.id, adapter_type="scripted_mock")
     assert task_run.base_ref is not None
@@ -260,6 +263,7 @@ def test_external_task_run_diff_uses_allowed_paths_and_excludes_denied(
     )
     agent = Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local")
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.commit()
@@ -344,6 +348,7 @@ def test_non_git_external_task_run_diff_uses_pre_run_file_snapshot(
     )
     agent = Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local")
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.commit()
@@ -451,6 +456,7 @@ def test_legacy_non_git_external_task_run_without_snapshot_falls_back_to_empty_b
     )
     agent = Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local")
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.commit()

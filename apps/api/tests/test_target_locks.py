@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -12,7 +13,8 @@ import pytest
 from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 from sqlmodel import select
 
 from app.models import (
@@ -2321,9 +2323,10 @@ def seed_lock_run(
         ),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(session)
     db.refresh(task)
     return session, create_task_run(db, task.id)

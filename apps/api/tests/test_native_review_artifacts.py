@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import asyncio
 import hashlib
 import json
@@ -7,7 +8,8 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.claude_code_adapter import ClaudeCodeAdapter
 from app.custom_agents import CustomAgentInput, save_custom_agent
@@ -45,7 +47,7 @@ def fixture(tmp_path):
         workspace = Workspace(name="Review", root_path="apps/demo", repo_url="local://apps/demo", default_branch="main")
         session = Session(workspace_id=workspace.id, title="Native review", bound_branch="main", worktree_path=str(root))
         agent = Agent(name="QA", role="qa", adapter_type="scripted_mock", provider="local")
-        db.add_all([workspace, session, agent]); db.commit()
+        db.add_all([workspace, session, agent]); flush_fixture_rows(db); db.commit()
         profile = save_custom_agent(db, workspace_id=workspace.id, value=CustomAgentInput(
             display_name="Native reviewer", mention_alias="native-reviewer", role="review",
             provider_id="local-claude-code-cli", tool_policy="claude_read_only",
@@ -55,7 +57,7 @@ def fixture(tmp_path):
         task = Task(session_id=session.id, title="Review source", intent_type="review", assigned_agent_id=agent.id,
                     plan_json=json.dumps({"targetId": "demo-frontend", "assignedRole": "review",
                                           "agentProfileId": profile.id, "files": [SOURCE]}))
-        db.add(task); db.commit()
+        db.add(task); flush_fixture_rows(db); db.commit()
         run = create_task_run(db, task.id)
         yield db, run, root, source
     engine.dispose()

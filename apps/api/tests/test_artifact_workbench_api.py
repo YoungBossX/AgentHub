@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -5,7 +6,8 @@ from contextlib import contextmanager
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.main import app, get_db
 from app.models import Agent, Artifact, ArtifactVersion, Session, Task, TaskRun, Workspace
@@ -145,12 +147,13 @@ def _seed_artifact_fixture(
             ),
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(agent)
         db.add(session)
         db.add(task)
         db.add(task_run)
         db.add(artifact)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         db.refresh(session)
         db.refresh(artifact)
         version = ArtifactVersion(
@@ -160,6 +163,6 @@ def _seed_artifact_fixture(
             summary="Initial artifact version.",
         )
         db.add(version)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         db.refresh(version)
         return session.id, artifact.id, version.id

@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import threading
+from fixture_database import flush_fixture_rows
 
 import pytest
 from sqlmodel import select
@@ -241,16 +242,20 @@ def test_native_lifecycle_with_real_validation_and_stale_api_overlay(fixture, mo
 
 
 def test_receipt_survives_sqlite_reopen_and_rechecks_source(fixture, tmp_path):
-    from sqlmodel import SQLModel, Session as DbSession, create_engine
+    from sqlmodel import SQLModel, Session as DbSession
+    from app.db_engine import create_runtime_engine as create_engine
     from app.models import Agent, Session, Task, TaskRun, Workspace
     db, run, root, source = fixture
     value, event = make_receipt(db, run, root)
     engine = create_engine(f"sqlite:///{(tmp_path / 'validation.sqlite').as_posix()}")
     SQLModel.metadata.create_all(engine)
     with DbSession(engine) as persisted:
-        for model in (Workspace, Session, Agent, Task, TaskRun):
-            for row in db.exec(select(model)).all(): persisted.add(model(**row.model_dump()))
-        persisted.add(TaskRunEvent(**event.model_dump()))
+        import app.models as models
+        for model in vars(models).values():
+            if isinstance(model, type) and issubclass(model, SQLModel) and getattr(model, '__table__', None) is not None:
+                for row in db.exec(select(model)).all():
+                    persisted.add(model(**{c.key: getattr(row, c.key) for c in model.__table__.columns}))
+        flush_fixture_rows(persisted)
         persisted.commit()
     engine.dispose()
     engine = create_engine(f"sqlite:///{(tmp_path / 'validation.sqlite').as_posix()}")

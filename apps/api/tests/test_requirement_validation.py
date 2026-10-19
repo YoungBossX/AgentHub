@@ -4,6 +4,7 @@ import shutil
 import threading
 
 import pytest
+from fixture_database import flush_fixture_rows
 
 from app.automatic_validation import validate_copy, validation_for_run, validation_currentness, digest
 from app.requirement_validation import VERSION, requirement_contract, check_ids, parse_browser_result
@@ -190,7 +191,9 @@ def test_scripted_execution_runs_real_browser_acceptance(mock_db, app_copy, monk
     agent = Agent(name="Frontend", role="frontend", adapter_type="scripted_mock", provider="local")
     task = Task(session_id=session.id, title="Build login page", intent_type="frontend_change", assigned_agent_id=agent.id,
                 plan_json=json.dumps({"targetId": "demo-frontend", "target": "login_page", "files": ["apps/demo/src/App.tsx", "apps/demo/src/styles.css"]}))
-    mock_db.add_all([workspace, session, agent, task]); mock_db.commit()
+    mock_db.add_all([workspace, session, agent, task])
+    flush_fixture_rows(mock_db)
+    mock_db.commit()
     run = create_task_run(mock_db, task.id)
     assert engine._prepare_claimed_task_run_for_adapter(mock_db, run, run.runner_id)
     completed = asyncio.run(execute_task_run(mock_db, run, adapter_type="scripted_mock", adapter=ScriptedMockAdapter(), supervisor=RunSupervisor()))

@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 import copy
 from contextlib import contextmanager
@@ -5,7 +6,8 @@ from datetime import datetime, timedelta
 
 import pytest
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, Session as DbSession, create_engine
+from sqlmodel import SQLModel, Session as DbSession
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.context_pack import build_session_context_pack
 from app.llm_planner import build_llm_planner_input
@@ -26,7 +28,7 @@ def conversation():
         session = Session(workspace_id=workspace.id, title="Pinned context", bound_branch="main", worktree_path=".worktrees/pinned-context")
         frontend = Agent(name="Frontend", role="frontend", adapter_type="codex", provider="local")
         db.add_all([workspace, session, frontend, Agent(name="Orchestrator", role="orchestrator", adapter_type="scripted_mock", provider="local")])
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         yield db, session, frontend
     engine.dispose()
 
@@ -88,7 +90,10 @@ def test_other_session_excluded_and_equal_pin_timestamps_use_insertion_order():
         stamp = datetime(2026, 10, 8)
         first = Message(id="z-first", session_id=session.id, sender_type="user", content_md="First", created_at=stamp, pinned_at=stamp)
         second = Message(id="a-second", session_id=session.id, sender_type="user", content_md="Second", created_at=stamp, pinned_at=stamp)
-        other = Message(session_id="another-session", sender_type="user", content_md="OTHER_SESSION_PRIVATE_REFERENCE", pinned_at=stamp + timedelta(days=1))
+        other_session = Session(workspace_id=session.workspace_id, title="Other pins", bound_branch="main", worktree_path=".worktrees/other-pins")
+        db.add(other_session)
+        db.flush([other_session])
+        other = Message(session_id=other_session.id, sender_type="user", content_md="OTHER_SESSION_PRIVATE_REFERENCE", pinned_at=stamp + timedelta(days=1))
         for message in (first, second, other):
             db.add(message)
             db.commit()

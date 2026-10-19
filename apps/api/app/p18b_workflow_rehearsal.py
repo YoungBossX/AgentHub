@@ -9,7 +9,8 @@ from typing import Any
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import create_engine, select
+from sqlmodel import select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.db_migrations import prepare_database
 from app.context_pack import build_session_context_pack

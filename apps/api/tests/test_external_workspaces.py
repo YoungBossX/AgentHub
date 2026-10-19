@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -6,7 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.external_workspaces import DEFAULT_EXTERNAL_DENIED_PATHS
 from app.main import app, get_db
@@ -53,8 +55,9 @@ def client() -> Iterator[TestClient]:
             worktree_path=".worktrees/external-target-session",
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(session)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
 
     def override_db() -> Iterator[DbSession]:
         with DbSession(engine) as db:

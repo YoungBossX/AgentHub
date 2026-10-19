@@ -1,10 +1,12 @@
+from fixture_database import flush_fixture_rows
 import json
 from collections.abc import Iterator
 
 import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.models import Agent, Session, Task, Workspace
 from app.target_registry import DEMO_BACKEND_TARGET_ID, DEMO_FRONTEND_TARGET_ID
@@ -38,10 +40,11 @@ def db() -> Iterator[DbSession]:
             Agent(name="QA Agent", role="qa", adapter_type="scripted_mock", provider="local"),
         ]
         session.add(workspace)
+        session.flush([workspace])
         session.add(agent_session)
         for agent in agents:
             session.add(agent)
-        session.commit()
+        flush_fixture_rows(session); session.commit()
         yield session
 
 
@@ -136,6 +139,6 @@ def _task_for_role(
         plan_json=json.dumps(plan, separators=(",", ":")),
     )
     db.add(task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(task)
     return task

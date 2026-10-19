@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 import subprocess
 from collections.abc import Iterator
@@ -5,7 +6,8 @@ from pathlib import Path
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 import pytest
 from app.deployments import (
@@ -292,12 +294,13 @@ def _seed_mixed_provider_graph(
         depends_on_task_ids=json.dumps([backend_task.id], separators=(",", ":")),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(backend)
     db.add(frontend)
     db.add(backend_task)
     db.add(frontend_task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(backend_task)
     db.refresh(frontend_task)
     return workspace, session, backend_task, frontend_task

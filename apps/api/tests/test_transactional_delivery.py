@@ -2,7 +2,8 @@ import json
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.models import TaskRunEvent
 from app.models import TaskRun
@@ -142,6 +143,8 @@ def test_rollback_decision_refuses_without_checkpoint() -> None:
 
 
 def test_record_delivery_decision_event_persists_payload() -> None:
+    from fixture_database import flush_fixture_rows
+    from app.models import Workspace, Agent, Session as AgentHubSession, Task
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -149,6 +152,12 @@ def test_record_delivery_decision_event_persists_payload() -> None:
     )
     SQLModel.metadata.create_all(engine)
     with DbSession(engine) as db:
+        workspace = Workspace(name='delivery', repo_url='local://', root_path='.', default_branch='main')
+        session = AgentHubSession(workspace_id=workspace.id, title='delivery', bound_branch='main', worktree_path='/tmp/worktree')
+        db.add_all([workspace, session,
+                    Agent(id='agent-1', name='delivery', role='frontend', adapter_type='scripted_mock', provider='local'),
+                    Task(id='task-1', session_id=session.id, title='delivery', intent_type='frontend_change')])
+        flush_fixture_rows(db)
         task_run = _task_run(metrics={})
         db.add(task_run)
         db.commit()

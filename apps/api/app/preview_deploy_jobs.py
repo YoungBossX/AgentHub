@@ -263,6 +263,10 @@ def _mark_job_failed(
 
 
 def _append_job_event(db: DbSession, job: PreviewDeployJob, event_type: str) -> None:
+    # A legacy orphan is still recorded as a failed job. It cannot own a new
+    # TaskRunEvent, and recovery must not synthesize a successful source run.
+    if db.get(TaskRun, job.source_task_run_id) is None:
+        return
     append_task_run_event(
         db,
         task_run_id=job.source_task_run_id,

@@ -1,10 +1,12 @@
+from fixture_database import flush_fixture_rows
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.external_memory_scan import (
     planned_external_memory_sources,
@@ -119,9 +121,10 @@ def _seed(db: DbSession) -> tuple[Workspace, Session]:
         worktree_path=".worktrees/external-memory-scan-session",
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(Agent(name="Orchestrator", role="orchestrator", adapter_type="scripted_mock", provider="local"))
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(workspace)
     db.refresh(session)
     return workspace, session

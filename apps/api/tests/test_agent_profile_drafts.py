@@ -1,10 +1,12 @@
+from fixture_database import flush_fixture_rows
 from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.main import app, get_db
 from app.models import Agent, AgentProfileDraft, Workspace
@@ -26,6 +28,7 @@ def client() -> Iterator[TestClient]:
             default_branch="main",
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(
             Agent(
                 name="QA Agent",
@@ -42,7 +45,7 @@ def client() -> Iterator[TestClient]:
                 default_branch="main",
             )
         )
-        db.commit()
+        flush_fixture_rows(db); db.commit()
 
     def override_db() -> Iterator[DbSession]:
         with DbSession(engine) as db:

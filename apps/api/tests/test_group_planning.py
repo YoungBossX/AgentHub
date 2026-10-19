@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 import asyncio
 import shutil
@@ -8,7 +9,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.custom_agents import CustomAgentInput, save_custom_agent
 from app.external_workspaces import ExternalWorkspaceRegistration, register_external_project_target
@@ -33,14 +35,14 @@ def db(monkeypatch):
         workspace = Workspace(name="Group", root_path="apps/demo", repo_url="local://apps/demo", default_branch="main")
         session = Session(workspace_id=workspace.id, title="Group", bound_branch="main", worktree_path=".worktrees/group-test")
         agents = [Agent(name=role, role=role, adapter_type="scripted_mock" if role in {"qa", "orchestrator"} else "codex", provider="local") for role in ["orchestrator", "frontend", "backend", "qa"]]
-        db.add_all([workspace, session, *agents]); db.commit()
+        db.add_all([workspace, session, *agents]); flush_fixture_rows(db); db.commit()
         yield db
     engine.dispose()
 
 
 def message(db, content):
     result = Message(session_id=db.exec(select(Session)).one().id, sender_type="user", content_md=content, context_json='{"groupExecution":"manual"}')
-    db.add(result); db.commit()
+    db.add(result); flush_fixture_rows(db); db.commit()
     return result
 
 

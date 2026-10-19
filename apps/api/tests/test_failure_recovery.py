@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import asyncio
 import json
 import shutil
@@ -11,7 +12,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.main import app, get_db, get_preview_service
 from app.models import Agent, Artifact, Deployment, Diff, Session, Task, TaskRun, Workspace
@@ -94,10 +96,11 @@ def seed_codex_task(db: DbSession, worktree_path: Path) -> str:
         ),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(task)
     return task.id
 

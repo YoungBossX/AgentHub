@@ -5,7 +5,8 @@ import subprocess
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.p18b_workflow_rehearsal import (
     EVIDENCE_SCHEMA_VERSION,

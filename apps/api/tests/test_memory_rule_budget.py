@@ -1,9 +1,11 @@
+from fixture_database import flush_fixture_rows
 import json
 from contextlib import contextmanager
 
 import pytest
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.context_pack import build_session_context_pack
 from app.llm_planner import build_llm_planner_input
@@ -25,7 +27,7 @@ def world():
         frontend = Agent(name="Frontend", role="frontend", adapter_type="codex", provider="local")
         db.add_all([workspace, session, frontend,
                     Agent(name="Orchestrator", role="orchestrator", adapter_type="scripted_mock", provider="local")])
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         yield db, workspace, session, frontend
     engine.dispose()
 
@@ -163,7 +165,10 @@ def test_missing_scope_owner_cannot_be_promoted_to_workspace_rule(scope):
 
 def test_other_workspace_rules_cannot_enter_frozen_candidate_selection():
     with world() as (db, workspace, _session, _frontend):
-        foreign = remember(db, workspace, workspace_id="another-workspace")
+        other_workspace = Workspace(name="Other rules", root_path="apps/demo", repo_url="local://apps/demo", default_branch="main")
+        db.add(other_workspace)
+        db.flush([other_workspace])
+        foreign = remember(db, workspace, workspace_id=other_workspace.id)
         unscoped = remember(db, workspace, workspace_id=None)
         selected = select_memory_context(db, query="compatibility", workspace_id=workspace.id, candidates=[foreign, unscoped])
         assert selected.to_context() == []

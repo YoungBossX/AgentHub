@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -5,7 +6,8 @@ from datetime import timedelta
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace
 from app.models import utc_now
@@ -217,11 +219,12 @@ def seed_recovery_tasks(db: DbSession) -> tuple[Workspace, Session, Task, Task]:
         depends_on_task_ids=json.dumps([upstream.id], separators=(",", ":")),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(upstream)
     db.add(downstream)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(upstream)
     db.refresh(downstream)
     return workspace, session, upstream, downstream

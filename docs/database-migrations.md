@@ -1,7 +1,7 @@
 # SQLite 数据库版本迁移
 
 平台保留 SQLModel 和 SQLite；结构变更由冻结的 Alembic revision 管理。
-当前初始版本为 `0001_local_baseline`。历史 revision 不读取未来的 ORM 定义，
+当前 head 为 `0002_database_integrity`，初始版本 `0001_local_baseline` 保持冻结。历史 revision 不读取未来的 ORM 定义，
 也不会运行 Agent、目标源码或 seed。此功能是开发者离线维护，不是 Agent 工具。
 
 ## 新环境和已有库
@@ -28,12 +28,12 @@ issues；空库/current 返回 0，可识别旧库返回 2，不兼容返回 1�
 4. 执行离线升级，核对结果，再启动工作区。
 
 ```powershell
-pnpm db:migrate --backup-dir 'E:\AgentHubBackups\migration-20261018-01' --api-port 8000
+pnpm db:migrate --backup-dir 'E:\Docker\AgentHub\migration-backup-new' --api-port 8000
 pnpm db:status
 pnpm dev:local
 ```
 
-示例路径只用于说明，实施验证没有在此路径或实际产品库运行迁移。自定义 API 端口
+示例路径只用于说明，目录必须尚不存在，临时目录也应先配置到 `E:\Docker`。本专项不自动升级实际产品库。自定义 API 端口
 必须同样传入 `--api-port`。重复对 current 库执行升级为无操作，不新增备份或重置数据。
 `db:init`/`db:seed` 只初始化空库或为 current 库补缺失种子；它们不代替旧库升级。
 已有 Agent 名称、启用状态、适配器、提示词，以及 Workspace 路径和分支会被保留。
@@ -45,12 +45,15 @@ API 捕获含 WAL 的已提交数据。备份核验后在另一个临时副本�
 revision 升级，逐表核对所有原列值、行标识及附件 BLOB，再提交版本。
 
 支持现行无版本库、固定历史表定义、六组共 23 个已知补列，以及冻结的缺失表/索引。
-TEXT/VARCHAR 和已知历史 server default 差异按兼容契约处理；不会重建已有业务表
-来统一拼写。历史 session/message 的 nullable TEXT PRIMARY KEY 变体仅允许非空
-已有 ID；不把其他随意移除的 FK 当成正常旧库。
+TEXT/VARCHAR 和已知历史 server default 差异按兼容契约处理，不为统一拼写重建表。
+v2 只对契约已允许的缺失外键及历史 nullable PRIMARY KEY 变体执行固定重建，
+显式复制所有原列并核验原值；规范 v1 表无需重建。临时副本位于新备份目录内。
+历史 ID 必须非空；不把其他随意移除的 FK 当成正常旧库。
 
 缺少必需业务字段的两三列测试表、未知表/列/视图/触发器、同名不兼容索引、未知版本、
-重复唯一值、已声明的 FK 违反或活动运行会被拒绝，不删除记录、不补造缺失业务值。
+重复唯一值、孤立引用、非法事件序号或活动运行会被拒绝，不删除记录、不补造缺失业务值。
+审计按冻结定义反查全部父子关系，包括旧 DDL 根本未声明的外键。事件按
+`task_run_id, sequence` 建唯一索引；历史重复项只报告，不自动重编号。
 拒绝不是数据清理任务。维护锁与写保留也不等于能阻止任意外部文件编辑器。
 
 ## 回执和失败处理
@@ -72,7 +75,7 @@ DDL/验证失败保留源库、备份及失败阶段，版本不能冒充成功�
 需要核验/恢复备份时，先保留原库和全部回执：
 
 ```powershell
-$migrationSnapshot = 'E:\AgentHubBackups\migration-20261018-01'
+$migrationSnapshot = 'E:\Docker\AgentHub\migration-backup-new'
 $migrationManifest = Get-Content -LiteralPath (Join-Path $migrationSnapshot 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $migrationHash = (Get-FileHash -LiteralPath (Join-Path $migrationSnapshot 'database.sqlite3') -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($migrationHash -ne $migrationManifest.backupSha256) { throw 'Backup hash mismatch; do not restore.' }
@@ -86,7 +89,17 @@ if ($migrationHash -ne $migrationManifest.backupSha256) { throw 'Backup hash mis
 
 ## 开发与回归
 
-改 ORM 后必须新增经过审阅的 revision，不能重新生成已交付的 schema_v1.json。
+业务引擎对每个 SQLite 物理连接开启并确认外键。只有拥有独占迁移事务的协调器，
+在固定表重建确有需要时，才在 `BEGIN IMMEDIATE` 之前设置该专用连接的外键开关，
+提交或回滚后恢复；业务执行不会关闭约束。
+
+事件追加先取得 SQLite 写保留，再读取最大序号和分配 SSE 时间游标；写保留持续到
+调用方提交或回滚。stage 只刷新事件本身，新父记录由调用方显式刷新。状态、审批和
+事件可在同一事务提交，避免提前刷新状态破坏完成判定。锁超时或旧 WAL 快照返回
+`EVENT_WRITE_CONFLICT`，API 为 HTTP 409；事务所有者须回滚后重建事务，不能自动重跑
+Provider、文件修改或部署等外部操作。
+
+改 ORM 后必须新增经过审阅的 revision，不能重新生成已交付的 schema_v1.json 或 schema_v2.json。
 裸 Alembic CLI 的 upgrade/stamp/offline SQL 被 env guard 拒绝，应使用协调器；该 guard
 是应用内流程约束，不宣称限制具备任意 Python/SQL 权限的宿主操作者。
 

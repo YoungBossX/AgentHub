@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 
 import pytest
+from fixture_database import flush_fixture_rows
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import inspect, text
@@ -15,7 +16,16 @@ from test_scripted_mock_adapter import db
 
 
 @pytest.fixture
-def history(db):
+def history(db, request):
+    historical_engine = None
+    if getattr(request, 'param', None) == 'frozen_v1':
+        from app.db_engine import create_runtime_engine
+        from migrations.baseline_v1 import frozen_metadata
+        from sqlalchemy.pool import StaticPool
+        from sqlmodel import Session as DbSession
+        historical_engine = create_runtime_engine('sqlite://', poolclass=StaticPool)
+        frozen_metadata().create_all(historical_engine)
+        db = DbSession(historical_engine)
     workspace = Workspace(name="Paging", root_path="fixture", repo_url="local://fixture", default_branch="main")
     session = Session(workspace_id=workspace.id, title="Paging", bound_branch="main", worktree_path="fixture-history")
     other = Session(workspace_id=workspace.id, title="Other", bound_branch="main", worktree_path="fixture-other")
@@ -23,8 +33,15 @@ def history(db):
     rows = [Message(id=f"row-{index:04d}", session_id=session.id, sender_type="user", content_md=f"message {index}",
                     pinned_at=stamp if index < 35 else None, created_at=stamp) for index in range(240)]
     alien = Message(session_id=other.id, sender_type="user", content_md="other Session")
-    db.add_all([workspace, session, other, alien, *rows]); db.commit()
-    return db, session.id, alien.id
+    db.add_all([workspace, session, other, alien, *rows])
+    flush_fixture_rows(db)
+    db.commit()
+    try:
+        yield db, session.id, alien.id
+    finally:
+        if historical_engine is not None:
+            db.close()
+            historical_engine.dispose()
 
 
 def test_stable_before_after_and_around_pages_with_equal_timestamps(history):
@@ -109,6 +126,7 @@ def test_http_bounds_unicode_segments_and_wrong_session_content(history):
     assert len(client.get(base + "/page?limit=10").json()["messages"]) == 10
 
 
+@pytest.mark.parametrize('history', ['frozen_v1'], indirect=True)
 def test_existing_database_history_indexes_upgrade_idempotently(history):
     from migration_fixtures import migrate_engine
     db, sid, _ = history

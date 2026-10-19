@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 import subprocess
 from dataclasses import replace
@@ -6,7 +7,8 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app import agent_creation
 from app.agent_runtime_config import RuntimeRoleConfig, upsert_runtime_config
@@ -33,7 +35,7 @@ def case(monkeypatch):
         workspace = Workspace(name="Creation", root_path="apps/demo", repo_url="local://demo", default_branch="main")
         other = Workspace(name="Other", root_path="apps/demo", repo_url="local://demo", default_branch="main")
         coordinator = Agent(name="Planner", role="orchestrator", adapter_type="scripted_mock", provider="local", system_prompt="CONFIG_BEHAVIOR_12")
-        db.add_all([workspace, other, coordinator]); db.commit()
+        db.add_all([workspace, other, coordinator]); flush_fixture_rows(db); db.commit()
         config = RuntimeRoleConfig(role="planner", agent_profile_id=coordinator.id,
             provider_id="claude-cli-planner", adapter_type="claude_cli", mode="read_only", enabled=True)
         upsert_runtime_config(db, workspace.id, {"planner": config})

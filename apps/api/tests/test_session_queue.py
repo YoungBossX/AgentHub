@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -7,7 +8,8 @@ import app.task_runs as task_runs_module
 import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.models import (
     Agent,
@@ -246,7 +248,8 @@ def seed_terminal_queue_run(db: DbSession) -> str:
     )
     db.add(entry)
     db.add(task_run)
-    db.commit()
+    db.flush([task_run])
+    flush_fixture_rows(db); db.commit()
     return task_run.id
 
 
@@ -294,11 +297,12 @@ def seed_queue_tasks(db: DbSession) -> tuple[Workspace, Session, Task, Task]:
         plan_json=json.dumps(plan, separators=(",", ":")),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(frontend)
     db.add(first)
     db.add(second)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(first)
     db.refresh(second)
     return workspace, session, first, second

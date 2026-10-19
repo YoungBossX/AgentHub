@@ -4,7 +4,8 @@ import os
 import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.external_workspaces import ExternalWorkspaceRegistration, register_external_project_target
 from app.models import Workspace
@@ -446,6 +447,7 @@ def test_workspace_registry_merges_builtin_and_external_targets(tmp_path) -> Non
             default_branch="main",
         )
         db.add(workspace)
+        db.flush([workspace])
         db.commit()
         db.refresh(workspace)
         register_external_project_target(
@@ -530,6 +532,7 @@ def test_workspace_registry_maps_external_backend_targets(tmp_path) -> None:
             default_branch="main",
         )
         db.add(workspace)
+        db.flush([workspace])
         db.commit()
         db.refresh(workspace)
         register_external_project_target(

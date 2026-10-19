@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import asyncio
 import json
 import shutil
@@ -6,7 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.group_execution import automatic_group_task, enqueue_ready_group_tasks, has_pending_automatic_groups
 from app.main import app, get_db
@@ -35,14 +37,14 @@ def runtime(tmp_path):
         ws = Workspace(name="Auto", root_path="apps/demo", repo_url="local://apps/demo", default_branch="main")
         session = Session(workspace_id=ws.id, title="Automatic", bound_branch="main", worktree_path=str(root))
         db.add_all([ws, session, *[Agent(name=role, role=role, adapter_type="scripted_mock", provider="local") for role in ["orchestrator", "frontend", "backend", "qa"]]])
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         yield db, source
     engine.dispose()
 
 
 def group(db, *, execution=None, content="@frontend @qa for demo app change button to Automatic Group"):
     message = Message(session_id=db.exec(select(Session)).one().id, sender_type="user", content_md=content, context_json=json.dumps({} if execution is None else {"groupExecution": execution}))
-    db.add(message); db.commit()
+    db.add(message); flush_fixture_rows(db); db.commit()
     return plan_for_message(db, message, content)
 
 

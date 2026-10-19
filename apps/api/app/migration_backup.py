@@ -90,16 +90,22 @@ def rehearse_backup(backup: MigrationBackup) -> None:
     from app import migration_runtime
     if sha256(backup.database) != backup.sha256:
         raise ValueError('Backup hash changed before rehearsal')
-    with tempfile.TemporaryDirectory(prefix='agenthub-db-rehearsal-') as directory:
+    with tempfile.TemporaryDirectory(prefix='agenthub-db-rehearsal-', dir=backup.root) as directory:
         copy = Path(directory) / 'rehearsal.sqlite3'
         shutil.copyfile(backup.database, copy)
         engine = create_engine('sqlite:///' + copy.as_posix(), poolclass=NullPool)
         try:
             with engine.connect() as connection:
-                connection.exec_driver_sql('BEGIN IMMEDIATE')
-                assert_rows_preserved(connection, backup.before)
-                migration_runtime.run_baseline_upgrade(connection, before=capture_rows(connection))
-                connection.commit()
+                try:
+                    migration_runtime.begin_schema_upgrade(connection)
+                    assert_rows_preserved(connection, backup.before)
+                    migration_runtime.run_schema_upgrade(connection, before=capture_rows(connection))
+                    connection.commit()
+                except BaseException:
+                    connection.rollback()
+                    raise
+                finally:
+                    migration_runtime.restore_upgrade_connection(connection)
         finally:
             engine.dispose()
     if sha256(backup.database) != backup.sha256:

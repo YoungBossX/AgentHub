@@ -1,3 +1,5 @@
+from fixture_database import flush_fixture_rows
+from legacy_corruption import delete_legacy_parent
 import asyncio
 import json
 from collections.abc import Iterator
@@ -7,7 +9,8 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 import app.main as main_module
 import app.run_engine as run_engine_module
@@ -44,9 +47,10 @@ from app.target_registry import (
 
 
 @pytest.fixture
-def db() -> Iterator[DbSession]:
+def db(request, tmp_path) -> Iterator[DbSession]:
     engine = create_engine(
-        "sqlite://",
+        'sqlite:///' + (tmp_path / 'legacy-corruption.sqlite3').as_posix()
+        if getattr(request, 'param', None) == 'legacy_corruption' else "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
@@ -118,13 +122,14 @@ def legacy_artifact_source(db: DbSession) -> tuple[TaskRun, Preview]:
         health_status="healthy",
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(task)
     db.add(task_run)
     db.add(preview_artifact)
     db.add(preview)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(task_run)
     db.refresh(preview)
     return task_run, preview
@@ -154,7 +159,7 @@ def _add_launched_queue_entry(
         started_at=task_run.created_at,
     )
     db.add(entry)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(entry)
     return entry
 
@@ -868,6 +873,7 @@ def test_completed_preview_and_deploy_jobs_are_not_replayed(
     assert calls == {"preview": 1, "deploy": 1}
 
 
+@pytest.mark.parametrize('db', ['legacy_corruption'], indirect=True)
 def test_orphaned_preview_job_fails_scope_without_calling_service(
     db: DbSession,
     legacy_artifact_source: tuple[TaskRun, Preview],
@@ -876,11 +882,12 @@ def test_orphaned_preview_job_fails_scope_without_calling_service(
     task = db.get(Task, task_run.task_id)
     job = PreviewDeployJob(
         session_id=task.session_id,
-        source_task_run_id="missing-task-run",
+        source_task_run_id=task_run.id,
         job_type="preview",
     )
     db.add(job)
     db.commit()
+    delete_legacy_parent(db, 'taskrun', task_run.id)
 
     class UnexpectedPreviewService:
         def start_task_run_preview(self, *args, **kwargs):

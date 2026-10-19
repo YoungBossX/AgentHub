@@ -1,3 +1,5 @@
+from fixture_database import flush_fixture_rows
+from legacy_corruption import delete_legacy_parent
 import asyncio
 import json
 from collections.abc import AsyncIterator
@@ -5,7 +7,8 @@ from collections.abc import AsyncIterator
 import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app import task_run_scope
 from app.adapters import (
@@ -85,9 +88,10 @@ class FakeAdapter(AgentAdapter):
 
 
 @pytest.fixture
-def db() -> DbSession:
+def db(request, tmp_path) -> DbSession:
     engine = create_engine(
-        "sqlite://",
+        'sqlite:///' + (tmp_path / 'legacy-corruption.sqlite3').as_posix()
+        if getattr(request, 'param', None) == 'legacy_corruption' else "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
@@ -130,11 +134,12 @@ def create_task_run(db: DbSession) -> tuple[Session, TaskRun]:
     )
 
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(task)
     db.add(task_run)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(task_run)
     return session, task_run
 
@@ -174,7 +179,7 @@ def invalidate_session_relationship(
     session = db.get(Session, task.session_id)
     assert session is not None
     if invalid_session_state == "missing_session":
-        db.delete(session)
+        delete_legacy_parent(db, 'session', session.id)
     else:
         other_session = Session(
             workspace_id=session.workspace_id,
@@ -185,7 +190,7 @@ def invalidate_session_relationship(
         task.session_id = other_session.id
         db.add(other_session)
         db.add(task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
 
 
 @pytest.mark.anyio
@@ -228,6 +233,7 @@ async def test_adapter_stream_rejects_missing_ownership_guard_before_create_run(
     ["missing_session", "task_session_relationship_mismatch"],
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize('db', ['legacy_corruption'], indirect=True)
 async def test_adapter_run_bind_revalidates_real_session(
     db: DbSession,
     invalid_session_state: str,
@@ -264,6 +270,7 @@ async def test_adapter_run_bind_revalidates_real_session(
     ["missing_session", "task_session_relationship_mismatch"],
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize('db', ['legacy_corruption'], indirect=True)
 async def test_adapter_event_fence_revalidates_real_session(
     db: DbSession,
     invalid_session_state: str,

@@ -1,10 +1,12 @@
+from fixture_database import flush_fixture_rows
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.live_memory_compliance import (
     P18C_LIBRARY_APP_USER_PROMPT,
@@ -326,6 +328,7 @@ def _workspace(db: DbSession) -> Workspace:
         default_branch="main",
     )
     db.add(workspace)
-    db.commit()
+    db.flush([workspace])
+    flush_fixture_rows(db); db.commit()
     db.refresh(workspace)
     return workspace

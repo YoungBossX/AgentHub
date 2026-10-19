@@ -1,10 +1,12 @@
+from fixture_database import flush_fixture_rows
 from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.main import app, get_db
 from app.memory_store import MemoryFilter, MemoryStoreError, list_memory_items
@@ -40,11 +42,12 @@ def client() -> Iterator[TestClient]:
             worktree_path=".worktrees/memory-policy-session",
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(session)
         db.add(Agent(name="Orchestrator", role="orchestrator", adapter_type="scripted_mock", provider="local"))
         db.add(Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local"))
         db.add(Agent(name="QA Agent", role="qa", adapter_type="scripted_mock", provider="local"))
-        db.commit()
+        flush_fixture_rows(db); db.commit()
 
     def override_db() -> Iterator[DbSession]:
         with DbSession(engine) as db:

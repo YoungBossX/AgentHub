@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 from datetime import datetime, timezone
 import json
 from collections.abc import Iterator
@@ -6,7 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.main import app, get_db
 from app.mission_trace import build_session_mission_trace
@@ -81,9 +83,10 @@ def _seed_pending_review_task(db: DbSession) -> Task:
         plan_json=json.dumps(plan, separators=(",", ":")),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(task)
     return task
 
@@ -189,6 +192,7 @@ def test_pmo_decision_is_visible_in_mission_trace(db: DbSession) -> None:
         plan_json=json.dumps(plan, separators=(",", ":")),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(task)
     db.commit()
@@ -327,6 +331,7 @@ def test_mission_trace_exposes_pmo_readiness_groups_and_next_actions(
         ),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(ready)
     db.add(waiting)
@@ -407,6 +412,7 @@ def test_mission_trace_exposes_retry_fallback_and_approval_next_actions(
         plan_json=json.dumps({"scheduler": {"state": "blocked"}}, separators=(",", ":")),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(retryable)
@@ -490,6 +496,7 @@ def test_mission_trace_exposes_redacted_pmo_evidence(db: DbSession) -> None:
         ),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(decision_task)
     db.add(conflict_task)

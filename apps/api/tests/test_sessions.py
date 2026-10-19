@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import subprocess
 import os
 from collections.abc import Iterator
@@ -7,7 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.dependencies import get_db, get_worktree_service
 from app.main import app
@@ -69,8 +71,9 @@ def client(temp_repo: Path) -> Iterator[TestClient]:
             enabled=True,
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(agent)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
 
     def override_db() -> Iterator[DbSession]:
         with DbSession(engine) as db:

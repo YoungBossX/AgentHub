@@ -16,7 +16,8 @@ import threading
 import time
 
 from fastapi import BackgroundTasks
-from sqlmodel import Session as DbSession, create_engine, select
+from sqlmodel import Session as DbSession, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.db_migrations import prepare_database
 from app.automatic_validation import validation_for_run

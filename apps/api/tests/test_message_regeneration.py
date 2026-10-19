@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
@@ -6,17 +7,20 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlmodel import SQLModel, Session as DbSession, create_engine, select
+from sqlmodel import SQLModel, Session as DbSession, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.main import app, get_db
-from app.models import Message, MessageAttachment, Session, Task, TaskRun, Workspace
+from app.models import Agent, Message, MessageAttachment, Session, Task, TaskRun, Workspace
 from app.message_regeneration import finish_request, metadata, prepare_regeneration, recover_interrupted_requests
 from app.routes import messages as routes
 
 
 @pytest.fixture
-def regeneration(tmp_path, monkeypatch):
-    engine = create_engine(f"sqlite:///{tmp_path / 'regeneration.sqlite3'}", connect_args={"check_same_thread": False, "timeout": 20})
+def regeneration(tmp_path, monkeypatch, request):
+    case = getattr(getattr(request.node, 'callspec', None), 'params', {}).get('change')
+    filename = 'legacy-corruption.sqlite3' if case == 'missing_parent' else 'regeneration.sqlite3'
+    engine = create_engine(f"sqlite:///{tmp_path / filename}", connect_args={"check_same_thread": False, "timeout": 20})
     SQLModel.metadata.create_all(engine)
     with DbSession(engine) as db:
         workspace = Workspace(name="Regeneration", root_path=str(tmp_path), repo_url="local://demo", default_branch="main")
@@ -28,13 +32,13 @@ def regeneration(tmp_path, monkeypatch):
         reply = Message(session_id=session.id, sender_type="orchestrator", message_kind="chat", content_md="Original reply", parent_message_id=request.id)
         attachment = MessageAttachment(session_id=session.id, message_id=request.id, filename="reference.txt", kind="text", media_type="text/plain",
             byte_size=9, sha256="fixture-hash", extraction_status="ready", text_content="FILE_ONLY", payload=b"FILE_ONLY")
-        db.add_all([workspace, session, other, quoted, request, reply, attachment]); db.commit()
+        db.add_all([workspace, session, other, quoted, request, reply, attachment]); flush_fixture_rows(db); db.commit()
         ids = dict(session=session.id, other=other.id, request=request.id, reply=reply.id, quoted=quoted.id, attachment=attachment.id)
     calls = []
     def dispatch(db, created, background_tasks):
         calls.append(created.id)
         db.add(Message(session_id=created.session_id, sender_type="orchestrator", content_md="New reply", parent_message_id=created.id))
-        db.commit()
+        flush_fixture_rows(db); db.commit()
     monkeypatch.setattr(routes, "dispatch_message", dispatch)
     def provide():
         with DbSession(engine) as db: yield db
@@ -98,7 +102,9 @@ def test_ineligible_messages_are_not_dispatchable(regeneration, change):
         if change == 'user': reply.sender_type = 'user'
         if change == 'diagnostic': reply.message_kind = 'group_execution_error'
         if change == 'streaming': reply.stream_state = 'streaming'
-        if change == 'missing_parent': reply.parent_message_id = 'missing'
+        if change == 'missing_parent':
+            from legacy_corruption import delete_legacy_parent
+            delete_legacy_parent(db, 'message', ids['request'])
         if change == 'foreign_parent':
             source = db.get(Message, ids['request']); source.session_id = ids['other']; db.add(source)
         db.add(reply); db.commit()
@@ -118,8 +124,11 @@ def test_running_work_in_session_blocks_request_regeneration(regeneration):
     client, engine, ids, calls = regeneration
     with DbSession(engine) as db:
         task = Task(session_id=ids['session'], title='Other live request', intent_type='frontend_change', status='completed')
-        run = TaskRun(task_id=task.id, agent_id='fixture', worktree_path='unused', state='waiting_approval')
-        db.add_all([task, run]); db.commit()
+        agent = Agent(name='Fixture', role='frontend', adapter_type='scripted_mock', provider='local')
+        run = TaskRun(task_id=task.id, agent_id=agent.id, worktree_path='unused', state='waiting_approval')
+        db.add_all([task, agent, run])
+        flush_fixture_rows(db)
+        db.commit()
     assert post(client, ids).status_code == 409 and not calls
 
 
@@ -144,7 +153,7 @@ def test_failed_preparation_keeps_identity_partial_evidence_and_safe_error(regen
     client, engine, ids, calls = regeneration; operation = str(uuid4())
     def dispatch(db, created, background_tasks):
         calls.append(created.id)
-        db.add(Message(session_id=created.session_id, sender_type='orchestrator', content_md='Partial plan', parent_message_id=created.id)); db.commit()
+        db.add(Message(session_id=created.session_id, sender_type='orchestrator', content_md='Partial plan', parent_message_id=created.id)); flush_fixture_rows(db); db.commit()
         raise ValueError('SECRET_TEST_MUST_NOT_LEAK')
     monkeypatch.setattr(routes, 'dispatch_message', dispatch)
     response = post(client, ids, operation)

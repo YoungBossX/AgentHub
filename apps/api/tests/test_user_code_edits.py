@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from fixture_database import flush_fixture_rows
 from fastapi.testclient import TestClient
 from sqlmodel import Session as DbSession, select
 
@@ -35,6 +36,7 @@ def edit_db(branch_db, tmp_path, monkeypatch):
     source = Artifact(task_run_id=run.id, artifact_type="diff", title="Original Agent Diff", status="ready")
     db.add(session); db.add(task); db.add(run); db.add(source)
     db.add(Diff(artifact_id=source.id, base_ref="base", head_ref="head", patch_text="original immutable evidence"))
+    flush_fixture_rows(db)
     db.commit()
     monkeypatch.setattr(edits, "WorktreeService", lambda: service)
     yield db, session.id, source.id, root

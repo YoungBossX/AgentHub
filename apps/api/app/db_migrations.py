@@ -15,6 +15,7 @@ from app.maintenance_lease import MaintenanceBusy, database_lease
 from app.schema_contract import SchemaReport, capture_rows, inspect_schema
 from app.local_data import canonical, regular, git, DataMaintenanceError
 from app import migration_backup, migration_runtime
+from migrations.integrity_v2 import IntegrityViolation
 
 
 class MigrationError(ValueError):
@@ -114,7 +115,7 @@ def upgrade_database(database_url: str, *, backup_dir: Path | None, repo_root: P
         raise MigrationError('incompatible-schema', 'inspect', '; '.join(report.issues))
     if report.state == 'current':
         return UpgradeResult('current', report.head)
-    backup, committed, stage = None, False, 'preflight'
+    backup, committed, commit_attempted, stage = None, False, False, 'preflight'
     try:
         with database_lease(path, exclusive=True):
             canonical(path)
@@ -123,8 +124,8 @@ def upgrade_database(database_url: str, *, backup_dir: Path | None, repo_root: P
                 creator=lambda: sqlite3.connect(path, timeout=1))
             try:
                 with engine.connect() as connection:
-                    connection.exec_driver_sql('BEGIN IMMEDIATE')
                     try:
+                        migration_runtime.begin_schema_upgrade(connection)
                         report = inspect_schema(connection)
                         if report.state == 'incompatible':
                             raise MigrationError('incompatible-schema', stage, '; '.join(report.issues))
@@ -145,8 +146,10 @@ def upgrade_database(database_url: str, *, backup_dir: Path | None, repo_root: P
                         regular(path)
                         if (path.stat().st_dev, path.stat().st_ino) != identity:
                             raise MigrationError('identity-changed', stage, 'Source file identity changed after backup.')
-                        migration_runtime.run_baseline_upgrade(connection, before=before)
+                        migration_runtime.run_schema_upgrade(connection, before=before)
                         if backup: migration_backup.write_receipt(backup, phase='upgrade-prepared')
+                        stage = 'commit'
+                        commit_attempted = True
                         connection.commit()
                         committed = True
                         if backup:
@@ -156,14 +159,19 @@ def upgrade_database(database_url: str, *, backup_dir: Path | None, repo_root: P
                     except BaseException:
                         connection.rollback()
                         raise
+                    finally:
+                        migration_runtime.restore_upgrade_connection(connection)
             finally:
                 engine.dispose()
     except Exception as exc:
-        code = 'commit-uncertain' if committed else 'migration-failed'
+        uncertain = committed or commit_attempted
+        code = 'commit-uncertain' if uncertain else 'migration-failed'
         if backup:
-            try: migration_backup.write_receipt(backup, phase=code if committed else 'failed', detail=stage)
+            try: migration_backup.write_receipt(backup, phase=code if uncertain else 'failed', detail=stage)
             except OSError: pass  # stderr still reports the true committed/uncertain state.
         if isinstance(exc, MigrationError): raise
+        if isinstance(exc, IntegrityViolation):
+            raise MigrationError('integrity-violation', stage, str(exc)) from exc
         if isinstance(exc, (MaintenanceBusy, DataMaintenanceError, SQLAlchemyError, sqlite3.Error)):
             detail = 'SQLite busy/locked or runtime active; stop writers first.' if isinstance(exc, (SQLAlchemyError, sqlite3.Error, MaintenanceBusy)) else str(exc)
         else:
@@ -182,16 +190,18 @@ def require_current_schema(db_engine: Engine) -> None:
 
 def _initialize_empty(db_engine: Engine) -> None:
     with db_engine.connect() as connection:
-        connection.exec_driver_sql('BEGIN IMMEDIATE')
         try:
+            migration_runtime.begin_schema_upgrade(connection)
             report = inspect_schema(connection)
             if report.state not in {'empty', 'current'}:
                 raise MigrationError('schema-upgrade-required', 'startup', 'Existing database requires offline db:migrate with a new backup directory.')
-            migration_runtime.run_baseline_upgrade(connection, before=capture_rows(connection))
+            migration_runtime.run_schema_upgrade(connection, before=capture_rows(connection))
             connection.commit()
         except BaseException:
             connection.rollback()
             raise
+        finally:
+            migration_runtime.restore_upgrade_connection(connection)
 
 
 def prepare_database(db_engine: Engine) -> None:

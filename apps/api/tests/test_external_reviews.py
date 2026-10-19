@@ -1,10 +1,12 @@
+from fixture_database import flush_fixture_rows
 import json
 from collections.abc import Iterator
 from pathlib import Path
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.external_evidence import record_command_evidence
 from app.external_workspaces import (
@@ -48,9 +50,10 @@ def create_external_diff_fixture(
     )
     agent = Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local")
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(workspace)
     register_external_project_target(
         db,
@@ -106,7 +109,7 @@ def create_external_diff_fixture(
     db.add(task_run)
     db.add(artifact)
     db.add(diff)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(artifact)
     db.refresh(task_run)
     return artifact.id

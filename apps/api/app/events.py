@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sqlite3
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -9,6 +10,7 @@ from typing import AsyncIterator, DefaultDict, Optional
 from uuid import UUID
 
 from sqlalchemy import and_, or_
+from sqlalchemy.exc import OperationalError
 from sqlmodel import Session as DbSession
 from sqlmodel import func, select
 
@@ -57,6 +59,28 @@ class SessionEventSubscriber:
 
 
 _session_subscribers: DefaultDict[str, list[SessionEventSubscriber]] = defaultdict(list)
+
+
+class EventWriteConflict(RuntimeError):
+    code = 'EVENT_WRITE_CONFLICT'
+
+
+def raise_event_write_conflict(error: OperationalError) -> None:
+    """Translate only SQLite write contention; transaction owners handle rollback."""
+    code = getattr(error.orig, 'sqlite_errorcode', 0)
+    if isinstance(error.orig, sqlite3.OperationalError) and isinstance(code, int) and code & 0xff in {5, 6}:
+        raise EventWriteConflict('Event write ownership is unavailable; retry a fresh database transaction.') from error
+    raise error
+
+
+def _acquire_event_write_guard(db: DbSession, task_run_id: str) -> None:
+    try:
+        with db.no_autoflush:
+            # Even a zero-row UPDATE reserves SQLite's writer before the MAX
+            # read. Callers must flush new parents before staging their event.
+            db.connection().exec_driver_sql('UPDATE taskrun SET id=id WHERE id=?', (task_run_id,))
+    except OperationalError as error:
+        raise_event_write_conflict(error)
 
 
 def _naive_utc_now() -> datetime:
@@ -114,13 +138,16 @@ def append_task_run_event(
     event_type: str,
     payload_json: str = "{}",
 ) -> TaskRunEvent:
-    event = stage_task_run_event(
-        db,
-        task_run_id=task_run_id,
-        event_type=event_type,
-        payload_json=payload_json,
-    )
-    db.commit()
+    try:
+        event = stage_task_run_event(
+            db,
+            task_run_id=task_run_id,
+            event_type=event_type,
+            payload_json=payload_json,
+        )
+        db.commit()
+    except OperationalError as error:
+        raise_event_write_conflict(error)
     db.refresh(event)
     publish_task_run_event(db, event)
     return event
@@ -132,11 +159,13 @@ def stage_task_run_event(
     event_type: str,
     payload_json: str = "{}",
 ) -> TaskRunEvent:
-    max_sequence = db.exec(
-        select(func.max(TaskRunEvent.sequence)).where(
-            TaskRunEvent.task_run_id == task_run_id
-        )
-    ).one()
+    _acquire_event_write_guard(db, task_run_id)
+    with db.no_autoflush:
+        max_sequence = db.exec(
+            select(func.max(TaskRunEvent.sequence)).where(
+                TaskRunEvent.task_run_id == task_run_id
+            )
+        ).one()
     sequence = int(max_sequence or 0) + 1
     event = TaskRunEvent(
         task_run_id=task_run_id,
@@ -146,13 +175,14 @@ def stage_task_run_event(
         created_at=_naive_utc_now(),
     )
     db.add(event)
-    db.flush()
-    # The first flush acquires SQLite's writer lock. Allocate the cursor timestamp
-    # while that lock is held so later committed events cannot receive an older
+    db.flush([event])
+    # Allocate the cursor timestamp while the write guard is held through commit
+    # so later committed events cannot receive an older
     # cursor, even when their TaskRun-local sequence starts again at one.
-    event.created_at = _next_persisted_event_created_at(db, event_id=event.id)
+    with db.no_autoflush:
+        event.created_at = _next_persisted_event_created_at(db, event_id=event.id)
     db.add(event)
-    db.flush()
+    db.flush([event])
     return event
 
 

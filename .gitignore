@@ -417,3 +417,10 @@ docs/evidence/intent-boundaries/*
 *.rej
 .*.swp
 .*.swo
+
+# Reviewed database integrity plan and spec
+!docs/database-integrity-verification.md
+!docs/superpowers/plans/2026-10-19-database-integrity.md
+!docs/superpowers/specs/
+docs/superpowers/specs/*
+!docs/superpowers/specs/2026-10-19-database-integrity-design.md

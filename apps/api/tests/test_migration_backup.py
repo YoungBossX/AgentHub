@@ -92,17 +92,17 @@ def test_rehearsal_failure_keeps_original_unmodified(legacy, tmp_path, monkeypat
 
 def test_mid_upgrade_failure_keeps_revision_and_backup(legacy, tmp_path, monkeypatch):
     runtime = feature('app.migration_runtime')
-    original = runtime.run_baseline_upgrade
+    original = runtime.run_schema_upgrade
     count = []
     def fail(connection, **kwargs):
         original(connection, **kwargs)
         count.append(1)
         if len(count) == 2: raise RuntimeError('injected original failure')
-    monkeypatch.setattr(runtime, 'run_baseline_upgrade', fail)
+    monkeypatch.setattr(runtime, 'run_schema_upgrade', fail)
     with pytest.raises(ValueError, match='upgrade'):
         run_upgrade(legacy, tmp_path / 'backup')
     assert feature('app.db_migrations').read_status('sqlite:///' + legacy.as_posix()).state == 'legacy-compatible'
-    monkeypatch.setattr(runtime, 'run_baseline_upgrade', original)
+    monkeypatch.setattr(runtime, 'run_schema_upgrade', original)
     assert run_upgrade(legacy, tmp_path / 'retry').state == 'upgraded'
 
 

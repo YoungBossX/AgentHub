@@ -6,7 +6,8 @@ import re
 import threading
 
 import pytest
-from sqlmodel import Session as DbSession, create_engine, select
+from sqlmodel import Session as DbSession, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app import workflow_evaluation as workflow
 from app import run_engine

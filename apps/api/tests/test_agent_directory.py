@@ -1,10 +1,12 @@
+from fixture_database import flush_fixture_rows
 from collections.abc import Iterator
 from contextlib import contextmanager
 
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.agent_runtime_config import RuntimeRoleConfig, upsert_runtime_config
 from app.main import app, get_db
@@ -146,11 +148,12 @@ def _client() -> Iterator[TestClient]:
             status="draft_only",
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(frontend)
         db.add(backend)
         db.add(orchestrator)
         db.add(draft)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         upsert_runtime_config(
             db,
             workspace.id,

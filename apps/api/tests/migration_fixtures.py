@@ -29,19 +29,25 @@ def memory_engine():
 
 
 def current_unversioned(engine):
-    SQLModel.metadata.create_all(engine)
+    from migrations.baseline_v1 import frozen_metadata
+    frozen_metadata().create_all(engine)
 
 
-def populate_complete(engine):
-    """Every ORM table has one row; raw old values and BLOBs can be projected."""
+def populate_complete(engine, *, skip_tables=(), ids=None):
+    """Populate historical fixtures, including their explicitly created parents."""
+    from migrations.baseline_v1 import frozen_metadata
+    ids = ids or {}
     with engine.begin() as connection:
-        for table in SQLModel.metadata.sorted_tables:
+        for table in frozen_metadata().sorted_tables:
+            if table.name in skip_tables:
+                continue
             values = {}
             for column in table.columns:
                 if column.name == 'id':
-                    value = table.name + '-id'
+                    value = ids.get(table.name, table.name + '-id')
                 elif column.foreign_keys:
-                    value = next(iter(column.foreign_keys)).column.table.name + '-id'
+                    parent = next(iter(column.foreign_keys)).column.table.name
+                    value = ids.get(parent, parent + '-id')
                 elif isinstance(column.type, LargeBinary):
                     value = b'\x00\xff\x01\x80' + table.name.encode()
                 elif isinstance(column.type, Boolean):
@@ -62,6 +68,14 @@ def populate_complete(engine):
             connection.execute(table.insert().values(**values))
 
 
+def complete_legacy_parents(engine, table_name):
+    """Positive fixture only; production migrations never synthesize parents."""
+    from migrations.baseline_v1 import frozen_metadata
+    frozen_metadata().create_all(engine)
+    ids = {'workspace': 'workspace-1', 'artifact': 'artifact-1'}
+    populate_complete(engine, skip_tables=(table_name,), ids=ids)
+
+
 def legacy_table(engine, table_name):
     """Static old DDL copied from the repository's compatibility evidence."""
     from pathlib import Path
@@ -75,12 +89,14 @@ def legacy_table(engine, table_name):
 def migrate_engine(engine):
     """Unit-level runner on an owned transaction; operator tests use backup CLI."""
     from app.schema_contract import capture_rows
-    from app.migration_runtime import run_baseline_upgrade
+    from app.migration_runtime import begin_schema_upgrade, restore_upgrade_connection, run_schema_upgrade
     with engine.connect() as connection:
-        connection.exec_driver_sql('BEGIN IMMEDIATE')
         try:
-            run_baseline_upgrade(connection, before=capture_rows(connection))
+            begin_schema_upgrade(connection)
+            run_schema_upgrade(connection, before=capture_rows(connection))
             connection.commit()
         except BaseException:
             connection.rollback()
             raise
+        finally:
+            restore_upgrade_connection(connection)

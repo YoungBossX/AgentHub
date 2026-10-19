@@ -4,7 +4,10 @@ import json
 from dataclasses import dataclass
 from typing import Literal
 from sqlalchemy import Connection, inspect
-from migrations.baseline_v1 import HEAD, SCHEMA, LEGACY_COLUMNS, LEGACY_WITHOUT_FKS
+from migrations.baseline_v1 import HEAD as BASELINE_HEAD, SCHEMA, LEGACY_COLUMNS, LEGACY_WITHOUT_FKS
+from migrations.baseline_v2 import HEAD, SCHEMA as INTEGRITY_SCHEMA
+
+INTEGRITY_HEAD = HEAD
 
 
 @dataclass(frozen=True)
@@ -48,6 +51,12 @@ def _default(value):
 
 
 def inspect_schema(connection: Connection) -> SchemaReport:
+    return inspect_target_schema(connection, target_revision=HEAD)
+
+
+def inspect_target_schema(connection: Connection, *, target_revision: str) -> SchemaReport:
+    if target_revision not in {BASELINE_HEAD, INTEGRITY_HEAD}:
+        raise ValueError('Unknown schema target revision')
     inspector = inspect(connection)
     tables = set(inspector.get_table_names()) - {t for t in inspector.get_table_names() if t.startswith('sqlite_')}
     issues, changes, revision = [], [], None
@@ -59,7 +68,8 @@ def inspect_schema(connection: Connection) -> SchemaReport:
             issues.append('Invalid version table structure')
         else:
             versions = connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalars().all()
-            if len(versions) != 1 or versions[0] != HEAD:
+            known = {BASELINE_HEAD, INTEGRITY_HEAD} if target_revision == INTEGRITY_HEAD else {BASELINE_HEAD}
+            if len(versions) != 1 or versions[0] not in known:
                 issues.append('Unknown, empty or multiple revision records')
             else:
                 revision = versions[0]
@@ -69,9 +79,11 @@ def inspect_schema(connection: Connection) -> SchemaReport:
                 or inspector.get_check_constraints('alembic_version')
                 or inspector.get_indexes('alembic_version')):
             issues.append('Invalid version table primary key or constraints')
-    unknown = tables - set(SCHEMA) - {'alembic_version'}
+    strict = revision == INTEGRITY_HEAD
+    schema = INTEGRITY_SCHEMA if strict else SCHEMA
+    unknown = tables - set(schema) - {'alembic_version'}
     issues.extend('Unexpected table: ' + name for name in sorted(unknown))
-    for name, expected in SCHEMA.items():
+    for name, expected in schema.items():
         if name not in tables:
             changes.append(SchemaChange('create_table', name, name))
             continue
@@ -80,7 +92,7 @@ def inspect_schema(connection: Connection) -> SchemaReport:
         # The original session-organization fixture used TEXT PRIMARY KEY
         # without NOT NULL or FK clauses. Accept this exact historical family
         # only with non-null persisted IDs; do not relax canonical FK checks.
-        legacy_nullable_pk = (name in {'session', 'message'} and columns.get('id', {}).get('nullable') is True
+        legacy_nullable_pk = (not strict and name in {'session', 'message'} and columns.get('id', {}).get('nullable') is True
             and _type(columns['id']['type']) == 'TEXT'
             and connection.exec_driver_sql(f'SELECT 1 FROM {quote(name)} WHERE id IS NULL LIMIT 1').first() is None)
         for extra in columns.keys() - target_columns.keys():
@@ -115,7 +127,7 @@ def inspect_schema(connection: Connection) -> SchemaReport:
         # Session.memory_snapshot_id and ArtifactVersion.parent_version_id were
         # historically plain TEXT additions; no table rebuild is necessary.
         allowed_fks = expected_fks - {(c, ref) for c, ref in expected_fks if c in LEGACY_COLUMNS.get(name, {})}
-        if actual_fks != expected_fks and actual_fks != allowed_fks and not (not actual_fks and (name in LEGACY_WITHOUT_FKS or legacy_nullable_pk)):
+        if actual_fks != expected_fks and (strict or (actual_fks != allowed_fks and not (not actual_fks and (name in LEGACY_WITHOUT_FKS or legacy_nullable_pk)))):
             issues.append(f'Incompatible foreign keys: {name}')
         if inspector.get_check_constraints(name) or inspector.get_unique_constraints(name):
             issues.append(f'Unexpected table constraints: {name}')
@@ -142,13 +154,13 @@ def inspect_schema(connection: Connection) -> SchemaReport:
                 if ([row[2] for row in keys] != index['columns']
                         or any(row[3] != 0 or row[4] != 'BINARY' for row in keys)):
                     issues.append(f'Incompatible index ordering or collation: {name}.{index_name}')
-    if revision == HEAD and changes:
+    if revision and changes:
         issues.append('Current revision has schema drift')
     if issues:
-        return SchemaReport('incompatible', revision, issues=tuple(issues))
+        return SchemaReport('incompatible', revision, head=target_revision, issues=tuple(issues))
     if revision:
-        return SchemaReport('current', revision)
-    return SchemaReport('legacy-compatible' if tables else 'empty', changes=tuple(changes))
+        return SchemaReport('current' if revision == target_revision else 'upgrade-required', revision, head=target_revision)
+    return SchemaReport('legacy-compatible' if tables else 'empty', head=target_revision, changes=tuple(changes))
 
 
 def _rows_digest(connection, table, columns):

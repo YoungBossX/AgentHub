@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import hashlib
 import io
 import json
@@ -9,7 +10,8 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from PIL import Image
 from pypdf import PdfWriter
-from sqlmodel import SQLModel, Session as DbSession, create_engine, select
+from sqlmodel import SQLModel, Session as DbSession, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app import attachments
 from app.attachment_context import ATTACHMENT_JSON_LIMIT, resolve_image_inputs, select_attachment_context
@@ -27,7 +29,7 @@ def storage(tmp_path, monkeypatch):
     with DbSession(engine) as db:
         workspace = Workspace(name="Files", repo_url="local://demo", root_path="apps/demo", default_branch="main")
         sessions = [Session(workspace_id=workspace.id, title=str(i), bound_branch="main", worktree_path=str(tmp_path / str(i))) for i in range(2)]
-        db.add_all([workspace, *sessions]); db.commit()
+        db.add_all([workspace, *sessions]); flush_fixture_rows(db); db.commit()
         ids = [row.id for row in sessions]
     def provide():
         with DbSession(engine) as db: yield db
@@ -134,7 +136,7 @@ def test_concurrent_quota_and_binding_have_one_winner(storage, monkeypatch):
     def bind(_):
         with DbSession(engine) as db:
             message = Message(session_id=sid, sender_type="user", content_md="race")
-            try: bind_message_attachments(db, message, [aid]); db.commit(); return message.id
+            try: bind_message_attachments(db, message, [aid]); flush_fixture_rows(db); db.commit(); return message.id
             except HTTPException as exc: return exc.status_code
     with ThreadPoolExecutor(max_workers=2) as pool: results = list(pool.map(bind, range(2)))
     assert results.count(409) == 1

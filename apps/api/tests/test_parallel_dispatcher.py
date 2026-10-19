@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import asyncio
 import json
 from concurrent.futures import ThreadPoolExecutor
@@ -8,7 +9,8 @@ from uuid import uuid4
 
 from fastapi import BackgroundTasks
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.models import Agent, Session, Task, TaskRun, TaskRunEvent, Workspace, utc_now
 from app.run_engine import (
@@ -211,9 +213,10 @@ def seed_queued_runs(
         provider="local",
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
 
     runs: list[TaskRun] = []
     now = utc_now()
@@ -246,7 +249,7 @@ def seed_queued_runs(
         )
         db.add(task)
         db.add(run)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         db.refresh(task)
         db.refresh(run)
         enqueue_task_run(

@@ -5,7 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from fastapi import BackgroundTasks
-from sqlmodel import select, create_engine, SQLModel, Session as DbSession
+from sqlmodel import select, SQLModel, Session as DbSession
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.models import Agent, Message, Session, Task, TaskRun, Workspace, WorkspaceSkill
 from app.skills import (SkillError, BINDING, catalog, capture_binding, instruction, message_selection,

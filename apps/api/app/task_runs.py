@@ -344,7 +344,7 @@ def create_task_run(
     )
     db.add(task)
     db.add(task_run)
-    db.commit()
+    db.flush([task_run])
     db.refresh(task_run)
 
     _append_state_event(
@@ -413,16 +413,16 @@ def transition_task_run(
     task.updated_at = now
     db.add(task)
     db.add(task_run)
-    db.commit()
-    db.refresh(task_run)
     event_payload = dict(payload or {})
     event_payload.setdefault("state", state)
     if error_code is not None:
         event_payload.setdefault("errorCode", error_code)
     if error_message is not None:
         event_payload.setdefault("errorMessage", error_message)
-    event_payload.setdefault("adapterType", adapter_type_for_run(db, task_run))
+    with db.no_autoflush:
+        event_payload.setdefault("adapterType", adapter_type_for_run(db, task_run))
     _append_state_event(db, task_run, state, event_payload)
+    db.refresh(task_run)
     if state in TERMINAL_STATES:
         _finalize_queue_and_lock_for_terminal_run(db, task, task_run, state)
         from app.scheduler import mark_task_run_terminal_scheduler_state

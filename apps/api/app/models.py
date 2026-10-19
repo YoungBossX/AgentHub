@@ -259,6 +259,7 @@ class TaskRun(SQLModel, table=True):
 
 
 class TaskRunEvent(SQLModel, table=True):
+    __table_args__ = (Index('ux_taskrunevent_run_sequence', 'task_run_id', 'sequence', unique=True),)
     id: str = Field(default_factory=new_id, primary_key=True)
     task_run_id: str = Field(foreign_key="taskrun.id", index=True)
     event_type: str

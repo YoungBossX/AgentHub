@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import asyncio
 from collections.abc import Iterator
 from datetime import datetime, timedelta
@@ -6,7 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app import events as events_module
 from app import main as main_module
@@ -66,11 +68,12 @@ def client() -> Iterator[TestClient]:
             worktree_path=".worktrees/session-two",
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(orchestrator)
         db.add(agent)
         db.add(session_one)
         db.add(session_two)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
 
     def override_db() -> Iterator[DbSession]:
         with DbSession(engine) as db:
@@ -99,7 +102,7 @@ def create_session_event_pair() -> tuple[str, str, str, str, str]:
             assigned_agent_id=agent.id,
         )
         db.add(task)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         db.refresh(task)
         task_run = TaskRun(
             task_id=task.id,
@@ -108,7 +111,7 @@ def create_session_event_pair() -> tuple[str, str, str, str, str]:
             worktree_path=session.worktree_path,
         )
         db.add(task_run)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         db.refresh(task_run)
 
         first = append_task_run_event(db, task_run.id, "task.state")
@@ -117,7 +120,7 @@ def create_session_event_pair() -> tuple[str, str, str, str, str]:
         second.created_at = first.created_at + timedelta(seconds=1)
         db.add(first)
         db.add(second)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
 
         return (
             session.id,

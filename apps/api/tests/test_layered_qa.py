@@ -7,7 +7,8 @@ from app.models import Artifact, Task, TaskRun, TaskRunEvent
 from app.qa_assessment import build_qa_assessment
 from app.reviews import create_scripted_review_for_diff, list_task_run_reviews
 from app.routes.task_artifacts import review_response
-from sqlmodel import Session as DbSession, SQLModel, create_engine, select
+from sqlmodel import Session as DbSession, SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 from test_external_reviews import create_external_diff_fixture, db_fixture
 
 
@@ -87,6 +88,7 @@ def test_unrelated_receipts_are_not_borrowed(tmp_path, mismatch):
             other = TaskRun(task_id=original.task_id, agent_id=original.agent_id,
                             state="completed", worktree_path=original.worktree_path)
             db.add(other)
+            db.flush([other])
             stored.task_run_id = other.id
         else:
             meta = json.loads(stored.meta_json)

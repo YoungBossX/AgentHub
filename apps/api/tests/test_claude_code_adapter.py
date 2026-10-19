@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import asyncio
 import json
 from collections.abc import AsyncIterator
@@ -7,7 +8,8 @@ from typing import Optional
 import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.adapters import AgentRunRequest, run_adapter_event_stream as _run_adapter_event_stream
 import app.claude_code_adapter as claude_code_adapter_module
@@ -149,11 +151,12 @@ def create_task_run(db: DbSession, worktree_path: str) -> tuple[Session, TaskRun
     )
 
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(task)
     db.add(task_run)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(session)
     db.refresh(task_run)
     return session, task_run

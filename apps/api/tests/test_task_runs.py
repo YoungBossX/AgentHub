@@ -1,3 +1,5 @@
+from fixture_database import flush_fixture_rows
+from legacy_corruption import delete_legacy_parent as _delete_legacy_parent
 import asyncio
 import json
 import sqlite3
@@ -21,7 +23,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import event, func, update
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.adapters import (
     AdapterCapabilities,
@@ -93,10 +96,29 @@ from app.target_registry import (
 )
 
 
+def test_new_task_run_and_initial_event_rollback_together(client, monkeypatch):
+    from app.events import EventWriteConflict
+    reached = []
+    def fail(*args, **kwargs):
+        reached.append(True)
+        raise EventWriteConflict('injected initial event failure')
+    monkeypatch.setattr(task_runs_module, 'append_task_run_event', fail)
+    with db_from_override() as db:
+        identifier = task_id()
+        before = db.get(Task, identifier).status
+        with pytest.raises(EventWriteConflict):
+            create_task_run(db, identifier)
+        db.rollback()
+        assert reached
+        assert db.exec(select(TaskRun).where(TaskRun.task_id == identifier)).all() == []
+        assert db.get(Task, identifier).status == before
+
+
 @pytest.fixture
-def client() -> Iterator[TestClient]:
+def client(request, tmp_path) -> Iterator[TestClient]:
     engine = create_engine(
-        "sqlite://",
+        'sqlite:///' + (tmp_path / 'legacy-corruption.sqlite3').as_posix()
+        if getattr(request, 'param', None) == 'legacy_corruption' else "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
@@ -141,12 +163,13 @@ def client() -> Iterator[TestClient]:
             assigned_agent_id=frontend.id,
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(session)
         db.add(frontend)
         db.add(backend)
         db.add(qa)
         db.add(task)
-        db.commit()
+        flush_fixture_rows(db); db.commit()
 
     def override_db() -> Iterator[DbSession]:
         with DbSession(engine) as db:
@@ -1857,6 +1880,7 @@ def test_scope_decision_guard_rechecks_sqlite_time_after_write_lock_wait(
             ),
         )
         setup_db.add(workspace)
+        setup_db.flush([workspace])
         setup_db.add(session)
         setup_db.add(agent)
         setup_db.add(task)
@@ -2045,6 +2069,7 @@ def test_scope_decision_fallback_cas_preserves_write_after_refresh(
             ),
         )
         setup_db.add(workspace)
+        setup_db.flush([workspace])
         setup_db.add(session)
         setup_db.add(agent)
         setup_db.add(task)
@@ -2470,6 +2495,7 @@ def test_require_scope_passed_rejects_same_target_rebound_to_other_workspace(
             worktree_path=".worktrees/other-workspace-session",
         )
         db.add(other_workspace)
+        db.flush([other_workspace])
         db.add(other_session)
         db.commit()
         task.session_id = other_session.id
@@ -3173,6 +3199,7 @@ def test_collecting_diff_stale_recovery_rejects_unbound_violation_evidence(
         "reclassified-readonly",
     ),
 )
+@pytest.mark.parametrize('client', ['legacy_corruption'], indirect=True)
 def test_target_lock_recovery_preserves_collecting_diff_scope_classification(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -3239,9 +3266,7 @@ def test_target_lock_recovery_preserves_collecting_diff_scope_classification(
         queue_entry = entry_for_task_run(db, task_run_id)
         assert queue_entry is not None
         queue_entry.state = "running"
-        if scope_case == "missing-task":
-            db.delete(task)
-        else:
+        if scope_case != "missing-task":
             task.status = "running"
             if scope_case == "reclassified-readonly":
                 task.plan_json = json.dumps(
@@ -3255,6 +3280,9 @@ def test_target_lock_recovery_preserves_collecting_diff_scope_classification(
         db.add(held_lock)
         db.add(queue_entry)
         db.commit()
+
+        if scope_case == 'missing-task':
+            _delete_legacy_parent(db, 'task', task_run.task_id)
 
         recovered = target_locks_module.recover_stale_target_locks(
             db,
@@ -4324,6 +4352,7 @@ def test_context_pack_includes_recent_messages_ledger_and_excludes_other_session
         db.add(user_message)
         db.add(assistant_message)
         db.add(other_session)
+        db.flush([other_session])
         db.add(other_message)
         db.add(task)
         db.commit()
@@ -5124,8 +5153,10 @@ def test_planned_review_is_satisfied_only_by_current_matching_artifacts(
         elif evidence_case == "foreign_diff":
             other_task = Task(session_id=session_id, title="Other frontend change", intent_type="frontend_change")
             db.add(other_task)
+            db.flush([other_task])
             other_run = TaskRun(task_id=other_task.id, agent_id=frontend_agent.id, state="completed", worktree_path=".worktrees/taskrun-session")
             db.add(other_run)
+            db.flush([other_run])
             diff_artifact.task_run_id = other_run.id
             db.add(diff_artifact)
         elif evidence_case in {"newer_no_review", "newer_failed"}:
@@ -10310,7 +10341,7 @@ def _invalidate_execution_session(
     session = db.get(Session, task.session_id)
     assert session is not None
     if invalid_session_state == "missing_session":
-        db.delete(session)
+        _delete_legacy_parent(db, 'session', session.id)
     else:
         other_session = Session(
             workspace_id=session.workspace_id,
@@ -10322,6 +10353,7 @@ def _invalidate_execution_session(
         )
         task.session_id = other_session.id
         db.add(other_session)
+        db.flush([other_session])
         db.add(task)
         if align_durable_binding:
             entry = entry_for_task_run(db, task_run.id)
@@ -10331,7 +10363,7 @@ def _invalidate_execution_session(
             task_run.metrics_json = json.dumps(metrics, separators=(",", ":"))
             db.add(entry)
             db.add(task_run)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
 
 
 @pytest.mark.parametrize(
@@ -10339,6 +10371,7 @@ def _invalidate_execution_session(
     ["missing_session", "task_session_relationship_mismatch"],
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize('client', ['legacy_corruption'], indirect=True)
 async def test_readonly_token_revalidates_real_session_before_delegate_create_run(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -10409,6 +10442,7 @@ async def test_readonly_token_revalidates_real_session_before_delegate_create_ru
     ],
 )
 @pytest.mark.anyio
+@pytest.mark.parametrize('client', ['legacy_corruption'], indirect=True)
 async def test_readonly_ownership_revalidates_real_session(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -15515,6 +15549,14 @@ async def test_request_snapshot_cas_rejects_frozen_identity_drift(
     replacement_started_at = queue_entry.started_at + timedelta(seconds=1)
     replacement_session_id = f"replacement:{original_session_id}"
     replacement_workspace_id = f"replacement:{request.workspace_id}"
+    if identity_drift == "queue_session_id":
+        db.add(Session(id=replacement_session_id, workspace_id=request.workspace_id,
+                       title="Replacement identity", bound_branch="main", worktree_path=".worktrees/replacement-identity"))
+        db.commit()
+    elif identity_drift == "session_workspace_id":
+        db.add(Workspace(id=replacement_workspace_id, name="Replacement identity", repo_url="local://apps/demo",
+                         root_path="apps/demo", default_branch="main"))
+        db.commit()
     original_persist_context_snapshot = run_engine_module._persist_context_snapshot
     adapter_calls: list[str] = []
 
@@ -16109,6 +16151,7 @@ async def test_write_finalizer_commit_fence_rejects_durable_scope_generation_dri
         default_branch="main",
     )
     db.add(replacement_workspace)
+    db.flush([replacement_workspace])
     db.commit()
     replacement_workspace_id = replacement_workspace.id
 
@@ -16788,6 +16831,7 @@ def test_finalizer_fence_rechecks_database_lease_after_writer_wait(
                 acquired_at=now,
             )
         setup_db.add(workspace)
+        setup_db.flush([workspace])
         setup_db.add(session)
         setup_db.add(agent)
         setup_db.add(task)
@@ -16795,6 +16839,7 @@ def test_finalizer_fence_rechecks_database_lease_after_writer_wait(
         setup_db.add(queue_entry)
         if target_lock is not None:
             setup_db.add(target_lock)
+        flush_fixture_rows(setup_db)
         setup_db.commit()
         token = run_engine_module._ExecutionLeaseToken(
             task_run_id=task_run.id,
@@ -17010,6 +17055,7 @@ def test_execute_task_run_recovery_rechecks_database_lease_after_writer_wait(
             ),
         )
         setup_db.add(workspace)
+        setup_db.flush([workspace])
         setup_db.add(session)
         setup_db.add(agent)
         setup_db.add(task)

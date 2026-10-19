@@ -4,7 +4,8 @@ import hashlib
 import pytest
 from pydantic import ValidationError
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import SQLModel, Session
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.agent_instructions import capture_agent_instruction, bound_agent_instruction
 from app.agent_runtime_config import (
@@ -59,6 +60,8 @@ def test_prompt_round_trip_reload_and_workspace_isolation(db):
 
 @pytest.mark.parametrize("enabled,prompt", [(False, "Ignored override"), (True, " \n "), (True, None)])
 def test_disabled_and_blank_prompt_inherit_agent_default(db, enabled, prompt):
+    db.add(Workspace(id='workspace', name='Prompt workspace', repo_url='local://', root_path='.', default_branch='main'))
+    db.commit()
     agent = Agent(name="Frontend", role="frontend", system_prompt="Default behavior")
     role = replace(default_runtime_config("workspace").roles["frontend"], enabled=enabled, system_prompt=prompt)
     upsert_runtime_config(db, "workspace", {"frontend": role})

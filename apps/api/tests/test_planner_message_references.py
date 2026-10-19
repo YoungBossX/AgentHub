@@ -1,8 +1,10 @@
+from fixture_database import flush_fixture_rows
 import json
 from contextlib import contextmanager
 
 from sqlalchemy.pool import StaticPool
-from sqlmodel import SQLModel, Session as DbSession, create_engine
+from sqlmodel import SQLModel, Session as DbSession
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.context_pack import build_session_context_pack
 from app.llm_planner import build_llm_planner_input, build_llm_planner_request
@@ -21,7 +23,7 @@ def conversation():
         run = TaskRun(task_id=task.id, agent_id=agent.id, state="completed", worktree_path=session.worktree_path)
         artifact = Artifact(task_run_id=run.id, artifact_type="diff", title="Previous diff", status="ready")
         db.add_all([workspace, session, agent, task, run, artifact])
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         yield db, session, agent, artifact
     engine.dispose()
 
@@ -56,7 +58,10 @@ def test_planner_does_not_attribute_selected_text_to_another_session_artifact():
         message = Message(session_id=other.id, sender_type="user", content_md="Inspect reference", context_json=json.dumps({
             "contextItems": [{"kind": "selected_text", "artifactId": artifact.id, "selectedText": "FORGED_SOURCE"}],
         }))
-        db.add_all([other, message]); db.commit()
+        db.add(other)
+        db.flush([other])
+        db.add(message)
+        db.commit()
         request = build_llm_planner_input(db, message)
         references = request["canonicalSharedContext"]["fields"]["relevantArtifacts"]["value"]
         assert not references["contextItems"][0]["valid"]

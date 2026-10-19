@@ -5,6 +5,13 @@
 
 ## 当前快照
 
+2026-10-19 数据库专项：用户批准 Native 计划，在 E 盘独立 `codex/database-integrity`
+工作树实施外键与事件并发修复，未提交或集成 main。固定 v2、离线升级保留数据、
+跨连接/进程编号和请求锁冲突处理已实现；CLI 和最小 Vite HTTP 闭环通过。
+最终全量验收尚未通过：API 三次均 2595 passed / 2 skipped / 1 个临时 Git 对象损坏失败，
+现有两个 Git 版本均出现该问题，根因未确认。源码、冻结 v1 和备份哈希正常，需独立环境对照。
+产品库仍保留原位且本次未升级，PostgreSQL 尚未实施。详见[本地验收记录](database-integrity-verification.md)。
+
 2026-10-18 交付：用户授权将工作台与意图边界修复提交并推送当前 `main`，随后核验对应
 提交的 Actions。提交前根检查通过，完整测试组成分别为 API 2551 passed / 1 skipped、
 Web 329（串行）、本地工具 24、demo-api 5；两份专项 strict 验证通过。测试使用外部临时库，

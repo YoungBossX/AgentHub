@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 from collections.abc import Iterator
 
@@ -5,7 +6,8 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.llm_planner import (
     LLMPlannerError,
@@ -46,11 +48,12 @@ def db() -> Iterator[DbSession]:
             worktree_path=".worktrees/planner-contract-session",
         )
         session.add(workspace)
+        session.flush([workspace])
         session.add(planning_session)
         session.add(Agent(name="Orchestrator", role="orchestrator", adapter_type="scripted_mock", provider="local"))
         session.add(Agent(name="Frontend Agent", role="frontend", adapter_type="codex", provider="local"))
         session.add(Agent(name="QA Agent", role="qa", adapter_type="scripted_mock", provider="local"))
-        session.commit()
+        flush_fixture_rows(session); session.commit()
         yield session
 
 
@@ -551,6 +554,6 @@ def _message(db: DbSession, content: str) -> Message:
         content_md=content,
     )
     db.add(message)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(message)
     return message

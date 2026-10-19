@@ -16,7 +16,7 @@ from app.message_regeneration import recover_interrupted_requests
 from app.user_code_edits import recover_user_edits
 from app.dependencies import get_db, get_deploy_service, get_preview_service
 from app.diffs import collect_task_run_diff
-from app.events import list_session_events
+from app.events import EventWriteConflict, list_session_events
 from app.ledger import (
     active_agents_for_ledger,
     changed_files_for_ledger,
@@ -142,6 +142,15 @@ session_event_routes.session_event_heartbeat_frame = (
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+
+@app.exception_handler(EventWriteConflict)
+async def event_write_conflict_handler(_request: Request, _error: EventWriteConflict) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": "Event write is busy; retry using a fresh database transaction.",
+                 "code": EventWriteConflict.code},
+    )
 
 
 @app.exception_handler(MemoryContextBudgetError)

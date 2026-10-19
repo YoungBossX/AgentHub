@@ -190,7 +190,7 @@ def test_api_lease_excludes_an_independent_process(data_workspace):
 async def test_api_lifespan_holds_and_releases_the_database_lease(data_workspace, monkeypatch):
     from contextlib import asynccontextmanager
     from app import main
-    from sqlalchemy import create_engine
+    from app.db_engine import create_runtime_engine as create_engine
     from sqlalchemy.pool import NullPool
     from app.db_migrations import prepare_database
     _, _, old_database, _, _ = data_workspace

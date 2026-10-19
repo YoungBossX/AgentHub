@@ -1,3 +1,4 @@
+from fixture_database import flush_fixture_rows
 import json
 import subprocess
 from collections.abc import Iterator
@@ -9,7 +10,8 @@ import pytest
 from fastapi import BackgroundTasks
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine, select
+from sqlmodel import SQLModel, select
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.external_workspaces import (
     ExternalWorkspaceRegistration,
@@ -456,6 +458,7 @@ def test_provisioned_project_runs_use_durable_queue_and_release_target_lock(tmp_
             provider="local",
         )
         db.add(workspace)
+        db.flush([workspace])
         db.add(session)
         db.add(frontend)
         db.commit()
@@ -1128,11 +1131,12 @@ def seed_dependent_tasks(
         depends_on_task_ids=json.dumps([upstream.id], separators=(",", ":")),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(frontend)
     db.add(upstream)
     db.add(downstream)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(upstream)
     db.refresh(downstream)
     return workspace, session, upstream, downstream
@@ -1194,11 +1198,12 @@ def seed_same_target_write_tasks(
         plan_json=json.dumps(plan, separators=(",", ":")),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(agent)
     db.add(first)
     db.add(second)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(first)
     db.refresh(second)
     return workspace, session, first, second
@@ -1284,12 +1289,13 @@ def seed_mixed_provider_task_graph(
         ),
     )
     db.add(workspace)
+    db.flush([workspace])
     db.add(session)
     db.add(backend)
     db.add(frontend)
     db.add(backend_task)
     db.add(frontend_task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     db.refresh(backend_task)
     db.refresh(frontend_task)
     return workspace, session, backend_task, frontend_task

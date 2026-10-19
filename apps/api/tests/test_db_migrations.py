@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 from sqlalchemy import inspect
-from migration_fixtures import feature, memory_engine, current_unversioned, populate_complete, legacy_table, LEGACY_COLUMNS
+from migration_fixtures import feature, memory_engine, current_unversioned, populate_complete, legacy_table, LEGACY_COLUMNS, complete_legacy_parents
 
 
 def apply(engine):
@@ -9,7 +9,7 @@ def apply(engine):
     with engine.connect() as connection:
         connection.exec_driver_sql('BEGIN IMMEDIATE')
         try:
-            feature('app.migration_runtime').run_baseline_upgrade(connection, before=contract.capture_rows(connection))
+            feature('app.migration_runtime').run_schema_upgrade(connection, before=contract.capture_rows(connection))
             connection.commit()
         except BaseException:
             connection.rollback()
@@ -21,7 +21,7 @@ def test_fixed_revision_initializes_empty():
     apply(engine)
     with engine.connect() as connection:
         assert feature('app.schema_contract').inspect_schema(connection).state == 'current'
-        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == '0001_local_baseline'
+        assert connection.exec_driver_sql('SELECT version_num FROM alembic_version').scalar_one() == '0002_database_integrity'
     assert len(inspect(engine).get_table_names()) == 27
 
 
@@ -37,6 +37,8 @@ def test_frozen_history_ignores_runtime_model_changes(monkeypatch):
 def test_supported_legacy_additions_preserve_values(table_name):
     engine = memory_engine()
     legacy_table(engine, table_name)
+    if table_name in {'externalprojecttarget', 'artifactversion'}:
+        complete_legacy_parents(engine, table_name)
     contract = feature('app.schema_contract')
     with engine.connect() as connection:
         before = contract.capture_rows(connection)

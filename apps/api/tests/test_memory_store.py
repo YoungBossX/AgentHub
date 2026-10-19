@@ -1,9 +1,11 @@
+from fixture_database import flush_fixture_rows
 from collections.abc import Iterator
 
 import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as DbSession
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 from sqlmodel import select
 
 from app.memory_snapshots import create_memory_snapshot
@@ -38,7 +40,8 @@ def db() -> Iterator[DbSession]:
             default_branch="main",
         )
         session.add(workspace)
-        session.commit()
+        session.flush([workspace])
+        flush_fixture_rows(session); session.commit()
         session.refresh(workspace)
         yield session
 

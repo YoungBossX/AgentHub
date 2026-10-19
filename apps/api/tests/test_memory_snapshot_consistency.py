@@ -1,10 +1,12 @@
+from fixture_database import flush_fixture_rows
 import hashlib
 import json
 from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
-from sqlmodel import Session as DbSession, SQLModel, create_engine
+from sqlmodel import Session as DbSession, SQLModel
+from app.db_engine import create_runtime_engine as create_engine
 
 from app.context_pack import build_session_context_pack
 from app.llm_planner import (
@@ -35,8 +37,9 @@ from app.run_engine import agent_run_request_for
 
 
 @pytest.fixture
-def world(tmp_path) -> Iterator[tuple[DbSession, Workspace, Session, Agent]]:
-    engine = create_engine(f"sqlite:///{tmp_path / 'memory.db'}", connect_args={"check_same_thread": False})
+def world(tmp_path, request) -> Iterator[tuple[DbSession, Workspace, Session, Agent]]:
+    filename = 'legacy-corruption.sqlite3' if getattr(request, 'param', None) == 'legacy_corruption' else 'memory.db'
+    engine = create_engine(f"sqlite:///{tmp_path / filename}", connect_args={"check_same_thread": False})
     SQLModel.metadata.create_all(engine)
     with DbSession(engine) as db:
         workspace = Workspace(name="Memory test", root_path="apps/demo", repo_url="local://apps/demo", default_branch="main")
@@ -46,7 +49,7 @@ def world(tmp_path) -> Iterator[tuple[DbSession, Workspace, Session, Agent]]:
         db.add_all([workspace, session, frontend,
                     Agent(name="Orchestrator", role="orchestrator", adapter_type="scripted_mock", provider="local"),
                     Agent(name="QA", role="qa", adapter_type="scripted_mock", provider="local")])
-        db.commit()
+        flush_fixture_rows(db); db.commit()
         yield db, workspace, session, frontend
     engine.dispose()
 
@@ -64,7 +67,7 @@ def _task(db, session, frontend):
                 assigned_agent_id=frontend.id,
                 plan_json=json.dumps({"targetId": "demo-frontend", "originalRequest": "Update canvas"}))
     db.add(task)
-    db.commit()
+    flush_fixture_rows(db); db.commit()
     return task
 
 
@@ -324,15 +327,16 @@ def test_invalid_task_run_binding_fails_without_falling_back_to_session(world, d
     assert "canonicalContextSnapshot" not in json.loads(run.metrics_json)
 
 
+@pytest.mark.parametrize('world', ['legacy_corruption'], indirect=True)
 def test_missing_session_snapshot_is_not_silently_replaced(world):
+    from legacy_corruption import delete_legacy_parent
     db, _workspace, session, frontend = world
     task = _task(db, session, frontend)
-    session.memory_snapshot_id = "missing-memory-snapshot"
-    db.add(session)
-    db.commit()
+    snapshot_id = ensure_session_memory_snapshot(db, session).id
+    delete_legacy_parent(db, 'memorysnapshot', snapshot_id)
     with pytest.raises(MemorySnapshotError):
         build_session_context_pack(db, task)
-    assert session.memory_snapshot_id == "missing-memory-snapshot"
+    assert session.memory_snapshot_id == snapshot_id
 
 
 def _digest(value):

@@ -5,6 +5,7 @@ import subprocess
 import threading
 
 import pytest
+from fixture_database import flush_fixture_rows
 from fastapi import BackgroundTasks, HTTPException
 from sqlmodel import select
 
@@ -252,7 +253,9 @@ def test_real_backend_repair_diff_revalidation_and_expiring_user_confirmation(mo
     agent = Agent(name="Backend", role="backend", adapter_type="scripted_mock", provider="local")
     original_task = Task(session_id=session.id, title="Original", intent_type="backend_change", status="completed", assigned_agent_id=agent.id,
                          plan_json=json.dumps({"targetId": "demo-backend", "assignedRole": "backend", "files": [BACKEND_SOURCE]}))
-    db.add_all([workspace, session, agent, original_task]); db.commit()
+    db.add_all([workspace, session, agent, original_task])
+    flush_fixture_rows(db)
+    db.commit()
     original = TaskRun(task_id=original_task.id, agent_id=agent.id, state="completed", worktree_path=str(backend_tree))
     db.add(original); db.commit()
     failed = validate_backend_copy(backend_tree, threading.Event())
@@ -264,7 +267,9 @@ def test_real_backend_repair_diff_revalidation_and_expiring_user_confirmation(mo
     report = Artifact(task_run_id=original.id, artifact_type="review", title="Old review", status="ready", meta_json=json.dumps({"qaAssessment": qa}))
     review = Review(artifact_id=report.id, reviewed_diff_artifact_id=old_diff.id, adapter_type="scripted_mock", status="warning",
         risk_level="low", summary="Original failure", findings_json=json.dumps([{"file": BACKEND_SOURCE, "message": "人工核对接口说明"}]))
-    db.add_all([old_diff, report, review]); db.commit()
+    db.add_all([old_diff, report, review])
+    flush_fixture_rows(db)
+    db.commit()
     frozen = (report.meta_json, review.findings_json)
     catalog = repair_history(db, session.id, report.id)
     draft = prepare_repair(db, session.id, report.id, [i["id"] for i in catalog["issues"]])
@@ -272,7 +277,9 @@ def test_real_backend_repair_diff_revalidation_and_expiring_user_confirmation(mo
     message.context_json = json.dumps(bind_message(db, message, {"reviewRepair": draft["selection"]}))
     task = Task(session_id=session.id, created_by_message_id=message.id, title="Repair health", intent_type="backend_change",
                 assigned_agent_id=agent.id, plan_json=original_task.plan_json)
-    db.add_all([message, task]); db.commit()
+    db.add_all([message, task])
+    flush_fixture_rows(db)
+    db.commit()
     run = create_task_run(db, task.id)
     assert _prepare_claimed_task_run_for_adapter(db, run, run.runner_id)
 

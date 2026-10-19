@@ -7,6 +7,7 @@ import subprocess
 import threading
 
 import pytest
+from fixture_database import flush_fixture_rows
 from sqlmodel import Session as DbSession, select
 
 from app import automatic_validation as validation
@@ -283,7 +284,9 @@ def test_backend_write_lifecycle_records_real_validation_diff_and_persistent_rev
     agent = Agent(name="Backend", role="backend", adapter_type="scripted_mock", provider="local")
     task = Task(session_id=session.id, title="Backend validation", intent_type="backend_change", assigned_agent_id=agent.id,
                 plan_json=json.dumps({"targetId": "demo-backend", "assignedRole": "backend", "files": [SOURCE]}))
-    mock_db.add_all([workspace, session, agent, task]); mock_db.commit()
+    mock_db.add_all([workspace, session, agent, task])
+    flush_fixture_rows(mock_db)
+    mock_db.commit()
     run = create_task_run(mock_db, task.id)
     assert _prepare_claimed_task_run_for_adapter(mock_db, run, run.runner_id)
     completed = asyncio.run(execute_task_run(mock_db, run, adapter_type="scripted_mock", adapter=BackendWriter(), supervisor=RunSupervisor()))

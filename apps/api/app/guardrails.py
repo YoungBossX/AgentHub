@@ -178,7 +178,6 @@ def request_task_run_approval(
     task_run.updated_at = now
     db.add(task)
     db.add(task_run)
-    db.commit()
 
     return append_task_run_event(
         db,
@@ -464,7 +463,6 @@ def _resolve_task_run_approval(
     task_run.updated_at = now
     db.add(task)
     db.add(task_run)
-    db.commit()
 
     append_task_run_event(
         db,

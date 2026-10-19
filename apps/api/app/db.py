@@ -1,5 +1,5 @@
 from sqlmodel import Session as DbSession
-from sqlmodel import create_engine
+from app.db_engine import create_runtime_engine
 
 from app.config import get_settings, sqlite_path_from_url
 from app.seed import seed_demo_data
@@ -8,7 +8,7 @@ from app.db_migrations import prepare_database, require_current_schema
 settings = get_settings()
 sqlite_path = sqlite_path_from_url(settings.database_url)
 
-engine = create_engine(
+engine = create_runtime_engine(
     settings.database_url,
     echo=False,
     connect_args={"check_same_thread": False}
