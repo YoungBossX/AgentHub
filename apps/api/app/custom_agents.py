@@ -4,6 +4,8 @@ import json
 import re
 from dataclasses import dataclass
 
+from app.intent_decisions import mention_aliases
+
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session as DbSession, select
 
@@ -32,7 +34,6 @@ ROLE_CAPABILITIES = {
     "orchestrator": {"code_review", "diff_analysis"},
 }
 ALIAS_PATTERN = re.compile(r"^[a-z][a-z0-9_-]{1,63}$")
-MENTION_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9_-]*)")
 RESERVED_ALIASES = {"frontend", "backend", "qa", "review", "orchestrator", "planner", "manager", "fallback"}
 
 
@@ -159,7 +160,7 @@ def custom_agent_mentions(db: DbSession, workspace_id: str, content: str) -> dic
 
     content = routing_text(content)
     selected: dict[str, AgentProfileDraft] = {}
-    for alias in MENTION_PATTERN.findall(content):
+    for alias in mention_aliases(content):
         profile = db.exec(select(AgentProfileDraft).where(
             AgentProfileDraft.workspace_id == workspace_id,
             AgentProfileDraft.mention_alias == alias.lower(),

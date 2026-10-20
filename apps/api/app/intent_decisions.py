@@ -1,6 +1,7 @@
 """Conservative request boundaries; recognition evidence grants no permissions."""
 from dataclasses import dataclass, replace
 import re
+import unicodedata
 from typing import Literal
 
 
@@ -39,7 +40,30 @@ class IntentDecision:
 
 # Only matched quote pairs are removed. Apostrophes in don't/it's are prose.
 QUOTED = re.compile(r"```[\s\S]*?```|`[^`\n]*`|\"[^\"\n]*\"|“[^”\n]*”|‘[^’\n]*’|(?<!\w)'[^'\n]*'(?!\w)")
-MENTION = re.compile(r"@[A-Za-z][A-Za-z0-9_-]*")
+# An ASCII mailbox/local token is data. Chinese prose may directly precede
+# an alias, so a blanket Unicode word boundary would break "请@frontend".
+# Unicode mailbox tails, including combining marks, need a category check.
+# Bare unknown aliases still reach the existing fail-closed role validation.
+_MENTION = re.compile(r"(?<![A-Za-z0-9._%+\-])@([A-Za-z][A-Za-z0-9_-]*)")
+_DOMAIN_SUFFIX = re.compile(r"\.[A-Za-z0-9]")
+
+
+def _is_agent_mention(match: re.Match) -> bool:
+    if match.start() == 0:
+        return True
+    previous = match.string[match.start() - 1]
+    mailbox_tail = previous.isalnum() or unicodedata.category(previous).startswith("M")
+    return not (mailbox_tail and _DOMAIN_SUFFIX.match(match.string, match.end()))
+
+
+def mention_aliases(content: str) -> list[str]:
+    return [match.group(1) for match in _MENTION.finditer(content) if _is_agent_mention(match)]
+
+
+def remove_agent_mentions(content: str) -> str:
+    return _MENTION.sub(lambda match: "" if _is_agent_mention(match) else match.group(), content)
+
+
 # Strip only explicit neutral scope/politeness clauses. Arbitrary prose before
 # a comma may contain another action, negation or a question and must stay.
 INTRODUCTION = re.compile(
@@ -67,9 +91,9 @@ def strip_mentions(content: str) -> str:
     parts = []
     start = 0
     for match in QUOTED.finditer(content):
-        parts.extend((MENTION.sub("", content[start:match.start()]), match.group()))
+        parts.extend((remove_agent_mentions(content[start:match.start()]), match.group()))
         start = match.end()
-    return "".join((*parts, MENTION.sub("", content[start:])))
+    return "".join((*parts, remove_agent_mentions(content[start:])))
 
 
 def command_match(pattern: re.Pattern, text: str):
@@ -81,7 +105,7 @@ def command_match(pattern: re.Pattern, text: str):
 def request_boundary(content: str) -> IntentDecision:
     if content.count("```") % 2:
         return IntentDecision("clarification", "clarify", reason_codes=("UNCLOSED_CODE_REFERENCE",))
-    text = MENTION.sub("", routing_text(content)).strip().strip(".!。！ ")
+    text = remove_agent_mentions(routing_text(content)).strip().strip(".!。！ ")
     text = INTRODUCTION.sub("", text)
     if not text:
         return IntentDecision("clarification", "clarify", reason_codes=("NO_ACTION_OUTSIDE_REFERENCE",), missing_fields=("request",))

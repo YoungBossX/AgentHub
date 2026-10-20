@@ -19,6 +19,7 @@ from app.models import utc_now
 from app.task_run_scope import TaskRunScopeError
 from app.process_environment import redact_process_evidence
 from app.attachment_inputs import ImageInput
+from app.execution_telemetry import AdapterTiming
 
 AgentEventType = Literal[
     "message.delta",
@@ -174,13 +175,16 @@ async def run_adapter_event_stream(
     run: Optional[AdapterRun] = None
     persisted: list[TaskRunEvent] = []
     primary_error = False
+    timing = AdapterTiming()
     try:
         run = await adapter.createRun(request)
+        timing.launched()
         if not _bind_adapter_run(
             db,
             request,
             run,
             ownership_guard=ownership_guard,
+            initial_timing=dict(timing.values),
         ):
             raise _adapter_event_ownership_error()
         if on_adapter_run_created is not None:
@@ -190,6 +194,7 @@ async def run_adapter_event_stream(
             event = normalize_agent_event(raw_event, request.task_run_id)
             if event.task_run_id != request.task_run_id:
                 raise _adapter_event_ownership_error()
+            timing.observe(event)
             stored = _persist_guarded_agent_event(
                 db,
                 request,
@@ -253,6 +258,7 @@ def _bind_adapter_run(
     run: AdapterRun,
     *,
     ownership_guard: Callable[[DbSession], bool],
+    initial_timing: Optional[dict[str, Any]] = None,
 ) -> bool:
     _rollback_adapter_event_fence(db)
     try:
@@ -277,6 +283,10 @@ def _bind_adapter_run(
             return False
         now = utc_now()
         task_run.adapter_run_id = run.adapter_run_id
+        if initial_timing is not None:
+            metrics = json.loads(task_run.metrics_json)
+            metrics['executionTiming'] = initial_timing
+            task_run.metrics_json = json.dumps(metrics, separators=(',', ':'))
         task_run.started_at = task_run.started_at or now
         task_run.updated_at = now
         db.add(task_run)
@@ -328,6 +338,13 @@ def _persist_guarded_agent_event(
             ),
         )
         safe_event = event.model_copy(update={"payload": safe_payload})
+        if any(isinstance(safe_payload.get(key), dict) for key in ('executionTiming', 'providerUsage')):
+            metrics = json.loads(task_run.metrics_json)
+            for key in ('executionTiming', 'providerUsage'):
+                if isinstance(safe_payload.get(key), dict):
+                    metrics[key] = safe_payload[key]
+            task_run.metrics_json = json.dumps(metrics, separators=(',', ':'))
+            db.add(task_run)
         terminal_state = _stage_task_run_event_state(db, task_run, task, safe_event)
         db.commit()
         db.refresh(stored)

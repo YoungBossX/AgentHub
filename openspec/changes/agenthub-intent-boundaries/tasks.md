@@ -1,5 +1,16 @@
 ## 1. Intent recognition boundaries
 
+- [x] 1.4 Fix the live feedback route rejecting ordinary email addresses as unknown Agent mentions. Use one shared lexical boundary for built-in/custom recipient selection and mention stripping, preserve explicit unknown/disabled rejection and Chinese adjacent mentions, verify literal copy values and real routing, then repeat the previously rejected real repair instruction. Preserve the measured source-A cohort instead of relabeling it as a post-fix run.
+
+1.4 verified2026-10-20: initial14-case RED9; Unicode4-case RED4; final18-case
+and adjacent regressions338passed, authored corpus85/85. Final B2 root check/full
+pnpm test exit0: API2782passed/19skipped/2warnings, Web333/tools24/demoAPI5;
+source216 plus3additional files match the frozen snapshot, independent review no
+remainingP1/P2. Same rejected real prompt passed earlier frozenB1 with4observed
+coding/review turns,2nativeQA and24/24business checks; A's10-case8/10 result
+unchanged. No B2 model cohort or new Docker/remote-CI claim. User confirmed
+retaining2policy-denied pytest caches. See docs/real-api-validation-20261019.md.
+
 - [x] 1.3 Fix neutral comma introductions without treating their first imperative
   as a second action; retain negative/informational/multi-action/quoted/slot
   boundaries, add parser/corpus/production planning regressions, and verify a

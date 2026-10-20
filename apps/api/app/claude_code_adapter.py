@@ -23,6 +23,7 @@ from app.process_input import private_stdin
 from app.claude_executable import resolve_claude_executable
 from app.native_reviews import NativeReadEvidence, NativeReviewError, validate_native_assessment
 from app.process_environment import ProcessTextRedactor, adapter_process_env, redact_process_evidence
+from app.execution_telemetry import provider_usage
 
 DEFAULT_CLAUDE_BINARY = "claude"
 STDERR_LIMIT = 1200
@@ -108,6 +109,7 @@ class ClaudeCodeRunState:
     process: Optional[ClaudeCodeProcess] = None
     start_error: Optional[Exception] = None
     interrupted: bool = False
+    provider_usage: Optional[dict[str, Any]] = None
 
 
 class ClaudeCodeAdapter(AgentAdapter):
@@ -170,6 +172,19 @@ class ClaudeCodeAdapter(AgentAdapter):
         return AdapterRun(adapterRunId=run_id)
 
     async def streamEvents(self, run_id: str) -> AsyncIterator[AgentEvent]:
+        state = self._state_for(run_id)
+        terminal = None
+        async for event in self._stream_events(run_id):
+            if event.type in {'completed', 'error'}:
+                if terminal is None or (terminal.type == 'completed' and event.type == 'error'):
+                    terminal = event
+            else:
+                yield event
+        if terminal is not None:
+            terminal.payload['providerUsage'] = state.provider_usage or provider_usage(None)
+            yield terminal
+
+    async def _stream_events(self, run_id: str) -> AsyncIterator[AgentEvent]:
         state = self._state_for(run_id)
         request = state.request
 
@@ -239,6 +254,8 @@ class ClaudeCodeAdapter(AgentAdapter):
                 # Keep only validated hashes in the final native receipt.
                 if raw_event.get("type") == "user":
                     continue
+            if raw_event.get('type') in {'result', 'completed', 'turn.completed'}:
+                state.provider_usage = provider_usage(raw_event)
             event = _map_claude_json_event(
                 raw_event,
                 request.task_run_id,
@@ -488,6 +505,7 @@ def _map_claude_json_event(
                 command=command,
                 stderr=stderr_excerpt,
                 claudeEventType=event_type,
+                providerUsage=provider_usage(raw_event),
             )
 
         return _event(
@@ -497,6 +515,7 @@ def _map_claude_json_event(
                 "adapter": "claude_code",
                 "claudeEventType": event_type,
                 "stderr": stderr_excerpt,
+                "providerUsage": provider_usage(raw_event),
             },
         )
 

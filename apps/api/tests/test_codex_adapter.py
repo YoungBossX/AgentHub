@@ -23,6 +23,20 @@ def _allow_test_execution_ownership(_: DbSession) -> bool:
     return True
 
 
+@pytest.mark.anyio
+async def test_error_then_usage_preserves_failed_call_consumption(db, tmp_path):
+    session, run = create_task_run(db, str(tmp_path))
+    process = FakeCodexProcess(stdout='\n'.join(json.dumps(item) for item in [
+        {'type': 'error', 'message': 'specific provider failure'},
+        {'type': 'turn.completed', 'usage': {'input_tokens': 10, 'output_tokens': 3}}]), returncode=1)
+    adapter = CodexAdapter(process_runner=FakeCodexRunner(process), codex_binary='codex')
+    stored = await run_adapter_event_stream(db, adapter, request_for(run, session))
+    db.refresh(run)
+    assert run.state == 'failed' and 'specific provider failure' in run.error_message
+    assert json.loads(run.metrics_json).get('providerUsage', {}).get('tokenTotal') == 13
+    assert sum(event.event_type in {'completed', 'error'} for event in stored) == 1
+
+
 async def run_adapter_event_stream(db, adapter, request, **kwargs):
     kwargs.setdefault("ownership_guard", _allow_test_execution_ownership)
     return await _run_adapter_event_stream(db, adapter, request, **kwargs)

@@ -192,6 +192,34 @@ def test_planner_required_workflow_groups_use_one_valid_native_plan(db, monkeypa
     assert all(json.loads(task.plan_json)["groupAssignment"]["coordinationSource"] == "fake_test" for task in tasks)
 
 
+@pytest.mark.parametrize("content", [
+    '@frontend @qa 继续同一个会话，再将 h1#demo-heading 精确改为“第二轮：中文协作已完成”。保留前一轮无关界面，审查本轮真实Diff。',
+    '@frontend @qa 请仅修改 h1#demo-heading 的文本为“协作已完成”。',
+    '@frontend @qa Update h1#demo-heading to the second revision.',
+    '@frontend @qa Update h1#demo-heading.',
+])
+def test_explicit_demo_heading_selector_reaches_bounded_group_planning(db, monkeypatch, content):
+    captured = native_provider(db, monkeypatch)
+    tasks = plan(db, content)
+    assert len(tasks) == 2 and len(captured) == 1
+    assert all(json.loads(task.plan_json)["targetId"] == "demo-frontend" for task in tasks)
+    assert json.loads(tasks[1].plan_json)["readOnly"] is True
+
+
+@pytest.mark.parametrize("content", [
+    '@frontend @qa Change an unrelated heading to "h1#demo-heading".',
+    '@frontend @qa Change an unrelated heading to “h1#demo-heading”.',
+    '@frontend @qa Update h1#demo-heading-other.',
+    '@frontend @qa Update xh1#demo-heading.',
+    '@frontend @qa Update h1#demo-heading.other.',
+    '@frontend @qa Update h1#demo-heading.tsx.',
+    '@frontend @qa Update h1#demo-heading in the whole app payment system.',
+])
+def test_demo_heading_scope_does_not_come_from_literal_partial_or_broad_reference(content):
+    from app.planning_intents import _is_safe_demo_frontend_request
+    assert not _is_safe_demo_frontend_request(content)
+
+
 @pytest.mark.parametrize("unavailable", ["disabled", "non-task", "failed"])
 def test_planner_required_group_never_persists_rule_fallback(db, monkeypatch, unavailable):
     from app.planner_providers import DisabledPlannerProvider, PlannerProviderError

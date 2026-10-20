@@ -25,6 +25,11 @@ Planner result or clarification rather than generic fallback.
   parameter text is preserved, and negation, explanation and genuine multiple
   actions in the remaining request retain the same no-partial-write boundaries.
 
+#### Scenario: Email addresses are data, not recipients
+- **WHEN** unquoted ordinary mailbox addresses occur beside explicit built-in or custom Agent aliases
+- **THEN** recipient selection and mention stripping preserve the addresses as data, without selecting an Agent from an address or rejecting its domain as an unknown alias
+- **AND** explicit unknown/disabled mentions still fail, quoted mentions stay non-routing data, and Chinese prose may directly precede a real mention.
+
 ### Requirement: Uniform bounded recognition evidence
 The server SHALL record versioned request type, source, routing, action/target,
 bounded parameters and reason codes from server decisions in existing message and

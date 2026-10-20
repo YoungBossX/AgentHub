@@ -23,7 +23,7 @@ from app.db_migrations import prepare_database
 from app.automatic_validation import validation_for_run
 from app.external_benchmark import reserve_output, git, file_hash
 from app.group_execution import enqueue_ready_group_tasks
-from app.models import Agent, Artifact, Diff, Session, Task, TaskRun, TaskRunEvent, Workspace
+from app.models import Agent, Artifact, Diff, Session, SessionQueueEntry, Task, TaskRun, TaskRunEvent, Workspace
 from app.native_reviews import _read_file, _no_link
 from app.process_environment import redact_process_evidence
 from app.routes.messages import create_message
@@ -39,6 +39,7 @@ from app.worktrees import repo_root
 from app.workflow_review_evidence import attempt_seconds, collect_reviews, review_gates
 from app.workflow_cohort import cohort, invalidate, role_stats, elapsed_stats
 from app.workflow_profiles import bound_scenario, configure_profiles, QA_PROMPT
+from app.workflow_metrics import attempt_timings, measurement_summary, stage_timer
 
 SCHEMA = "agenthub.workflow_evaluation.v2"
 TERMINAL = {"completed", "failed", "interrupted", "cancelled"}
@@ -89,12 +90,15 @@ def collect_attempt(db, run, root):
     observed = (("thread.started" in codex and bool(codex & {"turn.completed", "turn.finished"}))
                 or (bool(claude & {"system", "session.started", "init"}) and bool(claude & {"result", "completed", "turn.completed"})))
     diffs = db.exec(select(Diff).join(Artifact, Artifact.id == Diff.artifact_id).where(Artifact.task_run_id == run.id)).all()
+    queue = db.exec(select(SessionQueueEntry).where(SessionQueueEntry.task_run_id == run.id)).first()
     return {"taskRunId": run.id, "taskId": task.id, "role": plan.get("assignedRole"), "targetId": plan.get("targetId"),
             "elapsedSeconds": attempt_seconds(run), "startedAt": run.started_at.isoformat() if run.started_at else None,
             "endedAt": run.ended_at.isoformat() if run.ended_at else None,
             "state": run.state, "errorCode": run.error_code, "adapterRunId": run.adapter_run_id,
             "retryOfRunId": metrics.get("retryOfRunId"), "providerAssignment": metrics.get("providerAssignment"),
             "providerTurnObserved": observed, "scope": metrics.get("taskRunScopeDecision"),
+            "providerUsage": metrics.get('providerUsage'),
+            "stageTimings": attempt_timings(run, queue, metrics.get('executionTiming')),
             "completion": metrics.get("completionValidation"), "memoryUsage": metrics.get("memoryUsage"),
             "validation": validation_for_run(db, run.id),
             "reviews": collect_reviews(db, run, [json.loads(event.payload_json) for event in events if event.event_type == "completed"]),
@@ -174,7 +178,8 @@ def aggregate(cases, *, mode, cohort_valid=True):
                 "nativeQaVerifiedAttempts": sum(bool(a.get("reviews")) and all(r.get("verifiedNativeReceipt") for r in a["reviews"])
                     for case in items for phase in case.get("phases", []) for a in phase.get("attempts", []) if a.get("role") in {"qa", "review"}),
                 "medianElapsedSeconds": statistics.median(durations) if durations else None,
-                "maxElapsedSeconds": max(durations) if durations else None, "failureCounts": failures}
+                "maxElapsedSeconds": max(durations) if durations else None, "failureCounts": failures,
+                "measurements": measurement_summary(items)}
     return {**stats(cases), "naturalScenarios": stats([case for case in cases if not case.get("faultInjection")]),
             "faultInjectionScenarios": stats([case for case in cases if case.get("faultInjection")]),
             "categories": {name: stats([c for c in cases if c["caseId"] == name]) for name in sorted({c["caseId"] for c in cases})}}
@@ -221,10 +226,12 @@ async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phas
         phase = {}
     phase.update(index=index, promptHash=hashlib.sha256(scenario.prompts[index].encode()).hexdigest(), attempts=[], testExecution=test_execution)
     phase.update(requireNativeQa=require_native_qa, maxRetriesPerTask=max_retries, codingAdapter=coding_adapter)
+    phase['stageTimings'] = {name: None for name in ('planningDispatchMs', 'workflowExecutionMs', 'independentAcceptanceMs')}
     phase.update(requiredRuleId=required_rule.id if required_rule else None, requiredRuleHash=required_rule.content_hash if required_rule else None)
     before = hashes(root)
     try:
-        message = await _dispatch(db, session, scenario.prompts[index], evidence=phase)
+        with stage_timer(phase['stageTimings'], 'planningDispatchMs'):
+            message = await _dispatch(db, session, scenario.prompts[index], evidence=phase)
         phase["messageId"] = message.id
         tasks = db.exec(select(Task).where(Task.created_by_message_id == message.id).order_by(Task.priority, Task.created_at)).all()
         phase["tasks"] = [{"id": task.id, "dependsOn": json.loads(task.depends_on_task_ids), "plan": redact_process_evidence(json.loads(task.plan_json))} for task in tasks]
@@ -246,25 +253,27 @@ async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phas
                 queued.metrics_json = json.dumps(metrics); db.add(queued); db.commit()
                 phase["faultInjection"] = {"kind": "existing_codex_force_failure", "taskRunId": queued.id, "naturalProviderOutage": False}
         retries = {}
-        for _ in range(max(12, len(tasks) * (max_retries + 1) + 1)):
-            enqueue_ready_group_tasks(db, session_id=session.id)
-            run = await RunWorker().run_once(db)
-            if run is None:
-                break
-            db.expire_all(); run = db.get(TaskRun, run.id)
-            phase["attempts"].append(collect_attempt(db, run, root))
-            if progress: progress()
-            if run.state != "completed":
-                if run.state in {"failed", "interrupted"} and retries.get(run.task_id, 0) < max_retries:
-                    retry_task_run(db, run.id)
-                    retries[run.task_id] = retries.get(run.task_id, 0) + 1
-                    phase.setdefault("retryDecisions", []).append({"failedRunId": run.id, "taskId": run.task_id,
-                        "reason": "explicit_fault_injection" if scenario.fault_injection and len(phase["attempts"]) == 1 else "natural_execution_failure"})
-                    continue
-                break
+        with stage_timer(phase['stageTimings'], 'workflowExecutionMs'):
+            for _ in range(max(12, len(tasks) * (max_retries + 1) + 1)):
+                enqueue_ready_group_tasks(db, session_id=session.id)
+                run = await RunWorker().run_once(db)
+                if run is None:
+                    break
+                db.expire_all(); run = db.get(TaskRun, run.id)
+                phase["attempts"].append(collect_attempt(db, run, root))
+                if progress: progress()
+                if run.state != "completed":
+                    if run.state in {"failed", "interrupted"} and retries.get(run.task_id, 0) < max_retries:
+                        retry_task_run(db, run.id)
+                        retries[run.task_id] = retries.get(run.task_id, 0) + 1
+                        phase.setdefault("retryDecisions", []).append({"failedRunId": run.id, "taskId": run.task_id,
+                            "reason": "explicit_fault_injection" if scenario.fault_injection and len(phase["attempts"]) == 1 else "natural_execution_failure"})
+                        continue
+                    break
         db.expire_all()
         phase["allTasksCompleted"] = bool(tasks) and all(db.get(Task, task.id).status == "completed" for task in tasks)
-        phase["acceptance"] = await accept_source(root, scenario, index)
+        with stage_timer(phase['stageTimings'], 'independentAcceptanceMs'):
+            phase["acceptance"] = await accept_source(root, scenario, index)
     except asyncio.CancelledError:
         phase["error"] = "scenario_timeout_or_cancel"
         raise
@@ -379,13 +388,14 @@ async def run_scenario(directory, scenario, *, prepare_only=False, adapter="code
                   elapsedSeconds=round(time.monotonic() - started, 3), retryCount=sum(bool(a.get("retryOfRunId")) for a in attempts),
                   firstAttemptPassed=bool(phases) and not gates and not any(a["state"] != "completed" or a.get("retryOfRunId") for a in attempts))
     result["totalElapsedSeconds"] = round(time.monotonic() - preparation_started, 3)
+    result['tokenUsage'] = measurement_summary([result])['providerUsage']
     return result
 
 
 async def run_benchmark(output, *, case_id=None, repetitions=1, prepare_only=False, adapter="codex", qa_adapter="claude_code", timeout=900,
                         test_execution=False, max_retries=1):
     scenarios = [bound_scenario(scenario, qa_adapter) for scenario in select_scenarios(case_id)]
-    if (type(repetitions) is not int or not 1 <= repetitions <= 5 or adapter not in {"codex", "claude_code"} or not 60 <= timeout <= 1800
+    if (type(repetitions) is not int or not 1 <= repetitions <= 10 or adapter not in {"codex", "claude_code"} or not 60 <= timeout <= 1800
             or type(max_retries) is not int or not 0 <= max_retries <= 2
             or qa_adapter not in ({"claude_code", "scripted_mock"} if test_execution else {"claude_code"})):
         raise ValueError("Invalid bounded workflow evaluation options.")

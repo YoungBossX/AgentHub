@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 from urllib.parse import urlparse, urlunparse
@@ -15,6 +15,7 @@ from urllib.request import Request, urlopen
 from app.process_environment import adapter_process_env, redact_process_evidence
 from app.claude_executable import resolve_claude_executable
 from app.context_budget import ContextBudgetError, audit_planner, audit_planner_cli
+from app.execution_telemetry import provider_usage
 
 from app.config import Settings, get_settings
 from app.planner_contracts import (
@@ -371,6 +372,7 @@ class PlannerProviderResult:
     model: str | None = None
     base_url: str | None = None
     context_budget: dict[str, Any] | None = None
+    provider_usage: dict[str, Any] | None = None
 
     def to_metadata(self) -> dict[str, Any]:
         metadata: dict[str, Any] = {
@@ -396,6 +398,8 @@ class PlannerProviderResult:
             metadata["baseUrl"] = self.base_url
         if self.context_budget:
             metadata["contextBudget"] = self.context_budget
+        if self.provider_usage is not None:
+            metadata['providerUsage'] = self.provider_usage
         return metadata
 
 
@@ -580,6 +584,7 @@ class ClaudeCliPlannerProvider:
         duration_ms = _duration_ms(started)
         stderr = _excerpt(redact_process_evidence(completed.stderr or ""))
         stdout = redact_process_evidence(completed.stdout or "")
+        terminal = None
         if use_stdin:
             try:
                 results = [json.loads(line) for line in stdout.splitlines() if line.strip()]
@@ -588,12 +593,23 @@ class ClaudeCliPlannerProvider:
                     detail = terminal.get("result") or "; ".join(str(error) for error in terminal.get("errors", []))
                     summary = _excerpt(detail) if isinstance(detail, str) else "Claude attachment planning failed."
                     if "only support text input" in summary.lower():
-                        return self._error_result("PLANNER_IMAGE_UNSUPPORTED", "当前模型仅支持文本输入，无法读取图片。请选择支持图片的模型或原生 Agent，或改用文字附件。", started)
-                    return self._error_result(_planner_error_code_for_text(summary), summary, started)
+                        return replace(self._error_result("PLANNER_IMAGE_UNSUPPORTED", "当前模型仅支持文本输入，无法读取图片。请选择支持图片的模型或原生 Agent，或改用文字附件。", started), provider_usage=provider_usage(terminal))
+                    return replace(self._error_result(_planner_error_code_for_text(summary), summary, started), provider_usage=provider_usage(terminal))
                 stdout = str(terminal.get("result") or "")
             except (ValueError, StopIteration, AttributeError):
                 if completed.returncode == 0:
                     return self._error_result("PLANNER_INVALID_OUTPUT", "Claude attachment planning returned no valid result.", started)
+        else:
+            try:
+                envelope = json.loads(stdout)
+                if isinstance(envelope, dict) and envelope.get('type') == 'result':
+                    terminal = envelope
+                    stdout = str(envelope.get('result') or '')
+            except (ValueError, TypeError):
+                pass  # preserve compatibility with older plain-text command runners
+        usage = provider_usage(terminal)
+        if terminal is not None and terminal.get('is_error'):
+            return replace(self._error_result(_planner_error_code_for_text(stdout), _excerpt(stdout), started), provider_usage=usage)
         if completed.returncode != 0:
             code = _planner_error_code_for_text(stderr or stdout)
             return PlannerProviderResult(
@@ -604,6 +620,7 @@ class ClaudeCliPlannerProvider:
                 duration_ms=duration_ms,
                 error_code=code,
                 error_summary=stderr or f"Claude CLI planner exited with code {completed.returncode}.",
+                provider_usage=usage,
             )
         if not stdout.strip():
             return PlannerProviderResult(
@@ -614,6 +631,7 @@ class ClaudeCliPlannerProvider:
                 duration_ms=duration_ms,
                 error_code="PLANNER_EMPTY_OUTPUT",
                 error_summary="Claude CLI planner returned no output.",
+                provider_usage=usage,
             )
         return PlannerProviderResult(
             provider_id=self.provider_id,
@@ -622,6 +640,7 @@ class ClaudeCliPlannerProvider:
             status="succeeded",
             raw_output=stdout.strip(),
             duration_ms=duration_ms,
+            provider_usage=usage,
         )
 
     def _build_command(self, planner_input: dict[str, Any]) -> list[str]:
@@ -635,7 +654,7 @@ class ClaudeCliPlannerProvider:
         if custom_policy not in {None, "planner_no_tools"}:
             raise ValueError("Unsupported custom Planner tool policy.")
         command = [
-            self._claude_binary, "--print", "--output-format", "text",
+            self._claude_binary, "--print", "--output-format", "json",
             "--permission-mode", "dontAsk", "--allowedTools",
             "" if custom_policy else "Read",
         ]

@@ -27,6 +27,8 @@ BLOCKING_SCHEDULER_STATES = {
 def build_session_mission_trace(
     db: DbSession,
     session_id: str,
+    *,
+    include_events: bool = True,
 ) -> SessionMissionTraceResponse:
     ledger = refresh_session_ledger(db, session_id)
     tasks = db.exec(
@@ -37,7 +39,7 @@ def build_session_mission_trace(
     task_ids = [task.id for task in tasks]
     task_runs = _task_runs_for_tasks(db, task_ids)
     run_ids = [task_run.id for task_run in task_runs]
-    events = _events_for_runs(db, run_ids)
+    events = _events_for_runs(db, run_ids) if include_events else []
     artifacts = _artifacts_for_runs(db, run_ids)
     blockers = _blockers_for_tasks(tasks)
     session = db.get(AgentHubSession, session_id)

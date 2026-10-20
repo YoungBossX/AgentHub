@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 import hashlib
 import json
+from uuid import uuid4
 
 from app.process_environment import redact_process_evidence
 
@@ -23,7 +24,7 @@ def record_planner_call(planner_input, provider, result=None, *, error=None):
     calls = _calls.get()
     if calls is None or len(calls) >= 8:
         return
-    value = {"providerId": getattr(provider, "provider_id", None),
+    value = {"callId": uuid4().hex, "providerId": getattr(provider, "provider_id", None),
              "plannerSource": getattr(provider, "planner_source", None),
              "inputSha256": hashlib.sha256(json.dumps(planner_input, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}
     if result is not None:

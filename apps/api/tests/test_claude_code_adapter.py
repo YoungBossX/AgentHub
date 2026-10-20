@@ -175,6 +175,68 @@ def request_for(task_run: TaskRun, session: Session) -> AgentRunRequest:
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize('returncode', [0, 1])
+async def test_usage_and_semantic_timing_persist_after_process_exit(db, tmp_path, returncode):
+    session, run = create_task_run(db, str(tmp_path))
+    raw = [{'type': 'system'}, {'type': 'tool_diagnostic', 'text': 'not semantic'},
+           {'type': 'stream_event', 'event': {'type': 'content_block_delta', 'delta': {'type': 'text_delta', 'text': '真实文本'}}},
+           {'type': 'result', 'usage': {'input_tokens': 5, 'output_tokens': 3,
+            'cache_read_input_tokens': 0, 'cache_creation_input_tokens': 0}}]
+    adapter = ClaudeCodeAdapter(process_runner=FakeClaudeCodeRunner(FakeClaudeCodeProcess(
+        stdout='\n'.join(json.dumps(item) for item in raw), returncode=returncode, line_delay_sec=0.01)), claude_binary='claude')
+    await run_adapter_event_stream(db, adapter, request_for(run, session))
+    db.refresh(run)
+    metrics = json.loads(run.metrics_json)
+    assert metrics.get('providerUsage', {}).get('tokenTotal') == 8
+    timing = metrics.get('executionTiming')
+    assert timing and timing['adapterLaunchMs'] >= 0
+    assert timing['firstSemanticTextMs'] >= 20
+    assert timing['adapterWallMs'] >= timing['firstSemanticTextMs']
+    assert bool(timing['adapterTerminalAt'])
+    assert run.state == ('collecting_diff' if returncode == 0 else 'failed')
+
+
+@pytest.mark.anyio
+async def test_tool_diagnostic_is_not_first_semantic_text(db, tmp_path):
+    session, run = create_task_run(db, str(tmp_path))
+    adapter = ClaudeCodeAdapter(process_runner=FakeClaudeCodeRunner(FakeClaudeCodeProcess(
+        stdout='{"type":"tool_diagnostic","text":"debug"}\n{"type":"result"}\n')), claude_binary='claude')
+    await run_adapter_event_stream(db, adapter, request_for(run, session))
+    db.refresh(run)
+    timing = json.loads(run.metrics_json).get('executionTiming')
+    assert timing and timing['firstSemanticTextMs'] is None
+
+
+@pytest.mark.anyio
+async def test_error_then_result_retains_usage_without_weakening_terminal_fence(db, tmp_path):
+    session, run = create_task_run(db, str(tmp_path))
+    process = FakeClaudeCodeProcess(stdout='\n'.join(json.dumps(item) for item in [
+        {'type': 'error', 'message': 'specific provider failure'},
+        {'type': 'result', 'usage': {'input_tokens': 5, 'output_tokens': 3,
+                                   'cache_read_input_tokens': 0, 'cache_creation_input_tokens': 0}}]), returncode=1)
+    adapter = ClaudeCodeAdapter(process_runner=FakeClaudeCodeRunner(process), claude_binary='claude')
+    stored = await run_adapter_event_stream(db, adapter, request_for(run, session))
+    db.refresh(run)
+    assert run.state == 'failed' and 'specific provider failure' in run.error_message
+    assert json.loads(run.metrics_json).get('providerUsage', {}).get('tokenTotal') == 8
+    assert sum(event.event_type in {'completed', 'error'} for event in stored) == 1
+
+
+@pytest.mark.anyio
+async def test_error_wall_time_includes_wait_for_process_exit(db, tmp_path):
+    session, run = create_task_run(db, str(tmp_path))
+    class SlowExit(FakeClaudeCodeProcess):
+        async def wait(self):
+            await asyncio.sleep(.03)
+            return await super().wait()
+    adapter = ClaudeCodeAdapter(process_runner=FakeClaudeCodeRunner(SlowExit(
+        stdout='{"type":"result","is_error":true,"result":"provider failure"}', returncode=1)), claude_binary='claude')
+    await run_adapter_event_stream(db, adapter, request_for(run, session))
+    db.refresh(run)
+    assert json.loads(run.metrics_json)['executionTiming']['adapterWallMs'] >= 20
+
+
+@pytest.mark.anyio
 async def test_claude_code_adapter_builds_documented_command_shape(
     tmp_path: Path,
 ) -> None:

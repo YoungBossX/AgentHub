@@ -9,7 +9,7 @@ from sqlmodel import select
 from app.models import Agent, Message
 from app.models import Session as AgentHubSession
 from app.repositories import list_session_tasks
-from app.intent_decisions import IntentDecision, command_match, request_boundary, routing_text, strip_mentions
+from app.intent_decisions import IntentDecision, command_match, mention_aliases, remove_agent_mentions, request_boundary, routing_text, strip_mentions
 from app.target_registry import (
     DEMO_BACKEND_TARGET_ID,
     TargetProject,
@@ -22,7 +22,6 @@ from app.target_registry import (
 
 SUPPORTED_MENTION_ROLES = {"orchestrator", "frontend", "backend", "qa", "review"}
 MENTION_AGENT_ROLE = {"review": "qa"}
-MENTION_PATTERN = re.compile(r"@([A-Za-z][A-Za-z0-9_-]*)")
 CHANGE_TO_PATTERN = re.compile(
     r"(?:change\s+(?:the\s+)?(?:primary\s+)?(?:login\s+page\s+)?"
     r"(?P<english_target>button|button text|primary button text|title|heading)"
@@ -129,7 +128,7 @@ def parse_mentions(db: DbSession, content: str, workspace_id: str | None = None)
     except CustomAgentError as exc:
         raise MentionParseError(str(exc)) from exc
     aliases = {profile.mention_alias: profile for profile in custom.values()}
-    for raw_role in MENTION_PATTERN.findall(content):
+    for raw_role in mention_aliases(content):
         role = raw_role.lower()
         profile = aliases.get(role)
         if profile is not None:
@@ -357,7 +356,7 @@ def recognize_intent(content: str, *, roles: tuple[str, ...] = ()) -> IntentDeci
 
 
 def _is_safe_demo_frontend_request(content: str) -> bool:
-    normalized = MENTION_PATTERN.sub("", content).lower()
+    normalized = remove_agent_mentions(content).lower()
     if _is_unsupported_broad_request(normalized):
         return False
     safe_signals = [
@@ -373,11 +372,16 @@ def _is_safe_demo_frontend_request(content: str) -> bool:
         "最近活动",
         "hero",
     ]
-    return any(signal in normalized for signal in safe_signals)
+    # The fixed demo selector is also an explicit scope, including in follow-ups.
+    # A quoted replacement value or a longer identifier cannot establish scope.
+    demo_heading = re.search(
+        r"(?<![a-z0-9_#.-])h1#demo-heading(?![a-z0-9_#-]|\.[a-z0-9_#.-])", routing_text(normalized),
+    )
+    return any(signal in normalized for signal in safe_signals) or demo_heading is not None
 
 
 def _is_passthrough_frontend_request(content: str) -> bool:
-    normalized = MENTION_PATTERN.sub("", content).lower()
+    normalized = remove_agent_mentions(content).lower()
     implementation_signals = [
         "implement",
         "build",
@@ -419,7 +423,7 @@ def _is_passthrough_frontend_request(content: str) -> bool:
 
 
 def _is_safe_external_frontend_request(content: str) -> bool:
-    normalized = MENTION_PATTERN.sub("", content).lower()
+    normalized = remove_agent_mentions(content).lower()
     if _is_unsupported_broad_request(normalized):
         return False
     safe_signals = [
@@ -453,7 +457,7 @@ def _is_safe_external_frontend_request(content: str) -> bool:
 
 
 def _requires_backend_target(content: str) -> bool:
-    normalized = MENTION_PATTERN.sub("", content).lower()
+    normalized = remove_agent_mentions(content).lower()
     return any(
         signal in normalized
         for signal in (
@@ -607,7 +611,7 @@ def _is_unsupported_broad_request(content: str) -> bool:
 
 
 def _is_pure_chat_request(content: str) -> bool:
-    normalized = MENTION_PATTERN.sub("", content).strip().lower()
+    normalized = remove_agent_mentions(content).strip().lower()
     normalized = normalized.strip(" ?!。！？")
     greetings = {"你好", "您好", "hello", "hi", "hey"}
     capability_questions = {
@@ -677,7 +681,7 @@ def _safe_planner_error_summary(value: str) -> str:
 
 
 def _is_explicit_platform_mode_request(content: str) -> bool:
-    normalized = MENTION_PATTERN.sub("", content).lower()
+    normalized = remove_agent_mentions(content).lower()
     return (
         "platform mode" in normalized
         or "platform maintenance" in normalized

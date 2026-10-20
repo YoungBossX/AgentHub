@@ -25,6 +25,7 @@ from app.process_environment import adapter_process_env
 from app.process_environment import redact_process_evidence
 from app.mcp_connections import config_arguments as mcp_arguments, TOKEN_ENV
 from app.process_input import private_stdin
+from app.execution_telemetry import provider_usage
 
 DEFAULT_CODEX_BINARY = "/Applications/Codex.app/Contents/Resources/codex"
 STDERR_LIMIT = 1200
@@ -109,6 +110,7 @@ class CodexRunState:
     process: Optional[CodexProcess] = None
     start_error: Optional[Exception] = None
     interrupted: bool = False
+    provider_usage: Optional[dict[str, Any]] = None
     image_directory: Optional[tempfile.TemporaryDirectory] = None
 
 
@@ -199,11 +201,22 @@ class CodexAdapter(AgentAdapter):
         return AdapterRun(adapterRunId=run_id)
 
     async def streamEvents(self, run_id: str) -> AsyncIterator[AgentEvent]:
-        token = self._state_for(run_id).request.mcp_token
+        state = self._state_for(run_id)
+        token = state.request.mcp_token
+        terminal = None
         async for event in self._stream_events(run_id):
+            if event.type in {'completed', 'error'}:
+                if terminal is None or (terminal.type == 'completed' and event.type == 'error'):
+                    terminal = event
+                continue
             if token:
                 event = event.model_copy(update={"payload": redact_process_evidence(event.payload, {TOKEN_ENV: token})})
             yield event
+        if terminal is not None:
+            terminal.payload['providerUsage'] = state.provider_usage or provider_usage(None, 'codex')
+            if token:
+                terminal = terminal.model_copy(update={'payload': redact_process_evidence(terminal.payload, {TOKEN_ENV: token})})
+            yield terminal
 
     async def _stream_events(self, run_id: str) -> AsyncIterator[AgentEvent]:
         state = self._state_for(run_id)
@@ -242,6 +255,8 @@ class CodexAdapter(AgentAdapter):
             index += 1
             try:
                 raw_event = json.loads(line)
+                if isinstance(raw_event, dict) and raw_event.get('type') in {'turn.completed', 'turn.finished'}:
+                    state.provider_usage = provider_usage(raw_event, 'codex')
             except json.JSONDecodeError:
                 state.process.terminate()
                 stderr_excerpt = await _finish_process(state.process, stderr_task)
@@ -400,6 +415,10 @@ def _map_codex_json_event(
             return _event("message.delta", task_run_id, {"text": f"MCP · {tool} · {status}",
                 "adapter": "codex", "codexEventType": event_type, "mcpTool": tool, "mcpStatus": item.get("status")})
 
+    if event_type == 'item.completed' and isinstance(item, dict) and item.get('type') == 'agent_message':
+        return _event('message.delta', task_run_id, {'text': item.get('text') if isinstance(item.get('text'), str) else '',
+            'adapter': 'codex', 'codexEventType': event_type, 'codexItemType': 'agent_message'})
+
     if event_type == "thread.started":
         return _event(
             "task.state",
@@ -442,6 +461,7 @@ def _map_codex_json_event(
             {
                 "adapter": "codex",
                 "codexEventType": event_type,
+                "providerUsage": provider_usage(raw_event, 'codex'),
                 "stderr": stderr_excerpt,
             },
         )

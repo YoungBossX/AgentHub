@@ -25,7 +25,7 @@ from app.memory_snapshots import (
 )
 from app.memory_usage import memory_usage_receipt, planner_memory_evidence
 from app.memory_retrieval import select_memory_context
-from app.mission_trace import build_session_mission_trace
+from app.planner_trace_context import build_planner_mission_trace
 from app.plan_validator import PlanValidationError, validate_task_graph
 from app.planner_contracts import ConversationOutcome, PlannerRequest, PlannerResponse
 from app.planner_service import build_plan_draft
@@ -137,7 +137,7 @@ def build_llm_planner_request(db: DbSession, message: Message, *, target_ids: se
     pinned_context = select_pinned_message_context(db, message.session_id)
     recent_messages = without_pinned_duplicates(_recent_messages(db, message.session_id), pinned_context)
     context_items, artifact_references = _planner_message_references(db, message)
-    mission_trace = build_session_mission_trace(db, message.session_id).model_dump(by_alias=True)
+    mission_trace = build_planner_mission_trace(db, message.session_id)
     memory_selection = select_memory_context(
         db,
         query=message.content_md,

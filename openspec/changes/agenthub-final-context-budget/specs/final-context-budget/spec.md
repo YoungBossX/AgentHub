@@ -11,6 +11,11 @@ The system SHALL measure and bound the assembled application-managed request bef
 - **WHEN** native review contracts, MCP instructions, images or output schemas are added
 - **THEN** the final gate includes their applicable character or byte contribution before process or HTTP invocation.
 
+#### Scenario: Follow-up after streamed execution
+- **WHEN** prior runs contain many streamed UI events or large artifact telemetry
+- **THEN** Planner input contains bounded historical task/run/artifact summaries and explicit omission counts, without replaying raw event payloads or changing the full UI/database trace
+- **AND** current user text, selected rules, Skills, pins and references retain their existing selection and final rejection policies.
+
 ### Requirement: Explain input accounting honestly
 The system SHALL expose content-free final request totals, source inclusion/omission reasons and immutable hashes using explicit units.
 

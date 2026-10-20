@@ -3,6 +3,8 @@ import os
 import re
 from typing import Any, Optional
 
+from app.intent_decisions import remove_agent_mentions
+
 from sqlmodel import Session as DbSession
 from sqlmodel import select
 
@@ -31,7 +33,6 @@ from app.planning_intents import (
     AppContractIntent,
     FrontendIntent,
     MentionParseError,
-    MENTION_PATTERN,
     SUPPORTED_MENTION_ROLES,
     _active_external_target_for_role,
     _demo_backend_target_exists,
@@ -1033,7 +1034,7 @@ def _next_priority(existing_tasks: list[Task]) -> int:
 
 
 def _task_title(prefix: str, content: str) -> str:
-    request = MENTION_PATTERN.sub("", content).strip()
+    request = remove_agent_mentions(content).strip()
     request = re.sub(r"\s+", " ", request)
     if len(request) > 90:
         request = f"{request[:87].rstrip()}..."

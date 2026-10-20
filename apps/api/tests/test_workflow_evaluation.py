@@ -164,6 +164,23 @@ def test_unknown_options_reject_before_creating_output(tmp_path):
     assert not output.exists()
 
 
+def test_ten_repetitions_are_bounded_and_select_ten_isolated_episodes(tmp_path, monkeypatch):
+    selected = select_scenarios('backend-repair')
+    monkeypatch.setattr(workflow, 'select_scenarios', lambda _: selected)
+    monkeypatch.setattr(workflow, 'source_policy', lambda: {})
+    async def run(directory, scenario, **kwargs):
+        return {'caseId': scenario.id, 'verdict': 'passed', 'phases': []}
+    monkeypatch.setattr(workflow, 'run_scenario', run)
+    output = tmp_path / 'ten'
+    report = asyncio.run(workflow.run_benchmark(output, repetitions=10, test_execution=True))
+    assert len(report['cases']) == 10
+    assert {c['repetition'] for c in report['cases']} == set(range(1, 11))
+    assert len(list(output.glob('backend-repair-*'))) == 10
+    for bad in [11, True]:
+        with pytest.raises(ValueError):
+            asyncio.run(workflow.run_benchmark(tmp_path / ('invalid-' + str(bad)), repetitions=bad))
+
+
 def test_summary_keeps_failed_unattempted_denominators_and_injected_cases_separate():
     cases = [{"caseId": "api", "verdict": "passed", "firstAttemptPassed": True, "elapsedSeconds": 4},
              {"caseId": "retry", "verdict": "passed", "firstAttemptPassed": False, "retryCount": 1, "faultInjection": True, "elapsedSeconds": 6},

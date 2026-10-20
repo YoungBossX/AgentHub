@@ -45,6 +45,7 @@ def inventory(context, *, skill_text="", system_text=""):
         "recentMessages": value("recentMessages"), "pinnedMessages": value("pinnedMessageContext"),
         "attachments": value("attachmentContext"), "references": value("relevantArtifacts"),
         "guardrails": value("guardrails"), "memorySelection": value("memorySelection"),
+        "missionTrace": value("missionTrace"),
     }
     result = []
     for name, data in groups.items():
@@ -72,6 +73,14 @@ def inventory(context, *, skill_text="", system_text=""):
             reasons["pinned_selection_limit"] = counts["omitted"]
         elif name == "memorySelection":
             reasons.update({key: counts[key] for key in ("omittedByBudget", "omittedByExperienceLimit") if counts.get(key)})
+        elif name == "missionTrace":
+            events = selection.get("events", {})
+            omitted_events = events.get("omitted", 0) if isinstance(events, dict) else 0
+            if type(omitted_events) is int and omitted_events > 0:
+                reasons["historical_event_payloads"] = omitted_events
+            remaining = counts.get("omitted", 0) - omitted_events
+            if remaining > 0:
+                reasons["historical_summary_limit"] = remaining
         if counts.get("truncated"):
             reasons["source_text_truncated"] = counts["truncated"]
         if counts.get("redacted"):

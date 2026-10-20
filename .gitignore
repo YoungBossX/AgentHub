@@ -423,6 +423,15 @@ docs/evidence/intent-boundaries/*
 # Reviewed database integrity plan and spec
 !docs/database-integrity-verification.md
 !docs/superpowers/plans/2026-10-19-database-integrity.md
+!docs/superpowers/plans/2026-10-19-planner-trace-context.md
+!docs/superpowers/plans/2026-10-19-email-mention-boundaries.md
+!docs/superpowers/plans/2026-10-20-chinese-api-feedback.md
+!docs/real-api-validation-20261019.md
+!docs/chinese-api-validation-20261020.md
+!docs/resume-metrics-plan-20261020.md
+!docs/provider-usage-measurements.md
+!docs/chinese-usage-latency-validation-20261020.md
+!docs/superpowers/plans/2026-10-20-usage-latency-evaluation.md
 !docs/superpowers/specs/
 docs/superpowers/specs/*
 !docs/superpowers/specs/2026-10-19-database-integrity-design.md

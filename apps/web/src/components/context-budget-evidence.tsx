@@ -2,8 +2,8 @@
 
 type Receipt = { schemaVersion: string; status: string; textCharacters: number; textUtf8Bytes: number; managedBytes: number; imageCount: number; imageBytes: number; textSha256: string;
   limits: { textCharacters: number; managedBytes: number }; sources: { source: string; status: string; sourceSerializedCharacters: number; omissionReason: string | null; omissionReasons?: Record<string, number>; upstreamSelection: Record<string, number> }[] }
-const names: Record<string, string> = { systemPrompt: "角色指令", skills: "Skills", projectRules: "项目规则", otherMemory: "其他记忆", currentRequest: "当前需求", recentMessages: "近期消息", pinnedMessages: "置顶消息", attachments: "附件", references: "引用与产物", guardrails: "权限与边界", memorySelection: "记忆选择记录", nativeReviewContract: "原生评审契约", mcpInstruction: "MCP 工具提示" }
-const reasons: Record<string, string> = { image_budget: "图片限额", text_budget: "文本限额", no_text: "未提取到文本", attachment_selection_limit: "附件选择限额", pinned_selection_limit: "置顶选择限额", omittedByBudget: "记忆预算", omittedByExperienceLimit: "经验数量限额", source_text_truncated: "文本截断", protected_content_redacted: "保护内容已脱敏" }
+const names: Record<string, string> = { systemPrompt: "角色指令", skills: "Skills", projectRules: "项目规则", otherMemory: "其他记忆", currentRequest: "当前需求", recentMessages: "近期消息", pinnedMessages: "置顶消息", attachments: "附件", references: "引用与产物", guardrails: "权限与边界", memorySelection: "记忆选择记录", missionTrace: "任务历史摘要", nativeReviewContract: "原生评审契约", mcpInstruction: "MCP 工具提示" }
+const reasons: Record<string, string> = { image_budget: "图片限额", text_budget: "文本限额", no_text: "未提取到文本", attachment_selection_limit: "附件选择限额", pinned_selection_limit: "置顶选择限额", omittedByBudget: "记忆预算", omittedByExperienceLimit: "经验数量限额", source_text_truncated: "文本截断", protected_content_redacted: "保护内容已脱敏", historical_event_payloads: "流式事件仅保留在完整过程", historical_summary_limit: "历史摘要条数限额" }
 
 export function ContextBudgetEvidence({ receipt }: { receipt?: unknown }) {
   if (!receipt || typeof receipt !== "object" || !("schemaVersion" in receipt) || receipt.schemaVersion !== "agenthub.context_budget.v1") return null

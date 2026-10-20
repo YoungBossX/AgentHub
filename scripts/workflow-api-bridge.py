@@ -12,6 +12,10 @@ from fastapi.testclient import TestClient
 
 
 def main():
+    # Node writes UTF-8 JSON to the pipe. Isolated Python ignores
+    # PYTHONIOENCODING and may otherwise use the Windows legacy code page.
+    sys.stdin.reconfigure(encoding="utf-8", errors="strict")
+    sys.stdout.reconfigure(encoding="utf-8", errors="strict")
     project, data = (Path(value).resolve() for value in sys.argv[1:])
     spec = importlib.util.spec_from_file_location("workflow_guards", Path(__file__).with_name("demo-backend-check.py"))
     guards = importlib.util.module_from_spec(spec)
