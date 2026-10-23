@@ -18,7 +18,7 @@ export default async function ContactSettingsPage() {
               AgentHub 设置
             </p>
             <h1 className="mt-1 text-2xl font-semibold text-slate-950">
-              联系人设置
+              协作 Agent 设置
             </h1>
           </div>
           <Link

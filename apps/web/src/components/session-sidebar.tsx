@@ -188,8 +188,8 @@ export function SessionSidebar({
             </div>
           ) : null}
         </div>
-        <section className="mt-7 border-t border-[var(--border)] pt-4" aria-label="Agent 联系人">
-          <div className="mb-2 flex items-center justify-between gap-2 px-2"><p className="text-[11px] font-semibold text-slate-400">Agent 联系人</p><Link href="/settings/agents#create-agent" className="text-[10px] font-medium text-[var(--primary)] hover:underline">对话创建</Link></div>
+        <section className="mt-7 border-t border-[var(--border)] pt-4" aria-label="协作 Agent">
+          <div className="mb-2 flex items-center justify-between gap-2 px-2"><p className="text-[11px] font-semibold text-slate-400">协作 Agent</p><Link href="/settings/agents#create-agent" className="text-[10px] font-medium text-[var(--primary)] hover:underline">对话创建</Link></div>
           {agents.map((agent, index) => <button key={agent.id} disabled={agent.status !== "available" || (!agent.mentionAlias && !["orchestrator", "frontend", "backend", "qa"].includes(agent.role))} onClick={() => onMentionAgent?.(agent.mentionAlias ?? agent.role)} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-white disabled:cursor-default disabled:opacity-50" title={`@${agent.mentionAlias ?? agent.role} · ${agent.description}`}>
             <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold ${index % 3 === 0 ? "bg-indigo-100 text-indigo-600" : index % 3 === 1 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{agent.avatarInitials}</span>
             <span className="min-w-0"><span className="block truncate text-xs font-medium text-slate-700">{agent.displayName}</span><span className="block truncate text-[10px] text-slate-400">{agent.capabilityTags.slice(0, 2).join(" · ") || agent.role}</span></span>
@@ -202,7 +202,7 @@ export function SessionSidebar({
           <SidebarSettingsLink
             href="/settings/contacts"
             icon={<Users aria-hidden="true" size={17} />}
-            label="联系人设置"
+            label="协作 Agent 设置"
             meta={`${agents.length} 个`}
           />
           <SidebarSettingsLink

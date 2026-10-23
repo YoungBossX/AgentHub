@@ -26,10 +26,10 @@ export function AgentContactList({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-normal text-[var(--text-muted)]">
-            Agent 联系人
+            协作 Agent
           </p>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {agents.length} 个内置联系人
+            {agents.length} 个协作角色
           </p>
         </div>
         <Users aria-hidden="true" className="text-[var(--primary)]" size={16} />

@@ -1,38 +1,48 @@
 # 项目展示图片来源
 
 这些图片来自 AgentHub 实际运行的工作台或生成页面，不是设计稿。README 与根目录
-`index.html` 使用相对路径引用，点击图片可查看完整原图。
+`index.html` 使用相对路径引用。公开页面只保留功能说明，不提供原图、来源或元数据
+跳转链接；本文件与 `provenance.json` 留存来源和验证边界。
+
+后续主页调整以平台协作流程为主线，README 首图选用完整工作台；联系人管理的计划、
+桌面与手机结果放在可展开的示例说明内。原截图像素与哈希未变，工作台图中的旧
+“Agent 联系人”标签属于截图时的实际界面；当前产品文案已统一为“协作 Agent”。
 
 `brand-icon.png` 直接采用现有应用元数据渲染的 180px 品牌图标，来源为用户提供的
 设计，用于页首标识，避免为了小尺寸标识传输整张高分辨率原图。
 
-## 当前工作台回看真实历史记录
+## 选用的协作计划与业务 Diff
 
-以下四图在 2026-10-23 通过当前 UI 截取，展示 2026-10-20 正式中文批次中
+以下三图在 2026-10-23 通过当前 UI 对实际卡片区域截图，展示 2026-10-20 正式中文批次中
 `coordinated-contacts` 第 10 次的已完成记录，Session 为
 `fc974ec8-ab7c-49c2-8765-39957c6fa801`。
 
 | 图片 | 内容 |
 | --- | --- |
-| [workbench-process.png](workbench-process.png) | 中文任务依赖图、运行状态及成果面板 |
-| [workbench-dark.png](workbench-dark.png) | 同一真实任务的暗色工作台 |
-| [workbench-diff.png](workbench-diff.png) | 前端真实 Git Diff 与按任务组织的成果 |
-| [workbench-review.png](workbench-review.png) | Claude Code 原生只读评审，保留实际判断与来源 |
+| [workbench-process.png](workbench-process.png) | 四个任务的实际角色、标题与完成状态，无多余面板 |
+| [workbench-dark.png](workbench-dark.png) | 暗色完整工作台，展示任务依赖、角色和执行卡片 |
+| [workbench-diff.png](workbench-diff.png) | 后端实际 Diff，突出邮箱判重与新增记录保存的具体修改 |
 
 仅在隔离数据库副本中读取历史记录，禁用 API 生命周期及后台工作，浏览器只允许
 本机 GET/OPTIONS。未重新调用模型、运行任务、启动预览或修改产物，Task/TaskRun/
 Artifact/Diff/Review 行集与源数据库逐项核对一致。原始评测库与正式结果没有回写。
-截图中的脚本 Review 和原生模型评审有各自来源，不能合并为同一种验收。
+`workbench-review.png` 保留为此前截图记录，但当前页面不再展示：当前 UI 中旧固定验证
+回执已过期，不能当成当前验收成果。原生静态评审与固定检查仍是两类独立证据，旧报告
+未被改写，也未通过截去失败/过期提示冒充当前验证通过。
 
-## 当时留存的生成结果
+## 同一生成源码的实际功能交互
 
 | 图片 | 内容 |
 | --- | --- |
-| [result-preview-desktop.png](result-preview-desktop.png) | 2026-10-20 同一样本生成的联系人页面，桌面实图 |
-| [result-preview-mobile.png](result-preview-mobile.png) | 同一生成源码的 390px 实图 |
+| [result-preview-desktop.png](result-preview-desktop.png) | 760px 浏览器内的联系人组件，实际 POST 201 创建演示记录后刷新读取 |
+| [result-preview-mobile.png](result-preview-mobile.png) | 390px 下重复邮箱返回 409，显示中文错误并保留输入和既有列表 |
 
-这两图直接复制原始留存文件，像素未修改。前端通过平台 Vite 预览，后端由操作者辅助
-运行真实 ASGI；不代表自动多服务部署、生产上线或本次重新验证页面。
+这两图在 2026-10-23 新的 E 盘隔离目录中截图；使用 2026-10-20 该样本生成源码的逐文件
+哈希一致副本，没有修改应用样式、移除初始页面或写入假数据。直接对联系人组件截图，
+初始占位页面位于该组件之外。由浏览器填写演示数据，通过真实 ASGI 创建、刷新和拒绝
+重复记录，未模拟接口响应。前端使用平台固定 Vite 配置，后端由操作者辅助启动；不代表
+自动多服务部署或生产上线。记录仅保存在当前服务进程，刷新浏览器可读取，不宣称跨服务
+重启持久化。未重新调用模型，新的交互不并入历史 50 个任务或原流程耗时。
 
 ## 统计与版本边界
 
@@ -45,5 +55,6 @@ Artifact/Diff/Review 行集与源数据库逐项核对一致。原始评测库�
 - [当前项目状态](../../project-state.md)
 - [逐图尺寸、哈希及运行来源](provenance.json)
 
-新截图、只读数据库副本、浏览器请求审计和行集核验留存于本机
-`E:/Docker/AgentHub/public-docs-20261023-01`；仓库不包含原始数据库或凭据。
+本次截图、隔离源码、请求状态与源数据一致性核验在
+`E:/Docker/AgentHub/showcase-focus-20261023-01`。此前完整截图与原始批次留存于各自的
+E 盘目录，均未覆盖；仓库不包含数据库、凭据或构建输出。

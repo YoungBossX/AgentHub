@@ -751,7 +751,7 @@ describe("WorkspaceShell", () => {
     )
   })
 
-  it("renders settings navigation and PDF-required Agent contacts", async () => {
+  it("renders settings navigation and the collaborating Agent directory", async () => {
     apiMocks.listSessionMessages.mockResolvedValue([])
     apiMocks.listSessionTasks.mockResolvedValue([])
 
@@ -764,7 +764,7 @@ describe("WorkspaceShell", () => {
       />,
     )
 
-    expect(screen.getByText("联系人设置").closest("a")?.getAttribute("href")).toBe(
+    expect(screen.getByText("协作 Agent 设置").closest("a")?.getAttribute("href")).toBe(
       "/settings/contacts",
     )
     expect(screen.getByText("Agent 目录").closest("a")?.getAttribute("href")).toBe(
@@ -780,7 +780,7 @@ describe("WorkspaceShell", () => {
       "/settings/other",
     )
     expect(screen.getByText("新建会话")).toBeTruthy()
-    expect(screen.getByText("Agent 联系人")).toBeTruthy()
+    expect(screen.getByText("协作 Agent")).toBeTruthy()
     expect(screen.queryByText("Direct chat")).toBeNull()
   })
 

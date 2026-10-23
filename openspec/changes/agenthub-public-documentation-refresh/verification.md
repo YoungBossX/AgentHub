@@ -1,5 +1,85 @@
 # Content and presentation verification
 
+## 2026-10-23 confirmed platform-first presentation, task 1.3
+
+The user confirmed the task / execution / Diff / review / preview narrative.
+Homepage copy now follows these five steps, without changing the six sections,
+outer layout, CSS or scripts. README leads with the full workspace and groups
+the contacts example under a disclosure. The example is explicitly an Agent-built
+application, not a platform address book. Original screenshots and all seven
+image hashes remain unchanged; historical review expiry is not concealed.
+
+The sidebar, its existing settings link/page and role-list heading now use
+"协作 Agent" wording. Routes, API types, stored data, role/alias selection and
+availability controls are unchanged. The existing workspace navigation assertions
+were updated, without introducing a new runtime behavior.
+
+Fresh verification:
+
+- `pnpm --filter @agenthub/web test src/components/session-sidebar.test.tsx src/components/workspace-shell.test.tsx`: **23 passed**, two files.
+- `pnpm check:web`: ESLint and TypeScript passed.
+- `E:/Docker/AgentHub/platform-focus-20261023-01/check-page.cjs`: **six** Edge
+  configurations, 1440/1024/390px in light/dark, no page errors or horizontal
+  overflow, four HTML images loaded, theme keyboard/persistence and the new
+  workflow anchor passed. Original CSS/scripts, HTML sections, README outline,
+  seven image hashes and absence of image/metadata jump links verified.
+- Desktop and mobile captures visually inspected. README now contains six
+  local showcase images including the brand; three are in the optional case.
+- Strict OpenSpec and whitespace checks passed.
+
+Evidence and screenshots stay in the new E-drive directory. This is a text and
+presentation change, not a fresh model execution, full API regression or product
+data migration. No dependencies installed, services started, commit, push or
+publication performed.
+
+## 2026-10-23 user correction, task 1.2
+
+The public page no longer wraps images in links or exposes source/raw-image/
+metadata jump links in captions. Captions explain visible behavior. README keeps
+its section order; root HTML keeps all six sections, original CSS and both script
+blocks. Existing outer layouts, theme controls and navigation remain intact.
+
+Selected scenes now have a specific purpose: the full dark workbench shows
+roles/dependencies/execution; the light task-plan crop shows all four tasks;
+the backend Diff makes `casefold()` comparison and `_contacts.append(contact)`
+readable; the result crop shows an actual created contact. README also shows a
+390px duplicate-email rejection with Chinese error and retained input/list.
+Expired QA imagery is not rendered as current acceptance. Its historical image,
+reports and original benchmark records remain unchanged.
+
+Fresh validation under `E:/Docker/AgentHub/showcase-focus-20261023-01`:
+
+- `capture-result.json` and `hero-capture.json`: actual Edge captures, no product
+  mutation requests, no page errors or new Provider calls. No response fixtures
+  or synthetic DOM states. Generated demo interactions use a new unchanged
+  source copy, actual ASGI and actual POST 201 / POST 409 responses. A subsequent
+  page reload reads back the created record from the same service process.
+- `page-check.json`: **six** responsive/theme configurations, 1440/1024/390px in
+  light/dark, all images loaded and no horizontal overflow. Navigation and
+  keyboard theme persistence passed; all seven stored image hashes match.
+  No figure links, image-source links, obsolete screenshot audit captions or
+  expired-QA image appear in the root presentation.
+- Original-vs-final CSS/script blocks and README outline match. HTML has four
+  images after removing the QA figure; README uses five including the brand.
+  `preview-final.png` is an ordinary viewport capture, without stitching a
+  sticky header through the content. Final desktop/mobile pages were inspected.
+- `integrity.json` and final source verification: original evidence DB file
+  hash, all historical rows and every copied generated source file match.
+  Strict OpenSpec and `git diff --check` passed. No runtime code changed; no
+  fresh full API regression or new model task is claimed.
+
+An initial isolated preview failed because its cache directory did not exist
+when the fixed serving profile collected allowed roots. Creating that exact
+E-drive cache before loading the existing profile resolved the operator setup
+issue; scope guards were not disabled and original failure logs are retained.
+All helper services were stopped and generated Next type paths restored.
+No dependencies installed, product DB modified, commit, push or publication.
+Source/capture dates and deployment/storage limits remain in image metadata:
+the backend was operator-started, contact storage is process-local, and none of
+these new UI interactions changes the frozen 50-task or recovery statistics.
+
+## Original task 1.1
+
 2026-10-23, local `dev` worktree. No commit/push/publication. Previous UI/icon
 changes remain uncommitted and are not part of this content-only implementation.
 

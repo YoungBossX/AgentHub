@@ -15,27 +15,36 @@
   "images": [
     {
       "file": "workbench-process.png",
-      "sha256": "c8a3c746ce82460fe2019d4e5db9d1601aaca5f12185354b95fc184cbbbeb3b8",
-      "width": 1680,
-      "height": 1050,
-      "bytes": 153093,
-      "source": "current UI readback of historical native records"
+      "sha256": "708d62517e4bc2e194cb81db9d78589fdc659bd9de90f3bf0b22e13807ac8450",
+      "width": 768,
+      "height": 196,
+      "bytes": 14126,
+      "source": "鍗忎綔杩涘害",
+      "shownInPublicPresentation": true,
+      "capturedAt": "2026-10-23",
+      "nativeSourceDate": "2026-10-20"
     },
     {
       "file": "workbench-dark.png",
-      "sha256": "a387e02f465132163e4c5466f738bc1f5451de2e4bfdcc7dfeb4d026fa021d6a",
-      "width": 1680,
-      "height": 1050,
-      "bytes": 151032,
-      "source": "current UI readback of historical native records"
+      "sha256": "d3b82e693237fcc19bc6359dedf103ef618b51eef45360f7b56b3471cd557d16",
+      "width": 1440,
+      "height": 1000,
+      "bytes": 120683,
+      "source": "Actual full workbench in process view, inspector closed, historical native records unchanged",
+      "shownInPublicPresentation": true,
+      "capturedAt": "2026-10-23",
+      "nativeSourceDate": "2026-10-20"
     },
     {
       "file": "workbench-diff.png",
-      "sha256": "798d61ab6e2f7f408c56e75f7e7d0debec7cd6a67d3df3d3ca82c61f69f57bf3",
-      "width": 1680,
-      "height": 1050,
-      "bytes": 176288,
-      "source": "current UI readback of historical native records"
+      "sha256": "687b1fba7a2e7393f8e3c95ea10af228f57eb6c06588e45303de221db976435c",
+      "width": 687,
+      "height": 665,
+      "bytes": 43912,
+      "source": "Actual backend Diff card with visible additions and deletions",
+      "shownInPublicPresentation": true,
+      "capturedAt": "2026-10-23",
+      "nativeSourceDate": "2026-10-20"
     },
     {
       "file": "workbench-review.png",
@@ -43,23 +52,95 @@
       "width": 1680,
       "height": 1050,
       "bytes": 207253,
-      "source": "current UI readback of historical native records"
+      "source": "current UI readback of historical native records",
+      "shownInPublicPresentation": false,
+      "notSelectedReason": "Historical fixed-validation receipt is expired in current UI; not used as a current acceptance illustration"
     },
     {
       "file": "result-preview-desktop.png",
-      "sha256": "d54045e8c808400c00cc73da26bed58bbcc91d61bc08d9f87861a337d9f3809b",
-      "width": 1440,
-      "height": 1050,
-      "bytes": 145296,
-      "source": "unaltered 2026-10-20 generated-result capture"
+      "sha256": "f6209637c58592e7a3a0c72e09aae257f3f8cd8c5ca6c6e340e81e5fbf6ef350",
+      "width": 728,
+      "height": 511,
+      "bytes": 21152,
+      "source": "Unchanged historical generated source, freshly served in an isolated preview; actual contact API, operator-started process-local backend",
+      "shownInPublicPresentation": true,
+      "capturedAt": "2026-10-23",
+      "nativeSourceDate": "2026-10-20",
+      "scene": "Generated contacts component; baseline placeholder is outside this section",
+      "viewportWidth": 760,
+      "requests": [
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "status": 409
+        }
+      ]
     },
     {
       "file": "result-preview-mobile.png",
-      "sha256": "44fc47e02ac6c9af4bfec30ed393a7e75b274c7ea9f0f5c45fe5fd0324a13b48",
-      "width": 390,
-      "height": 1562,
-      "bytes": 83859,
-      "source": "unaltered 2026-10-20 generated-result capture"
+      "sha256": "7fa4ab39858c363267aaba928e53a8a827e89481eb9b406c4e680df46bfe52da",
+      "width": 358,
+      "height": 571,
+      "bytes": 25267,
+      "source": "Unchanged historical generated source, freshly served in an isolated preview; actual contact API, operator-started process-local backend",
+      "shownInPublicPresentation": true,
+      "capturedAt": "2026-10-23",
+      "nativeSourceDate": "2026-10-20",
+      "scene": "Duplicate email rejected with 409; Chinese error, input and existing list retained",
+      "viewportWidth": 390,
+      "requests": [
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "status": 201
+        },
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "status": 409
+        }
+      ]
     },
     {
       "file": "brand-icon.png",
@@ -67,13 +148,27 @@
       "width": 180,
       "height": 180,
       "bytes": 72404,
-      "source": "Existing app metadata image rendered from the user-supplied brand artwork on 2026-10-23"
+      "source": "Existing app metadata image rendered from the user-supplied brand artwork on 2026-10-23",
+      "shownInPublicPresentation": true
     }
   ],
   "limits": [
-    "Current UI readback is not a fresh run",
-    "Result screenshots retain their original capture date",
-    "Vite with operator-assisted ASGI is not automatic production deployment",
-    "A selected passing sample does not replace the 50-run denominator"
-  ]
+    "Plan and Diff are historical native-run records, not a new Agent execution",
+    "Generated app source is unchanged from 2026-10-20; fresh UI interactions occurred only in a new isolated preview",
+    "Contact storage is process-local; refreshed browser reads are not persistence across server restarts",
+    "Backend is operator-started; screenshots do not establish automatic multi-service deployment",
+    "Expired QA imagery is excluded from the public presentation; original reports and benchmark failures remain unchanged",
+    "Selected scenes illustrate capabilities and do not replace the 50-task denominator"
+  ],
+  "schemaVersion": 2,
+  "selection": "Actual four-task plan, backend business Diff, created contact and rejected duplicate; focused DOM-element screenshots, no image synthesis",
+  "generatedSourceHashes": {
+    "apps\\demo\\index.html": "d201c3a4eaf6503008a27a179ec1502db08250694aaf28158313202e8dfec1f9",
+    "apps\\demo\\package.json": "35ac1be578e95ccf296a7e5b8098c9a44c274bb211d62690ddc8d016d4df898d",
+    "apps\\demo\\src\\App.tsx": "7b1072f42c3afb3461fab8e5016b8b1a7e7ef14431ac2f2e5d2e783a815c7e41",
+    "apps\\demo\\src\\main.tsx": "73a131ff83bcd3bd74760240daf50aafff76f2bf13da3c1e6e75a6b99405d87b",
+    "apps\\demo\\src\\styles.css": "6848728e070a48cbed86855e88ad3252fe6636bf7c7b57477f89c73dd0e25f8f",
+    "apps\\demo-api\\app\\main.py": "ff2b0b768dfd494b036afd9d3dc0a5ccd9fdd5f4990f64c850bacab196520040",
+    "apps\\demo-api\\app\\__init__.py": "d61ab2e437fff4aa583396952d03bcbc0ed7be07d762ccea2f35aa1d1d3dbbe3"
+  }
 }

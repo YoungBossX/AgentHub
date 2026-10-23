@@ -52,9 +52,9 @@ Diff / Review / Preview
 TaskRunEvent → SSE → Web Workspace
 ```
 
-<a href="docs/images/showcase/workbench-process.png"><img src="docs/images/showcase/workbench-process.png" alt="AgentHub 当前工作台：中文联系人协作任务的依赖图、运行状态与成果面板" width="100%" /></a>
+<img src="docs/images/showcase/workbench-dark.png" alt="AgentHub 多 Agent 工作台：角色选择、任务依赖、执行状态与运行记录" width="100%" />
 
-*真实页面截图：2026-10-23 的工作台只读回看 2026-10-20 的原生联系人协作记录；没有重新调用模型或改写任务状态。点击查看原图。截图来源、结果页面和版本边界见[图片说明](docs/images/showcase/README.md)。静态[图文介绍页源码](index.html)沿用同一组实图。*
+*从任务拆解到多 Agent 执行，再查看真实 Diff、审查结果与应用预览。侧栏的协作 Agent 用于选择角色和 @ 分派任务。*
 
 ---
 
@@ -293,9 +293,26 @@ Web Workspace
 | **Validation**  | 对内置目标记录与当前源码/策略绑定的分项检查，保留失败及不适用项 |
 | **Usage & Timing** | 保存可获得的 Token 用量和分阶段耗时，缺失回执不补造 |
 
-<a href="docs/images/showcase/workbench-diff.png"><img src="docs/images/showcase/workbench-diff.png" alt="真实联系人协作记录中的前端代码 Diff，在当前成果工作台中查看" width="100%" loading="lazy" /></a>
+<img src="docs/images/showcase/workbench-diff.png" alt="联系人接口代码差异：补齐新增记录保存逻辑，并对完整邮箱地址进行忽略大小写的判重" width="100%" loading="lazy" />
 
-*当前 UI 回看真实历史 Diff。原生评审、桌面/390px 结果及图片来源见[完整截图说明](docs/images/showcase/README.md)；截图中的脚本报告与模型报告分别标注，不合并为同一种验收。*
+*真实 Diff 将任务与文件增删对应起来。图中示例补齐记录保存逻辑，并修正邮箱判重。*
+
+<details>
+<summary>示例应用：用联系人管理验证前后端协作</summary>
+
+联系人管理是 Agent 生成的示例业务，用来验证后端接口、前端表单与 QA 审查的协作链路，不是 AgentHub 自身的通讯录功能。
+
+<img src="docs/images/showcase/workbench-process.png" alt="示例任务计划：后端接口、前端表单及两项 QA 审查，四个任务对应明确角色和执行状态" width="100%" loading="lazy" />
+
+<img src="docs/images/showcase/result-preview-desktop.png" alt="生成的联系人功能：接口成功创建的演示联系人已出现在列表中" width="100%" loading="lazy" />
+
+*新增联系人后更新列表，刷新页面仍可从当前服务读取记录。*
+
+<img src="docs/images/showcase/result-preview-mobile.png" alt="重复邮箱被拒绝后出现中文错误提示，输入内容和已有联系人列表均保留" width="358" loading="lazy" />
+
+*重复邮箱被拒绝时保留输入与已有列表，方便修改后继续提交。*
+
+</details>
 
 ---
 
