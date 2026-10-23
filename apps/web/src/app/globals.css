@@ -16,7 +16,7 @@
   --primary-foreground: #ffffff;
   --muted: #eaeae6;
   --muted-foreground: #6d6d65;
-  --text-muted: #797970;
+  --text-muted: #6d6d65;
   --text-secondary: var(--muted-foreground);
   --border: transparent;
   --border-strong: #e4e4df;
@@ -87,6 +87,8 @@
 /* Map the existing light utility palette without changing every artifact or
    settings component. White text on solid action/avatar colors stays white. */
 @layer utilities {
+  :is(.text-\[10px\], .text-\[11px\]) { font-size: .75rem; line-height: 1.5; }
+  :is(h1, h2, h3, h4, h5, h6):is(.text-sm, .text-xs) { font-size: 1rem; }
   :is(.bg-white, .bg-white\/60, .bg-white\/70, .bg-white\/80, .bg-white\/90) { background-color: var(--surface); }
   :is(.bg-slate-50, .bg-slate-50\/80, .bg-slate-100) { background-color: var(--surface-muted); }
   .bg-slate-200 { background-color: var(--surface-raised); }
@@ -152,6 +154,7 @@ body {
     "Segoe UI",
     sans-serif;
   line-height: 1.5;
+  font-size: 14px;
   font-weight: var(--font-weight-normal);
   font-variant-numeric: tabular-nums;
   text-rendering: optimizeLegibility;

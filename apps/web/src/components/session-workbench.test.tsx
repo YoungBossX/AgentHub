@@ -78,7 +78,9 @@ describe("evidence-backed workbench", () => {
 
   it("marks historical artifacts and opens the selected concrete artifact", () => {
     const onSelect = vi.fn()
-    render(<SessionResults artifacts={[diff]} tasks={[task("a", [], [run("run-2", "failed")])]} onSelect={onSelect} />)
+    render(<SessionResults artifacts={[diff]} tasks={[task("a", [], [run("run-1", "completed"), run("run-2", "failed")])]} onSelect={onSelect} />)
+    expect(screen.queryByRole("button", { name: /代码变更/ })).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: /历史成果/ }))
     fireEvent.click(screen.getByRole("button", { name: /代码变更/ }))
     expect(onSelect).toHaveBeenCalledWith("diff:1")
     expect(screen.getByText(/历史成果/)).toBeTruthy()

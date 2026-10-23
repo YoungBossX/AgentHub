@@ -100,6 +100,20 @@ agenthub_design_v_2.md
 
 # Internal project docs (for AI/dev workflow, not for public users)
 docs/*
+# Public project presentation assets; keep other local images/artifacts ignored.
+!docs/images/
+docs/images/*
+!docs/images/showcase/
+docs/images/showcase/*
+!docs/images/showcase/README.md
+!docs/images/showcase/provenance.json
+!docs/images/showcase/brand-icon.png
+!docs/images/showcase/workbench-process.png
+!docs/images/showcase/workbench-dark.png
+!docs/images/showcase/workbench-diff.png
+!docs/images/showcase/workbench-review.png
+!docs/images/showcase/result-preview-desktop.png
+!docs/images/showcase/result-preview-mobile.png
 !docs/sandbox-options.md
 !docs/backend-versioned-validation-review.md
 !docs/review-repair-loop-review.md

@@ -1,0 +1,79 @@
+{
+  "capturedAt": "2026-10-23",
+  "nativeRunDate": "2026-10-20",
+  "case": "coordinated-contacts",
+  "repetition": 10,
+  "sessionId": "fc974ec8-ab7c-49c2-8765-39957c6fa801",
+  "nativeRunIds": [
+    "de186416-af96-4859-8da2-37074a7cf6e4",
+    "f83ac6d9-70a6-4a89-97f7-0fe5029bbf8e",
+    "03dd4c19-7982-4fad-9907-ef19d750192f",
+    "d3991f6e-fb67-4361-8cd2-babf0eb5ce53"
+  ],
+  "historicalRecordsUnchanged": true,
+  "newProviderCalls": 0,
+  "images": [
+    {
+      "file": "workbench-process.png",
+      "sha256": "c8a3c746ce82460fe2019d4e5db9d1601aaca5f12185354b95fc184cbbbeb3b8",
+      "width": 1680,
+      "height": 1050,
+      "bytes": 153093,
+      "source": "current UI readback of historical native records"
+    },
+    {
+      "file": "workbench-dark.png",
+      "sha256": "a387e02f465132163e4c5466f738bc1f5451de2e4bfdcc7dfeb4d026fa021d6a",
+      "width": 1680,
+      "height": 1050,
+      "bytes": 151032,
+      "source": "current UI readback of historical native records"
+    },
+    {
+      "file": "workbench-diff.png",
+      "sha256": "798d61ab6e2f7f408c56e75f7e7d0debec7cd6a67d3df3d3ca82c61f69f57bf3",
+      "width": 1680,
+      "height": 1050,
+      "bytes": 176288,
+      "source": "current UI readback of historical native records"
+    },
+    {
+      "file": "workbench-review.png",
+      "sha256": "e2214d1fb3f775128386b22e8baee9bf77d1fe4bbb9e3dc5cc2db7b600be7850",
+      "width": 1680,
+      "height": 1050,
+      "bytes": 207253,
+      "source": "current UI readback of historical native records"
+    },
+    {
+      "file": "result-preview-desktop.png",
+      "sha256": "d54045e8c808400c00cc73da26bed58bbcc91d61bc08d9f87861a337d9f3809b",
+      "width": 1440,
+      "height": 1050,
+      "bytes": 145296,
+      "source": "unaltered 2026-10-20 generated-result capture"
+    },
+    {
+      "file": "result-preview-mobile.png",
+      "sha256": "44fc47e02ac6c9af4bfec30ed393a7e75b274c7ea9f0f5c45fe5fd0324a13b48",
+      "width": 390,
+      "height": 1562,
+      "bytes": 83859,
+      "source": "unaltered 2026-10-20 generated-result capture"
+    },
+    {
+      "file": "brand-icon.png",
+      "sha256": "b977a659f15522f88b347f822dd7daf1bc6d732cb3efb912101390fee833c478",
+      "width": 180,
+      "height": 180,
+      "bytes": 72404,
+      "source": "Existing app metadata image rendered from the user-supplied brand artwork on 2026-10-23"
+    }
+  ],
+  "limits": [
+    "Current UI readback is not a fresh run",
+    "Result screenshots retain their original capture date",
+    "Vite with operator-assisted ASGI is not automatic production deployment",
+    "A selected passing sample does not replace the 50-run denominator"
+  ]
+}

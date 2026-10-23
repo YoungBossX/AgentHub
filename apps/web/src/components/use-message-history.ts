@@ -129,7 +129,8 @@ export function useMessageHistory(backendUrl: string, sessionId: string | null, 
     try {
       const page: MessagePage = await listMessagePage(backendUrl, sessionId, query)
       if (owner.current.key !== token.key || owner.current.generation !== token.generation) return
-      const destination = jumpId ?? (direction === "latest" ? page.messages.at(-1)?.id : null)
+      // Latest scrolling belongs to ConversationScroll, including the results footer.
+      const destination = jumpId ?? null
       scrollIntent.current = destination ? { ...token, id: destination, block: direction === "latest" ? "end" : "center" } : null
       setWindow(previous => {
         const current = previous.key === key ? previous : empty(key)
@@ -148,11 +149,25 @@ export function useMessageHistory(backendUrl: string, sessionId: string | null, 
     } catch (error) { if (owner.current.key === token.key && owner.current.generation === token.generation) callbacks.current.onError(error) }
     finally { busy.current.delete(key); setPending(current => current === key ? null : current) }
   }
+  async function refreshManually() {
+    if (!sessionId || busy.current.has(key) || owner.current.key !== key) return
+    const token = { ...owner.current }
+    busy.current.add(key); setPending(key)
+    try {
+      await refresh()
+      if (owner.current.key === token.key && owner.current.generation === token.generation) callbacks.current.onReady()
+    }
+    catch (error) {
+      if (owner.current.key === token.key && owner.current.generation === token.generation) callbacks.current.onError(error)
+    } finally {
+      busy.current.delete(key); setPending(current => current === key ? null : current)
+    }
+  }
   function openMessage(id: string) {
     if (visible.rows.some(row => row.id === id)) document.getElementById(`message-${id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" })
     else void navigate({ around: id }, "around", id)
   }
-  return { messages: visible.rows, latestMessages: visible.latestRows, latestMessageId: visible.latestId, setMessages, showLatestMessages, showLatestPage, refresh, pins: visible.pins, pinnedTotal: visible.pinnedTotal, loading: !visible.loaded,
+  return { messages: visible.rows, latestMessages: visible.latestRows, latestMessageId: visible.latestId, setMessages, showLatestMessages, showLatestPage, refresh, refreshManually, pins: visible.pins, pinnedTotal: visible.pinnedTotal, loading: !visible.loaded,
     hasOlder: visible.hasOlder, hasNewer: visible.hasNewer, historical: visible.mode === "history", pending: pending === key,
     older: () => visible.rows.length ? navigate({ before: visible.rows[0].id }, "older") : Promise.resolve(),
     newer: () => visible.rows.length ? navigate({ after: visible.rows.at(-1)!.id }, "newer") : Promise.resolve(),

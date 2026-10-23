@@ -1,13 +1,13 @@
 "use client"
 
 import { Disclosure } from "./disclosure"
+import { BrandMark } from "./brand-mark"
 
 import Link from "next/link"
 import { type ReactNode, useMemo, useState } from "react"
 import {
   Bot,
   ChevronRight,
-  GitBranch,
   Brain,
   MoreHorizontal,
   Plus,
@@ -76,9 +76,7 @@ export function SessionSidebar({
         {onClose ? <button aria-label="关闭会话列表" className="mb-2 ml-auto flex rounded-lg p-1.5 lg:hidden" onClick={onClose}><X size={16} /></button> : null}
         <div className="rounded-lg bg-transparent">
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)]">
-              <GitBranch aria-hidden="true" size={18} />
-            </span>
+            <BrandMark />
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold text-slate-950">
                 {workspaceName}

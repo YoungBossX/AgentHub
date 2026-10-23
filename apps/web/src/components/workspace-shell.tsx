@@ -31,6 +31,8 @@ import { sessionStages, type WorkspaceView } from "./session-workbench-state"
 import { SessionEventTimeline, type SessionVisualEvent } from "./session-event-timeline"
 import { WorkspaceHeader } from "@/components/workspace-shell-header"
 import { WorkbenchLayout } from "@/components/workbench-layout"
+import { useInspectorState } from "./use-inspector-state"
+import { ConversationScroll } from "./conversation-scroll"
 import {
   artifactSelectionAfterRefresh,
   appendContextItem,
@@ -118,9 +120,6 @@ export function WorkspaceShell({
 
   const [view, setView] = useState<WorkspaceView>("conversation")
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [inspectorCollapsed, setInspectorCollapsed] = useState(false)
-  const [inspectorOpen, setInspectorOpen] = useState(false)
-  const [inspectorExpanded, setInspectorExpanded] = useState(false)
   const [eventsBySession, setEventsBySession] = useState<Record<string, SessionVisualEvent[]>>({})
   const onVisualEvent = useCallback((event: SessionVisualEvent) => {
     setEventsBySession((current) => {
@@ -154,13 +153,14 @@ export function WorkspaceShell({
   }, [evidenceArtifactItems, workbenchArtifacts, visibleTasks, workbenchSessionId, selectedSessionId])
   const activeContextItems = contextSessionId === selectedSessionId ? contextItems : []
   const selectedArtifact = artifactItems.find((artifact) => artifact.id === selectedArtifactId) ?? null
+  const inspector = useInspectorState(selectedSessionId, Boolean(selectedArtifact))
+  const { collapsed: inspectorCollapsed, overlay: inspectorOpen, expanded: inspectorExpanded } = inspector
   const selectedPreview = selectedArtifact?.kind === "preview" ? selectedArtifact.artifact : null
   const visibleMessages = messages.filter((message) => message.sessionId === selectedSessionId)
   const stages = sessionStages(visibleTasks, artifactItems, visibleMessages.some((message) => message.senderType === "user"))
   function selectArtifact(id: string) {
     setSelectedArtifactId(id)
-    setInspectorOpen(true)
-    setInspectorCollapsed(false)
+    inspector.reveal()
   }
 
   const reportArtifactError = useCallback((error: unknown) => reportSyncError("无法加载执行成果", error), [reportSyncError])
@@ -250,7 +250,6 @@ export function WorkspaceShell({
     setContextItems([])
     if (repairDraft) { setRepairDraft(null); setDraft("") }
     setSidebarOpen(false)
-    setInspectorExpanded(false)
     setSyncError(null)
     setEvidenceArtifactItems([])
     setWorkbenchArtifacts([])
@@ -400,8 +399,7 @@ export function WorkspaceShell({
     setContextItems(current => appendContextItem(contextSessionId === selectedSessionId ? current : [], contextItemFromCode(artifact, quote.path, quote.text)))
     setContextSessionId(selectedSessionId)
     setView("conversation")
-    setInspectorExpanded(false)
-    setInspectorOpen(false)
+    inspector.dismissOverlay()
     requestAnimationFrame(() => composerRef.current?.focus())
   }
 
@@ -480,7 +478,7 @@ export function WorkspaceShell({
       onDraft: (sessionId, value) => {
         if (selectedSessionIdRef.current !== sessionId) return
         setRepairDraft({ sessionId, draft: value }); setDraft(value.contentMd); setView("conversation")
-        setInspectorExpanded(false); setInspectorOpen(false)
+        inspector.dismissOverlay()
         requestAnimationFrame(() => composerRef.current?.focus())
       }, onOpenArtifact: id => {
         const item = artifactItems.find(item => item.artifact.artifactId === id)
@@ -500,9 +498,9 @@ export function WorkspaceShell({
           <WorkspaceHeader conversationMode={conversationMode} healthSlot={healthSlot} onModeChange={setConversationMode}
             selectedSessionTitle={selectedSession?.title ?? "未选择会话"} taskCount={visibleTasks.length} stages={stages}
             view={view} onViewChange={setView} artifactCount={artifactItems.length}
-            onToggleSidebar={() => setSidebarOpen((open) => !open)} onToggleInspector={() => { if (window.matchMedia("(min-width: 1200px)").matches) setInspectorCollapsed((value) => !value); else setInspectorOpen((open) => !open) }} />
+            onToggleSidebar={() => setSidebarOpen((open) => !open)} onToggleInspector={() => { if (window.matchMedia("(min-width: 1200px)").matches) inspector.toggleDesktop(); else inspector.toggleMobile() }} />
           {syncError ? <div className="mx-5 mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">{syncError}</div> : null}
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5" data-region="center-scroll">
+          <ConversationScroll sessionId={selectedSessionId} active={view === "conversation"} historical={history.historical} loading={history.loading} messages={visibleMessages}>
             {selectedSession ? <div className="mx-auto max-w-4xl"><SessionGuidance tasks={visibleTasks} artifacts={artifactItems} messages={history.latestMessages} onNavigate={(next, taskId) => {
               setView(next)
               requestAnimationFrame(() => { if (taskId) document.getElementById(`task-${taskId}`)?.scrollIntoView({ block: "start", behavior: "smooth" }); else if (next === "conversation") composerRef.current?.focus() })
@@ -546,7 +544,7 @@ export function WorkspaceShell({
               <SessionEventTimeline events={selectedSessionId ? eventsBySession[selectedSessionId] ?? [] : []} tasks={visibleTasks} />
             </div>
             <div className="mx-auto max-w-3xl" hidden={view !== "results"}><SessionResults artifacts={artifactItems} tasks={visibleTasks} onSelect={selectArtifact} /></div>
-          </div>
+          </ConversationScroll>
           {selectedSession ? <div className="shrink-0 px-5 pb-4 pt-2">
               {repairDraft?.sessionId === selectedSessionId ? <div className="mx-auto mb-2 flex max-w-3xl flex-wrap items-center justify-between gap-2 rounded border border-[var(--border)] bg-[var(--surface-muted)] p-2 text-xs"><span>修复草稿 · 评审 {repairDraft.draft.selection.reviewArtifactId.slice(0, 8)} · {repairDraft.draft.selection.issueIds.length} 个问题 · 版本 {repairDraft.draft.selection.expectedFingerprint.slice(0, 12)} · 发送时核对源码</span><button type="button" onClick={() => setRepairDraft(null)}>取消修复绑定</button></div> : null}
               <MessageComposer
@@ -575,8 +573,8 @@ export function WorkspaceShell({
         </main>
         <div className="workbench-inspector flex min-h-0 min-w-0 flex-col">
           <ArtifactPanel artifactItems={artifactItems} busy={isPending} frameKey={previewFrameKey}
-            expanded={inspectorExpanded} onToggleExpand={() => { setInspectorExpanded((value) => !value); setInspectorOpen(true); setInspectorCollapsed(false) }}
-            onClose={() => { setSelectedArtifactId(null); setInspectorOpen(false); setInspectorExpanded(false); setInspectorCollapsed(true) }}
+            expanded={inspectorExpanded} onToggleExpand={inspector.toggleExpanded}
+            onClose={() => { setSelectedArtifactId(null); inspector.close() }}
             onCreateDeploy={handleCreateDeployment} onOpenPreview={handleOpenPreview} onRefresh={handleRefreshPreviews}
             onSaveArtifactEdit={handleSaveArtifactEdit} onSelectArtifact={selectArtifact} onStopPreview={handleStopPreview} selectedArtifactId={selectedArtifactId} />
         </div>

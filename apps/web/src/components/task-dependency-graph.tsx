@@ -85,7 +85,7 @@ export function TaskDependencyGraph({ tasks, agents = [] }: { tasks: SessionTask
                 <text
                   x="16"
                   y="25"
-                  fontSize="11"
+                  fontSize="12"
                   fill="var(--muted-foreground)"
                 >
                   {(agents.find((agent) => agent.id === task.assignedAgentId) ?? agents.find((agent) => agent.role === task.assignedAgentRole))?.displayName.slice(0, 28) ?? task.assignedAgentRole ?? "unassigned"}
@@ -108,7 +108,7 @@ export function TaskDependencyGraph({ tasks, agents = [] }: { tasks: SessionTask
                 <text
                   x="28"
                   y="68"
-                  fontSize="10"
+                  fontSize="12"
                   fill={color}
                 >
                   {statusLabel(state)}

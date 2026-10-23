@@ -119,5 +119,40 @@ it("scrolls to a requested message only after its page has committed to the DOM"
   act(() => view.getByText("pin").click())
   await waitFor(() => expect(scrolled).toContain(row(10).id))
   act(() => view.getByText("latest").click())
-  await waitFor(() => expect(scrolled.at(-1)).toBe(row(5000).id))
+  await waitFor(() => expect(view.container.querySelector(`#message-${row(5000).id}`)).toBeTruthy())
+  // Latest is owned by ConversationScroll, including the progress/results footer.
+  expect(scrolled).toEqual([row(10).id])
+})
+
+it("reports manual refresh errors, clears pending and preserves the visible window", async () => {
+  const failure = new Error("读取暂时不可用"), error = vi.fn(), ready = vi.fn(), revision = { current: 0 }
+  api.page.mockResolvedValueOnce(page(rows(4920, 5000))).mockRejectedValueOnce(failure).mockResolvedValueOnce(page(rows(4920, 5000)))
+  const hook = renderHook(() => useMessageHistory("api", "s", revision, error, ready))
+  await waitFor(() => expect(hook.result.current.messages).toHaveLength(80))
+  await act(async () => { await hook.result.current.refreshManually() })
+  expect(error).toHaveBeenCalledWith(failure)
+  expect(hook.result.current.pending).toBe(false)
+  expect(hook.result.current.messages[0].id).toBe(row(4920).id)
+  ready.mockClear()
+  await act(async () => { await hook.result.current.refreshManually() })
+  expect(ready).toHaveBeenCalledOnce()
+})
+
+it("does not report a late manual refresh failure in another session", async () => {
+  let reject!: (reason: Error) => void
+  const pending = new Promise<MessagePage>((_, fail) => { reject = fail })
+  const revision = { current: 0 }, error = vi.fn(), ready = vi.fn()
+  api.page.mockResolvedValueOnce(page(rows(4920, 5000))).mockImplementationOnce(() => pending).mockResolvedValueOnce(page(rows(0, 2, "other"), false))
+  const hook = renderHook(({ sid }) => useMessageHistory("api", sid, revision, error, ready), { initialProps: { sid: "s" } })
+  await waitFor(() => expect(hook.result.current.messages).toHaveLength(80))
+  let refresh!: Promise<void>
+  act(() => { refresh = hook.result.current.refreshManually() })
+  expect(hook.result.current.pending).toBe(true)
+  hook.rerender({ sid: "other" })
+  await waitFor(() => expect(hook.result.current.messages[0]?.sessionId).toBe("other"))
+  ready.mockClear()
+  await act(async () => { reject(new Error("旧会话读取失败")); await refresh })
+  expect(error).not.toHaveBeenCalled()
+  expect(ready).not.toHaveBeenCalled()
+  expect(hook.result.current.pending).toBe(false)
 })

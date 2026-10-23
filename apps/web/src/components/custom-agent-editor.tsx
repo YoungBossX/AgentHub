@@ -70,6 +70,6 @@ export function CustomAgentEditor({ backendUrl, workspaceId, targets, editing, i
       <label className="flex items-center gap-2 text-xs font-semibold"><input type="checkbox" checked={draft.enabled} onChange={(event) => patch({ enabled: event.target.checked })} />启用自定义 Agent</label>
     </fieldset>
     {error ? <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
-    <div className="flex flex-wrap justify-end gap-2"><button type="button" disabled={busy || disabled} className={field} onClick={onCancel}>取消自定义编辑</button><button type="submit" disabled={busy || disabled || !workspaceId} className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "保存中…" : "保存自定义 Agent"}</button></div>
+    <div className="flex flex-wrap justify-end gap-2"><button type="button" disabled={busy || disabled} className={field} onClick={onCancel}>取消自定义编辑</button><button type="submit" disabled={busy || disabled || !workspaceId} className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-50">{busy ? "保存中…" : "保存自定义 Agent"}</button></div>
   </form>
 }

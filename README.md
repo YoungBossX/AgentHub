@@ -1,11 +1,12 @@
 <div align="center">
 
+<img src="docs/images/showcase/brand-icon.png" alt="AgentHub 标识" width="96" height="96" />
 
 # AgentHub
 
-### IM-style Multi-Agent Coding Workspace
+### 面向本地开发的多 Agent 编程工作台
 
-**让多 Agent 编程从“聊天回答”走向可调度、可隔离、可追踪、可验证的工程交付。**
+**在同一工作台提出需求、协调角色、查看代码变更，逐项核对执行结果。**
 
 <p>
   <img src="https://img.shields.io/badge/Python-FastAPI-3776AB?logo=python&logoColor=white" alt="Python FastAPI" />
@@ -25,11 +26,11 @@
 
 ## 项目简介
 
-AgentHub 是一个面向**本地开发工作流**的 Multi-Agent Coding Workspace。
+AgentHub 是一个面向**本机单用户开发**的 IM 式多 Agent 编程工作台。你可以在会话中用中文提出需求，指定前端、后端或评审角色，查看任务依赖和执行进度，再打开真实 Git Diff、评审报告及 Vite React 预览继续修改。
 
-用户在 Session 中提出开发需求后，系统完成需求理解、任务规划、角色路由、运行调度与代码执行，并将执行过程沉淀为 **TaskRun / TaskRunEvent / Diff / Review / Preview** 等可追踪工程结果。
+项目关注三个实际问题：多角色任务如何按依赖推进，不同会话如何隔离代码修改，以及执行结束后如何核对结果。后端通过 **Task / TaskRun / TaskRunEvent** 组织计划、运行和事件，前端分别展示对话、执行过程和成果。
 
-> **核心目标：不是让多个 Agent 同时“聊天”，而是让多个 Agent 围绕真实代码任务协作，并让每一步执行都有边界、有状态、有结果可查。**
+> 当前定位：本地单用户 Agent Coding Workspace。保留 Codex、Claude Code 和显式 ScriptedMock 兜底；支持内置前后端目标及受限外部目标。任务完成、检查通过、模型评审和预览健康是不同证据，需要分别查看。暂不提供多用户协作或生产部署。
 
 ```text
 User Request
@@ -51,6 +52,10 @@ Diff / Review / Preview
 TaskRunEvent → SSE → Web Workspace
 ```
 
+<a href="docs/images/showcase/workbench-process.png"><img src="docs/images/showcase/workbench-process.png" alt="AgentHub 当前工作台：中文联系人协作任务的依赖图、运行状态与成果面板" width="100%" /></a>
+
+*真实页面截图：2026-10-23 的工作台只读回看 2026-10-20 的原生联系人协作记录；没有重新调用模型或改写任务状态。点击查看原图。截图来源、结果页面和版本边界见[图片说明](docs/images/showcase/README.md)。静态[图文介绍页源码](index.html)沿用同一组实图。*
+
 ---
 
 ## 交付文档
@@ -62,6 +67,10 @@ TaskRunEvent → SSE → Web Workspace
 | [`docs/demo-script.md`](docs/demo-script.md) | 录屏、现场演示和答辩脚本 |
 | [`docs/architecture.md`](docs/architecture.md) | 架构、核心链路、模块地图和可靠性边界 |
 | [`docs/project-state.md`](docs/project-state.md) | 当前基线、冻结证据、已知限制与交付状态 |
+| [`docs/database-migrations.md`](docs/database-migrations.md) | SQLite / Alembic 离线迁移、备份与已有数据兼容 |
+| [`docs/container-validation.md`](docs/container-validation.md) | 可选 Docker 固定检查与测试，区别于 Agent 容器化 |
+| [`docs/chinese-usage-latency-validation-20261020.md`](docs/chinese-usage-latency-validation-20261020.md) | 历史同版中文 50 次评测、Token 与阶段耗时，含失败和分母 |
+| [`docs/real-api-stability-validation-20261022.md`](docs/real-api-stability-validation-20261022.md) | 后续原生 QA 修复和独立复验，不回写历史评测 |
 | [`docs/ordered-local-improvements.md`](docs/ordered-local-improvements.md) | 同版本原生 QA 评测、业务验收扩展与职责拆分的本地证据和范围 |
 | [`AGENTS.md`](AGENTS.md) | AI 协作守则和项目 guardrails |
 | [`openspec/changes`](openspec/changes) | Spec、任务拆解和演进记录 |
@@ -74,20 +83,33 @@ TaskRunEvent → SSE → Web Workspace
 
 | 能力                          | AgentHub 的实现                                              |
 | ----------------------------- | ------------------------------------------------------------ |
-| **Multi-Agent Orchestration** | 将需求拆分为 frontend / backend / qa 等角色任务，并通过 Task Graph 描述依赖关系与执行目标 |
-| **Runtime Mapping**           | ProviderGateway 将角色与具体 Coding Provider 解耦，统一完成 Provider 解析、能力匹配与运行时选择 |
-| **Workspace Isolation**       | 每个 Session 使用独立 Git Worktree，避免不同会话直接写入同一工作目录 |
-| **Concurrency Control**       | Session Queue + Scheduler + Target Lock 协同控制写任务顺序与目标级互斥 |
-| **Realtime Trace**            | TaskRunEvent 持久化到 SQLite，通过 SSE 增量推送，以 Session 游标、周期重放和空闲心跳支持恢复 |
-| **Evidence Delivery**         | 将真实代码修改进一步组织为 Diff、Review、Preview 与运行诊断，而不是只返回文本结果 |
-| **Versioned Validation**       | 内置 Vite/FastAPI 固定验证绑定源码、策略和执行代次，旧成功不能验收新代码；模型评审与自动检查分别显示 |
-| **Review & Repair**            | 从具体发现准备修复草稿，显式发送、复验并保留旧报告；普通模型建议仍需人工核验 |
-| **Skills & Controlled MCP**    | 版本冻结的技能包和受控只读文档连接；不授予任意脚本、网络或主机写权限 |
-| **Local Usability & Data**     | 阶段/阻塞/下一步提示、有界消息历史/分段正文、离线一致快照/恢复演练及引用检查后的缓存隔离 |
+| **任务规划与意图识别** | 识别角色提及、受支持意图及拒绝边界；可选原生 Planner 输出结构化计划，再校验目标、路径、命令与依赖 |
+| **角色与运行时配置** | 支持角色名称、别名、提示词及受限自定义档案；ProviderGateway 解析兼容 Provider、检查健康和容量 |
+| **会话与写入隔离** | 每个 Session 独立 Git Worktree；Session Queue、Scheduler 与 Target Lock 控制依赖和目标写竞争 |
+| **过程可视化与恢复** | 任务图、状态、事件时间线与运行诊断；TaskRunEvent 持久化后通过 SSE 推送，支持游标重放和心跳 |
+| **代码与成果工作台** | 查看真实 Diff、只读评审、文档版本和 Vite React 预览；保留产物来源及当前/历史运行区别 |
+| **版本绑定的分项验收** | 内置 Vite/FastAPI 固定检查绑定源码、策略与执行代次；旧成功不能验收新代码，模型评审独立显示 |
+| **评审、修复与重试** | 选择具体发现准备修复草稿，显式发送后重新检查；支持中断、重试及明确标识来源的脚本兜底 |
+| **记忆与上下文** | 作用域记忆、冻结快照、置顶消息、附件与代码片段引用；按预算组装，超限拒绝而不静默丢弃必要规则 |
+| **Skills 与受控 MCP** | 技能说明按版本冻结；兼容 Codex 可通过内置网关只读查询项目文档，不支持任意服务器或写工具 |
+| **可观测用量** | 保存可获得的 CLI Token 回执与排队、规划、执行、收尾等耗时；未知值保留未知，应用观测不冒称上游 TTFT |
+| **本地数据维护** | SQLite / Alembic 管理版本；已有库离线备份迁移，另有一致快照、恢复演练和受限缓存隔离 |
+| **可选容器验证** | 操作者可为服务器固定检查/测试选择预制 Docker 镜像；默认 native，Agent CLI、预览和浏览器保持原生 |
 
 本地个人项目的当前能力和证据见 [交付核对](docs/local-project-delivery.md)。
 源码实现、最近验收和未提交改动以 [当前项目状态](docs/project-state.md) 为准；历史 CI 通过不能验证后续本地改动。
 固定检查只覆盖其明示契约，不等于任意业务功能正确或通用恶意代码沙箱。
+
+<details>
+<summary>查看历史真实任务评测及其适用范围</summary>
+
+2026-10-20 的冻结版本，对五类固定中文场景各执行 10 次：严格完整验收 **40/50**，独立业务契约 **46/50**，另有 3 次失败、1 次未完整验证。单独的受控故障恢复 **10/10**，不并入普通任务分母。
+
+198 条去重逻辑调用/尝试记录中，197 条有完整 Token 回执；已知小计 4,382,605 Token，剩余 1 条超时未知，完整总量不填零。任务流程 P50 / P95 为 90.437 / 372.703 秒，仅描述该机器、该版本与这些重复场景。
+
+这些结果不代表当前版本的任意任务成功率，也不是生产 HTTP 压测。截图选取通过样本用于展示，完整统计保留全部失败；后续修复另存记录。详见[评测定义与完整结果](docs/chinese-usage-latency-validation-20261020.md)及[后续修复记录](docs/real-api-stability-validation-20261022.md)。
+
+</details>
 
 ---
 
@@ -108,11 +130,13 @@ flowchart TB
         PG[ProviderGateway]
         C[Codex Adapter]
         CL[Claude Code Adapter]
+        M[ScriptedMock / explicit fallback]
 
         TG --> S
         S --> PG
         PG --> C
         PG --> CL
+        PG --> M
     end
 
     subgraph I["Isolation Layer"]
@@ -121,6 +145,7 @@ flowchart TB
 
         C --> W
         CL --> W
+        M --> W
         S --> L
         L --> W
     end
@@ -163,7 +188,7 @@ flowchart TB
 
 ### 1. Planning & Task Graph
 
-Planner / Orchestrator 将自然语言需求转换为可执行任务，并为任务建立角色、目标与依赖关系。
+Planner / Orchestrator 先解析角色提及和意图。规则处理明确支持的需求与边界；启用原生 Planner 后，由模型生成结构化计划，再经过同一套任务图、路径和命令校验。讨论、拒绝或澄清不会伪装成已执行任务。
 
 ```text
 User Request
@@ -207,15 +232,10 @@ Worktree / Target
 - 只读任务可并发执行；
 - 写任务进入 Session 写队列；
 - 同一目标通过 Target Lock 建立互斥边界；
-- Session 之间使用独立 Git Worktree 隔离工作目录。
-- Preview、staging build 和本地静态服务只接收显式公开的项目环境变量；
-  Codex、Claude Code、Claude Planner 及其 CLI 探针只接收对应 provider 的环境配置。
-- Codex 只能以 `workspace-write` 原生沙箱、无交互批准、临时会话且忽略非受管配置/规则
-  的固定命令形态启动；Claude Code 只能以 restricted + safe mode、显式文件工具集和
-  strict MCP 边界启动。用户派生指令位于 `--` 之后，不能被重新解释为 CLI 选项。
-- 内嵌 Vite Preview 使用固定 iframe sandbox，只保留脚本、表单和 Preview 自身 origin
-  能力；不授予顶层导航、弹窗、下载、modal、pointer lock 或 presentation，并关闭
-  敏感 Permissions Policy 能力与 Referrer 传递。
+- Session 之间使用独立 Git Worktree 隔离工作目录；内置 Demo 的显式隔离写任务可在执行工作树校验后汇合；
+- 路径范围、禁止文件、固定命令、CLI 原生限制和预览 iframe 各自承担不同边界，Worktree 本身不等于安全沙箱。
+
+默认检查在 native 后端执行；可选 Docker 仅运行服务器固定检查/测试，不将 Agent CLI、预览或整个平台放入容器。环境变量、工具及预览权限详见[架构边界](docs/architecture.md#可靠性边界)和[容器验证说明](docs/container-validation.md)。
 
 ---
 
@@ -236,6 +256,7 @@ ProviderGateway 位于 TaskRun 与 Coding Runtime 之间，统一负责：
 ```text
 CodexAdapter
 ClaudeCodeAdapter
+ScriptedMockAdapter  # 显式兜底：按受支持模板真实修改文件，不调用模型
 ```
 
 因此 Planner、Task Graph 与 TaskRun 可以保持稳定，而底层 Coding Runtime 可以独立配置和扩展。
@@ -244,7 +265,7 @@ ClaudeCodeAdapter
 
 ### 4. Evidence & Realtime Trace
 
-AgentHub 不把“模型输出完成”直接视为最终交付，而是继续采集可验证的工程结果。
+Agent 退出后，系统继续收集真实文件变化并核对完成条件。内置目标的固定检查、模型静态评审和预览健康分别记录；源码改变后，旧验证回执会过期。
 
 ```text
 Coding Agent
@@ -269,6 +290,12 @@ Web Workspace
 | **Preview**      | 启动并展示本地 Web 预览                  |
 | **TaskRunEvent** | 持久化任务执行状态与运行轨迹，并提供 Session 级 SSE 恢复游标 |
 | **Diagnostics**  | 汇总 Queue、Provider、Preview 等运行状态 |
+| **Validation**  | 对内置目标记录与当前源码/策略绑定的分项检查，保留失败及不适用项 |
+| **Usage & Timing** | 保存可获得的 Token 用量和分阶段耗时，缺失回执不补造 |
+
+<a href="docs/images/showcase/workbench-diff.png"><img src="docs/images/showcase/workbench-diff.png" alt="真实联系人协作记录中的前端代码 Diff，在当前成果工作台中查看" width="100%" loading="lazy" /></a>
+
+*当前 UI 回看真实历史 Diff。原生评审、桌面/390px 结果及图片来源见[完整截图说明](docs/images/showcase/README.md)；截图中的脚本报告与模型报告分别标注，不合并为同一种验收。*
 
 ---
 
@@ -276,12 +303,13 @@ Web Workspace
 
 | 模块              | 技术                                                    |
 | ----------------- | ------------------------------------------------------- |
-| **Web Workspace** | Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui |
+| **Web Workspace** | Next.js App Router、React、TypeScript、Tailwind CSS、本地 UI 组件 |
 | **API**           | FastAPI、Pydantic、SQLModel                             |
-| **Persistence**   | SQLite                                                  |
+| **Persistence**   | SQLite、SQLModel、Alembic 版本迁移                        |
 | **Realtime**      | Server-Sent Events (SSE)                                |
 | **Agent Runtime** | Codex CLI、Claude Code CLI、Adapter Abstraction         |
 | **Isolation**     | Git Worktree、Target Scope、Target Lock                 |
+| **Fixed Validation** | 原生固定检查；可选 Docker 预制验证镜像，不是通用 Agent 沙箱 |
 | **Demo Frontend** | Vite + React                                            |
 | **Specification** | OpenSpec                                                |
 
@@ -308,6 +336,7 @@ AgentHub/
 | 文件                     | 职责                                                 |
 | ------------------------ | ---------------------------------------------------- |
 | `planning.py`            | Mention 解析、Planner / LLM Planner、Task Graph 生成 |
+| `planning_intents.py / intent_decisions.py` | 规则边界与统一意图识别结果，配套固定评测集 |
 | `run_engine.py`          | TaskRun 主执行链路与运行生命周期                     |
 | `provider_gateway.py`    | Provider 解析、健康、容量与运行时映射                |
 | `scheduler.py`           | 任务依赖与可运行状态判断                             |
@@ -317,6 +346,11 @@ AgentHub/
 | `claude_code_adapter.py` | Claude Code CLI 执行适配                             |
 | `diffs.py`               | Git / 文件变更采集                                   |
 | `previews.py`            | 本地 Preview 生命周期管理                            |
+| `skills.py / mcp_gateway.py` | 版本冻结技能包及受控只读项目文档工具                |
+| `memory_snapshots.py / memory_retrieval.py` | 作用域记忆、冻结快照及有界上下文检索       |
+| `db_migrations.py`       | SQLite 状态检查、一致备份与 Alembic 离线升级            |
+
+以上文件位于 [`apps/api/app`](apps/api/app)。完整前后端模块地图见[架构说明](docs/architecture.md)。
 
 ---
 
@@ -396,13 +430,15 @@ Session 网页预览仍由 API 在实际运行的工作树中启动，不能用�
 ### 5. 发送任务
 
 ```text
-@orchestrator build a login page for the demo app
+@orchestrator 为演示应用构建一个登录页
 ```
 
 默认自动组会依次规划、执行、评审并汇总；历史手动计划仍可逐项启动。
 真实执行需要在“工作区设置 → 运行设置”选择可用的本机 Codex/Claude Code，
 执行失败可显式使用 ScriptedMock 兜底。脚本兜底不执行模型提示词，不应被视为
 真实 Agent 成功。
+
+第一次运行可按“对话 → 执行过程 → 成果”查看：先核对计划与修改范围，再检查 Diff 和分项 QA；需要预览时打开 Vite React 结果。遇到失败先查看运行原因，重试保留原记录。主工作台的成果区会区分当前运行和历史结果，空面板可收起，两侧分界支持拖动。
 
 系统将进入：
 
@@ -447,6 +483,6 @@ pnpm test          # 运行测试
 
 ### AgentHub
 
-**From AI conversation to verifiable engineering delivery.**
+**让协作过程可见，让执行结果可检查。**
 
 </div>

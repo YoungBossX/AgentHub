@@ -12,7 +12,7 @@ it.each(["queued", "pending", "waiting_approval", "blocked", "failed", "interrup
   const current = { ...task(state), taskRuns: [{ id: "r", state, errorMessage: "需要处理的实际原因" } as TaskRun] }
   render(<SessionGuidance tasks={[current]} artifacts={[]} messages={[message]} onNavigate={onNavigate} />)
   expect(onNavigate).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole("button"))
+  fireEvent.click(screen.getByRole("button", { name: sessionGuidance([current], [], [message]).action }))
   expect(onNavigate).toHaveBeenCalledWith("process", "t")
   if (state === "queued") expect(screen.getByText(/排队中/)).toBeTruthy()
   if (state === "waiting_approval") expect(screen.getByText(/等待确认/)).toBeTruthy()

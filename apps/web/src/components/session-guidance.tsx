@@ -1,6 +1,7 @@
 "use client"
 
 import type { ChatMessage, SessionTask } from "@/lib/api"
+import { Disclosure } from "./disclosure"
 import type { ArtifactPanelItem } from "./preview-card"
 import { latestTaskState, type WorkspaceView } from "./session-workbench-state"
 
@@ -55,9 +56,11 @@ export function sessionGuidance(tasks: SessionTask[], artifacts: ArtifactPanelIt
 
 export function SessionGuidance({ tasks, artifacts, messages, onNavigate }: { tasks: SessionTask[]; artifacts: ArtifactPanelItem[]; messages: ChatMessage[]; onNavigate: (view: WorkspaceView, taskId?: string) => void }) {
   const guide = sessionGuidance(tasks, artifacts, messages)
-  return <section aria-label="当前阶段与下一步" className="mb-4 min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-xs">
-    <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0 flex-1"><p className="font-semibold">当前阶段 · {guide.phase}</p><p className="mt-1 break-words text-[var(--muted-foreground)]">{guide.detail}</p></div>
-      <button type="button" className="shrink-0 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1" onClick={() => onNavigate(guide.view, guide.taskId)}>{guide.action}</button></div>
-    <p className="mt-2 break-words">下一步：{guide.next}</p>
+  const urgent = /失败|中断|取消|确认|受阻|超限|等待前置|等待目标|复验待处理/.test(guide.phase)
+  return <section aria-label="当前阶段与下一步" className="mb-5 min-w-0 rounded-2xl bg-[var(--surface-muted)] px-4 py-3 text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex min-w-0 flex-1 items-center gap-2"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${urgent ? "bg-amber-500" : "bg-[var(--primary)]"}`} aria-hidden="true" /><p className="font-medium">{guide.phase}</p></div>
+      <button type="button" className="shrink-0 rounded-lg bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--primary)]" onClick={() => onNavigate(guide.view, guide.taskId)}>{guide.action}</button></div>
+    <p className="mt-2 break-words text-xs text-[var(--muted-foreground)]">下一步：{guide.next}</p>
+    {urgent ? <p className="mt-2 break-words text-sm">{guide.detail}</p> : <Disclosure summary="阶段说明" className="mt-2 text-xs text-[var(--muted-foreground)]"><p className="mt-2 break-words">{guide.detail}</p></Disclosure>}
   </section>
 }

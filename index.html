@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="AgentHub：IM-style Multi-Agent Coding Workspace。展示任务编排、Provider Runtime、Git Worktree 隔离、并发控制、SSE 事件追踪与工程证据链。" />
-  <title>AgentHub · Multi-Agent Coding Workspace</title>
+  <meta name="description" content="AgentHub：面向本机单用户开发的多 Agent 编程工作台。通过真实页面了解中文任务规划、受控执行、代码 Diff、版本验收与结果预览。" />
+  <title>AgentHub · 多 Agent 编程工作台</title>
 
   <script>
     (() => {
@@ -928,14 +928,7 @@
     <div class="page nav-inner">
       <a class="brand" href="#top" aria-label="AgentHub 首页">
         <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path class="hub-line" d="M12 12 6.5 6.5M12 12l5.5-5.5M12 12l-5 6M12 12l5 6"/>
-            <circle class="hub-node-a" cx="6.5" cy="6.5" r="2.15"/>
-            <circle class="hub-node-b" cx="17.5" cy="6.5" r="2.15"/>
-            <circle class="hub-node-b" cx="7" cy="18" r="2.15"/>
-            <circle class="hub-node-a" cx="17" cy="18" r="2.15"/>
-            <circle class="hub-core" cx="12" cy="12" r="2.7"/>
-          </svg>
+          <img src="docs/images/showcase/brand-icon.png" width="38" height="38" alt="" style="display:block;border-radius:12px" />
         </span>
         <span>AgentHub</span>
       </a>
@@ -989,20 +982,20 @@
       <div class="page hero-grid">
         <div class="hero-copy">
           <div class="eyebrow">
-            <span class="tag">Multi-Agent</span>
-            <span class="tag">Coding Workspace</span>
-            <span class="tag">Engineering Evidence</span>
+            <span class="tag">多 Agent 协作</span>
+            <span class="tag">本地单用户</span>
+            <span class="tag">真实代码与验收</span>
           </div>
 
           <h1><span class="gradient-text">AgentHub</span></h1>
 
           <p class="lead">
-            面向本地开发工作流的 <strong>IM 式多 Agent 编程协作平台</strong>。
-            将用户需求转换为可执行任务图，由不同角色 Agent 协同完成代码任务，
-            并通过隔离执行、并发控制、实时事件流与工程产物形成完整交付闭环。
+            一个面向本机开发的 <strong>IM 式多 Agent 编程工作台</strong>。
+            用中文提出需求，由前端、后端和评审角色按计划协作；
+            在同一界面查看执行过程、真实代码变更与验收依据，再继续修改。
           </p>
 
-          <div class="hero-note">从自然语言需求，推进到可检查的工程结果</div>
+          <div class="hero-note">本地单用户 · 过程可见 · 结果逐项核对</div>
 
           <div class="actions">
             <a class="btn primary" href="#architecture">查看系统架构 ↓</a>
@@ -1011,71 +1004,31 @@
 
           <div class="hero-metrics">
             <div class="metric">
-              <strong>Task Graph</strong>
-              <span>任务拆解、角色分配、Target 与依赖编排</span>
+              <strong>计划与角色</strong>
+              <span>先核对目标、修改范围和依赖，再进入执行</span>
             </div>
             <div class="metric">
-              <strong>Worktree + Lock</strong>
-              <span>Session 级隔离与目标写入冲突控制</span>
+              <strong>受控执行</strong>
+              <span>独立会话工作树、写队列与目标锁</span>
             </div>
             <div class="metric">
-              <strong>Event + Artifact</strong>
-              <span>运行状态、Diff、Review、Preview 统一追踪</span>
+              <strong>版本与成果</strong>
+              <span>Diff、模型评审和固定检查分别留存</span>
             </div>
           </div>
         </div>
 
-        <div class="workspace" aria-label="AgentHub 产品界面示意">
+        <div class="workspace" aria-label="AgentHub 真实工作台截图">
           <div class="window-bar">
             <div class="dots"><i></i><i></i><i></i></div>
-            <div class="window-title">AgentHub Workspace · Live Execution</div>
+            <div class="window-title">真实工作台 · 中文联系人协作记录</div>
           </div>
-
-          <div class="workspace-ui">
-            <aside class="sidebar">
-              <div class="panel-title">Agents</div>
-              <div class="person active">◎ Orchestrator</div>
-              <div class="person">◫ Frontend</div>
-              <div class="person">⌘ Backend</div>
-              <div class="person">✓ QA / Review</div>
-
-              <div class="panel-title" style="margin-top:20px">Sessions</div>
-              <div class="person active">Login Page</div>
-              <div class="person">Dashboard</div>
-              <div class="person">Settings</div>
-            </aside>
-
-            <div class="chat">
-              <div class="bubble user">@orchestrator 构建一个登录页，并完成前后端实现与检查。</div>
-              <div class="bubble agent">已生成执行计划。任务将按角色、Target 与依赖关系推进。</div>
-
-              <div class="task">
-                <div class="task-head"><b>Frontend · Login UI</b><span class="status">completed</span></div>
-                <div class="progress"><span style="width:100%"></span></div>
-                <div class="micro">target: frontend · worktree isolated</div>
-              </div>
-
-              <div class="task">
-                <div class="task-head"><b>Backend · API Contract</b><span class="status">running</span></div>
-                <div class="progress"><span style="width:72%"></span></div>
-                <div class="micro">provider resolved · task run active</div>
-              </div>
-
-              <div class="task">
-                <div class="task-head"><b>QA · Review</b><span class="status">ready</span></div>
-                <div class="progress"><span style="width:28%"></span></div>
-                <div class="micro">dependsOn: frontend + backend</div>
-              </div>
-            </div>
-
-            <aside class="artifact-panel">
-              <div class="panel-title">Artifacts</div>
-              <div class="artifact-item"><b>✓ Diff</b><br>App.tsx<br>styles.css</div>
-              <div class="artifact-item"><span class="blue">◉ Preview</span><br>Vite React<br>healthy</div>
-              <div class="artifact-item"><b>✓ Review</b><br>artifact ready</div>
-              <div class="artifact-item"><span class="blue">⌁ Events</span><br>TaskRunEvent<br>streaming</div>
-            </aside>
-          </div>
+          <figure style="margin:0">
+            <a href="docs/images/showcase/workbench-dark.png" target="_blank" rel="noreferrer" title="打开完整工作台截图">
+              <img src="docs/images/showcase/workbench-dark.png" width="1680" height="1050" alt="AgentHub 暗色工作台实图，展示四个中文任务的依赖、已完成状态和代码成果面板" style="display:block;width:100%;height:auto" fetchpriority="high" />
+            </a>
+            <figcaption style="padding:14px 18px;color:var(--text-2);font-size:12px">2026-10-23 界面只读回看 2026-10-20 的真实原生运行记录。点击查看原图；不是重新执行或实时预览。<a href="docs/images/showcase/README.md" style="text-decoration:underline">图片来源 ↗</a></figcaption>
+          </figure>
         </div>
       </div>
     </section>
@@ -1085,38 +1038,38 @@
         <div class="section-head">
           <div>
             <div class="kicker">01 · Overview</div>
-            <h2>把 AI 编程从“回答”推进到“交付”</h2>
+            <h2>从一条需求，走到可检查的代码结果</h2>
           </div>
-          <p>AgentHub 的核心不是增加更多聊天角色，而是建立从需求理解、任务编排、受控执行到结果验证的工程工作流。</p>
+          <p>围绕真实代码任务组织协作：先明确目标与依赖，再受控执行，最后核对 Diff、检查和预览。当前是本地单用户工作台，保留真实模型与脚本兜底的来源区别。</p>
         </div>
 
         <div class="cards">
           <article class="card">
             <div class="card-icon">⌁</div>
             <h3>任务编排</h3>
-            <p>Planner 解析用户意图与角色提及，Orchestrator 生成 Task Graph，并对依赖、角色与 Target 进行组织。</p>
-            <div class="card-code">planning.py · task_graph_builder.py</div>
+            <p>用中文描述需求或 @ 指定角色。明确支持的需求按规则识别；可选原生 Planner 输出结构化计划，校验目标、路径和依赖后再派发。</p>
+            <div class="card-code">planning.py · planning_intents.py</div>
           </article>
 
           <article class="card">
             <div class="card-icon">⚙</div>
             <h3>运行时路由</h3>
-            <p>ProviderGateway 将 Agent 角色与具体 Coding Provider 解耦，统一处理 Provider 解析、健康检查与运行配置。</p>
+            <p>角色与具体 CLI 分开配置，沿用 Codex、Claude Code 和显式脚本兜底。可自定义名称、别名与提示词，运行时保留选择来源。</p>
             <div class="card-code">provider_gateway.py · runtime config</div>
           </article>
 
           <article class="card">
             <div class="card-icon">⑂</div>
             <h3>隔离与并发</h3>
-            <p>Session 级 Git Worktree 提供工作区隔离，Session Queue 与 Target Lock 控制写任务的安全执行顺序。</p>
+            <p>每个会话拥有独立 Git Worktree，写队列和目标锁减少代码冲突。文件范围、CLI 限制与固定检查各有职责，工作树本身不等于安全沙箱。</p>
             <div class="card-code">session_queue.py · target_locks.py</div>
           </article>
 
           <article class="card">
             <div class="card-icon">✓</div>
             <h3>可验证交付</h3>
-            <p>执行结果沉淀为 Diff、Review、Preview、TaskRunEvent 等工程产物，前端持续展示真实运行过程。</p>
-            <div class="card-code">diffs.py · previews.py · events.py</div>
+            <p>真实 Diff、模型评审、固定检查和预览健康分别展示。验证绑定源码版本，历史成功不替代当前验收；失败原因和重试记录继续保留。</p>
+            <div class="card-code">diffs.py · reviews.py · previews.py</div>
           </article>
         </div>
       </div>
@@ -1129,29 +1082,29 @@
             <div class="kicker">02 · Architecture</div>
             <h2>一条请求如何进入执行系统</h2>
           </div>
-          <p>从 IM Session 进入 Planner，再经过任务图、Scheduler、运行时路由和受控工作区，最终生成持久化事件与可检查 Artifact。</p>
+          <p>消息、引用与附件进入规划；任务按依赖和写锁执行。SQLite 保存运行及产物，SSE 将事件投影到工作台。规划、调度、代码执行和验收各自保留边界。</p>
         </div>
 
         <div class="architecture-shell">
           <div class="arch-row">
-            <div class="arch-node accent"><b>User / Session</b><span>Message / Context</span></div>
-            <div class="arch-node"><b>Planner</b><span>Intent / Mention / LLM</span></div>
-            <div class="arch-node"><b>Task Graph</b><span>Role / Target / DependsOn</span></div>
-            <div class="arch-node blue"><b>Scheduler</b><span>Dependency / Queue</span></div>
-            <div class="arch-node blue"><b>ProviderGateway</b><span>Runtime Resolution</span></div>
-            <div class="arch-node"><b>Adapter</b><span>Codex / Claude Code</span></div>
+            <div class="arch-node accent"><b>需求与会话</b><span>Message · 引用 · 附件</span></div>
+            <div class="arch-node"><b>意图与规划</b><span>规则边界 · 可选原生 Planner</span></div>
+            <div class="arch-node"><b>任务图</b><span>角色 · 目标 · 依赖校验</span></div>
+            <div class="arch-node blue"><b>任务调度</b><span>依赖 · 队列 · 容量</span></div>
+            <div class="arch-node blue"><b>ProviderGateway</b><span>运行时配置与能力匹配</span></div>
+            <div class="arch-node"><b>执行适配器</b><span>Codex · Claude · 脚本兜底</span></div>
           </div>
 
           <div class="arch-row">
-            <div class="arch-node"><b>Worktree / Target</b><span>Execution Boundary</span></div>
-            <div class="arch-node"><b>Target Lock</b><span>Write Isolation</span></div>
-            <div class="arch-node accent"><b>Diff / Review</b><span>Engineering Evidence</span></div>
-            <div class="arch-node accent"><b>Preview</b><span>Runtime Verification</span></div>
-            <div class="arch-node blue"><b>TaskRunEvent</b><span>Persistent Event Stream</span></div>
-            <div class="arch-node blue"><b>SSE / Web UI</b><span>Realtime Projection</span></div>
+            <div class="arch-node"><b>工作树与目标</b><span>Session 隔离 · 路径范围</span></div>
+            <div class="arch-node"><b>目标写锁</b><span>避免冲突写入</span></div>
+            <div class="arch-node accent"><b>Diff 与评审</b><span>真实变更 · 独立模型判断</span></div>
+            <div class="arch-node accent"><b>检查与预览</b><span>源码绑定检查 · 预览健康</span></div>
+            <div class="arch-node blue"><b>持久化事件</b><span>SQLite · TaskRunEvent</span></div>
+            <div class="arch-node blue"><b>SSE 与工作台</b><span>增量展示 · 游标重放</span></div>
           </div>
 
-          <div class="architecture-caption">Planning → Scheduling → Runtime → Isolation → Evidence → Realtime Projection</div>
+          <div class="architecture-caption">需求与规划 → 调度与执行 → 代码边界 → 分项验收 → 事件与成果展示</div>
         </div>
 
         <div class="layer-strip">
@@ -1170,50 +1123,50 @@
             <div class="kicker">03 · Engineering</div>
             <h2>工程设计重点</h2>
           </div>
-          <p>项目把多 Agent 协作拆成规划、运行时、隔离、并发与证据模型几个独立问题，避免把所有职责塞进一个“Orchestrator 类”。</p>
+          <p>围绕四个问题设计：任务怎样拆解，角色怎样选择运行时，代码修改怎样隔离，以及结果怎样按当前版本核对。Skills、MCP、记忆和用量观测沿用这些边界。</p>
         </div>
 
         <div class="engineering">
           <article class="eng-card">
             <div class="num">01 / TASK GRAPH</div>
-            <h3>任务不是聊天消息，而是可调度节点</h3>
+            <h3>先校验计划，再按依赖执行</h3>
             <ul>
-              <li>Task 记录角色、Target、依赖与 Intent。</li>
-              <li>任务图校验后再进入 Scheduler。</li>
-              <li>前置任务完成后，下游任务才能进入可运行状态。</li>
+              <li>Task 记录角色、目标、依赖与意图，TaskRun 记录每次尝试。</li>
+              <li>讨论、澄清和拒绝不伪装成执行；计划校验后才进入调度。</li>
+              <li>前置失败保留阻塞原因；中断和重试保留原始运行记录。</li>
             </ul>
             <code>planning.py · plan_validator.py · task_graph_builder.py</code>
           </article>
 
           <article class="eng-card">
             <div class="num">02 / PROVIDER RUNTIME</div>
-            <h3>角色职责与具体模型 / CLI 解耦</h3>
+            <h3>配置可复用，执行仍然受控</h3>
             <ul>
-              <li>ProviderGateway 根据 role / target / capability 做运行时解析。</li>
-              <li>统一处理 Provider 健康、容量与 Adapter 能力。</li>
-              <li>Planner 和 TaskRun 不需要绑定某一个 Coding CLI。</li>
+              <li>ProviderGateway 按角色、目标与能力选择兼容运行时。</li>
+              <li>配置和提示词进入运行快照，后续修改不改写历史。</li>
+              <li>Skills 补充说明；兼容 Codex 的内置 MCP 只读项目文档，不扩大权限。</li>
             </ul>
             <code>provider_gateway.py · codex_adapter.py · claude_code_adapter.py</code>
           </article>
 
           <article class="eng-card">
             <div class="num">03 / ISOLATION</div>
-            <h3>Worktree 隔离会话，Lock 控制写冲突</h3>
+            <h3>隔离工作目录，限制写入范围</h3>
             <ul>
-              <li>不同 Session 在独立 Git Worktree 中工作。</li>
-              <li>写任务通过 Session Queue 控制运行顺序。</li>
-              <li>同一 Target 使用写锁建立互斥边界。</li>
+              <li>不同会话使用独立工作树，任务仅操作分配的目标。</li>
+              <li>默认写任务经 Session Queue 与 Target Lock 控制顺序及互斥。</li>
+              <li>可选 Docker 只承载固定检查与测试；Agent CLI 和预览仍原生运行。</li>
             </ul>
             <code>session_queue.py · scheduler.py · target_locks.py</code>
           </article>
 
           <article class="eng-card">
             <div class="num">04 / EVENT MODEL</div>
-            <h3>执行过程先持久化，再实时投影到前端</h3>
+            <h3>事件可恢复，用量与耗时可追溯</h3>
             <ul>
-              <li>Adapter 事件标准化为 TaskRunEvent。</li>
-              <li>事件落 SQLite 后通过 SSE 增量推送。</li>
-              <li>Diff、Review、Preview 与 Diagnostics 统一形成证据链。</li>
+              <li>标准化事件先写入 TaskRunEvent，再通过 SSE 增量展示。</li>
+              <li>Session 游标、心跳与重放支持断线后恢复显示。</li>
+              <li>记录可获得的 Token 回执和阶段耗时，缺失用量保持未知。</li>
             </ul>
             <code>events.py · run_engine.py · run_diagnostics.py</code>
           </article>
@@ -1228,42 +1181,47 @@
             <div class="kicker">04 · Evidence</div>
             <h2>执行结果必须可追踪、可检查</h2>
           </div>
-          <p>AgentHub 不把“模型说完成了”视为最终结果，而是继续采集真实代码变化、运行状态与前端预览，形成工程交付证据。</p>
+          <p>以下是同一中文联系人协作样本的真实记录与生成页面。过程、Diff、模型评审和业务检查分别核对，截图选取通过样本用于展示，不代替完整统计。</p>
         </div>
 
         <div class="evidence-grid">
-          <div class="terminal" aria-label="TaskRunEvent 示例">
-            <div class="terminal-head">TASK RUN · event stream</div>
-            <div class="term-line"><span class="blue">[01]</span> provider.resolution_started · role=frontend</div>
-            <div class="term-line"><span class="ok">[02]</span> provider.health_checked · local-codex-cli healthy</div>
-            <div class="term-line"><span class="blue">[03]</span> session_queue.running · target=frontend</div>
-            <div class="term-line"><span class="gold">[04]</span> adapter.event · file_edit App.tsx</div>
-            <div class="term-line"><span class="gold">[05]</span> adapter.event · file_edit styles.css</div>
-            <div class="term-line"><span class="ok">[06]</span> diff.collected · artifact ready</div>
-            <div class="term-line"><span class="ok">[07]</span> preview.healthy · vite target running</div>
-            <div class="term-line"><span class="blue">[08]</span> task_run.completed · evidence projected to UI</div>
+          <div class="terminal" aria-label="真实 Diff 与原生评审截图">
+            <div class="terminal-head">真实成果 · 代码变更与模型评审</div>
+            <figure style="margin:0 0 24px">
+              <a href="docs/images/showcase/workbench-diff.png" target="_blank" rel="noreferrer"><img src="docs/images/showcase/workbench-diff.png" width="1680" height="1050" alt="真实联系人任务的前端 Diff，在当前成果工作台展开代码差异" style="display:block;width:100%;height:auto;border-radius:12px" loading="lazy" /></a>
+              <figcaption style="margin-top:10px;color:inherit;font-size:12px">真实 Git Diff · 当前界面回看历史产物，点击查看完整代码差异。</figcaption>
+            </figure>
+            <figure style="margin:0">
+              <a href="docs/images/showcase/workbench-review.png" target="_blank" rel="noreferrer"><img src="docs/images/showcase/workbench-review.png" width="1680" height="1050" alt="Claude Code 原生只读评审报告，保留来源、风险和具体文件依据" style="display:block;width:100%;height:auto;border-radius:12px" loading="lazy" /></a>
+              <figcaption style="margin-top:10px;color:inherit;font-size:12px">原生只读评审 · 模型判断与脚本报告分别标识；评审通过不等于独立测试通过。</figcaption>
+            </figure>
+            <p style="margin:20px 0 0;color:inherit;font-size:12px">历史同版评测：五类固定中文场景各 10 次，严格完整验收 40/50；另列受控恢复 10/10。198 条逻辑调用/尝试中 197 条有完整用量，1 条超时未知。<a href="docs/chinese-usage-latency-validation-20261020.md" style="text-decoration:underline">查看分母与限制 ↗</a></p>
           </div>
 
           <div class="timeline">
             <div class="timeline-item">
-              <b>Task planned</b>
-              <p>Planner 输出角色、目标、依赖和执行意图。</p>
+              <b>01 · 中文需求与计划</b>
+              <p>在同一会话规划后端联系人接口、前端表单与列表，以及后续评审任务。</p>
             </div>
             <div class="timeline-item">
-              <b>Runtime resolved</b>
-              <p>ProviderGateway 选择兼容的 Coding Provider / Adapter。</p>
+              <b>02 · 角色与执行来源</b>
+              <p>样本使用原生规划、Claude Code 编码与只读评审；具体角色和运行 ID 保留在记录中。</p>
             </div>
             <div class="timeline-item">
-              <b>Controlled execution</b>
-              <p>任务在 Session Worktree / Target Scope 中运行。</p>
+              <b>03 · 真实文件修改</b>
+              <p>任务在分配的前后端目标中改文件，采集实际 Git Diff；越界或无可验证变化不冒充成功。</p>
             </div>
             <div class="timeline-item">
-              <b>Evidence collected</b>
-              <p>采集 Diff、Review、Preview 与运行诊断。</p>
+              <b>04 · 分项核对</b>
+              <p>固定检查绑定执行时的源码，模型静态评审单独呈现；历史产物不替代后续版本验收。</p>
             </div>
             <div class="timeline-item">
-              <b>Realtime projection</b>
-              <p>TaskRunEvent 持久化后通过 SSE 推送到 Workspace。</p>
+              <b>05 · 查看生成页面</b>
+              <p>下图是 2026-10-20 留存的生成结果，包含真实联系人表单与列表。预览采用平台 Vite 加操作者辅助 ASGI，不代表自动生产部署。</p>
+              <figure style="margin:16px 0 0">
+                <a href="docs/images/showcase/result-preview-desktop.png" target="_blank" rel="noreferrer"><img src="docs/images/showcase/result-preview-desktop.png" width="1440" height="1050" alt="真实任务生成的联系人页面，展示姓名邮箱表单、联系人列表和新增结果" style="display:block;width:100%;height:auto;border-radius:12px" loading="lazy" /></a>
+                <figcaption style="margin-top:10px;color:var(--text-2);font-size:12px"><a href="docs/images/showcase/result-preview-mobile.png" target="_blank" rel="noreferrer" style="text-decoration:underline">查看 390px 移动端原图 ↗</a> · <a href="docs/images/showcase/README.md" style="text-decoration:underline">截图来源与版本说明 ↗</a></figcaption>
+              </figure>
             </div>
           </div>
         </div>
@@ -1277,7 +1235,7 @@
             <div class="kicker">05 · Stack & Modules</div>
             <h2>技术栈与核心模块</h2>
           </div>
-          <p>项目围绕本地 Agent Runtime、Web Workspace、持久化事件和代码工作区隔离构建，模块边界直接对应主要工程职责。</p>
+          <p>前端采用 Next.js / React，后端采用 FastAPI / SQLModel，SQLite 由 Alembic 管理版本。SSE 推送运行事件；Docker 是可选固定验证后端，不依赖 PostgreSQL、Redis 或 WebSocket。</p>
         </div>
 
         <div class="stack">
@@ -1286,25 +1244,30 @@
           <span class="chip">Pydantic</span>
           <span class="chip">SQLModel</span>
           <span class="chip">SQLite</span>
+          <span class="chip">Alembic</span>
           <span class="chip">Next.js</span>
+          <span class="chip">React</span>
           <span class="chip">TypeScript</span>
           <span class="chip">Tailwind CSS</span>
           <span class="chip">SSE</span>
           <span class="chip">Git Worktree</span>
           <span class="chip">Codex CLI</span>
           <span class="chip">Claude Code CLI</span>
+          <span class="chip">只读文档 MCP</span>
+          <span class="chip">Skills</span>
+          <span class="chip">Docker 固定验证 · 可选</span>
         </div>
 
         <div class="module-grid">
-          <div class="module"><code>planning.py</code><p>Mention 解析、Planner / LLM Planner 与 Task Graph 生成。</p></div>
+          <div class="module"><code>planning.py / planning_intents.py</code><p>角色提及、规则边界、原生规划和任务图校验。</p></div>
           <div class="module"><code>run_engine.py</code><p>TaskRun 主执行链路、生命周期与执行收尾。</p></div>
-          <div class="module"><code>provider_gateway.py</code><p>Provider 解析、健康检查、容量与运行时映射。</p></div>
-          <div class="module"><code>scheduler.py</code><p>任务依赖、访问模式与可运行状态判断。</p></div>
-          <div class="module"><code>session_queue.py</code><p>Session 内写任务队列和并发运行 gate。</p></div>
+          <div class="module"><code>provider_gateway.py</code><p>角色与运行时映射，保留 Codex、Claude Code 和脚本兜底的来源。</p></div>
+          <div class="module"><code>scheduler.py / session_queue.py</code><p>依赖、访问模式、写队列和可运行状态判断。</p></div>
+          <div class="module"><code>skills.py / mcp_gateway.py</code><p>版本冻结的技能说明，以及兼容 Codex 的受控只读项目文档连接。</p></div>
           <div class="module"><code>target_locks.py</code><p>Target 写锁获取、持有与终态释放。</p></div>
-          <div class="module"><code>codex_adapter.py</code><p>Codex CLI 适配与标准化运行事件。</p></div>
-          <div class="module"><code>claude_code_adapter.py</code><p>Claude Code CLI 适配与执行边界。</p></div>
-          <div class="module"><code>diffs.py / previews.py</code><p>真实代码变化采集与本地 Preview 生命周期。</p></div>
+          <div class="module"><code>memory_snapshots.py</code><p>会话记忆与冻结上下文，保留来源和显式刷新边界。</p></div>
+          <div class="module"><code>db_migrations.py</code><p>SQLite 版本检查、已有库一致备份与 Alembic 离线迁移。</p></div>
+          <div class="module"><code>diffs.py / reviews.py / previews.py</code><p>真实变更、独立评审、预览生命周期与成果来源。</p></div>
         </div>
       </div>
     </section>
@@ -1312,7 +1275,7 @@
 
   <footer>
     <div class="page footer-inner">
-      <span>AgentHub · From AI conversation to verifiable engineering delivery.</span>
+      <span>AgentHub · 本地单用户编程工作台 · 让协作过程可见，让结果可检查。</span>
       <a href="https://github.com/YoungBossX/AgentHub" target="_blank" rel="noreferrer" style="white-space:nowrap">github.com/YoungBossX/AgentHub ↗</a>
     </div>
   </footer>
