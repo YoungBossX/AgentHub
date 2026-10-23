@@ -17,6 +17,7 @@ describe("Skills", () => {
   it("supports explicit overrides, an empty selection and return to defaults", async () => {
     const change = vi.fn()
     const { rerender } = render(<SkillSelector backendUrl="local" workspaceId="w" selected={null} onChange={change} disabled={false} />)
+    fireEvent.click(screen.getByRole("button", { name: /本次技能/ }))
     await screen.findByLabelText(/react-form/)
     fireEvent.click(screen.getByLabelText(/react-form/)); expect(change).toHaveBeenLastCalledWith(["react-form"])
     rerender(<SkillSelector backendUrl="local" workspaceId="w" selected={["react-form"]} onChange={change} disabled={false} />)
@@ -25,6 +26,7 @@ describe("Skills", () => {
   })
   it("caps selection and disables changes while sending", async () => {
     render(<SkillSelector backendUrl="local" workspaceId="w" selected={["a", "b", "c"]} onChange={vi.fn()} disabled={true} />)
+    fireEvent.click(screen.getByRole("button", { name: /本次技能/ }))
     await screen.findByLabelText(/react-form/)
     expect(screen.getByLabelText(/react-form/).hasAttribute("disabled")).toBe(true)
     expect(screen.getByRole("button", { name: "使用默认" }).hasAttribute("disabled")).toBe(true)

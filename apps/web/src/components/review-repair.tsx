@@ -1,5 +1,7 @@
 "use client"
 
+import { Disclosure } from "./disclosure"
+
 import { createContext, useContext, useEffect, useState } from "react"
 import { reviewRepairRequest, type RepairDraft, type RepairState } from "@/lib/review-repair-api"
 
@@ -52,7 +54,7 @@ function RepairControl({ context, artifactId }: { context: NonNullable<React.Con
         } catch (error) { setError(error instanceof Error ? error.message : "准备失败") }
         finally { setBusy(false) }
       }}>准备修复草稿（{selected.length}/8）</button>
-      {data.history.length ? <details open className="min-w-0"><summary className="cursor-pointer">修复历史 · {data.history.length}</summary><div className="mt-2 space-y-2">
+      {data.history.length ? <Disclosure defaultOpen className="min-w-0" summaryClassName="cursor-pointer" summary={<>修复历史 · {data.history.length}</>}><div className="mt-2 space-y-2">
         {data.history.map(entry => <div key={entry.messageId} className="min-w-0 rounded border border-[var(--border)] bg-[var(--surface)] p-2">
           <p>修复请求 {entry.messageId.slice(0, 8)} · {stateLabel(entry.state)}</p>
           <p className="mt-1 text-[var(--muted-foreground)]">{entry.checksCurrent ? "当前源码有对应复验记录" : "尚无可确认的当前版本复验"}</p>
@@ -65,10 +67,10 @@ function RepairControl({ context, artifactId }: { context: NonNullable<React.Con
               })) } catch (error) { setError(error instanceof Error ? error.message : "确认失败") }
               finally { setBusy(false) }
             }}>我已核验此问题（当前源码）</button> : null}</div>)}
-          {entry.confirmations.length ? <details className="mt-2"><summary className="cursor-pointer">人工确认记录（旧版本记录保留）</summary>{entry.confirmations.map((item, i) => <p key={i} className="mt-1 break-all text-[var(--muted-foreground)]">版本 {item.sourceFingerprint.slice(0, 12)} · {item.confirmedAt}</p>)}</details> : null}
+          {entry.confirmations.length ? <Disclosure className="mt-2" summaryClassName="cursor-pointer" summary={<>人工确认记录（旧版本记录保留）</>}>{entry.confirmations.map((item, i) => <p key={i} className="mt-1 break-all text-[var(--muted-foreground)]">版本 {item.sourceFingerprint.slice(0, 12)} · {item.confirmedAt}</p>)}</Disclosure> : null}
           <div className="mt-2 flex flex-wrap gap-2">{entry.artifactIds.map(id => <button key={id} type="button" className="rounded border border-[var(--border)] px-2 py-1" onClick={() => context.onOpenArtifact(id)}>查看产物 {id.slice(0, 8)}</button>)}</div>
         </div>)}
-      </div></details> : null}
+      </div></Disclosure> : null}
     </> : null}
   </section>
 }

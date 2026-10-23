@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm"
 
 import { CopyTextButton } from "./copy-text-button"
 import styles from "./chat-markdown.module.css"
+import { revealAppendedText } from "./streaming-markdown"
 
 const MARKDOWN_CHARACTER_LIMIT = 100_000
 
@@ -57,6 +58,11 @@ function MessageImage({ src, alt }: { src?: string; alt?: string }) {
 }
 
 const components: Components = {
+  span({ node, children, ...props }) {
+    // A new source offset needs a new DOM node so a finished CSS animation
+    // cannot be reused for the next streamed character at the same child index.
+    return <span key={String(node?.properties.dataRevealId ?? "settled")} {...props}>{children}</span>
+  },
   a({ href, children, title, id, "aria-describedby": describedBy }) {
     if (!href) return <span>{children}</span>
     return <a id={id} aria-describedby={describedBy} href={href} title={title} target={href.startsWith("#") ? undefined : "_blank"} rel="noopener noreferrer" referrerPolicy="no-referrer">{children}</a>
@@ -83,13 +89,17 @@ const components: Components = {
 }
 
 export const ChatMarkdown = memo(function ChatMarkdown({ content, messageId }: { content: string; messageId: string }) {
+  const [snapshot, setSnapshot] = useState({ content, messageId, from: content.length })
+  if (snapshot.content !== content || snapshot.messageId !== messageId) {
+    setSnapshot({ content, messageId, from: snapshot.messageId === messageId && content.startsWith(snapshot.content) ? snapshot.content.length : content.length })
+  }
   if (content.length > MARKDOWN_CHARACTER_LIMIT) {
     return <div className={styles.markdown}><p className={styles.longNotice}>消息较长，以下按原文显示。</p><pre className={styles.plainText}>{content}</pre></div>
   }
   const prefix = `message-${encodeURIComponent(messageId)}-`
   return <div className={styles.markdown}>
     <Markdown components={components} remarkPlugins={[remarkGfm]}
-      rehypePlugins={[[uniqueFootnoteLabel, { prefix }]]}
+      rehypePlugins={[[uniqueFootnoteLabel, { prefix }], [revealAppendedText, { source: content, from: snapshot.from }]]}
       remarkRehypeOptions={{ clobberPrefix: prefix, footnoteLabel: "注释" }}
       urlTransform={(url, _key, node) => safeUrl(url, node.tagName === "img")}>
       {content}

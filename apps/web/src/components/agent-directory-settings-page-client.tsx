@@ -215,7 +215,7 @@ export function AgentDirectorySettingsPageClient({
             取消
           </button>
           <button
-            className="min-h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
+            className="min-h-10 rounded-lg bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-strong)] disabled:opacity-60"
             disabled={draftStatus === "saving"}
             type="submit"
           >

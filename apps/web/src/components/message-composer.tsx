@@ -144,7 +144,7 @@ export function MessageComposer({
         </div>
       ) : null}
       <form
-        className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm focus-within:border-[var(--primary)]"
+        className="composer-surface grid gap-2"
         data-region="composer"
         onSubmit={onSubmit}
       >
@@ -158,7 +158,7 @@ export function MessageComposer({
           placeholder="@orchestrator 为演示应用构建登录页"
           value={draft}
         />
-        <div className="flex items-center justify-between gap-3">
+        <div className="composer-toolbar flex items-center justify-between gap-3">
           <div className="flex h-10 items-center">
             {onAttach ? <>
               <input ref={fileInput} aria-label="选择附件" type="file" multiple hidden disabled={isPending} accept=".txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.yaml,.yml,.xml,.py,.js,.jsx,.ts,.tsx,.css,.html,.sql,.java,.go,.rs,.c,.cpp,.h,.log,.pdf,.png,.jpg,.jpeg,.webp" onChange={(event) => { const files = Array.from(event.target.files ?? []); const available = Math.max(0, 4 - attachments.length); setAttachmentNotice(files.length > available ? `每条消息最多 4 个附件，本次仅添加前 ${available} 个。` : ""); onAttach(files); event.target.value = "" }} />

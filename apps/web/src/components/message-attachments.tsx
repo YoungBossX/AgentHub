@@ -1,5 +1,7 @@
 "use client"
 
+import { Disclosure } from "./disclosure"
+
 import { Download, FileText } from "lucide-react"
 import { attachmentContentUrl, type MessageAttachment } from "@/lib/api"
 
@@ -21,7 +23,7 @@ export function MessageAttachments({ items, backendUrl }: { items: MessageAttach
         <FileText size={16} className="mt-1 shrink-0 text-[var(--primary)]" aria-hidden="true" />
         <div className="min-w-0 flex-1"><p className="break-all text-xs font-semibold">{item.filename}</p>
           <p className="text-[10px] leading-4 text-[var(--muted-foreground)]">{Math.max(1, Math.ceil(item.byteSize / 1024))} KiB · {attachmentReadLabel(item)}</p>
-          <details className="text-[10px] text-[var(--muted-foreground)]"><summary>文件来源</summary><p className="break-all">附件 {item.id}<br />SHA-256 {item.sha256}</p></details>
+          <Disclosure className="text-[10px] text-[var(--muted-foreground)]"  summary={<>文件来源</>}><p className="break-all">附件 {item.id}<br />SHA-256 {item.sha256}</p></Disclosure>
         </div>
         <a href={attachmentContentUrl(backendUrl, item)} download={item.filename} aria-label={`下载 ${item.filename}`} className="rounded p-1.5 hover:bg-[var(--surface-muted)]"><Download size={15} /></a>
       </div>

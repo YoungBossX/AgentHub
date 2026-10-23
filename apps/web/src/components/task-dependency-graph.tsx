@@ -94,7 +94,7 @@ export function TaskDependencyGraph({ tasks, agents = [] }: { tasks: SessionTask
                   x="16"
                   y="46"
                   fontSize="12"
-                  fontWeight="600"
+                  fontWeight="var(--font-weight-semibold)"
                   fill="var(--foreground)"
                 >
                   {task.title.length > 18 ? `${task.title.slice(0, 18)}…` : task.title}

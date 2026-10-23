@@ -1,5 +1,7 @@
 "use client"
 
+import { Disclosure } from "./disclosure"
+
 import { type ReactNode } from "react"
 import { Bot, Quote, Pin, PinOff } from "lucide-react"
 
@@ -53,11 +55,11 @@ export function ChatThread({
       data-region="center-scroll"
     >
       <div className="mx-auto grid w-full min-w-0 max-w-3xl grid-cols-1 gap-4">
-        {pinnedTotal > 0 ? <details className="sticky top-0 z-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm" aria-label="关键消息">
-          <summary className="cursor-pointer text-sm font-medium"><Pin size={14} className="mr-2 inline" />置顶消息 · {pinnedTotal}</summary>
+        {pinnedTotal > 0 ? <Disclosure className="sticky top-0 z-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm" aria-label="关键消息" summaryClassName="cursor-pointer text-sm font-medium" summary={<><Pin size={14} className="mr-2 inline" />置顶消息 · {pinnedTotal}</>}>
+
           {pinnedTotal > pins.length ? <p className="mt-2 text-xs text-[var(--muted-foreground)]">显示最近 {pins.length} 条置顶，其余置顶仍保留在可翻页查看的会话历史中。</p> : null}
           <div className="mt-2 grid max-h-48 gap-1 overflow-y-auto">{pins.map((message) => <button key={message.id} type="button" onClick={() => history ? history.openMessage(message.id) : document.getElementById(`message-${message.id}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" })} className="rounded p-2 text-left text-xs text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)]">{message.contentMd.slice(0, 140)}</button>)}</div>
-        </details> : null}
+        </Disclosure> : null}
         {history ? <div data-history-latest={history.latestMessageId} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-2 text-xs" aria-label="消息历史导航">
           <span>{history.loading ? "正在加载最近消息…" : `当前显示 ${visible.length} 条 · 窗口上限 ${HISTORY_WINDOW_SIZE} 条`}{history.historical ? " · 正在查看历史" : " · 跟随最新"}</span>
           <div className="flex flex-wrap gap-2">{history.hasOlder ? <button type="button" disabled={history.pending} className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 disabled:opacity-40" onClick={() => void history.older()}>加载更早消息</button> : null}

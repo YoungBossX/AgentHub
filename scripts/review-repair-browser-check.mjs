@@ -81,7 +81,7 @@ try {
     assert.equal(await page.getByRole("button", { name: /^成果/ }).getAttribute("aria-pressed"), "true")
     if (withBudget) {
       const evidence = page.getByLabel("最终上下文预算")
-      await evidence.locator("summary").click()
+      await evidence.getByRole("button", { name: /上下文预算/ }).click()
       await evidence.getByText(/字符不是模型 Token/).waitFor()
       await evidence.getByText(/置顶选择限额 2/).waitFor()
       assert.equal(await evidence.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true)

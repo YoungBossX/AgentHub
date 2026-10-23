@@ -1,5 +1,7 @@
 "use client"
 
+import { Disclosure } from "./disclosure"
+
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { applyCodeEdit, listCodeEdits, resolveCodeEdit, type CodeEditOperation } from "@/lib/api"
 
@@ -51,10 +53,10 @@ function SessionEditStatus({ context }: { context: CodeEditContext }) {
         finally { setBusy(false) }
       }}>已核对，保留当前文件并恢复执行</button> : null}
     </div>)}
-    {operations.length ? <details className="min-w-0 rounded border border-[var(--border)] p-3 text-xs">
-      <summary className="cursor-pointer">用户修改记录 · 最近 {operations.length} 项</summary>
-      <div className="mt-2 space-y-2">{operations.map(operation => <details key={operation.id} className="min-w-0 rounded border border-[var(--border)] p-2">
-        <summary className="cursor-pointer break-all">{operation.id.slice(0, 8)} · {codeEditStateLabel(operation.state)} · {operation.files.length} 个文件</summary>
+    {operations.length ? <Disclosure className="min-w-0 rounded border border-[var(--border)] p-3 text-xs" summaryClassName="cursor-pointer" summary={<>用户修改记录 · 最近 {operations.length} 项</>}>
+
+      <div className="mt-2 space-y-2">{operations.map(operation => <Disclosure key={operation.id} className="min-w-0 rounded border border-[var(--border)] p-2" summaryClassName="cursor-pointer break-all" summary={<>{operation.id.slice(0, 8)} · {codeEditStateLabel(operation.state)} · {operation.files.length} 个文件</>}>
+
         <p className="mt-2 break-all text-[var(--muted-foreground)]">来源 Diff {operation.sourceArtifactId.slice(0, 8)} · {operation.targetId}</p>
         <pre className="my-2 max-h-64 overflow-auto">{operation.patch}</pre>
         {operation.state === "prepared" ? <button type="button" disabled={busy} className="rounded border border-[var(--border)] px-2 py-1" onClick={async () => {
@@ -63,7 +65,7 @@ function SessionEditStatus({ context }: { context: CodeEditContext }) {
           catch (error) { setError(error instanceof Error ? error.message : "应用失败") }
           finally { setBusy(false) }
         }}>应用此记录中的差异</button> : null}
-      </details>)}</div>
-    </details> : null}
+      </Disclosure>)}</div>
+    </Disclosure> : null}
   </>
 }

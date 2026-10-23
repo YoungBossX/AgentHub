@@ -1,5 +1,7 @@
 "use client"
 
+import { Disclosure } from "./disclosure"
+
 import type { GroupSummary } from "@/lib/api"
 
 const outcomes: Record<string, string> = {
@@ -27,8 +29,8 @@ export function GroupSummaryCard({ summary, onRetry }: { summary: GroupSummary; 
       {summary.state === "completed" ? <p className="whitespace-pre-wrap">{summary.interpretation?.summary ?? "未配置原生协调模型，以下为确定性执行记录。"}</p> : null}
       {summary.interpretation?.nextSteps.length ? <ul className="list-disc pl-5">{summary.interpretation.nextSteps.map((step, index) => <li key={index}>{step}</li>)}</ul> : null}
       <p className="text-xs text-[var(--text-muted)]">本次汇总未运行测试；评审通过仅表示静态评审结论。</p>
-      <details className="rounded border border-[var(--border)] p-2">
-        <summary className="cursor-pointer text-xs font-medium">运行与制品依据 · {evidence?.tasks.length ?? 0} 个任务</summary>
+      <Disclosure className="rounded border border-[var(--border)] p-2" summaryClassName="cursor-pointer text-xs font-medium" summary={<>运行与制品依据 · {evidence?.tasks.length ?? 0} 个任务</>}>
+
         <div className="mt-2 space-y-2">
           {evidence?.tasks.map((task) => <div key={task.taskId} className="rounded bg-[var(--surface-muted)] p-2 text-xs">
             <p className="font-medium">{task.displayName} · {task.title}</p>
@@ -43,7 +45,7 @@ export function GroupSummaryCard({ summary, onRetry }: { summary: GroupSummary; 
           {summary.agentInstruction ? <p className="break-all text-xs text-[var(--text-muted)]">提示词 SHA-256 {summary.agentInstruction.sha256}</p> : null}
           {summary.providerEvidence?.outputSha256 ? <p className="break-all text-xs text-[var(--text-muted)]">输出 SHA-256 {summary.providerEvidence.outputSha256}</p> : null}
         </div>
-      </details>
+      </Disclosure>
     </section>
   )
 }

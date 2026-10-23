@@ -1,5 +1,7 @@
 "use client"
 
+import { Disclosure } from "./disclosure"
+
 import Link from "next/link"
 import { type ReactNode, useMemo, useState } from "react"
 import {
@@ -113,7 +115,7 @@ export function SessionSidebar({
         <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-[var(--surface-muted)] p-1" aria-label="会话列表视图">
           {(["active", "archived"] as const).map((view) => <button key={view} type="button" aria-pressed={sessionView === view} onClick={() => setSessionView(view)} className={cn("rounded-md px-2 py-1.5 text-xs", sessionView === view ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm" : "text-[var(--muted-foreground)]")}>{view === "active" ? "最近" : "已归档"}</button>)}
         </div>
-        <label className="mb-3 flex min-h-9 items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 text-sm text-slate-700 shadow-sm">
+        <label className="search-field mb-3 flex min-h-9 items-center gap-2 rounded-lg bg-[var(--surface)] px-3 text-sm text-slate-700 transition-shadow">
           <Search aria-hidden="true" className="shrink-0 text-slate-400" size={15} />
           <span className="sr-only">搜索会话</span>
           <input
@@ -198,7 +200,7 @@ export function SessionSidebar({
       </nav>
 
       <div className="shrink-0 border-t border-[var(--border)] p-3 text-xs text-slate-500">
-        <details><summary className="cursor-pointer rounded-lg px-2 py-2 font-medium">工作区设置</summary>        <section className="grid gap-1">
+        <Disclosure  summaryClassName="cursor-pointer rounded-lg px-2 py-2 font-medium" summary={<>工作区设置</>}>        <section className="grid gap-1">
           <SidebarSettingsLink
             href="/settings/contacts"
             icon={<Users aria-hidden="true" size={17} />}
@@ -229,7 +231,7 @@ export function SessionSidebar({
             label="其他设置"
             meta="预留"
           />
-        </section></details>
+        </section></Disclosure>
         <p className="mt-2 px-2 text-[10px] text-slate-400">本地工作区 · {workspaceName}</p>
         <TimeZoneLabel className="mt-1 block truncate px-2 text-[10px] text-[var(--muted-foreground)]" />
       </div>

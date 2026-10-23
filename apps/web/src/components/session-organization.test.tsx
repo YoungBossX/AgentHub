@@ -62,6 +62,7 @@ describe("key message pins", () => {
     rerender(<ChatThread messages={[pinned]} selectedSession={session("recent")} taskCount={0} onPinMessage={pin} />)
     const bubble = container.querySelector("article")! as HTMLElement
     bubble.scrollIntoView = scroll
+    fireEvent.click(screen.getByRole("button", { name: /置顶消息 · 1/ }))
     fireEvent.click(within(screen.getByLabelText("关键消息")).getByRole("button", { name: message.contentMd }))
     expect(scroll).toHaveBeenCalledWith({ behavior: "smooth", block: "center" })
     fireEvent.click(screen.getByRole("button", { name: "取消置顶消息" }))

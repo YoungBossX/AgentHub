@@ -1,5 +1,7 @@
 "use client"
 
+import { Disclosure } from "./disclosure"
+
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 
 import { ArtifactMessageCards, type ArtifactContextIntent } from "./artifact-message-cards"
@@ -763,5 +765,5 @@ function RecoverySummary({
 }
 
 function ProcessDisclosure({ compact, label, children }: { compact: boolean; label: string; children: ReactNode }) {
-  return compact ? <details className="mt-3"><summary className="cursor-pointer text-xs font-medium text-slate-500">{label}</summary>{children}</details> : children
+  return compact ? <Disclosure className="mt-3" summaryClassName="cursor-pointer text-xs font-medium text-slate-500" summary={<>{label}</>}>{children}</Disclosure> : children
 }

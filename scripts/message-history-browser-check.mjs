@@ -105,7 +105,7 @@ try {
     await page.waitForFunction(latest => document.querySelector("[data-history-latest]")?.getAttribute("data-history-latest") === latest, id(5000))
     assert.deepEqual(await messages.evaluateAll(rows => rows.map(row => row.id)), before)
     const pins = page.getByLabel("关键消息")
-    await pins.locator("summary").click()
+    await pins.getByRole("button", { name: /置顶消息/ }).click()
     assert.equal(await pins.getByRole("button").count(), 16)
     await pins.getByRole("button").first().click()
     await page.locator(`#message-${id(39)}`).waitFor()

@@ -115,6 +115,38 @@ describe("CopyTextButton", () => {
     await waitFor(() => expect(screen.getByRole("status").textContent).toContain("复制失败"))
   })
 
+  it("reveals only appended prose, preserves graphemes and leaves historical/code text settled", () => {
+    const view = render(createElement(ChatMarkdown, { content: "历史段落", messageId: "stream" }))
+    expect(view.container.querySelectorAll(".stream-reveal-char").length).toBe(0)
+    view.rerender(createElement(ChatMarkdown, { content: "历史段落新增👩‍💻", messageId: "stream" }))
+    expect(Array.from(view.container.querySelectorAll(".stream-reveal-char"), el => el.textContent)).toEqual(["新", "增", "👩‍💻"])
+    expect(view.container.textContent).toBe("历史段落新增👩‍💻")
+    view.rerender(createElement(ChatMarkdown, { content: "替换正文", messageId: "stream" }))
+    expect(view.container.querySelectorAll(".stream-reveal-char").length).toBe(0)
+    view.rerender(createElement(ChatMarkdown, { content: "替换正文\n\n```js\nconst x = 1\n```", messageId: "stream" }))
+    expect(view.container.querySelector("code .stream-reveal-char")).toBeNull()
+    view.rerender(createElement(ChatMarkdown, { content: "另一个历史消息", messageId: "other" }))
+    expect(view.container.querySelectorAll(".stream-reveal-char").length).toBe(0)
+  })
+
+  it("bounds snapshot reveal work without withholding large chunks or changing links", () => {
+    const view = render(createElement(ChatMarkdown, { content: "原文", messageId: "bounded" }))
+    view.rerender(createElement(ChatMarkdown, { content: `原文${"中".repeat(1000)} [文档](https://example.com)`, messageId: "bounded" }))
+    expect(view.container.querySelectorAll(".stream-reveal-char").length).toBe(32)
+    expect(view.container.textContent).toContain("中".repeat(1000))
+    expect(screen.getByRole("link", { name: "文档" }).getAttribute("href")).toBe("https://example.com/")
+  })
+
+  it("mounts a fresh animation node for each new append instead of reusing a finished animation", () => {
+    const view = render(createElement(ChatMarkdown, { content: "旧", messageId: "next-chunk" }))
+    view.rerender(createElement(ChatMarkdown, { content: "旧甲", messageId: "next-chunk" }))
+    const first = view.container.querySelector(".stream-reveal-char")!
+    view.rerender(createElement(ChatMarkdown, { content: "旧甲乙", messageId: "next-chunk" }))
+    expect(view.container.querySelector(".stream-reveal-char")).not.toBe(first)
+    expect(first.isConnected).toBe(false)
+    expect(view.container.querySelector(".stream-reveal-char")?.textContent).toBe("乙")
+  })
+
   it("does not show an old successful copy as success for changed content", async () => {
     let finish: () => void = () => {}
     vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn(() => new Promise<void>((resolve) => { finish = resolve })) } })

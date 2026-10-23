@@ -1,3 +1,5 @@
+import { Disclosure } from "./disclosure"
+
 import { TaskDependencyGraph } from "./task-dependency-graph"
 import type { AgentContact, SessionTask, TaskRun } from "@/lib/api"
 import { apiTimestampEpoch } from "@/lib/date-format"
@@ -39,7 +41,7 @@ export function DagSummary({ tasks, agents = [] }: { tasks: SessionTask[]; agent
       <h3 className="font-semibold text-slate-900">任务依赖图 · {hasFork || hasJoin ? "Fork / Join" : "串行依赖链"}</h3>
       <p className="mt-1 text-slate-600">依赖就绪不等于已并发；并行组仅为提示，执行仍受队列、锁、审批和 provider 容量约束。</p>
       <TaskDependencyGraph tasks={tasks} agents={agents} />
-      <details className="mt-3"><summary className="cursor-pointer font-medium text-slate-600">依赖与集成详情</summary>
+      <Disclosure className="mt-3" summaryClassName="cursor-pointer font-medium text-slate-600" summary={<>依赖与集成详情</>}>
       <ul className="mt-2 grid gap-2">
         {tasks.map((task, index) => {
           const run = task.taskRuns.at(-1)
@@ -70,13 +72,13 @@ export function DagSummary({ tasks, agents = [] }: { tasks: SessionTask[]; agent
               {run?.errorCode ? <p className="mt-1 text-red-700">{run.errorCode}：{run.errorMessage}</p> : null}
               {run?.metricsJson.executionRetry ? <p className="mt-1">独立分支重试 · 保留此前运行与成功分支</p> : null}
               {(task.integrationArtifacts ?? []).map((record) => (
-                <details key={record.artifactId} className="mt-2 rounded border border-slate-200 p-2">
-                  <summary className="cursor-pointer font-medium">
+                <Disclosure key={record.artifactId} className="mt-2 rounded border border-slate-200 p-2" summaryClassName="cursor-pointer font-medium" summary={<>
                     {record.artifactType === "conflict" ? "合并冲突记录"
                       : record.verified ? "已验证集成"
                       : record.status === "prepared" ? "集成已准备 · 等待恢复确认"
                       : "历史或未验证集成"} · {record.artifactId.slice(0, 8)}
-                  </summary>
+                  </>}>
+
                   <p className="mt-1 break-all">Artifact：{record.artifactId} · {record.status}</p>
                   {record.mergeCommit ? <p className="break-all">合并 commit：{record.mergeCommit}</p> : null}
                   <p className="break-all">来源 Run：{record.sourceRunIds?.join(", ") || "未记录"}</p>
@@ -84,13 +86,13 @@ export function DagSummary({ tasks, agents = [] }: { tasks: SessionTask[]; agent
                   {record.changedFiles?.length ? <p>合并文件：{record.changedFiles.join(", ")}</p> : null}
                   {record.conflictingFiles?.length ? <p>冲突文件：{record.conflictingFiles.join(", ")}</p> : null}
                   {record.artifactType === "conflict" ? <p>先处理冲突，再重试此 join 的 integration；无需重跑成功分支。</p> : null}
-                </details>
+                </Disclosure>
               ))}
             </li>
           )
         })}
       </ul>
-      </details>
+      </Disclosure>
       <p className="mt-2 text-slate-600">
         {overlaps.length ? `已记录 TaskRun 生命周期重叠：${overlaps.map(([a, b]) => `${a.id.slice(0, 8)} / ${b.id.slice(0, 8)}`).join("；")}`
           : "尚无完整时间区间可证明运行重叠。"}

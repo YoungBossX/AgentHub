@@ -1,3 +1,5 @@
+import { Disclosure } from "./disclosure"
+
 import type { ReviewArtifact } from "@/lib/api"
 
 const labels: Record<string, string> = {
@@ -55,26 +57,26 @@ export function QaEvidence({ review }: { review: ReviewArtifact }) {
           {qa.functional.contract.expectedText ? ` · 期望：${qa.functional.contract.expectedText}` : ""}
         </p> : <p className="mt-1 text-[var(--muted-foreground)]">当前结构化任务未配置交互验收，构建通过不能替代需求验收。</p>}
         {qa.functional.status === "unavailable" ? <p className="mt-1">请检查已安装的浏览器与验证环境，再发起新运行。</p> : null}
-        {qa.functional.checks.length > 0 ? <details className="mt-2"><summary>桌面与窄屏检查（{qa.functional.checks.length}）</summary>
+        {qa.functional.checks.length > 0 ? <Disclosure className="mt-2"  summary={<>桌面与窄屏检查（{qa.functional.checks.length}）</>}>
           <ul className="mt-1 space-y-1">{qa.functional.checks.map((check) => <li key={check.id}>
             {check.id.startsWith("desktop.") ? "桌面" : "窄屏"} · {({ fields: "表单输入", empty: "空值拦截", invalid_email: "邮箱格式校验", submit: "有效输入提交", text: "文案一致", click: "按钮可点击", runtime: "运行与资源检查" } as Record<string, string>)[check.id.split(".")[1]] ?? check.id}：{labels[check.status]}
             {check.detail ? <p className="break-words text-[var(--muted-foreground)]">{check.detail}</p> : null}
           </li>)}</ul>
-        </details> : null}
+        </Disclosure> : null}
         <p className="mt-2 text-[var(--muted-foreground)]">仅验证上列交互，不包含真实账号认证或完整应用验收。过期报告中的分项结果为历史记录。</p>
       </div> : null}
       {qa.rules.violations.length > 0 ? (
         <p className="mt-2 break-all">范围违规：{qa.rules.violations.join("、")}</p>
       ) : null}
       {qa.rules.findings.length > 0 ? (
-        <details className="mt-2"><summary>规则发现（{qa.rules.findings.length}）</summary>
+        <Disclosure className="mt-2"  summary={<>规则发现（{qa.rules.findings.length}）</>}>
           <ul className="mt-1 space-y-1">{qa.rules.findings.map((finding, index) => (
             <li className="break-words" key={index}>{String(finding.message ?? "")}</li>
           ))}</ul>
-        </details>
+        </Disclosure>
       ) : null}
       {qa.commands.some((item) => item.evidence.length > 0) ? (
-        <details className="mt-2"><summary>命令执行记录</summary>
+        <Disclosure className="mt-2"  summary={<>命令执行记录</>}>
           <ul className="mt-1 space-y-2">{qa.commands.flatMap((item) => item.evidence.map((entry) => (
             <li className="break-all" key={`${item.kind}-${entry.eventId ?? entry.artifactId}`}>
               <code>{entry.command}</code> · 退出码 {entry.exitCode}
@@ -82,7 +84,7 @@ export function QaEvidence({ review }: { review: ReviewArtifact }) {
               {entry.log ? <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-[var(--muted)] p-2">{entry.log}</pre> : null}
             </li>
           )))}</ul>
-        </details>
+        </Disclosure>
       ) : null}
       <p className="mt-3 leading-5 text-[var(--muted-foreground)]">
         {qa.model.status === "not_run" ? (qa.validation ? "尚未完成模型评审，自动验证结果见上方。" : "此报告仅完成规则审查，未完成模型评审。") : "模型结论仅供静态评审参考，不能覆盖规则失败。"}
