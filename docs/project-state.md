@@ -1,11 +1,56 @@
 # AgentHub 项目状态
 
-本文档只保留当前可执行基线。历史阶段叙述已移入
-[历史文档索引](history/README.md)，避免旧的“进行中”描述覆盖现状。
+当前交付以“当前快照”为准。下方阶段记录的版本、测试数字和当时提交状态保留原始口径，
+不能作为后续源码的验证结论；更早资料见[历史文档索引](history/README.md)。
 
 ## 当前快照
 
-交付说明：当前改动按用户授权整理为`dev`分支源码提交，排除构建产物、依赖、缓存、
+2026-10-23交付：按用户授权将工作流1.4–1.6的相互依赖修复整理为`dev`源码提交，
+范围为源码、测试、OpenSpec和说明文档。提交前新增复核326项相关测试及根检查通过；
+构建产物、依赖、缓存、数据库、API配置和E盘实测原始数据均不纳入提交。
+下方“未提交/未推送”保留各轮验收当时状态；远程交付以Git引用为准，
+GitHub CI结论以该提交对应的工作流为准，不将历史CI通过套用到新提交。
+
+2026-10-23：`agenthub-workflow-evaluation` 1.6原生QA协议修复已落地并本地复验，未提交/推送。
+只读Claude使用固定JSON Schema与结构化回执，保留真实全文Read、绑定、版本和严格门禁；
+漏必填字段仍拒绝，不补造severity。仅新联系人v3夹具提供9个固定后端边界用例。
+新自然联系人业务28/28、两个原生QA回执有效，首次仍因旧CSS冗余warning失败。
+真实清理只改styles.css，后续在逐文件相同的新隔离Session副本原生QA passed、业务28项
+再次通过；原修复阶段的配置遗漏/失败依赖及用量缺失保留，不能称同Session自动恢复。
+非空finding完整Schema协议探针通过，评审本身failed/high正确识别夹具缺陷。
+56项专项、根检查、工具24、demo-api5、strict及独立复核通过；全量API2909 passed/
+19 skipped/1 failed/2 warnings，唯一失败为误选缺失WSL bash。同源码指定Git Bash后
+该项1 passed，原全量退出1与单项退出0分别保留。352项源码/测试冻结，产品库、旧归档
+2135项及原运行/评审记录核验一致。12条逻辑尝试包含11次真实CLI与一次启动前失败，
+自然结果、清理、独立复审和探针分别记录；历史4/5与旧50次分母均不改写。
+证据在 `E:/Docker/AgentHub/qa-reliability-20261023-01`，详见
+[原生QA协议修复与复验](real-api-stability-validation-20261022.md#2026-10-23-原生qa协议修复与复验)。
+
+2026-10-22：`agenthub-workflow-evaluation` 1.5 已完成本地真实API稳定性迭代，尚未提交/推送。
+修复引号文案加约束被误拒绝、换行/否定后缀误入规则、受限修复拒绝合法只读QA文件上下文，
+以及收尾报告仍显示queued/规划来源丢失的缺陷。最终源码五类中文各一次，严格4/5、独立
+业务均通过；联系人保留后端QA低风险警告和前端JSON缺少必填字段的失败。该QA在独立库
+副本显式重试取得有效评审，未改写原结果。最终版本受控业务修复和单次受控启动重试各通过。
+完整API2895 passed/19 skipped/2 warnings、Web333、工具24、demo-api5、根检查及strict通过；
+90条人工意图语料匹配，370项冻结输入、用量/Diff/状态及41份旧归档核验一致。
+中间版本、自然与注入/追加样本分开，未知用量不填零。新证据位于
+`E:/Docker/AgentHub/reliability-20261022-01`，详见[稳定性核验](real-api-stability-validation-20261022.md)。
+交付核对发现实际业务库仍停在v1；按此前本地迁移授权，以现有离线工具备份、演练后
+升级至 `0002_database_integrity`。26表830条旧记录及BLOB逐值相等，完整性、外键及
+事件序号核验通过；该库新副本完成ASGI启动、健康接口与关闭。主文件哈希因schema迁移
+变化，备份与新哈希分别保留；没有启动常驻业务服务或把副本测试冒充实际HTTP服务。
+
+2026-10-22：`agenthub-workflow-evaluation` 1.4 已实现于本地，尚未提交/推送。
+显式中文联系人场景新增28项固定检查，可选择在完整业务失败后执行一次受限修复；
+首次结果保留，修复独立计分且计入用量与耗时。源码/策略/会话/范围绑定与原始运行
+来源保存在现有执行链及TaskRun JSON中，没有数据库迁移或UI任意业务自动修复。
+根检查、Web333、工具24及demo-api5通过；正式初始化隔离库后完整API回归
+2867 passed / 19 skipped / 2 warnings，退出0，跳过不计通过。两条完整队列/Diff/浏览器
+修复正反例及取消/超时/越界校验通过；编码和Planner为明确测试替身，未新增真实模型指标。
+产品库主文件哈希与此前一致，旧交付清单41份文件哈希一致；新验收资料在E盘。
+操作与边界见[工作流验收说明](workflow-evaluation.md#中文联系人固定验收与一次受限修复)。
+
+历史交付说明：2026-10-20的改动按用户授权整理为`dev`分支源码提交，排除构建产物、依赖、缓存、
 本地数据库及API配置。下文“未提交/未推送”指各轮验收时的快照，最终Git交付以远程引用为准。
 
 2026-10-20 Token/阶段采集及同版中文实测完成：扩展既有CLI结果、TaskRun JSON与工作流报告，
@@ -119,11 +164,13 @@ Web 109 passed，demo-api 5 passed。详见
 运行时保留 `CodexAdapter`、`ClaudeCodeAdapter` 与
 `ScriptedMockAdapter`，真实 provider 不可用时必须诚实失败或显式降级，不能伪造成功。
 
-### 已闭合的 OpenSpec
+### OpenSpec 阶段验收记录
 
-| Change | 当前状态 | 关键证据 |
+表中“本地未提交”等字样属于各阶段冻结时的状态；当前分支、后续归并和未提交修复以顶部快照为准。
+
+| Change | 阶段状态 | 关键证据 |
 |---|---:|---|
-| `agenthub-container-validation` | 1.1–1.6及F1/F2本机完成，未提交/合并 | 正式双镜像、真实Docker18项/零跳过，资源/中断/数据/写Diff预览通过；最后API2714/19环境跳过、Web333、本地工具24、demo-api5、Node控制3、根/strict通过。首轮临时环境异常和成功复验分别保留；数据/临时文件在E盘，未启用产品Docker后端，远程CI未触发。见 [说明](container-validation.md) / [证据](../openspec/changes/agenthub-container-validation/verification.md) |
+| `agenthub-container-validation` | 1.1–1.6及F1/F2本机完成，0d5a5a2 已纳入dev | 正式双镜像、真实Docker18项/零跳过，资源/中断/数据/写Diff预览通过；原阶段API2714/19环境跳过、Web333、本地工具24、demo-api5、Node控制3、根/strict通过。首轮临时环境异常和成功复验分别保留；数据/临时文件在E盘，未启用产品Docker后端，未重新运行远程容器资格。见 [说明](container-validation.md) / [证据](../openspec/changes/agenthub-container-validation/verification.md) |
 | `agenthub-post-migration-workbench` | 1.1–1.2 Complete（本轮 main 交付） | 历史预览恢复；真实 Codex/Diff/预览与版本验收；发送框对齐和默认品牌显示 AgentHub。本轮完整 Web 329、API 2551/1 skip、根检查通过，自定义名和数据保留，模型 QA 未运行，见 [记录](../openspec/changes/agenthub-post-migration-workbench/verification.md) |
 | `agenthub-alembic-migrations` | 1.1 Complete（2072231 已同步 main） | 固定 26 表/23 列兼容、独占备份与副本演练、原值/BLOB 和 seed 配置保留、版本启动检查及旧实现替换；完整实现回归和 main CI 通过。本地真实库随后经用户授权备份、迁移至 current 并启动验证通过，见 [迁移说明](database-migrations.md) / [原实现验收](alembic-migrations-review.md) |
 | `agenthub-intent-boundaries` | 1.1–1.2 已交付；1.3 Complete（本轮 main 交付） | 统一结果/保守边界；1.3 修复逗号引导语，85/85 人工语料与真实 Codex 原措辞闭环通过，本轮完整 API 2551/1 skip。首轮环境失败与隔离重跑、模型 QA 未运行等边界见 [1.3 记录](../openspec/changes/agenthub-intent-boundaries/comma-verification.md)；历史指标仍见 [原记录](intent-boundaries-review.md) |
@@ -135,7 +182,7 @@ Web 109 passed，demo-api 5 passed。详见
 | `agenthub-workbench-usability` | 1.1–1.2 Complete（本地未提交） | 当前阶段/阻塞/下一步、结构化 Skill 参考文件、稳定消息分页与分段全文。5,000 条夹具初始 80、DOM 最多 200、置顶 16；最终 API 78、Web 326/43 文件、根检查及四组长会话/四组修复兼容浏览器检查通过。完整原文与 Agent 上下文保留；夹具和测量边界见 [记录](workbench-usability-review.md) |
 | `agenthub-final-context-budget` | 1.1 Complete（本地未提交） | 应用最终输入字符/字节/图片门禁、四类真实 Planner 格式、原生契约/MCP 提示、冻结来源选择/省略与可折叠历史回执。最终专项 19、执行代次/原生/MCP 等 446、Web 303，亮暗/390px 四组浏览器检查通过；不等于模型 Token 或 CLI 隐式/后续工具上下文统计。[记录](final-context-budget-review.md) |
 | `agenthub-review-repair-loop` | 1.1 Complete（本地未提交） | 选择问题、无执行草稿、显式发送/重新生成、源码及目录绑定、启动/输出围栏、重试与当前检查/用户确认历史；最终专项 27、Web 301，沙箱 Edge 1440/390px 亮暗四组交互通过。相邻回归及测试替身/浏览器 API 夹具边界见 [验收记录](review-repair-loop-review.md)，没有真实模型修复或新远程 CI |
-| `agenthub-workflow-evaluation` | 1.1 Complete（本地未提交） | 五类冻结场景、隔离消息规划/队列/原生执行、独立 API/真实浏览器联调、逐次失败/重试与源码证据。首轮真实完整批次 4/5（自然 3/4；另有明确故障注入恢复），修复命令跨目标混入后独立真实联调复验通过，215.969 秒、10 项桌面/窄屏检查。旧失败和限时中断保留，不拼接同版本成功率；[说明](workflow-evaluation.md)及[证据](evidence/workflow-evaluation/README.md)。QA 为脚本，不宣称通用模型能力或新远程 CI |
+| `agenthub-workflow-evaluation` | 1.1–1.5本地完成；1.4/1.5尚未提交 | 中文同版50次历史结果与本轮五类各一次分别保留；原生Planner/编码/QA、固定业务验收、受限修复和显式恢复均有独立证据。完整API2895/19 skip，未把QA警告或追加恢复改成首次通过。见[说明](workflow-evaluation.md)及[本轮核验](real-api-stability-validation-20261022.md)；非通用成功率或新远程CI |
 | `agenthub-backend-versioned-validation` | 1.1 Complete（本地未提交） | 内置 FastAPI 临时副本语法/七组 ASGI 契约，源码及执行代次/策略绑定，过期及取消/归属围栏；QA 按 check/test 判定并显示 build 不适用。后端相关 240、Web 298、启动器 19、根检查及 strict OpenSpec 通过。仅固定接口契约，非真实 Provider/完整业务验收；[记录](backend-versioned-validation-review.md) |
 | `agenthub-review-defect-hardening` | 1.1–1.2 Complete（已推送 dev） | API Host/Origin/控制头、预览文件及 JS/CSS 边界、默认 Skill 并发预算、结构化诊断和 POSIX Vite URL 兼容。`a831265` 的 [Ubuntu CI](https://github.com/YoungBossX/AgentHub/actions/runs/38675914342) 全部通过：沙箱 Chrome 155.0.8059.39、启动器/路径 19、Web 296/38 文件、API 2,081 passed / 48 skipped、demo-api 5、根检查和空白检查。此前本机全量 2,128/1 skip；最后预览相关 25。保留 `b3afe0e` 首轮启动超时和重跑单项失败历史；[证据](evidence/review-hardening/README.md) |
 | `agenthub-controlled-mcp` | 1.1 Complete | 工作区只读文档连接、执行绑定回环网关及受控 Codex 参数；真实 Codex 两次工具调用、Skill 载入、Diff、版本绑定 check/build/3 项产物测试及桌面/窄屏标题验收通过，预览健康。API 全量 2,074 passed / 1 skipped；最后文档额外禁止路径修复后 MCP 23 passed；Web 291、启动器 17、demo-api 5，根检查和 strict OpenSpec 通过。模型 QA 未运行，整体 QA 保持 incomplete。见 [证据](evidence/skills-mcp/README.md) 与 [使用说明](local-usage.md#配置与使用项目文档-mcp) |

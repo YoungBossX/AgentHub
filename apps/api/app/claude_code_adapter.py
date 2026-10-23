@@ -21,7 +21,7 @@ from app.guardrails import evaluate_command
 from app.attachment_inputs import claude_input
 from app.process_input import private_stdin
 from app.claude_executable import resolve_claude_executable
-from app.native_reviews import NativeReadEvidence, NativeReviewError, validate_native_assessment
+from app.native_reviews import NativeReadEvidence, NativeReviewError, native_assessment_schema_json, validate_native_assessment
 from app.process_environment import ProcessTextRedactor, adapter_process_env, redact_process_evidence
 from app.execution_telemetry import provider_usage
 
@@ -214,7 +214,7 @@ class ClaudeCodeAdapter(AgentAdapter):
         text_reconciler = _ClaudeTextReconciler()
         text_redactor = ProcessTextRedactor(getattr(state.process, "evidence_environment", None))
         native_binding = request.plan_context.get("nativeReviewContract") if self._read_only else None
-        native_evidence = NativeReadEvidence(native_binding) if isinstance(native_binding, dict) else None
+        native_evidence = NativeReadEvidence(native_binding, require_structured=True) if isinstance(native_binding, dict) else None
 
         index = 0
         async for line in state.process.stdout_lines():
@@ -397,6 +397,8 @@ class ClaudeCodeAdapter(AgentAdapter):
             "--no-session-persistence",
             "--max-budget-usd",
             self._max_budget_usd,
+            *(["--json-schema", native_assessment_schema_json()]
+              if self._read_only and isinstance(request.plan_context.get("nativeReviewContract"), dict) else []),
             *(["--input-format", "stream-json"] if request.has_attachments or len(request.instruction) > 12000 else ["--", request.instruction]),
         ]
 

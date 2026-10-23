@@ -47,6 +47,35 @@ def test_long_slot_is_not_silently_truncated():
     assert recognize_intent("add a " + "a" * 61 + " input field").route == "clarify"
 
 
+@pytest.mark.parametrize("content", [
+    '@frontend @qa 请仅把演示应用 apps/demo/src/App.tsx 中 h1#demo-heading 的标题改成“联系人故障恢复验证”。保留联系人表单、请求流程及其他现有行为，不修改后端。QA只读审查本次实际Diff。',
+    'In the demo app, change title to "Ready". Preserve the existing form and layout.',
+    '把标题改成“就绪”。保留“联系人”列表。',
+    'add status text "Ready". Keep the existing layout.',
+    '调整文案为“你好”。保留旧按钮。',
+    '把演示应用标题改成“就绪”。\n保留联系人表单及其他现有行为，不修改后端。',
+    '把演示应用标题改成“就绪”。保留联系人列表，不要创建联系人。',
+])
+def test_quoted_copy_with_additional_constraints_requires_planner(content):
+    decision = recognize_intent(content)
+    assert (decision.request_type, decision.route) == ("unknown", "planner")
+    assert decision.reason_codes == ("QUALIFIED_TARGET_TEXT",)
+    assert decision.parameters == () and decision.missing_fields == ()
+    assert parse_frontend_intent(content, include_login_creation=True) is None
+    assert parse_app_contract_intent(content) is None
+
+
+@pytest.mark.parametrize("value", ['“”', '“' + '字' * 61 + '”', '“未闭合'])
+@pytest.mark.parametrize("tail", ['。保留联系人列表。', '。保留联系人列表，不要创建联系人。'])
+def test_invalid_quoted_copy_is_still_rejected_with_additional_constraints(value, tail):
+    content = '把标题改成' + value + tail
+    decision = recognize_intent(content)
+    assert (decision.request_type, decision.route) == ("clarification", "clarify")
+    assert decision.reason_codes == ("INVALID_TARGET_TEXT",)
+    assert parse_frontend_intent(content) is None
+    assert parse_app_contract_intent(content) is None
+
+
 def test_quoted_mentions_cannot_select_agents():
     assert "@frontend" not in routing_text('explain "@frontend"')
     assert "@backend" not in routing_text('```text\n@backend\n```')

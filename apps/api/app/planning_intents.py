@@ -9,7 +9,7 @@ from sqlmodel import select
 from app.models import Agent, Message
 from app.models import Session as AgentHubSession
 from app.repositories import list_session_tasks
-from app.intent_decisions import IntentDecision, command_match, mention_aliases, remove_agent_mentions, request_boundary, routing_text, strip_mentions
+from app.intent_decisions import IntentDecision, QUOTED, command_match, mention_aliases, remove_agent_mentions, request_boundary, routing_text, strip_mentions
 from app.target_registry import (
     DEMO_BACKEND_TARGET_ID,
     TargetProject,
@@ -156,7 +156,7 @@ def parse_mentions(db: DbSession, content: str, workspace_id: str | None = None)
 def parse_frontend_intent(
     content: str, *, include_login_creation: bool = False,
 ) -> Optional[FrontendIntent]:
-    if not request_boundary(content).allows_rule_mutation:
+    if not request_boundary(content).allows_rule_mutation or _quoted_target_route(content) is not None:
         return None
     followup = parse_followup_change(content)
     if followup is not None:
@@ -250,6 +250,8 @@ def parse_frontend_intent(
 def parse_app_contract_intent(content: str) -> Optional[AppContractIntent]:
     if not request_boundary(content).allows_rule_mutation:
         return None
+    if _target_text_match(strip_mentions(content).strip()) is not None:
+        return None  # A copy command cannot grant a later creation rule permission.
     normalized = routing_text(strip_mentions(content)).lower()
     creation = re.search(
         r"(?:\b(?:build|create|implement|make|develop)\s+(?:(?:a|an|the|simple|demo|mini)\s+)*|"
@@ -284,7 +286,7 @@ def parse_app_contract_intent(content: str) -> Optional[AppContractIntent]:
 
 
 def parse_followup_change(content: str) -> Optional[FollowupChange]:
-    if not request_boundary(content).allows_rule_mutation:
+    if not request_boundary(content).allows_rule_mutation or _quoted_target_route(content) is not None:
         return None
     normalized = strip_mentions(content).strip()
     match = command_match(CHANGE_TO_PATTERN, normalized)
@@ -307,12 +309,35 @@ def _clean_target_text(value: str) -> str:
     if cleaned and cleaned[0] in pairs:
         # Sentence punctuation after a closed quote is not part of the value.
         cleaned = re.sub(r"[。.!?]+$", "", cleaned).rstrip()
-        if len(cleaned) < 2 or cleaned[-1] != pairs[cleaned[0]]:
+        if len(cleaned) < 2 or QUOTED.fullmatch(cleaned) is None:
             return ""
         cleaned = cleaned[1:-1]
     else:
         cleaned = re.sub(r"[。.!?]+$", "", cleaned).strip()
     return cleaned if len(cleaned) <= 60 else ""
+
+
+def _target_text_match(normalized: str):
+    return (command_match(CHANGE_TO_PATTERN, normalized)
+            or command_match(THEME_COLOR_PATTERN, normalized)
+            or command_match(STATUS_TEXT_PATTERN, normalized)
+            or command_match(LAYOUT_COPY_PATTERN, normalized))
+
+
+def _quoted_target_route(content: str) -> str | None:
+    normalized = strip_mentions(content).strip()
+    match = _target_text_match(normalized)
+    if match is None:
+        return None
+    # Inspect the complete remaining request, including newline constraints
+    # which the single-line rule match deliberately does not consume.
+    value = normalized[match.start("value"):].strip()
+    if not value.startswith(('"', "'", '“', '‘')):
+        return None
+    quoted = QUOTED.match(value)
+    if quoted is None or not _clean_target_text(quoted.group()):
+        return "clarify"
+    return "planner" if value[quoted.end():].strip(" .!?。！？") else None
 
 
 def recognize_intent(content: str, *, roles: tuple[str, ...] = ()) -> IntentDecision:
@@ -322,28 +347,33 @@ def recognize_intent(content: str, *, roles: tuple[str, ...] = ()) -> IntentDeci
     boundary = replace(request_boundary(content), roles=roles)
     if not boundary.allows_rule_fallback or boundary.request_type == "review":
         return boundary
+    quoted_route = _quoted_target_route(content)
+    if quoted_route == "clarify":
+        return replace(boundary, request_type="clarification", route="clarify",
+                       reason_codes=("INVALID_TARGET_TEXT",), missing_fields=("targetText",))
+    if quoted_route == "planner":
+        # Preserve all constraints for semantic planning before any rule can
+        # interpret a later clause as a separate literal or creation request.
+        return replace(boundary, route="planner", reason_codes=("QUALIFIED_TARGET_TEXT",))
     frontend = parse_frontend_intent(content, include_login_creation=True)
     if frontend is not None:
         return replace(boundary, request_type="change", action=frontend.intent,
                        target=frontend.target,
                        parameters=(("targetText", frontend.target_text),) if frontend.target_text else (),
                        reason_codes=("BOUNDED_FRONTEND_RULE",))
-    contract = parse_app_contract_intent(content)
-    if contract is not None:
-        return replace(boundary, request_type="change", action="create_app",
-                       target=contract.app_type, reason_codes=("BOUNDED_APP_RULE",))
     # An incomplete or oversized supported slot must not enter generic fallback.
     normalized = strip_mentions(content).strip().rstrip(".!?。！？")
-    slot_match = (command_match(CHANGE_TO_PATTERN, normalized)
-                  or command_match(THEME_COLOR_PATTERN, normalized)
-                  or command_match(STATUS_TEXT_PATTERN, normalized)
-                  or command_match(LAYOUT_COPY_PATTERN, normalized))
+    slot_match = _target_text_match(normalized)
     empty_copy = re.search(r"(?:改成|\b(?:title|heading|button)(?:\s+text)?\s+to)\s*[\"'“”‘’]*\s*$", normalized, re.I)
     malformed_field = re.search(r"(?:\badd\s+(?:a\s+)?[^;；\n]*\bfield|(?:添加|新增)[^;；\n]*输入框)\s*$", normalized, re.I)
     empty_color = re.search(r"(?:\bchange\s+(?:the\s+)?(?:theme|accent|primary|brand)\s+color\s+to|(?:主题色|主色|强调色|品牌色)改成)\s*$", normalized, re.I)
     if slot_match is not None or empty_copy or malformed_field or empty_color:
         return replace(boundary, request_type="clarification", route="clarify",
                        reason_codes=("INVALID_TARGET_TEXT",), missing_fields=("targetText",))
+    contract = parse_app_contract_intent(content)
+    if contract is not None:
+        return replace(boundary, request_type="change", action="create_app",
+                       target=contract.app_type, reason_codes=("BOUNDED_APP_RULE",))
     if roles and all(role in {"qa", "review", "orchestrator"} for role in roles) and any(role in {"qa", "review"} for role in roles):
         return replace(boundary, request_type="review", reason_codes=("EXPLICIT_REVIEW_ROLE",))
     if not _is_explicit_platform_mode_request(content) and not re.search(

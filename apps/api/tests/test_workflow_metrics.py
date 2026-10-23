@@ -50,6 +50,23 @@ def test_missing_usage_does_not_claim_complete_token_total_or_free_call():
     assert fields['estimatedCostUsd']['knownSum'] == pytest.approx(.05)
 
 
+def test_repair_usage_is_included_without_overwriting_natural_success_rate():
+    case = example()
+    case.update(verdict='failed', firstAttemptPassed=False, repairOutcome={'status': 'recovered'})
+    repair = copy.deepcopy(case['phases'][0])
+    for attempt in repair['attempts']:
+        attempt['taskRunId'] += '-repair'
+    repair['plannerCalls'][0]['callId'] += '-repair'
+    case['repairPhases'] = [repair]
+    result = aggregate([case], mode='live')
+    assert result['passed'] == 0 and result['finalSuccessRate'] == 0
+    assert result['repairs'] == {'attempted': 1, 'recovered': 1, 'failed': 0}
+    assert result['measurements']['providerUsage']['callRecords'] == 8
+    assert result['measurements']['providerUsage']['fields']['inputTokens']['total'] == 76
+    assert result['measurements']['stageTimings']['planningDispatchMs']['observed'] == 2
+    assert result['roles']['coding']['attempts'] == 4
+
+
 def test_empty_report_has_unknown_totals_not_zero_and_no_latency():
     result = aggregate([], mode='live').get('measurements')
     assert result

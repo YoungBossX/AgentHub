@@ -5,6 +5,8 @@ import shutil
 import sys
 import tempfile
 import threading
+import time
+from contextlib import contextmanager
 
 from app.automatic_validation import capture_validation_source, digest, run_command, validate_copy, validation_environment
 from app.backend_validation import capture_backend_source, validate_backend_copy
@@ -12,6 +14,32 @@ from app.worktrees import repo_root
 from app.contacts_contract import LEGACY, CONTRACTS, check_ids, parse_result, policy
 
 CONTACT_IDS = check_ids(LEGACY)
+
+
+@contextmanager
+def workflow_copy():
+    """Do not lose a completed receipt to Windows browser background handles."""
+    root = Path(tempfile.mkdtemp(prefix='agenthub-workflow-check-')).resolve()
+    receipt = {'status': 'pending', 'attempts': 0}
+    try:
+        yield root, receipt
+    finally:
+        # The fixed dependency link is removed by the caller before this point.
+        if root.parent != Path(tempfile.gettempdir()).resolve() or not root.name.startswith('agenthub-workflow-check-') or root.is_symlink():
+            raise ValueError('Workflow cleanup ownership cannot be verified.')
+        for attempt in range(1, 4):
+            receipt['attempts'] = attempt
+            try:
+                shutil.rmtree(root)
+                receipt['status'] = 'removed'
+                break
+            except OSError as exc:
+                if getattr(exc, 'winerror', None) not in {32, 33}:
+                    raise
+                if attempt == 3:
+                    receipt.update(status='retained_busy', directoryName=root.name)
+                else:
+                    time.sleep(0.1)
 
 
 def contacts_acceptance(root, cancelled, *, contract=LEGACY):
@@ -24,8 +52,7 @@ def contacts_acceptance(root, cancelled, *, contract=LEGACY):
     node = shutil.which("node")
     if node is None:
         return {"status": "unavailable", "reason": "node_missing"}
-    with tempfile.TemporaryDirectory(prefix="agenthub-workflow-check-") as directory:
-        copy = Path(directory).resolve()
+    with workflow_copy() as (copy, cleanup):
         for relative, raw in {**front_contents, **back_contents}.items():
             path = copy / relative
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -43,14 +70,14 @@ def contacts_acceptance(root, cancelled, *, contract=LEGACY):
         try:
             build = run_command([node, str(platform / "scripts/demo-validation-build.mjs")], project, env, cancelled)
             if build["status"] != "passed":
-                return {"status": build["status"], "reason": "integration_build_failed", "checks": []}
+                return {"status": build["status"], "reason": "integration_build_failed", "checks": [], "cleanup": cleanup}
             result = run_command([node, str(platform / "scripts/workflow-contacts-check.mjs")], project, env, cancelled)
             if result["status"] in {"timeout", "cancelled"}:
-                return {"status": result["status"], "contract": contract, "checks": []}
+                return {"status": result["status"], "contract": contract, "checks": [], "cleanup": cleanup}
             try:
                 parsed = parse_result(result, contract)
                 if parsed.get("status") == "unavailable":
-                    return parsed
+                    return {**parsed, 'cleanup': cleanup}
                 unchanged = (capture_validation_source(root)[0] == frontend and capture_backend_source(root)[0] == backend)
                 # Verify both copied input sets; target code runs with write denial,
                 # and the source hash is checked again independently after execution.
@@ -60,10 +87,11 @@ def contacts_acceptance(root, cancelled, *, contract=LEGACY):
                 return {"status": "cancelled" if cancelled.is_set() else "stale" if not unchanged else parsed["status"],
                         "contract": contract, "policyFingerprint": before_policy,
                         "checks": parsed["checks"], "requests": parsed.get("requests", []), "browserVersion": parsed.get("browserVersion"),
+                        "cleanup": cleanup,
                         "frontendFingerprint": frontend["sourceFingerprint"], "backendFingerprint": backend["sourceFingerprint"]}
             except (ValueError, KeyError, TypeError):
                 return {"status": result["status"] if result["status"] in {"timeout", "cancelled"} else "unavailable",
-                        "reason": "missing_integration_evidence", "checks": []}
+                        "reason": "missing_integration_evidence", "checks": [], "cleanup": cleanup}
         finally:
             if link.is_symlink():
                 link.unlink()

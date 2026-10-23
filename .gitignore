@@ -113,6 +113,7 @@ docs/*
 !docs/business-contract-coverage-review.md
 !docs/execution-card-modularity-review.md
 !docs/workflow-evaluation.md
+!docs/real-api-stability-validation-20261022.md
 !docs/pinned-message-context-review.md
 !docs/chat-markdown-rendering-review.md
 !docs/local-dependency-security-review.md

@@ -5,7 +5,7 @@ Live execution uses existing configured Planner/CLI providers; no mock fallback.
 """
 import argparse
 import asyncio
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -40,6 +40,7 @@ from app.workflow_review_evidence import attempt_seconds, collect_reviews, revie
 from app.workflow_cohort import cohort, invalidate, role_stats, elapsed_stats
 from app.workflow_profiles import bound_scenario, configure_profiles, QA_PROMPT
 from app.workflow_metrics import attempt_timings, measurement_summary, stage_timer
+from app.workflow_feedback import ContactsRepairGuard, activate_repair, prepare_contacts_repair
 
 SCHEMA = "agenthub.workflow_evaluation.v2"
 TERMINAL = {"completed", "failed", "interrupted", "cancelled"}
@@ -98,6 +99,7 @@ def collect_attempt(db, run, root):
             "retryOfRunId": metrics.get("retryOfRunId"), "providerAssignment": metrics.get("providerAssignment"),
             "providerTurnObserved": observed, "scope": metrics.get("taskRunScopeDecision"),
             "providerUsage": metrics.get('providerUsage'),
+            "businessRepair": metrics.get('workflowBusinessRepair'),
             "stageTimings": attempt_timings(run, queue, metrics.get('executionTiming')),
             "completion": metrics.get("completionValidation"), "memoryUsage": metrics.get("memoryUsage"),
             "validation": validation_for_run(db, run.id),
@@ -110,6 +112,8 @@ def collect_attempt(db, run, root):
 
 def phase_gates(scenario, phase):
     gates = []
+    if phase.get('error'):
+        gates.append('phase_execution_error')
     if not phase.get("nativePlanning") and not (phase.get("testExecution") and phase.get("planningSource") == "fake_test"):
         gates.append("native_planning_unobserved")
     attempts = phase.get("attempts", [])
@@ -173,10 +177,14 @@ def aggregate(cases, *, mode, cohort_valid=True):
                 "firstAttemptSuccessRate": sum(c.get("firstAttemptPassed") is True for c in items) / denominator if live and denominator else None,
                 "finalSuccessRate": sum(c.get("verdict") == "passed" for c in items) / denominator if live and denominator else None,
                 "retryCount": sum(c.get("retryCount", 0) for c in items),
+                "repairs": {"attempted": sum(bool(c.get('repairPhases')) for c in items),
+                    "recovered": sum(c.get('repairOutcome', {}).get('status') == 'recovered' for c in items),
+                    "failed": sum(c.get('repairOutcome', {}).get('status') == 'failed' for c in items)},
                 "roles": role_stats(items),
                 "totalElapsed": elapsed_stats([case.get("totalElapsedSeconds") for case in items]),
                 "nativeQaVerifiedAttempts": sum(bool(a.get("reviews")) and all(r.get("verifiedNativeReceipt") for r in a["reviews"])
-                    for case in items for phase in case.get("phases", []) for a in phase.get("attempts", []) if a.get("role") in {"qa", "review"}),
+                    for case in items for phase in [*case.get("phases", []), *case.get("repairPhases", [])]
+                    for a in phase.get("attempts", []) if a.get("role") in {"qa", "review"}),
                 "medianElapsedSeconds": statistics.median(durations) if durations else None,
                 "maxElapsedSeconds": max(durations) if durations else None, "failureCounts": failures,
                 "measurements": measurement_summary(items)}
@@ -220,7 +228,7 @@ async def accept_source(root, scenario, index=0):
 
 
 async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phase=None, test_execution=False, required_rule=None, progress=None,
-                    require_native_qa=False, max_retries=1, coding_adapter="codex"):
+                    require_native_qa=False, max_retries=1, coding_adapter="codex", feedback_guard=None):
     started = time.monotonic()
     if phase is None:
         phase = {}
@@ -230,6 +238,8 @@ async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phas
     phase.update(requiredRuleId=required_rule.id if required_rule else None, requiredRuleHash=required_rule.content_hash if required_rule else None)
     before = hashes(root)
     try:
+        if feedback_guard:
+            feedback_guard.current()
         with stage_timer(phase['stageTimings'], 'planningDispatchMs'):
             message = await _dispatch(db, session, scenario.prompts[index], evidence=phase)
         phase["messageId"] = message.id
@@ -242,6 +252,8 @@ async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phas
         phase["nativePlanning"] = bool(plans) and all((p.get("groupAssignment", {}).get("plannerEvidence") or {}).get("plannerSource") == "real_llm" for p in plans)
         sources = {(p.get("groupAssignment", {}).get("plannerEvidence") or {}).get("plannerSource", "deterministic") for p in plans}
         phase["planningSource"] = next(iter(sources)) if len(sources) == 1 else "mixed_or_missing"
+        if feedback_guard:
+            feedback_guard.validate_tasks(tasks)
         if progress: progress()
         if not phase["nativePlanning"] and not (test_execution and phase["planningSource"] == "fake_test"):
             phase["error"] = "Configured native planning did not execute; no coding provider was started."
@@ -256,11 +268,14 @@ async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phas
         with stage_timer(phase['stageTimings'], 'workflowExecutionMs'):
             for _ in range(max(12, len(tasks) * (max_retries + 1) + 1)):
                 enqueue_ready_group_tasks(db, session_id=session.id)
-                run = await RunWorker().run_once(db)
+                with activate_repair(feedback_guard):
+                    run = await RunWorker().run_once(db)
                 if run is None:
                     break
                 db.expire_all(); run = db.get(TaskRun, run.id)
                 phase["attempts"].append(collect_attempt(db, run, root))
+                if feedback_guard:
+                    feedback_guard.advance(phase['attempts'][-1], hashes(root))
                 if progress: progress()
                 if run.state != "completed":
                     if run.state in {"failed", "interrupted"} and retries.get(run.task_id, 0) < max_retries:
@@ -274,6 +289,8 @@ async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phas
         phase["allTasksCompleted"] = bool(tasks) and all(db.get(Task, task.id).status == "completed" for task in tasks)
         with stage_timer(phase['stageTimings'], 'independentAcceptanceMs'):
             phase["acceptance"] = await accept_source(root, scenario, index)
+        if feedback_guard:
+            feedback_guard.current()
     except asyncio.CancelledError:
         phase["error"] = "scenario_timeout_or_cancel"
         raise
@@ -291,6 +308,8 @@ async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phas
         phase["immutableInputs"] = all(baseline_hashes.get(path) == after.get(path) for path in set(baseline_hashes) | set(after) if not permitted(scenario, path))
         phase["sourceHashes"] = after
         phase["elapsedSeconds"] = round(time.monotonic() - started, 3)
+        if feedback_guard:
+            phase['repairLaunches'] = list(feedback_guard.runs.values())
         phase["failureGates"] = phase_gates(scenario, phase)
         phase["verdict"] = "failed" if phase["failureGates"] else "passed"
         if progress: progress()
@@ -298,7 +317,7 @@ async def run_phase(db, session, root, scenario, index, baseline_hashes, *, phas
 
 
 async def run_scenario(directory, scenario, *, prepare_only=False, adapter="codex", qa_adapter="claude_code", timeout=900,
-                       test_execution=False, progress=None, max_retries=1):
+                       test_execution=False, progress=None, max_retries=1, repair_contract_failures=False):
     preparation_started = time.monotonic()
     scenario = bound_scenario(scenario, qa_adapter)
     root = prepare_source(directory, scenario)
@@ -348,8 +367,31 @@ async def run_scenario(directory, scenario, *, prepare_only=False, adapter="code
                                                      require_native_qa=qa_adapter == "claude_code", max_retries=max_retries, coding_adapter=adapter,
                                                      progress=(lambda: progress(result)) if progress else None), timeout=timeout)
                     if phase["verdict"] != "passed": break
+                if repair_contract_failures:
+                    result['naturalElapsedSeconds'] = round(time.monotonic() - started, 3)
+                    decision = prepare_contacts_repair(root, result['phases'][-1])
+                    result.update(repairOutcome=decision, repairPhases=[])
+                    if decision['status'] == 'prepared':
+                        remaining = timeout - (time.monotonic() - started)
+                        if remaining <= 0:
+                            result['repairOutcome'] = {'status': 'budget_exhausted', 'binding': decision}
+                        else:
+                            guard = ContactsRepairGuard(root, session.id, decision)
+                            repair_scenario = bound_scenario(replace(scenario, prompts=(decision['prompt'],),
+                                frontend='frontend' in decision['roles'], backend='backend' in decision['roles']), qa_adapter)
+                            repair_phase = {}
+                            result['repairPhases'].append(repair_phase)
+                            result['repairOutcome'] = {'status': 'running', 'binding': decision}
+                            if progress: progress(result)
+                            await asyncio.wait_for(run_phase(db, session, root, repair_scenario, 0, decision['sourceHashes'],
+                                phase=repair_phase, test_execution=test_execution, required_rule=rule,
+                                require_native_qa=qa_adapter == 'claude_code', max_retries=0, coding_adapter=adapter,
+                                feedback_guard=guard, progress=(lambda: progress(result)) if progress else None), timeout=remaining)
+                            result['repairOutcome']['status'] = 'recovered' if repair_phase['verdict'] == 'passed' else 'failed'
             except asyncio.TimeoutError:
                 result["error"] = "scenario_timeout"
+                if result.get('repairOutcome', {}).get('status') == 'running':
+                    result['repairOutcome']['status'] = 'budget_exhausted'
             finally:
                 for run in db.exec(select(TaskRun).join(Task, Task.id == TaskRun.task_id).where(Task.session_id == session.id)).all():
                     if run.state not in TERMINAL:
@@ -365,16 +407,21 @@ async def run_scenario(directory, scenario, *, prepare_only=False, adapter="code
                 # Preserve successful earlier phases at their original version.
                 # Only refresh the interrupted phase after its owned queue is
                 # actually terminal; a cutoff streaming state is not a live run.
-                if result["phases"] and result["phases"][-1].get("error") == "scenario_timeout_or_cancel":
-                    interrupted = result["phases"][-1]
-                    for attempt in interrupted["attempts"]:
+                for interrupted in [*result['phases'], *result.get('repairPhases', [])]:
+                    pending = [attempt for attempt in interrupted.get('attempts', []) if attempt['state'] not in TERMINAL]
+                    if not pending:
+                        continue
+                    for attempt in pending:
                         cutoff = attempt["state"]
                         db.expire_all()
                         attempt.update(collect_attempt(db, db.get(TaskRun, attempt["taskRunId"]), root))
                         attempt.update(stateAtCutoff=cutoff, stoppedBy="workflow_evaluation")
-                    interrupted["failureGates"] = phase_gates(scenario, interrupted)
+                    stopped_scenario = repair_scenario if any(interrupted is phase for phase in result.get('repairPhases', [])) else scenario
+                    interrupted["failureGates"] = phase_gates(stopped_scenario, interrupted)
                     if progress: progress(result)
     except asyncio.CancelledError:
+        if result.get('repairOutcome', {}).get('status') == 'running':
+            result['repairOutcome']['status'] = 'interrupted'
         result.update(verdict="interrupted", failureGates=["evaluation_interrupted"], elapsedSeconds=round(time.monotonic() - started, 3))
         if progress: progress(result)
         raise
@@ -393,10 +440,11 @@ async def run_scenario(directory, scenario, *, prepare_only=False, adapter="code
 
 
 async def run_benchmark(output, *, case_id=None, repetitions=1, prepare_only=False, adapter="codex", qa_adapter="claude_code", timeout=900,
-                        test_execution=False, max_retries=1):
+                        test_execution=False, max_retries=1, repair_contract_failures=False):
     scenarios = [bound_scenario(scenario, qa_adapter) for scenario in select_scenarios(case_id)]
     if (type(repetitions) is not int or not 1 <= repetitions <= 10 or adapter not in {"codex", "claude_code"} or not 60 <= timeout <= 1800
             or type(max_retries) is not int or not 0 <= max_retries <= 2
+            or type(repair_contract_failures) is not bool or (repair_contract_failures and case_id != 'contacts-boundaries')
             or qa_adapter not in ({"claude_code", "scripted_mock"} if test_execution else {"claude_code"})):
         raise ValueError("Invalid bounded workflow evaluation options.")
     root = reserve_output(output)
@@ -408,7 +456,8 @@ async def run_benchmark(output, *, case_id=None, repetitions=1, prepare_only=Fal
               "livePreviewStarted": False, "deploymentExecuted": False, "summaryModelEvaluated": False,
               "cases": [{"caseId": case.id, "repetition": rep, "faultInjection": case.fault_injection, "verdict": "not_attempted"} for rep in range(1, repetitions + 1) for case in scenarios]}
     report["cohort"] = cohort(policy, development_head=report["developmentHead"], adapter=adapter, qa_adapter=qa_adapter,
-                              scenarios=[asdict(case) for case in scenarios], repetitions=repetitions, max_retries=max_retries)
+                              scenarios=[asdict(case) for case in scenarios], repetitions=repetitions, max_retries=max_retries,
+                              repair_contract_failures=repair_contract_failures)
     save_report(root, report)
     for index, pending in enumerate(report["cases"]):
         if not policy_matches(policy):
@@ -424,13 +473,18 @@ async def run_benchmark(output, *, case_id=None, repetitions=1, prepare_only=Fal
             save_report(root, report)
         try:
             result = await run_scenario(directory, scenario, prepare_only=prepare_only, adapter=adapter, qa_adapter=qa_adapter, timeout=timeout,
-                                        test_execution=test_execution, progress=progress, max_retries=max_retries)
+                                        test_execution=test_execution, progress=progress, max_retries=max_retries,
+                                        **({'repair_contract_failures': True} if repair_contract_failures else {}))
         except asyncio.CancelledError:
             report["status"] = "interrupted"
             save_report(root, report)
             raise
         except Exception as exc:
-            result = {"caseId": scenario.id, "verdict": "harness_error", "failureGates": ["harness_error"], "errorType": type(exc).__name__}
+            result = {**report['cases'][index], "caseId": scenario.id, "verdict": "harness_error",
+                      "failureGates": sorted(set([*report['cases'][index].get('failureGates', []), 'harness_error'])),
+                      "errorType": type(exc).__name__}
+            if result.get('repairOutcome', {}).get('status') == 'running':
+                result['repairOutcome'] = {**result['repairOutcome'], 'status': 'harness_error'}
         report["cases"][index] = {**pending, **result}
         if not policy_matches(policy):
             invalidate(report, reason="evaluation_policy_changed", index=index)
@@ -448,7 +502,8 @@ async def run_benchmark(output, *, case_id=None, repetitions=1, prepare_only=Fal
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--case", choices=[case.id for case in select_scenarios()])
+    parser.add_argument("--case", choices=[case.id for case in select_scenarios()] + ['contacts-boundaries'])
+    parser.add_argument('--repair-contract-failures', action='store_true', help='Explicit contacts-boundaries only; one bounded repair, original score preserved')
     parser.add_argument("--prepare-only", action="store_true")
     parser.add_argument("--repetitions", type=int, default=1)
     parser.add_argument("--adapter", choices=["codex", "claude_code"], default="codex")
@@ -456,7 +511,8 @@ def main():
     parser.add_argument("--timeout", type=int, default=900)
     args = parser.parse_args()
     report = asyncio.run(run_benchmark(args.output, case_id=args.case, repetitions=args.repetitions,
-                                      prepare_only=args.prepare_only, adapter=args.adapter, timeout=args.timeout, max_retries=args.max_retries))
+                                      prepare_only=args.prepare_only, adapter=args.adapter, timeout=args.timeout, max_retries=args.max_retries,
+                                      repair_contract_failures=args.repair_contract_failures))
     return 0 if all(c["verdict"] in {"passed", "prepared"} for c in report["cases"]) else 1
 
 

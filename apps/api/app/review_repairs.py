@@ -180,6 +180,9 @@ def rebind_message(db, source, created):
 
 def require_launch(db, run, task):
     """Called under the ordinary execution owner/target lock before snapshotting."""
+    from app.workflow_feedback import require_launch as require_business_repair
+
+    require_business_repair(db, run, task)
     message = db.get(Message, task.created_by_message_id) if task.created_by_message_id else None
     binding = obj(message.context_json).get(BINDING) if message else None
     if not isinstance(binding, dict):

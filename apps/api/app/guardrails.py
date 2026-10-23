@@ -326,6 +326,12 @@ def _is_vite_preview_command(parts: list[str]) -> bool:
 
 
 def _is_claude_code_command(parts: list[str]) -> bool:
+    if len(parts) == 22 and parts[18] == "--json-schema":
+        from app.native_reviews import native_assessment_schema_json
+
+        if parts[9] != "Read" or parts[11] != "Read" or parts[19] != native_assessment_schema_json():
+            return False
+        parts = [*parts[:18], *parts[20:]]
     if len(parts) == 20 and parts[-2:] == ["--input-format", "stream-json"]:
         parts = [*parts[:-2], "--", "<stdin>"]
     return (

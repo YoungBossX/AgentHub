@@ -73,6 +73,65 @@ def assessment(binding, **changes):
     return value
 
 
+def test_native_readonly_command_requests_exact_assessment_schema(fixture):
+    from types import SimpleNamespace
+    from app.native_reviews import NativeAssessment
+    from app.guardrails import evaluate_command
+    db, run, _, _ = fixture
+    binding = capture_native_review_binding(db, run)
+    request = SimpleNamespace(permission_profile={"toolPolicy": "claude_read_only"},
+        plan_context={"nativeReviewContract": binding}, instruction="审查真实源码", has_attachments=False)
+    command = ClaudeCodeAdapter(read_only=True)._build_command(request)
+    assert "--json-schema" in command
+    index = command.index("--json-schema")
+    assert json.loads(command[index + 1]) == NativeAssessment.model_json_schema()
+    assert evaluate_command(command).allowed
+    changed = command.copy(); changed[index + 1] = '{"type":"object"}'
+    assert not evaluate_command(changed).allowed
+    changed = command.copy(); changed[9] = changed[11] = "Read,Write,Edit,MultiEdit"
+    assert not evaluate_command(changed).allowed
+
+
+@pytest.mark.parametrize("structured", [None, [], "invalid", {"summary": "缺字段"}])
+def test_native_structured_mode_never_falls_back_to_valid_text(fixture, structured):
+    db, run, _, _ = fixture
+    binding = capture_native_review_binding(db, run)
+    recorder = NativeReadEvidence(binding, require_structured=True)
+    recorder.observe({"type": "result", "subtype": "success", "is_error": False,
+        "result": json.dumps(assessment(binding)), "structured_output": structured})
+    with pytest.raises(NativeReviewError):
+        validate_native_assessment(recorder.result, binding, {SOURCE: binding["files"][SOURCE]["textSha256"]})
+
+
+def test_structured_serialization_does_not_count_as_a_read_or_enable_other_tools(fixture):
+    db, run, _, _ = fixture
+    binding = capture_native_review_binding(db, run)
+    recorder = NativeReadEvidence(binding, require_structured=True)
+    output = assessment(binding)
+    recorder.observe({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "StructuredOutput", "id": "output", "input": output}]}})
+    assert not recorder.scope_violation and not recorder.reads
+    recorder.observe({"type": "result", "subtype": "success", "is_error": False,
+        "result": "This text is deliberately not the assessment", "structured_output": output})
+    with pytest.raises(NativeReviewError):
+        validate_native_assessment(recorder.result, binding, recorder.reads)
+    assert validate_native_assessment(recorder.result, binding,
+        {SOURCE: binding["files"][SOURCE]["textSha256"]})["findings"][0]["severity"] == "low"
+    recorder.observe({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Write", "input": {}}]}})
+    assert recorder.scope_violation
+
+
+def test_missing_finding_severity_is_rejected_even_in_structured_output(fixture):
+    db, run, _, _ = fixture
+    binding = capture_native_review_binding(db, run)
+    output = assessment(binding)
+    del output["findings"][0]["severity"]
+    with pytest.raises(NativeReviewError):
+        validate_native_assessment(json.dumps(output), binding,
+            {SOURCE: binding["files"][SOURCE]["textSha256"]})
+
+
 def read_events(root, text, *, error=False, partial=False, wrong_file=False):
     path = str(root / SOURCE)
     return [
@@ -212,7 +271,7 @@ class ReviewRunner:
         if self.mode == "invalid": output["validation"] = "passed"
         if self.mode == "changed": (cwd / SOURCE).write_text("changed after Read", encoding="utf-8")
         events.append({"type": "result", "subtype": "success", "is_error": False,
-                       "result": json.dumps(output, ensure_ascii=False)})
+                       "result": json.dumps(output, ensure_ascii=False), "structured_output": output})
         self.process = FakeClaudeCodeProcess(stdout="\n".join(json.dumps(event, ensure_ascii=False) for event in events),
                                             returncode=1 if self.mode == "exit_error" else 0)
         return self.process

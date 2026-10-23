@@ -7,14 +7,16 @@
 运行中取消及 create/check/export 崩溃恢复、旧数据保留和真实写文件/Diff/验证/预览闭环。
 环境为 Windows Docker Desktop 4.95.0 / Engine 29.8.2 的 Linux/amd64、cgroup v2；
 不推广为 macOS、独立 Linux 宿主或真实模型执行的验收结论。
-最后完整原生API **2714 passed / 19 skipped / 0 failed**，Web333、本地工具24、
+该阶段完整原生API **2714 passed / 19 skipped / 0 failed**，Web333、本地工具24、
 demo-api5、Node控制3、根检查和专项strict通过。首次全量3项临时环境异常及后续成功记录均保留。
-产品库和三个 Adapter 未修改；代码保留在 `codex/container-validation`，未提交或合并，
-主工作区服务仍使用原来的 native 配置。远程手动 Actions 尚未触发。
+该能力已随 `0d5a5a2` 集成至 `dev`，原 `codex/container-validation` 为历史实施分支，
+当前操作无需该分支。默认验证后端仍为 native，三个 Adapter 没有获得 Docker 访问权限。
+以上数字属于原容器专项版本；当前完整回归与提交状态见 [项目状态](project-state.md#当前快照)。
+本轮没有重新运行真实 Docker 资格，也未触发远程手动容器 Actions。
 
 ## 操作员准备
 
-本机 Docker Desktop 已安装在 `E:/Docker/DockerDesktop`，Linux/amd64 daemon 已启动。
+本机准备的 Docker Desktop 位置为 `E:/Docker/DockerDesktop`；使用前应确认当前 daemon 状态。
 Docker 数据盘为 `E:/Docker/wsl-data/disk/docker_data.vhdx`；WSL 系统盘和交换盘
 也位于 `E:/Docker/wsl-data`，崩溃目录已配置到该目录。用户 `.wslconfig` 只保存 E 盘路径；Docker/Windows 少量配置和日志
 仍可能由系统保存在 C 盘，不代表镜像、容器和卷数据位于 C 盘。
@@ -31,7 +33,7 @@ docker system df
 `version` 同时出现 Client/Server 才表示已连接引擎；`ps` 只列运行中容器，
 临时检查结束后为空是正常情况。`system df` 用于查看 Docker 镜像、容器及构建缓存占用。
 
-以下命令在 `codex/container-validation` 隔离工作区使用；当前主工作区尚未集成这些命令。
+以下命令从已集成容器验证功能的 AgentHub 仓库根目录运行。
 每次新开操作终端先设置临时目录，避免准备、客户端私有配置和测试证据落入默认 C 盘临时目录：
 
 ```powershell

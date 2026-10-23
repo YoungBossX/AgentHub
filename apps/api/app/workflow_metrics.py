@@ -66,7 +66,7 @@ def measurement_summary(cases):
     attempts, calls, phases = [], [], []
     seen_runs, seen_calls = set(), set()
     for case_index, case in enumerate(cases):
-        for phase_index, phase in enumerate(case.get('phases', [])):
+        for phase_index, phase in enumerate([*case.get('phases', []), *case.get('repairPhases', [])]):
             phases.append(phase)
             for call_index, call in enumerate(phase.get('plannerCalls', [])):
                 key = call.get('callId') or (case_index, phase_index, call_index)

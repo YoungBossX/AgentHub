@@ -86,6 +86,11 @@
     {"id":"intro-info","category":"information","content":"In the demo app, explain how to change title to Hello","mustNotRuleExecute":true,"expected":{"requestType":"explain","route":"reply"}},
     {"id":"intro-status-write","category":"multiple","content":"In the demo app, show task status and fix the button","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner"}},
     {"id":"intro-quoted-action","category":"introduction","content":"In the demo app, change title to \"Welcome, add a phone field\"","expected":{"requestType":"change","route":"continue","parameters":{"targetText":"Welcome, add a phone field"}}},
-    {"id":"intro-missing-value","category":"slots","content":"In the demo app, change title to","mustNotRuleExecute":true,"expected":{"requestType":"clarification","route":"clarify"}}
+    {"id":"intro-missing-value","category":"slots","content":"In the demo app, change title to","mustNotRuleExecute":true,"expected":{"requestType":"clarification","route":"clarify"}},
+    {"id":"qualified-title-zh","category":"qualified_copy","content":"把演示应用标题改成“联系人故障恢复验证”。保留联系人表单、请求流程及其他现有行为，不修改后端。","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner","parameters":{},"missingFields":[]}},
+    {"id":"qualified-title-en","category":"qualified_copy","content":"In the demo app, change title to \"Ready\". Preserve the existing form and layout.","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner","parameters":{}}},
+    {"id":"qualified-quoted-tail","category":"qualified_copy","content":"把标题改成“就绪”。保留“联系人”列表。","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner","parameters":{}}},
+    {"id":"qualified-newline","category":"qualified_copy","content":"把演示应用标题改成“就绪”。\n保留联系人表单及其他现有行为，不修改后端。","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner","parameters":{}}},
+    {"id":"qualified-negative-create","category":"qualified_copy","content":"把演示应用标题改成“就绪”。保留联系人列表，不要创建联系人。","mustNotRuleExecute":true,"expected":{"requestType":"unknown","route":"planner","parameters":{}}}
   ]
 }

@@ -43,8 +43,70 @@ SCENARIOS = (
 )
 
 
+CONTACTS_BOUNDARIES = Scenario('contacts-boundaries', (
+    '@backend @frontend @qa 请完善演示应用的中文联系人功能，仅修改 apps/demo-api/app/main.py 和 apps/demo/src/App.tsx。'
+    '后端 POST /contacts 保存联系人，GET /contacts 返回已保存结果；完整邮箱忽略大小写判重并返回409，不同域名允许创建。'
+    '姓名仅含ASCII、制表符或全角空格时返回422且不写入。保留现有健康检查、API和CORS。'
+    '前端使用相对 /api/contacts，标签为姓名、邮箱，按钮为新增联系人，列表 aria-label 为联系人列表；保留 h1#demo-heading。'
+    '姓名必填且不能仅含空白，邮箱格式有效；重复或临时POST失败时以可访问的中文alert提示，保留表单与列表，允许重试。'
+    'POST确认201后立即按真实id保留联系人并清空表单；随后GET刷新失败仍显示已保存结果，用中性role=status中文说明已保存但刷新失败。'
+    '成功后清除旧错误，刷新页面后保持数据；适配桌面与390px窄屏，无外部请求。QA只读审查双方真实Diff。',
+), backend=True, frontend=True, integration=True, contacts_contract='contacts-boundaries-v3')
+
+
+# Trusted fixture-only regression material. Agents may read, never edit/run it.
+# Presence is not an execution receipt; fixed independent acceptance still runs.
+CONTACTS_BOUNDARY_TESTS = '''"""中文联系人边界回归；由平台固定提供，QA仅可读取。"""
+import pytest
+from fastapi.testclient import TestClient
+from app.main import app, reset_contacts_for_tests
+
+
+@pytest.fixture
+def api():
+    reset_contacts_for_tests()
+    with TestClient(app) as client:
+        yield client
+    reset_contacts_for_tests()
+
+
+@pytest.mark.parametrize("email", ["ADA@example.com", "ada@EXAMPLE.COM", "ADA@EXAMPLE.COM"])
+def test_full_email_case_insensitive_duplicate_keeps_records(api, email):
+    before = api.get("/contacts").json()
+    assert api.post("/contacts", json={"name": "重复联系人", "email": email}).status_code == 409
+    assert api.get("/contacts").json() == before
+
+
+def test_new_contact_persists_and_case_variant_is_duplicate(api):
+    payload = {"name": "中文新联系人", "email": "Unique.Person@Example.COM"}
+    before = api.get("/contacts").json()
+    response = api.post("/contacts", json=payload)
+    assert response.status_code == 201
+    stable = api.get("/contacts").json()
+    assert stable == before + [response.json()]
+    assert api.post("/contacts", json={**payload, "email": "unique.person@example.com"}).status_code == 409
+    assert api.get("/contacts").json() == stable
+
+
+def test_same_local_part_different_domain_is_distinct(api):
+    before = api.get("/contacts").json()
+    response = api.post("/contacts", json={"name": "不同域名联系人", "email": "ada@other.example.com"})
+    assert response.status_code == 201
+    assert api.get("/contacts").json() == before + [response.json()]
+
+
+@pytest.mark.parametrize("name", ["   ", "\\t", "\\u3000", " \\t\\u3000 "])
+def test_whitespace_name_is_422_and_never_writes(api, name):
+    before = api.get("/contacts").json()
+    response = api.post("/contacts", json={"name": name, "email": "blank@example.com"})
+    assert response.status_code == 422
+    assert api.get("/contacts").json() == before
+'''
+
+
 def select_scenarios(case_id=None):
-    selected = [case for case in SCENARIOS if case_id is None or case.id == case_id]
+    candidates = SCENARIOS if case_id is None else (*SCENARIOS, CONTACTS_BOUNDARIES)
+    selected = [case for case in candidates if case_id is None or case.id == case_id]
     if not selected:
         raise ValueError("Unknown workflow scenario.")
     return selected
@@ -60,6 +122,8 @@ def prepare_source(directory: Path, scenario: Scenario):
     for name in ("demo", "demo-api"):
         shutil.copytree(platform / "apps" / name, root / "apps" / name,
                         ignore=shutil.ignore_patterns("node_modules", "dist", "__pycache__", ".pytest_cache", ".env*"))
+    if scenario.contacts_contract == "contacts-boundaries-v3":
+        (root / "apps/demo-api/tests/test_contacts_boundaries.py").write_text(CONTACTS_BOUNDARY_TESTS, encoding="utf-8")
     if scenario.id == "backend-repair":
         path = root / "apps/demo-api/app/main.py"
         path.write_text(path.read_text(encoding="utf-8").replace('status="ok"', 'status="broken"'), encoding="utf-8")

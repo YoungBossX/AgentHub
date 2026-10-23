@@ -44,7 +44,7 @@ def test_native_qa_profile_routes_through_real_readonly_parser_and_source_bound_
                 {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "read-main", "is_error": False}]},
                  "tool_use_result": {"type": "text", "file": {"filePath": str(Path(cwd) / name), "content": text,
                     "startLine": 1, "numLines": len(text.splitlines()), "totalLines": len(text.splitlines())}}},
-                {"type": "result", "subtype": "success", "is_error": False, "result": json.dumps(output)}]
+                {"type": "result", "subtype": "success", "is_error": False, "result": json.dumps(output), "structured_output": output}]
             return FakeClaudeCodeProcess(stdout="\n".join(json.dumps(event) for event in events), returncode=1 if recover and len(calls) == 1 else 0)
     monkeypatch.setattr(run_engine, "ClaudeCodeAdapter", lambda *args, **kwargs: ClaudeCodeAdapter(*args, process_runner=NativeRunner(), **kwargs))
     monkeypatch.setattr(run_engine._provider_health_probe, "check_provider", lambda provider, **kwargs:

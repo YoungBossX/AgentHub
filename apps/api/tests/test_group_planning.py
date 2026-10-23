@@ -192,6 +192,17 @@ def test_planner_required_workflow_groups_use_one_valid_native_plan(db, monkeypa
     assert all(json.loads(task.plan_json)["groupAssignment"]["coordinationSource"] == "fake_test" for task in tasks)
 
 
+def test_qualified_quoted_title_reaches_existing_native_group_planner(db, monkeypatch):
+    captured = native_provider(db, monkeypatch)
+    content = '@frontend @qa 请仅把演示应用 h1#demo-heading 的标题改成“联系人故障恢复验证”。保留联系人表单、请求流程及其他现有行为，不修改后端。QA只读审查本次实际Diff。'
+    tasks = plan(db, content)
+    assert len(tasks) == 2 and len(captured) == 1
+    assert captured[0]["originalUserRequest"] == content
+    assert all(json.loads(task.plan_json)["intentDecision"]["source"] == "llm" for task in tasks)
+    assert all(json.loads(task.plan_json)["targetId"] == "demo-frontend" for task in tasks)
+    assert json.loads(tasks[1].plan_json)["readOnly"] is True
+
+
 @pytest.mark.parametrize("content", [
     '@frontend @qa 继续同一个会话，再将 h1#demo-heading 精确改为“第二轮：中文协作已完成”。保留前一轮无关界面，审查本轮真实Diff。',
     '@frontend @qa 请仅修改 h1#demo-heading 的文本为“协作已完成”。',
@@ -221,7 +232,11 @@ def test_demo_heading_scope_does_not_come_from_literal_partial_or_broad_referenc
 
 
 @pytest.mark.parametrize("unavailable", ["disabled", "non-task", "failed"])
-def test_planner_required_group_never_persists_rule_fallback(db, monkeypatch, unavailable):
+@pytest.mark.parametrize("content", [
+    "@frontend @qa change demo app title to Hello and add a phone input field",
+    '@frontend @qa 把演示应用标题改成“就绪”。保留“联系人”列表。',
+])
+def test_planner_required_group_never_persists_rule_fallback(db, monkeypatch, unavailable, content):
     from app.planner_providers import DisabledPlannerProvider, PlannerProviderError
     if unavailable == "disabled":
         monkeypatch.setattr("app.group_planner.resolve_planner_provider", lambda *args, **kwargs: DisabledPlannerProvider())
@@ -234,7 +249,7 @@ def test_planner_required_group_never_persists_rule_fallback(db, monkeypatch, un
         def fail(payload):
             raise PlannerProviderError(code="TEST_UNAVAILABLE", summary="Explicit failure")
         native_provider(db, monkeypatch, callback=fail)
-    tasks = plan(db, "@frontend @qa change demo app title to Hello and add a phone input field")
+    tasks = plan(db, content)
     assert tasks == [] and db.exec(select(Task)).all() == []
     assert db.exec(select(TaskRun)).all() == []
     user = db.exec(select(Message).where(Message.sender_type == "user")).one()

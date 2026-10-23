@@ -5,10 +5,13 @@ import statistics
 import sys
 
 
-def cohort(source_policy, *, development_head, adapter, qa_adapter, scenarios, repetitions, max_retries):
+def cohort(source_policy, *, development_head, adapter, qa_adapter, scenarios, repetitions, max_retries,
+           repair_contract_failures=False):
     identity = {"developmentHead": development_head, "sourcePolicy": source_policy,
         "codingAdapter": adapter, "qaAdapter": qa_adapter, "python": sys.version,
         "selectedScenarios": scenarios, "repetitions": repetitions, "maxRetriesPerTask": max_retries}
+    if repair_contract_failures:
+        identity['repairContractFailures'] = True
     fingerprint = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return {"id": fingerprint, "status": "frozen", "identity": identity,
         "limits": "Same implementation/input policy, not a model-version guarantee; fixed scenario repetitions are not distinct business tasks."}
@@ -33,7 +36,8 @@ def elapsed_stats(values):
 
 
 def role_stats(cases):
-    attempts = [attempt for case in cases for phase in case.get("phases", []) for attempt in phase.get("attempts", [])]
+    attempts = [attempt for case in cases for phase in [*case.get("phases", []), *case.get("repairPhases", [])]
+                for attempt in phase.get("attempts", [])]
     result = {}
     for name, roles in (("coding", {"frontend", "backend"}), ("qa", {"qa", "review"})):
         selected = [attempt for attempt in attempts if attempt.get("role") in roles]

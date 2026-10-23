@@ -11,14 +11,23 @@ import { chromium } from "playwright"
 const output = resolve(process.env.AGENTHUB_VALIDATION_OUTPUT)
 const origin = "http://agenthub-workflow.invalid"
 const contract = process.env.AGENTHUB_CONTACTS_CONTRACT ?? "contacts-create-v1"
-const resilience = contract === "contacts-resilience-v2"
+const boundaries = contract === "contacts-boundaries-v3"
+const resilience = contract === "contacts-resilience-v2" || boundaries
+const labels = boundaries ? { list: "联系人列表", name: "姓名", email: "邮箱", submit: "新增联系人" }
+  : { list: "Contacts", name: "Name", email: "Email", submit: "Create contact" }
 const checks = [], requests = [], pending = new Map()
-let browser, child, closed, unavailable = false, browserVersion, id = 0, outputBytes = 0
+let browser, child, closed, unavailable = false, browserVersion, id = 0, outputBytes = 0, missingUi = false
 let readyResolve, readyReject
 const ready = new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject })
 let stderr = ""
 async function check(id, operation) {
-  try { await operation(); checks.push({ id, status: "passed" }) }
+  try {
+    if (boundaries && missingUi && !id.startsWith("api.")
+        && !/\.(initial|layout|runtime|same_local_distinct_domain|case_insensitive_duplicate)$/.test(id)) {
+      throw new Error("Required Chinese contacts form/list controls are missing")
+    }
+    await operation(); checks.push({ id, status: "passed" })
+  }
   catch (error) { checks.push({ id, status: "failed", detail: String(error.message).slice(0, 400) }) }
 }
 function request(method, path, body) {
@@ -30,7 +39,7 @@ function request(method, path, body) {
   })
 }
 try {
-  assert.ok(["contacts-create-v1", "contacts-resilience-v2"].includes(contract))
+  assert.ok(["contacts-create-v1", "contacts-resilience-v2", "contacts-boundaries-v3"].includes(contract))
   const channel = process.env.AGENTHUB_VALIDATION_BROWSER_CHANNEL ?? (process.platform === "win32" ? "msedge" : "chromium")
   assert.ok(["msedge", "chrome", "chromium"].includes(channel))
   child = spawn(process.env.AGENTHUB_WORKFLOW_PYTHON, ["-I", "-B", fileURLToPath(new URL("./workflow-api-bridge.py", import.meta.url)),
@@ -60,9 +69,10 @@ try {
     ...(channel === "chromium" ? {} : { channel }) })
   browserVersion = browser.version()
   for (const [view, width] of [["desktop", 1280], ["narrow", 390]]) {
+    missingUi = false
     const context = await browser.newContext({ viewport: { width, height: 850 }, serviceWorkers: "block", acceptDownloads: false, permissions: [] })
     const errors = [], activity = []
-    let failNextPost = false
+    let failNextPost = false, failNextGet = false
     let blocked = 0
     await context.route("**/*", async route => {
       try {
@@ -73,11 +83,14 @@ try {
           assert.ok(requests.length + pending.size < 128, "Workflow API request budget exceeded")
           const injected = req.method() === "POST" && failNextPost
           if (injected) failNextPost = false
-          const result = injected ? { status: 503, body: { detail: "Temporary evaluation failure" } }
+          const injectedGet = req.method() === "GET" && failNextGet
+          if (injectedGet) failNextGet = false
+          const result = (injected || injectedGet) ? { status: 503, body: { detail: "Temporary evaluation failure" } }
             : await request(req.method(), "/contacts", req.method() === "POST" ? req.postDataJSON() : undefined)
           assert.ok(Number.isInteger(result.status))
           activity.push({ method: req.method(), status: result.status, body: result.body })
-          requests.push({ view, method: req.method(), status: result.status, ...(injected ? { injected: "fixed_503" } : {}) })
+          requests.push({ view, method: req.method(), status: result.status, ...(injected ? { injected: "fixed_503" } : {}),
+            ...(injectedGet ? { injected: "fixed_get_503" } : {}) })
           return await route.fulfill({ status: result.status, contentType: "application/json", body: JSON.stringify(result.body) })
         }
         assert.equal(req.method(), "GET")
@@ -106,7 +119,7 @@ try {
     page.on("dialog", dialog => { blocked++; void dialog.dismiss() })
     try {
       await page.goto(origin, { waitUntil: "load", timeout: 10000 })
-      const list = page.getByRole("list", { name: "Contacts", exact: true })
+      const list = page.getByRole("list", { name: labels.list, exact: true })
       let initial
       await check(`${view}.initial`, async () => {
         await list.getByText("Ada Lovelace", { exact: true }).waitFor()
@@ -115,13 +128,18 @@ try {
         for (const contact of initial) assert.ok(await list.getByText(contact.name, { exact: true }).isVisible())
         assert.equal(await list.getByRole("listitem").count(), initial.length)
       })
-      const name = `Workflow ${randomUUID().slice(0, 8)}`, email = `${randomUUID()}@example.invalid`
-      const submit = page.getByRole("button", { name: "Create contact", exact: true })
-      const nameInput = page.getByLabel("Name", { exact: true }), emailInput = page.getByLabel("Email", { exact: true })
+      const name = `${boundaries ? "测试联系人" : "Workflow "}${randomUUID().slice(0, 8)}`, email = `${randomUUID()}@example.invalid`
+      const submit = page.getByRole("button", { name: labels.submit, exact: true })
+      const nameInput = page.getByLabel(labels.name, { exact: true }), emailInput = page.getByLabel(labels.email, { exact: true })
+      // The initial check already allowed mounting/fetching. A wholly missing
+      // interface must produce complete business failures within the fixed
+      // command budget, rather than repeating the same locator timeout.
+      if (boundaries) missingUi = (await list.count()) !== 1 || (await submit.count()) !== 1
+        || (await nameInput.count()) !== 1 || (await emailInput.count()) !== 1
       await check(`${view}.create`, async () => {
-        await page.getByLabel("Name", { exact: true }).fill(name)
-        await page.getByLabel("Email", { exact: true }).fill(email)
-        await page.getByRole("button", { name: "Create contact", exact: true }).click()
+        await nameInput.fill(name)
+        await emailInput.fill(email)
+        await submit.click()
         await list.getByText(name, { exact: true }).waitFor()
         const created = activity.find(r => r.method === "POST" && r.status === 201)?.body
         assert.equal(created?.name, name); assert.equal(created?.email, email)
@@ -133,6 +151,7 @@ try {
           const alert = page.getByRole("alert").first()
           await alert.waitFor({ state: "visible" })
           assert.ok((await alert.innerText()).trim())
+          if (boundaries) assert.match(await alert.innerText(), /[\u3400-\u9fff]/, "API rejection needs Chinese guidance")
           assert.equal(await nameInput.inputValue(), expectedName)
           assert.equal(await emailInput.inputValue(), expectedEmail)
           assert.equal(await list.getByRole("listitem").count(), count)
@@ -198,9 +217,78 @@ try {
           assert.equal(await list.getByRole("listitem").count(), initial.length + 2)
         }
       })
+      if (boundaries) {
+        await check(`${view}.same_local_distinct_domain`, async () => {
+          const before = (await request("GET", "/contacts")).body
+          const existing = before[0], other = existing.email.split("@")[0] + "@" + randomUUID() + ".example.invalid"
+          const created = await request("POST", "/contacts", { name: "不同域名联系人", email: other })
+          assert.equal(created.status, 201, "Different domains identify different contacts")
+          assert.ok((await request("GET", "/contacts")).body.some(c => c.email === other))
+        })
+        await check(`${view}.case_insensitive_duplicate`, async () => {
+          const before = (await request("GET", "/contacts")).body
+          const duplicate = await request("POST", "/contacts", { name: "重复邮箱联系人", email: before[0].email.toUpperCase() })
+          assert.equal(duplicate.status, 409, "Full email identity must ignore case")
+          assert.deepEqual((await request("GET", "/contacts")).body, before, "Duplicate changed stored contacts")
+        })
+        await check(`${view}.saved_refresh_failure`, async () => {
+          // A missing form is a business failure, not unavailable transport.
+          // Keep synchronization inside the recorded check as well.
+          await page.reload({ waitUntil: "load" })
+          await list.getByText(name, { exact: true }).waitFor()
+          const savedName = `已保存联系人${randomUUID().slice(0, 8)}`, savedEmail = `${randomUUID()}@example.invalid`
+          await nameInput.fill(savedName); await emailInput.fill(savedEmail)
+          const start = activity.length
+          failNextGet = true
+          try {
+            await submit.click()
+            await list.getByText(savedName, { exact: true }).waitFor()
+            assert.equal(await nameInput.inputValue(), ""); assert.equal(await emailInput.inputValue(), "")
+            assert.equal(activity.slice(start).filter(r => r.method === "POST").length, 1)
+            assert.ok(activity.slice(start).some(r => r.method === "POST" && r.status === 201 && r.body?.name === savedName))
+            assert.ok(activity.slice(start).some(r => r.method === "GET" && r.status === 503))
+            const notice = page.getByRole("status").filter({ hasText: /已保存|已创建/ }).first()
+            await notice.waitFor({ state: "visible" })
+            assert.match(await notice.innerText(), /刷新.*(?:失败|未成功|不可用)|(?:无法|未能).*刷新/)
+            assert.doesNotMatch(await notice.innerText(), /(?:保存|创建)(?:操作)?(?:失败|未成功)/)
+            assert.doesNotMatch(await notice.getAttribute("class") ?? "", /\b(?:form-error|error|danger|destructive)\b/)
+            assert.ok((await page.getByRole("alert").allTextContents()).every(text => !text.trim()))
+            await page.reload({ waitUntil: "load" })
+            await list.getByText(savedName, { exact: true }).waitFor()
+            assert.ok((await request("GET", "/contacts")).body.some(c => c.name === savedName && c.email === savedEmail))
+          } finally { failNextGet = false }
+        })
+        await check(`${view}.whitespace_name`, async () => {
+          await nameInput.fill("   "); await emailInput.fill(`${randomUUID()}@example.invalid`)
+          const start = activity.length
+          const before = (await request("GET", "/contacts")).body
+          await submit.click()
+          const alert = page.getByRole("alert").first()
+          await alert.waitFor({ state: "visible" })
+          assert.match(await alert.innerText(), /姓名/)
+          assert.match(await alert.innerText(), /必填|为空|空白|填写|输入|有效/)
+          assert.equal(activity.slice(start).filter(r => r.method === "POST").length, 0, "Whitespace name must be blocked before POST")
+          assert.deepEqual((await request("GET", "/contacts")).body, before)
+          const validName = `空白校验后恢复${randomUUID().slice(0, 8)}`
+          await nameInput.fill(validName); await submit.click()
+          await list.getByText(validName, { exact: true }).waitFor()
+          assert.ok((await page.getByRole("alert").allTextContents()).every(text => !text.trim()))
+        })
+      }
       await check(`${view}.layout`, async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)))
       await check(`${view}.runtime`, async () => { assert.equal(errors.length, 0, errors.join("; ")); assert.equal(blocked, 0) })
     } finally { await context.close() }
+  }
+  // Invalid direct API writes run last: a defective backend must not poison
+  // the next viewport and turn one defect into unrelated UI failures.
+  if (boundaries) for (const [label, invalidName] of [["ascii", "   "], ["unicode", "\t\u3000"]]) {
+    await check(`api.whitespace_${label}`, async () => {
+      const before = (await request("GET", "/contacts")).body
+      const invalid = await request("POST", "/contacts", { name: invalidName, email: `${randomUUID()}@example.invalid` })
+      requests.push({ view: "api", method: "POST", status: invalid.status, contract: `whitespace_${label}` })
+      assert.equal(invalid.status, 422, "Backend must independently reject whitespace names")
+      assert.deepEqual((await request("GET", "/contacts")).body, before, "Invalid name changed stored contacts")
+    })
   }
 } catch { unavailable = true }
 finally {
@@ -214,7 +302,7 @@ finally {
     }
   }
 }
-const status = unavailable ? "unavailable" : checks.length === (resilience ? 18 : 10) && checks.every(c => c.status === "passed") ? "passed" : "failed"
-console.log(JSON.stringify({ schemaVersion: resilience ? "agenthub.workflow_contacts.v2" : "agenthub.workflow_contacts.v1", contract, status, checks, browserVersion, requests,
+const status = unavailable ? "unavailable" : checks.length === (boundaries ? 28 : resilience ? 18 : 10) && checks.every(c => c.status === "passed") ? "passed" : "failed"
+console.log(JSON.stringify({ schemaVersion: boundaries ? "agenthub.workflow_contacts.v3" : resilience ? "agenthub.workflow_contacts.v2" : "agenthub.workflow_contacts.v1", contract, status, checks, browserVersion, requests,
   diagnosticCode: unavailable ? "workflow_transport_or_browser_unavailable" : null }))
 process.exitCode = status === "passed" ? 0 : status === "unavailable" ? 2 : 1
