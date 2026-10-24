@@ -487,7 +487,7 @@ export function WorkspaceShell({
       } }}>
     <CodeQuoteContext.Provider key={selectedSessionId} value={handleQuoteCode}>
     <section className="h-dvh overflow-hidden bg-white" data-region="app-shell">
-      <WorkbenchLayout inspectorCollapsed={inspectorCollapsed} inspectorExpanded={inspectorExpanded} className={`workbench-layout h-full min-h-0 ${inspectorExpanded ? "inspector-expanded" : ""} ${inspectorOpen ? "inspector-open" : ""} ${sidebarOpen ? "sidebar-open" : ""} ${inspectorCollapsed ? "inspector-collapsed" : ""}`}>
+      <WorkbenchLayout onCollapseInspector={inspector.close} inspectorCollapsed={inspectorCollapsed} inspectorExpanded={inspectorExpanded} className={`workbench-layout h-full min-h-0 ${inspectorExpanded ? "inspector-expanded" : ""} ${inspectorOpen ? "inspector-open" : ""} ${sidebarOpen ? "sidebar-open" : ""} ${inspectorCollapsed ? "inspector-collapsed" : ""}`}>
         <div className="workbench-sidebar min-h-0" hidden={inspectorExpanded}>
           <SessionSidebar onClose={() => setSidebarOpen(false)} agents={initialAgents} isPending={isPending} onCreateSession={handleCreateSession} onSelectSession={selectSession}
             onOrganizeSession={handleOrganizeSession}

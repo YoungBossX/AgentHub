@@ -23,6 +23,7 @@
   --focus-inner: #b5b5ab;
   --focus-outer: #e2e2db;
   --weight-offset: 0;
+  --control-radius: 8px;
   --code-bg: #20201e;
   --code-text: #e2e8f0;
   --code-muted: #94a3b8;
@@ -179,19 +180,40 @@ button:not(:disabled), summary { cursor: pointer; }
   box-shadow: 0 0 0 1px var(--focus-inner), 0 0 0 4px var(--focus-outer);
 }
 .search-field:focus-within, .composer-surface:focus-within {
-  box-shadow: 0 0 0 1px var(--focus-inner), 0 0 0 4px var(--focus-outer);
+  box-shadow: inset 0 0 0 1px var(--focus-inner), inset 0 0 0 4px var(--focus-outer);
 }
-.search-field input:focus, .composer-surface textarea:focus { box-shadow: none; }
+.search-field:focus-within input:focus, .composer-surface:focus-within textarea:focus { box-shadow: none; }
 .composer-surface {
+  --surface-padding: 16px;
   border: 0;
-  border-radius: 18px;
+  border-radius: calc(var(--control-radius) + var(--surface-padding));
   background: var(--surface-muted);
-  padding: 16px;
+  padding: var(--surface-padding);
   box-shadow: 0 3px 18px rgb(30 30 25 / .025);
   transition: box-shadow 160ms ease;
 }
 .composer-surface textarea { padding: 0 4px; min-height: 64px; }
 .composer-toolbar { padding-top: 8px; }
+
+/* A surface owns the outline; its child actions use fill and hover feedback. */
+.chat-outline { border: 0; box-shadow: inset 0 0 0 1px var(--border-strong); }
+.composer-context { --surface-padding: 12px; padding: var(--surface-padding); }
+.composer-attachments { --surface-padding: 8px; padding: var(--surface-padding); }
+.message-attachment, .diff-surface { --surface-padding: 12px; }
+:is(.composer-context, .composer-attachments, .message-attachment, .diff-surface) {
+  border-radius: calc(var(--control-radius) + var(--surface-padding));
+}
+.workbench-layout button {
+  border: 0;
+  --tw-ring-shadow: 0 0 transparent;
+  --tw-ring-offset-shadow: 0 0 transparent;
+}
+.workbench-layout button:not(:disabled):not([class^="bg-"]):not([class*=" bg-"]):hover { background-color: var(--surface-raised); }
+.workbench-layout .new-message-notice:hover { background-color: color-mix(in srgb, var(--foreground) 92%, var(--surface)); }
+.workbench-layout :is(button, a, [tabindex]):focus-visible { box-shadow: inset 0 0 0 2px var(--focus-inner); }
+.file-name { display: inline-flex; max-width: 100%; min-width: 0; vertical-align: bottom; }
+.filename-prefix { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.filename-suffix { flex: 0 0 auto; max-width: 100%; overflow-wrap: anywhere; }
 
 .disclosure-trigger { display: flex; align-items: center; gap: 7px; width: 100%; text-align: start; }
 .disclosure-chevron { flex-shrink: 0; transition: transform 200ms cubic-bezier(.215,.61,.355,1); }
@@ -240,7 +262,7 @@ button:not(:disabled), summary { cursor: pointer; }
 .is-resizing .workbench-resizer > span { background: var(--primary); transform: scaleY(1.2); }
 .workbench-resizer:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--focus-inner); }
 .workbench-layout.is-resizing { user-select: none; }
-.workbench-drag-shield { position: fixed; inset: 0; z-index: 50; cursor: col-resize; }
+.workbench-drag-shield { position: fixed; inset: 0; z-index: 50; cursor: col-resize; background: transparent; }
 @media (max-width: 1199px) { .workbench-resizer { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -251,4 +273,5 @@ button:not(:disabled), summary { cursor: pointer; }
 @media (forced-colors: active) {
   :is(button, a, summary, [tabindex], input, textarea, select):focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
   .composer-surface, .search-field { border: 1px solid CanvasText; }
+  .chat-outline { outline: 1px solid CanvasText; outline-offset: -1px; }
 }

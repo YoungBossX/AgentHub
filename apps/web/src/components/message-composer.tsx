@@ -4,6 +4,7 @@ import { useRef, useState, type Ref, type FormEvent, type ReactNode } from "reac
 import { ArrowDown, ArrowUp, FileText, MessageSquare, Paperclip, Send, X } from "lucide-react"
 import type { DraftAttachment } from "./use-message-attachments"
 import { attachmentReadLabel } from "./message-attachments"
+import { FileName } from "./file-name"
 
 import { Button } from "@/components/ui/button"
 import type { ArtifactPanelItem } from "@/components/preview-card"
@@ -55,20 +56,21 @@ export function MessageComposer({
 }: MessageComposerProps) {
   const hasContext = contextItems.length > 0
   const fileInput = useRef<HTMLInputElement>(null)
+  const composition = useRef({ active: false, endedAt: -Infinity })
   const [attachmentNotice, setAttachmentNotice] = useState("")
 
   return (
     <div className="mx-auto grid min-w-0 w-full max-w-3xl shrink-0 grid-cols-1 gap-2">
       {skillSelector}
-      {attachments.length ? <ul className="grid max-h-44 gap-1 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2" aria-label="待发送附件">
-        {attachments.map((item) => <li key={item.key} className="flex min-w-0 items-start gap-2 rounded bg-[var(--surface-muted)] p-2 text-xs">
+      {attachments.length ? <ul className="chat-outline composer-attachments grid max-h-44 gap-1 overflow-y-auto bg-[var(--surface)]" aria-label="待发送附件">
+        {attachments.map((item) => <li key={item.key} className="flex min-w-0 items-start gap-2 rounded-lg bg-[var(--surface-muted)] p-2 text-xs">
           <FileText size={15} className="shrink-0 text-[var(--primary)]" />
-          <div className="min-w-0 flex-1"><p className="truncate font-medium">{item.filename}</p><p role={item.state === "error" ? "alert" : "status"} className="mt-1 text-[10px] text-[var(--muted-foreground)]">{item.state === "uploading" ? "正在上传并校验…" : item.state === "removing" ? "正在移除…" : item.error ?? (item.attachment ? attachmentReadLabel(item.attachment) : "上传失败")}</p></div>
+          <div className="min-w-0 flex-1"><p className="font-medium"><FileName path={item.filename} /></p><p role={item.state === "error" ? "alert" : "status"} className="mt-1 text-[10px] text-[var(--muted-foreground)]">{item.state === "uploading" ? "正在上传并校验…" : item.state === "removing" ? "正在移除…" : item.error ?? (item.attachment ? attachmentReadLabel(item.attachment) : "上传失败")}</p></div>
           <button type="button" aria-label={`移除附件 ${item.filename}`} disabled={isPending || item.state === "uploading" || item.state === "removing"} onClick={() => onRemoveAttachment?.(item.key)} className="rounded p-1 disabled:opacity-30"><X size={14} /></button>
         </li>)}
       </ul> : null}
       {hasContext ? (
-        <div className="grid gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-xs shadow-sm">
+        <div className="chat-outline composer-context grid gap-2 bg-white text-xs">
           <div className="flex items-center justify-between gap-2">
             <span className="font-semibold text-[var(--primary)]">待发送上下文</span>
             <button
@@ -84,7 +86,7 @@ export function MessageComposer({
           <ol className="grid gap-2">
             {contextItems.map((item, index) => (
               <li
-                className="flex min-w-0 items-start gap-2 rounded-md bg-[var(--surface-muted)] px-2.5 py-2"
+                className="flex min-w-0 items-start gap-2 rounded-lg bg-[var(--surface-muted)] px-2.5 py-2"
                 key={item.id}
               >
                 {item.kind === "message" ? (
@@ -113,7 +115,7 @@ export function MessageComposer({
                 <div className="flex shrink-0 items-center gap-1">
                   <button
                     aria-label={`上移上下文 ${item.title}`}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:opacity-40"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
                     disabled={index === 0}
                     onClick={() => onMoveContextItem(item.id, "up")}
                     type="button"
@@ -122,7 +124,7 @@ export function MessageComposer({
                   </button>
                   <button
                     aria-label={`下移上下文 ${item.title}`}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:opacity-40"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
                     disabled={index === contextItems.length - 1}
                     onClick={() => onMoveContextItem(item.id, "down")}
                     type="button"
@@ -131,7 +133,7 @@ export function MessageComposer({
                   </button>
                   <button
                     aria-label={`移除上下文 ${item.title}`}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-50"
                     onClick={() => onRemoveContextItem(item.id)}
                     type="button"
                   >
@@ -153,7 +155,15 @@ export function MessageComposer({
           aria-label="消息"
           rows={2}
           className="min-h-14 min-w-0 w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 outline-none placeholder:text-[var(--muted-foreground)]"
-          onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isPending && !attachmentsBlocked && draft.trim()) event.currentTarget.form?.requestSubmit() } }}
+          onCompositionStart={() => { composition.current.active = true }}
+          onCompositionEnd={() => { composition.current = { active: false, endedAt: Date.now() } }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey) return
+            if (composition.current.active || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
+            event.preventDefault()
+            if (Date.now() - composition.current.endedAt < 500) return
+            if (!isPending && !attachmentsBlocked && draft.trim()) event.currentTarget.form?.requestSubmit()
+          }}
           onChange={(event) => onDraftChange(event.target.value)}
           placeholder="@orchestrator 为演示应用构建登录页"
           value={draft}

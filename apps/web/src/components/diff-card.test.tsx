@@ -47,7 +47,7 @@ describe("DiffCard", () => {
     expect(screen.getByText(/1 个文件变更/)).toBeTruthy()
     expect(screen.getByText(/\+2/)).toBeTruthy()
     expect(screen.getByText(/-1/)).toBeTruthy()
-    expect(screen.getByText("apps/demo/src/App.tsx")).toBeTruthy()
+    expect(screen.getByTitle("apps/demo/src/App.tsx")).toBeTruthy()
     expect(screen.queryByTestId("monaco-diff-editor")).toBeNull()
 
     fireEvent.click(screen.getByRole("button", { name: "展开 Diff" }))

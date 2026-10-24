@@ -12,7 +12,7 @@ import { sampleDeploymentArtifact } from "./__fixtures__/sample-deployment"
 import type { ArtifactPanelItem } from "@/components/preview-card"
 import type { ChatMessage } from "@/lib/api"
 
-afterEach(() => cleanup())
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
 
 const contextMessage: ChatMessage = {
   contentMd: "请基于这个登录需求继续完善。",
@@ -99,6 +99,43 @@ const workbenchContextArtifact: ArtifactPanelItem = {
 }
 
 describe("MessageComposer", () => {
+  function input() {
+    const submit = vi.fn((event: React.FormEvent) => event.preventDefault())
+    render(<MessageComposer contextItems={[]} draft="中文任务" isPending={false}
+      onClearContext={vi.fn()} onDraftChange={vi.fn()} onMoveContextItem={vi.fn()}
+      onRemoveContextItem={vi.fn()} onSubmit={submit} />)
+    vi.spyOn(HTMLFormElement.prototype, "requestSubmit").mockImplementation(function (this: HTMLFormElement) {
+      this.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    })
+    return { textbox: screen.getByRole("textbox", { name: "消息" }), submit }
+  }
+
+  it("blocks Enter through IME confirmation and the full 500ms guard interval", () => {
+    vi.useFakeTimers()
+    const { textbox, submit } = input()
+    fireEvent.compositionStart(textbox)
+    fireEvent.keyDown(textbox, { key: "Enter" })
+    expect(submit).not.toHaveBeenCalled()
+    fireEvent.compositionEnd(textbox)
+    fireEvent.keyDown(textbox, { key: "Enter" })
+    vi.advanceTimersByTime(499)
+    fireEvent.keyDown(textbox, { key: "Enter" })
+    expect(submit).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    fireEvent.keyDown(textbox, { key: "Enter" })
+    expect(submit).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([{ isComposing: true }, { keyCode: 229 }])("blocks native IME Enter %j", (native) => {
+    const { textbox, submit } = input()
+    fireEvent.keyDown(textbox, { key: "Enter", ...native })
+    expect(submit).not.toHaveBeenCalled()
+    fireEvent.keyDown(textbox, { key: "Enter", shiftKey: true })
+    expect(submit).not.toHaveBeenCalled()
+    fireEvent.keyDown(textbox, { key: "Enter" })
+    expect(submit).toHaveBeenCalledTimes(1)
+  })
+
   it("preserves quoted code and draft provenance in the outgoing context", () => {
     const text = "  const title = '选区';\n"
     const selected = contextItemFromCode(contextArtifact, "src/App.tsx", text)

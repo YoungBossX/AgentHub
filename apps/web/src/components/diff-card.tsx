@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, FileCode2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { LocalDiffEditor } from "./local-diff-editor"
 import { UserCodeEditor } from "./user-code-editor"
+import { FileName } from "./file-name"
 
 import { Button } from "./ui/button"
 import type { DiffArtifact } from "@/lib/api"
@@ -32,7 +33,7 @@ export function DiffCard({ diff }: DiffCardProps) {
   const filesChanged = diff.stats.filesChanged || diff.changedFiles.length
 
   return (
-    <article className="min-w-0 rounded-md border border-[var(--border)] bg-white p-3">
+    <article className="chat-outline diff-surface min-w-0 bg-white p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1 text-xs font-medium uppercase tracking-normal text-[var(--muted-foreground)]">
@@ -60,10 +61,10 @@ export function DiffCard({ diff }: DiffCardProps) {
       <ul className="mt-3 grid gap-1" aria-label="变更文件">
         {diff.changedFiles.map((file) => (
           <li
-            className="truncate rounded-sm border border-[var(--border)] bg-slate-50 px-2 py-1 text-xs"
+            className="min-w-0 rounded-lg bg-slate-50 px-2 py-1 text-xs"
             key={file}
           >
-            {file}
+            <FileName path={file} />
           </li>
         ))}
       </ul>
@@ -85,25 +86,25 @@ export function DiffCard({ diff }: DiffCardProps) {
               {parsedFiles.map((file) => (
                 <button
                   className={cn(
-                    "rounded-sm border px-2 py-1 text-xs",
+                    "min-w-0 max-w-full rounded-lg px-2 py-1 text-xs",
                     file.path === selectedFile?.path
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-[var(--border)] bg-white text-[var(--muted-foreground)]",
+                      ? "bg-blue-50 text-blue-700"
+                      : "bg-white text-[var(--muted-foreground)]",
                   )}
                   key={file.path}
                   onClick={() => setSelectedPath(file.path)}
                   type="button"
                 >
-                  {file.path}
+                  <FileName path={file.path} />
                 </button>
               ))}
             </div>
           ) : null}
 
           {selectedFile ? (
-            <div className="overflow-hidden rounded-md border border-[var(--border)]">
+            <div className="overflow-hidden rounded-lg">
               <div className="border-b border-[var(--border)] bg-slate-50 px-3 py-2 text-xs font-medium">
-                {selectedFile.path}
+                <FileName path={selectedFile.path} />
                 <div className="mt-2 flex gap-2">
                   <button aria-pressed={!sideBySide} className="rounded border border-slate-200 bg-white px-2 py-1" onClick={() => setSideBySide(false)}>补丁</button>
                   <button aria-pressed={sideBySide} className="rounded border border-slate-200 bg-white px-2 py-1" onClick={() => setSideBySide(true)}>并排对比</button>

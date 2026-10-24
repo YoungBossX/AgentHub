@@ -65,7 +65,7 @@ try {
     })
     assert.equal(focus.outline, "none")
     assert.equal(focus.border, "0px")
-    assert(focus.shadow.includes("4px"), "Composer must have a visible outer focus ring")
+    assert(focus.shadow.includes("4px") && focus.shadow.includes("inset"), "Composer must have visible inset focus rings")
     await composer.blur()
     await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-region="composer"]')).boxShadow.endsWith(" 0px"))
     await page.screenshot({ path: resolve(output, `desktop-${theme}.png`) })

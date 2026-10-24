@@ -123,21 +123,21 @@ try {
   const before = (await position()).top
   count++
   await refresh()
-  await page.getByRole("button", { name: /1 条新消息 · 回到底部/ }).waitFor()
+  await page.getByRole("button", { name: /1 条新消息 · 跳至最新/ }).waitFor()
   assert(Math.abs((await position()).top - before) < 2, JSON.stringify({ before, after: await position(), stage: "append" }))
   append = "\n\n这是同一条消息追加的中文内容。"
   await refresh()
   await page.getByText("这是同一条消息追加的中文内容。", { exact: true }).waitFor()
-  assert.equal(await page.getByRole("button", { name: /1 条新消息 · 回到底部/ }).count(), 1)
+  assert.equal(await page.getByRole("button", { name: /1 条新消息 · 跳至最新/ }).count(), 1)
   assert(Math.abs((await position()).top - before) < 2, JSON.stringify({ before, after: await position(), stage: "same-message" }))
   await page.setViewportSize({ width: 1280, height: 900 })
   assert(Math.abs((await position()).top - before) < 2, JSON.stringify({ before, after: await position(), stage: "resize" }))
-  await page.getByRole("button", { name: /回到底部/ }).click()
+  await page.getByRole("button", { name: /跳至最新/ }).click()
   await bottom()
   count++; await refresh()
   await page.locator(`#message-${message(count - 1).id}`).waitFor()
   await bottom()
-  assert.equal(await page.getByRole("button", { name: /回到底部/ }).count(), 0)
+  assert.equal(await page.getByRole("button", { name: /跳至最新/ }).count(), 0)
   results.push({ check: "upward-reading-counted-append-same-message-resize-bottom-follow", passed: true })
 
   await scrollTo(0)

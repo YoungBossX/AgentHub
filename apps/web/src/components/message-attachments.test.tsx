@@ -7,6 +7,33 @@ import { MessageComposer } from "./message-composer"
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const item: MessageAttachment = { id: "file-1", sessionId: "a", messageId: null, filename: "需求.txt", kind: "text", mediaType: "text/plain", byteSize: 20, sha256: "abc", extractionStatus: "ready", textTruncated: false, imageWidth: null, imageHeight: null, imageSha256: null, createdAt: "2026-10-09T00:00:00Z" }
+
+it.each(["这是非常长的中文需求文档文件名称与版本说明.tar.gz", "src/这是非常长的中文类型定义文件名称与版本说明.d.ts"])("retains full filename identity and complete compound suffix: %s", filename => {
+  render(<MessageAttachments backendUrl="http://localhost:8000" items={[{ ...item, filename }]} />)
+  const label = screen.getByTitle(filename)
+  expect(label.getAttribute("aria-label")).toBe(filename)
+  const suffix = label.querySelector(".filename-suffix")!
+  expect(suffix.textContent?.endsWith(filename.endsWith(".d.ts") ? ".d.ts" : ".tar.gz")).toBe(true)
+  expect(label.textContent).toBe(filename)
+  expect(screen.getByRole("link", { name: `下载 ${filename}` }).getAttribute("download")).toBe(filename)
+})
+
+it("keeps combining characters and a family emoji whole in filename tails", () => {
+  const tail = "e\u0301👨‍👩‍👧‍👦中文版本说明.txt"
+  const filename = "一个非常长的测试文件名称".repeat(3) + tail
+  render(<MessageAttachments backendUrl="http://localhost:8000" items={[{ ...item, filename }]} />)
+  const label = screen.getByTitle(filename)
+  expect(label.querySelector(".filename-suffix")?.textContent).toBe(tail)
+  expect(label.textContent).toBe(filename)
+})
+
+it("allows middle ellipsis for CJK names even below an arbitrary character count", () => {
+  const filename = "这是二十个中文文字组成的文件名资料.pdf"
+  render(<MessageAttachments backendUrl="http://localhost:8000" items={[{ ...item, filename }]} />)
+  const label = screen.getByTitle(filename)
+  expect(label.querySelector(".filename-prefix")).toBeTruthy()
+  expect(label.querySelector(".filename-suffix")?.textContent?.endsWith(".pdf")).toBe(true)
+})
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>((done) => { resolve = done }); return { promise, resolve } }
 const response = (value = item) => new Response(JSON.stringify(value), { status: 201 })
 

@@ -127,4 +127,80 @@ describe("resizable workbench", () => {
     expect(value("inspector")).toBe(436)
     expect(screen.getByText("成果")).toBeTruthy()
   })
+
+  it("double-clicks the result separator to equal halves even beyond the old maximum", () => {
+    containerWidth = 2000
+    render(layout())
+    fireEvent.doubleClick(separator("inspector"))
+    expect(value("inspector")).toBe((2000 - value("sidebar")) / 2)
+    expect(JSON.parse(localStorage.getItem(COLUMN_STORAGE_KEY)!).inspector).toBe(880)
+  })
+
+  it("restores a wide equal split from storage without discarding the preference", () => {
+    containerWidth = 2000
+    localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify({ sidebar: 240, inspector: 880 }))
+    render(layout())
+    expect(value("inspector")).toBe(880)
+  })
+
+  it("does not collapse at exactly 82 percent or persist a sub-minimum open width", () => {
+    containerWidth = 1420
+    const collapse = vi.fn()
+    render(<WorkbenchLayout className="workbench-layout" inspectorCollapsed={false} inspectorExpanded={false} onCollapseInspector={collapse}><main>对话</main><aside>成果</aside></WorkbenchLayout>)
+    fireEvent.pointerDown(separator("inspector"), pointer(1060))
+    fireEvent.pointerMove(separator("inspector"), pointer(1204))
+    fireEvent.pointerUp(separator("inspector"), pointer(1204))
+    expect(collapse).not.toHaveBeenCalled()
+    expect(JSON.parse(localStorage.getItem(COLUMN_STORAGE_KEY)!).inspector).toBe(280)
+  })
+
+  it("cancels a drag from global Escape and restores the original preference", () => {
+    render(layout())
+    fireEvent.pointerDown(separator("inspector"), pointer(1040))
+    fireEvent.pointerMove(separator("inspector"), pointer(940))
+    fireEvent.keyDown(window, { key: "Escape" })
+    expect(value("inspector")).toBe(360)
+    expect(localStorage.getItem(COLUMN_STORAGE_KEY)).toBeNull()
+  })
+
+  it("does not persist a keyboard adjustment inside a canceled pointer drag", () => {
+    render(layout())
+    fireEvent.pointerDown(separator("inspector"), pointer(1040))
+    fireEvent.pointerMove(separator("inspector"), pointer(1000))
+    fireEvent.keyDown(separator("inspector"), { key: "ArrowLeft" })
+    fireEvent.keyDown(window, { key: "Escape" })
+    expect(value("inspector")).toBe(360)
+    expect(localStorage.getItem(COLUMN_STORAGE_KEY)).toBeNull()
+  })
+
+  it("cancels on desktop container resize instead of collapsing from stale drag geometry", () => {
+    containerWidth = 2000
+    const collapse = vi.fn()
+    const { container } = render(<WorkbenchLayout className="workbench-layout" inspectorCollapsed={false} inspectorExpanded={false} onCollapseInspector={collapse}><main>对话</main><aside>成果</aside></WorkbenchLayout>)
+    fireEvent.pointerDown(separator("inspector"), pointer(1580))
+    fireEvent.pointerMove(separator("inspector"), pointer(1700))
+    containerWidth = 1400
+    fireEvent.resize(window)
+    expect(container.querySelector(".workbench-drag-shield")).toBeNull()
+    fireEvent.pointerUp(separator("inspector"), pointer(1700))
+    expect(collapse).not.toHaveBeenCalled()
+    expect(localStorage.getItem(COLUMN_STORAGE_KEY)).toBeNull()
+  })
+
+  it("defers collapse until release beyond 82 percent and keeps a usable reopen width", () => {
+    const collapse = vi.fn()
+    render(<WorkbenchLayout className="workbench-layout" inspectorCollapsed={false} inspectorExpanded={false} onCollapseInspector={collapse}><main>对话</main><aside>成果</aside></WorkbenchLayout>)
+    fireEvent.pointerDown(separator("inspector"), pointer(1040))
+    fireEvent.pointerMove(separator("inspector"), pointer(1200))
+    expect(value("inspector")).toBe(200)
+    expect(collapse).not.toHaveBeenCalled()
+    fireEvent.keyDown(window, { key: "Escape" })
+    expect(value("inspector")).toBe(360)
+    expect(collapse).not.toHaveBeenCalled()
+    fireEvent.pointerDown(separator("inspector"), pointer(1040))
+    fireEvent.pointerMove(separator("inspector"), pointer(1200))
+    fireEvent.pointerUp(separator("inspector"), pointer(1200))
+    expect(collapse).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(localStorage.getItem(COLUMN_STORAGE_KEY)!).inspector).toBe(360)
+  })
 })

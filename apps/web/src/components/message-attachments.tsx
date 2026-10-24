@@ -1,6 +1,7 @@
 "use client"
 
 import { Disclosure } from "./disclosure"
+import { FileName } from "./file-name"
 
 import { Download, FileText } from "lucide-react"
 import { attachmentContentUrl, type MessageAttachment } from "@/lib/api"
@@ -13,7 +14,7 @@ export function attachmentReadLabel(item: MessageAttachment) {
 
 export function MessageAttachments({ items, backendUrl }: { items: MessageAttachment[]; backendUrl: string }) {
   return <ul className="mt-3 grid min-w-0 grid-cols-1 gap-2" aria-label="消息附件">
-    {items.map((item) => <li key={item.id} className="min-w-0 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+    {items.map((item) => <li key={item.id} className="chat-outline message-attachment min-w-0 overflow-hidden bg-[var(--surface)]">
       {item.kind === "image" ? <a href={attachmentContentUrl(backendUrl, item, true)} target="_blank" rel="noreferrer" aria-label={`预览 ${item.filename}`}>
         {/* Validated local raster endpoint; bypass Next remote image optimization. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -21,7 +22,7 @@ export function MessageAttachments({ items, backendUrl }: { items: MessageAttach
       </a> : null}
       <div className="flex min-w-0 items-start gap-2 p-3">
         <FileText size={16} className="mt-1 shrink-0 text-[var(--primary)]" aria-hidden="true" />
-        <div className="min-w-0 flex-1"><p className="break-all text-xs font-semibold">{item.filename}</p>
+        <div className="min-w-0 flex-1"><p className="text-xs font-semibold"><FileName path={item.filename} /></p>
           <p className="text-[10px] leading-4 text-[var(--muted-foreground)]">{Math.max(1, Math.ceil(item.byteSize / 1024))} KiB · {attachmentReadLabel(item)}</p>
           <Disclosure className="text-[10px] text-[var(--muted-foreground)]"  summary={<>文件来源</>}><p className="break-all">附件 {item.id}<br />SHA-256 {item.sha256}</p></Disclosure>
         </div>
