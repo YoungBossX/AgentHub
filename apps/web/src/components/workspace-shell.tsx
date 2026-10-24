@@ -4,6 +4,7 @@ import { CodeEditProvider } from "./user-code-edit-context"
 import { CodeQuoteContext, MAX_QUOTED_CODE_CHARS, type CodeQuote } from "./code-quote-context"
 
 import { selectComposerMention } from "./composer-mentions"
+import { useWorkbenchViewport } from "./use-workbench-viewport"
 import { useMessageAttachments } from "./use-message-attachments"
 import { useMessageHistory } from "./use-message-history"
 import { listMessagePage } from "@/lib/message-history-api"
@@ -112,6 +113,7 @@ export function WorkspaceShell({
   const [workbenchSessionId, setWorkbenchSessionId] = useState<string | null>(null)
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
   const composerRef = useRef<HTMLTextAreaElement>(null)
+  const viewportRef = useWorkbenchViewport()
   const [contextSessionId, setContextSessionId] = useState<string | null>(null)
   const [contextItems, setContextItems] = useState<ComposerContextItem[]>([])
   const [skillOverride, setSkillOverride] = useState<{ sessionId: string | null; ids: string[] | null }>({ sessionId: null, ids: null })
@@ -486,7 +488,7 @@ export function WorkspaceShell({
         else setSyncError("该产物暂未载入，请刷新会话的执行过程。")
       } }}>
     <CodeQuoteContext.Provider key={selectedSessionId} value={handleQuoteCode}>
-    <section className="h-dvh overflow-hidden bg-white" data-region="app-shell">
+    <section ref={viewportRef} className="workspace-viewport h-dvh overflow-hidden bg-white" data-region="app-shell">
       <WorkbenchLayout onCollapseInspector={inspector.close} inspectorCollapsed={inspectorCollapsed} inspectorExpanded={inspectorExpanded} className={`workbench-layout h-full min-h-0 ${inspectorExpanded ? "inspector-expanded" : ""} ${inspectorOpen ? "inspector-open" : ""} ${sidebarOpen ? "sidebar-open" : ""} ${inspectorCollapsed ? "inspector-collapsed" : ""}`}>
         <div className="workbench-sidebar min-h-0" hidden={inspectorExpanded}>
           <SessionSidebar onClose={() => setSidebarOpen(false)} agents={initialAgents} isPending={isPending} onCreateSession={handleCreateSession} onSelectSession={selectSession}
@@ -545,7 +547,7 @@ export function WorkspaceShell({
             </div>
             <div className="mx-auto max-w-3xl" hidden={view !== "results"}><SessionResults artifacts={artifactItems} tasks={visibleTasks} onSelect={selectArtifact} /></div>
           </ConversationScroll>
-          {selectedSession ? <div className="shrink-0 px-5 pb-4 pt-2">
+          {selectedSession ? <div className="composer-dock shrink-0 px-5 pb-4 pt-2">
               {repairDraft?.sessionId === selectedSessionId ? <div className="mx-auto mb-2 flex max-w-3xl flex-wrap items-center justify-between gap-2 rounded border border-[var(--border)] bg-[var(--surface-muted)] p-2 text-xs"><span>修复草稿 · 评审 {repairDraft.draft.selection.reviewArtifactId.slice(0, 8)} · {repairDraft.draft.selection.issueIds.length} 个问题 · 版本 {repairDraft.draft.selection.expectedFingerprint.slice(0, 12)} · 发送时核对源码</span><button type="button" onClick={() => setRepairDraft(null)}>取消修复绑定</button></div> : null}
               <MessageComposer
                 inputRef={composerRef}

@@ -78,7 +78,7 @@ export function ConversationScroll({ sessionId, active, loading, historical, mes
     reading.current.following = false
   }
   const visibleNotice = active && !historical && notice.key === sessionId && notice.distance > 120
-  return <div className="relative min-h-0 flex-1">
+  return <div className="relative min-h-0 flex-1 overflow-hidden">
     <div ref={root} className="h-full overflow-y-auto px-5 py-5" data-region="center-scroll" role="region" aria-label="对话消息" tabIndex={0}
       onWheelCapture={pauseFollowing} onTouchMoveCapture={pauseFollowing}
       onPointerDownCapture={event => { if (event.target === event.currentTarget) pauseFollowing() }}

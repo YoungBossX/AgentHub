@@ -26,28 +26,31 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { WorkbenchLayout } from "${source}/components/workbench-layout";
 import { MessageComposer } from "${source}/components/message-composer";
+import { WorkspaceHeader } from "${source}/components/workspace-shell-header";
 import { ConversationScroll } from "${source}/components/conversation-scroll";
 import { MessageAttachments } from "${source}/components/message-attachments";
 import { useInspectorState } from "${source}/components/use-inspector-state";
+import { useWorkbenchViewport } from "${source}/components/use-workbench-viewport";
 function Fixture() {
+  const viewport = useWorkbenchViewport();
+  const [epoch,setEpoch] = useState(0);
+  React.useEffect(()=>{window.__uiSwitchSession=()=>setEpoch(n=>n+1);return()=>{delete window.__uiSwitchSession}},[]);
   const [count,setCount] = useState(35), [draft,setDraft] = useState("中文输入与协作界面验收");
   const inspector = useInspectorState("fixture",false);
   const messages = Array.from({length:count},(_,i)=>({id:"interaction-"+i,contentMd:"第 "+(i+1)+" 条中文阅读验收消息"}));
-  return <><header style={{height:48,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px"}}>
-    <strong>AgentHub · 离线组件交互验收夹具</strong><span>
-    <button aria-label="切换成果面板" onClick={()=>inspector.toggleDesktop()}>成果面板</button>
-    <button aria-label="追加验收消息" onClick={()=>setCount(n=>n+1)}>追加消息</button></span></header>
+  return <section key={epoch} ref={viewport} className="workspace-viewport h-dvh flex flex-col" data-region="app-shell">
     <WorkbenchLayout className={"workbench-layout h-full min-h-0 "+(inspector.collapsed?"inspector-collapsed":"")}
       inspectorCollapsed={inspector.collapsed} inspectorExpanded={false} onCollapseInspector={inspector.close}>
-      <div className="workbench-sidebar"><aside style={{padding:16}}>协作 Agent<br/>前端 · 后端 · QA</aside></div>
+      <div className="workbench-sidebar"><aside style={{padding:16}}>协作 Agent<br/>前端 · 后端 · QA<br/><button aria-label="追加验收消息" onClick={()=>setCount(n=>n+1)}>追加验收消息</button></aside></div>
       <main className="workbench-main flex min-h-0 min-w-0 flex-col overflow-hidden bg-white">
+        <WorkspaceHeader conversationMode="group" onModeChange={()=>{}} selectedSessionTitle="离线组件交互验收夹具" taskCount={count} stages={[]} view="conversation" onViewChange={()=>{}} artifactCount={1} onToggleSidebar={()=>{}} onToggleInspector={inspector.toggleDesktop}/>
         <ConversationScroll sessionId="fixture" active loading={false} historical={false} messages={messages}>
           {messages.map((message,i)=><article id={"message-"+message.id} key={message.id} style={{padding:16,marginBottom:12,background:"var(--surface-muted)",borderRadius:12}}>
             <p>{message.contentMd}</p><p>这里验证阅读位置、滚动意图和文件展示，不代表真实模型任务。</p>
             {i===34?<MessageAttachments backendUrl="" items={[{id:"ui-file",sessionId:"fixture",filename:${JSON.stringify(filename)},kind:"text",byteSize:20,extractionStatus:"ready",sha256:"fixture"}]} />:null}
           </article>)}
         </ConversationScroll>
-        <div style={{padding:16}}><MessageComposer contextItems={[{id:"fixture-note",kind:"note",title:"上下文操作验收",summary:"验证容器层次与无边框操作按钮"}]} draft={draft} isPending={false} onAttach={()=>{}}
+        <div className="composer-dock shrink-0 px-5 pb-4 pt-2"><MessageComposer contextItems={[{id:"fixture-note",kind:"note",title:"上下文操作验收",summary:"验证容器层次与无边框操作按钮"}]} draft={draft} isPending={false} onAttach={()=>{}}
           onClearContext={()=>{}} onDraftChange={setDraft} onMoveContextItem={()=>{}} onRemoveContextItem={()=>{}}
           onSubmit={event=>{event.preventDefault();window.__uiSubmits=(window.__uiSubmits??0)+1;}} /></div>
       </main>
@@ -55,7 +58,7 @@ function Fixture() {
         <button aria-label="关闭产物" onClick={inspector.close}>关闭预览</button>
         <iframe title="拖拽输入隔离验收" style={{width:"100%",height:"80%",border:0}} srcDoc="<p>预览 iframe 验收夹具</p>" />
       </aside></div>
-    </WorkbenchLayout></>;
+    </WorkbenchLayout></section>;
 }
 createRoot(document.getElementById("root")).render(<Fixture/>);
 `)
@@ -78,7 +81,7 @@ assert(css.includes(".composer-surface"), "Build the current web app before brow
 await writeFile(resolve(fixture,"index.html"), `<!doctype html><html data-theme="light"><meta charset="utf-8">${cssLinks.join("")}<style>#root{height:100vh;display:flex;flex-direction:column}.workbench-layout{flex:1;height:auto}</style><body><div id="root"></div><script src="./bundle/fixture.js"></script></body></html>`)
 const browser = await chromium.launch({ channel: process.platform === "win32" ? "msedge" : "chrome", headless: true, chromiumSandbox: true })
 try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: "block", acceptDownloads: false })
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, hasTouch: true, serviceWorkers: "block", acceptDownloads: false })
   await context.route("**/*", route => {
     const request = route.request(), url = new URL(request.url())
     if (!request.url().startsWith(pathToFileURL(fixture).href) && url.protocol !== "about:") return route.abort()
@@ -104,6 +107,28 @@ try {
     await scroller.evaluate((el, distance) => { el.scrollTop = el.scrollHeight - el.clientHeight - distance; el.dispatchEvent(new Event("scroll")) }, distance)
     await settle()
   }
+
+  await composer.fill("短需求")
+  const inputHeight = () => composer.evaluate(el => el.getBoundingClientRect().height)
+  const shortHeight = await inputHeight()
+  await composer.fill("请核对中文任务拆解、文件修改范围与执行结果。\n".repeat(24))
+  const longInput = await composer.evaluate(el => ({ height: el.clientHeight, content: el.scrollHeight, overflow: getComputedStyle(el).overflowY }))
+  assert(longInput.height > shortHeight && longInput.height <= 240)
+  assert(longInput.content > longInput.height && longInput.overflow === "auto")
+  await composer.fill("")
+  assert.equal(await inputHeight(), shortHeight)
+  await composer.fill("这是用于验收输入框自适应宽度的中文需求，请保持选区与文字完整。".repeat(3))
+  const wideHeight = await inputHeight()
+  await composer.evaluate(el => el.setSelectionRange(2, 6))
+  await page.setViewportSize({width:390,height:844}); await settle()
+  assert(await inputHeight() > wideHeight)
+  assert.deepEqual(await composer.evaluate(el=>[el.selectionStart,el.selectionEnd]),[2,6])
+  for (const name of ["添加附件", "发送"]) {
+    const box = await page.getByRole("button",{name,exact:true}).boundingBox()
+    assert(box.width >= 44 && box.height >= 44)
+  }
+  results.push({check:"adaptive-input-grow-clear-width-selection-and-touch-targets",passed:true})
+  await page.setViewportSize({width:1440,height:1000}); await settle()
 
   await composer.fill("中文输入法边界验收")
   await composer.evaluate(el => {
@@ -227,6 +252,71 @@ try {
   assert.notEqual(await action.evaluate(el=>getComputedStyle(el).outlineStyle),"none")
   await page.emulateMedia({forcedColors:"none"})
   results.push({check:"forced-colors-keyboard-focus",passed:true})
+
+  const keyboardPage = await context.newPage()
+  keyboardPage.on("pageerror", error => errors.push(error.message))
+  await keyboardPage.setViewportSize({width:390,height:844})
+  await keyboardPage.addInitScript(() => {
+    class SimulatedViewport extends EventTarget {
+      height = 844; offsetTop = 0; scale = 1
+    }
+    window.__simulatedViewport = new SimulatedViewport()
+    Object.defineProperty(window,"visualViewport",{configurable:true,value:window.__simulatedViewport})
+  })
+  await keyboardPage.goto(pathToFileURL(resolve(fixture,"index.html")).href)
+  await keyboardPage.getByRole("textbox",{name:"消息",exact:true}).fill("长需求\n".repeat(24))
+  for (const theme of ["light","dark"]) {
+    await keyboardPage.evaluate(theme=>{
+      document.documentElement.dataset.theme=theme
+      Object.assign(window.__simulatedViewport,{height:360,offsetTop:24})
+      window.__simulatedViewport.dispatchEvent(new Event("resize"))
+    },theme)
+    await keyboardPage.getByRole("button",{name:"上下文与附件",exact:true}).waitFor()
+    await keyboardPage.waitForTimeout(280)
+    await keyboardPage.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+    const shell = await keyboardPage.locator('[data-region="app-shell"]').boundingBox()
+    const send = await keyboardPage.getByRole("button",{name:"发送",exact:true}).boundingBox()
+    assert.equal(Math.round(shell.height),360); assert.equal(Math.round(shell.y),24)
+    assert(send.y>=shell.y && send.y+send.height<=shell.y+shell.height,`Send must stay in simulated viewport: ${JSON.stringify({shell,send})}`)
+    const input = await keyboardPage.getByRole("textbox",{name:"消息",exact:true}).evaluate(el=>({height:el.clientHeight,content:el.scrollHeight}))
+    assert(input.content>input.height)
+    assert(await keyboardPage.locator("html").evaluate(el=>el.scrollWidth<=el.clientWidth))
+    await keyboardPage.screenshot({path:resolve(output,`390-${theme}-simulated-keyboard.png`)})
+    results.push({check:`simulated-keyboard-${theme}-bounded-input-and-visible-send`,passed:true})
+  }
+  const referenceToggle=keyboardPage.getByRole("button",{name:"上下文与附件",exact:true})
+  await referenceToggle.tap()
+  await keyboardPage.waitForTimeout(280)
+  const removeReference=keyboardPage.getByRole("button",{name:"移除上下文 上下文操作验收",exact:true})
+  await removeReference.scrollIntoViewIfNeeded()
+  assert(await referenceToggle.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}),"Message scroller must not intercept reference controls")
+  const referenceBox=await removeReference.boundingBox()
+  const visibleShell=await keyboardPage.locator('[data-region="app-shell"]').boundingBox()
+  assert(referenceBox.y>=visibleShell.y && referenceBox.y+referenceBox.height<=visibleShell.y+visibleShell.height)
+  await referenceToggle.tap()
+  await keyboardPage.waitForTimeout(280)
+  await keyboardPage.evaluate(()=>{
+    window.__oldShell=document.querySelector('[data-region="app-shell"]')
+    window.__uiSwitchSession()
+  })
+  await keyboardPage.waitForFunction(()=>window.__oldShell!==document.querySelector('[data-region="app-shell"]'))
+  await keyboardPage.evaluate(()=>{
+    Object.assign(window.__simulatedViewport,{height:320,offsetTop:18})
+    window.__simulatedViewport.dispatchEvent(new Event("resize"))
+  })
+  await keyboardPage.waitForFunction(()=>document.querySelector('[data-region="app-shell"]').style.getPropertyValue("--workspace-viewport-height")==="320px")
+  assert.equal(await keyboardPage.evaluate(()=>window.__oldShell.style.getPropertyValue("--workspace-viewport-height")),"")
+  const switchedShell=await keyboardPage.locator('[data-region="app-shell"]').boundingBox()
+  const switchedSend=await keyboardPage.getByRole("button",{name:"发送",exact:true}).boundingBox()
+  assert(switchedSend.y>=switchedShell.y && switchedSend.y+switchedSend.height<=switchedShell.y+switchedShell.height)
+  results.push({check:"short-viewport-reference-access-and-session-node-rebinding",passed:true})
+  await keyboardPage.evaluate(()=>{
+    window.__simulatedViewport.scale=2
+    window.__simulatedViewport.dispatchEvent(new Event("resize"))
+  })
+  assert.equal(await keyboardPage.locator('[data-region="app-shell"]').evaluate(el=>el.style.getPropertyValue("--workspace-viewport-height")),"")
+  await keyboardPage.close()
+  results.push({check:"simulated-pinch-zoom-preserves-browser-control",passed:true})
   assert.deepEqual(errors, []); assert.deepEqual(mutations, [])
   await writeFile(resolve(output, "result.json"), JSON.stringify({ evidence: "Actual components and production CSS, offline Edge fixture; no server, model tasks, full-workbench or OS IME candidate-window claim", results, errors, mutations }, null, 2))
   console.log(JSON.stringify({ checks: results.length, errors, mutations }))

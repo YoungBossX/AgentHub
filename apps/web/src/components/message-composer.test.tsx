@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { createRef } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -12,7 +13,93 @@ import { sampleDeploymentArtifact } from "./__fixtures__/sample-deployment"
 import type { ArtifactPanelItem } from "@/components/preview-card"
 import type { ChatMessage } from "@/lib/api"
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers() })
+
+describe("自适应消息输入", () => {
+  const props = { contextItems: [], draft: "中文需求", isPending: false,
+    onClearContext: vi.fn(), onDraftChange: vi.fn(), onMoveContextItem: vi.fn(),
+    onRemoveContextItem: vi.fn(), onSubmit: vi.fn() }
+
+  it("随恢复、粘贴与清空草稿增高和回缩，同时保留外部焦点引用", () => {
+    let contentHeight = 64
+    vi.spyOn(HTMLTextAreaElement.prototype, "scrollHeight", "get").mockImplementation(() => contentHeight)
+    const inputRef = createRef<HTMLTextAreaElement>()
+    const view = render(<MessageComposer {...props} inputRef={inputRef} />)
+    const textarea = screen.getByRole("textbox", { name: "消息" }) as HTMLTextAreaElement
+    expect(inputRef.current).toBe(textarea)
+    expect(textarea.style.height).toBe("64px")
+    contentHeight = 480
+    view.rerender(<MessageComposer {...props} draft={"长需求\n".repeat(20)} inputRef={inputRef} />)
+    expect(textarea.style.height).toBe("480px")
+    textarea.setSelectionRange(2, 4)
+    expect(textarea.selectionStart).toBe(2)
+    inputRef.current?.focus()
+    expect(document.activeElement).toBe(textarea)
+    contentHeight = 64
+    view.rerender(<MessageComposer {...props} draft="" inputRef={inputRef} />)
+    expect(textarea.style.height).toBe("64px")
+    view.unmount()
+    expect(inputRef.current).toBeNull()
+  })
+
+  it("宽度变化重新测量，单纯高度变化不形成观察循环，卸载时释放观察器", () => {
+    let contentHeight = 90
+    vi.spyOn(HTMLTextAreaElement.prototype, "scrollHeight", "get").mockImplementation(() => contentHeight)
+    let callback: ResizeObserverCallback = () => {}
+    const disconnect = vi.fn()
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(next: ResizeObserverCallback) { callback = next }
+      observe = vi.fn()
+      disconnect = disconnect
+    })
+    const view = render(<MessageComposer {...props} />)
+    const textarea = screen.getByRole("textbox", { name: "消息" }) as HTMLTextAreaElement
+    const resize = (width: number) => callback([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver)
+    contentHeight = 190
+    resize(240)
+    expect(textarea.style.height).toBe("190px")
+    contentHeight = 250
+    resize(240)
+    expect(textarea.style.height).toBe("190px")
+    resize(180)
+    expect(textarea.style.height).toBe("250px")
+    view.unmount()
+    expect(disconnect).toHaveBeenCalledOnce()
+  })
+
+  it("无 ResizeObserver 时仍支持窗口变化与回调引用", () => {
+    vi.stubGlobal("ResizeObserver", undefined)
+    let contentHeight = 70
+    vi.spyOn(HTMLTextAreaElement.prototype, "scrollHeight", "get").mockImplementation(() => contentHeight)
+    const inputRef = vi.fn()
+    const view = render(<MessageComposer {...props} inputRef={inputRef} />)
+    const textarea = screen.getByRole("textbox", { name: "消息" }) as HTMLTextAreaElement
+    expect(inputRef).toHaveBeenCalledWith(textarea)
+    contentHeight = 140
+    fireEvent(window, new Event("resize"))
+    expect(textarea.style.height).toBe("140px")
+    view.unmount()
+    expect(inputRef).toHaveBeenLastCalledWith(null)
+  })
+
+  it("短小屏幕用可展开摘要保留上下文，展开与收起不改变草稿或待发送内容", () => {
+    vi.stubGlobal("innerWidth", 390)
+    vi.stubGlobal("innerHeight", 360)
+    vi.stubGlobal("visualViewport", undefined)
+    const context = [{ id: "note", kind: "note" as const, title: "需要保留的引用", summary: "真实引用内容" }]
+    render(<MessageComposer {...props} contextItems={context} />)
+    const toggle = screen.getByRole("button", { name: "上下文与附件" })
+    expect(toggle.getAttribute("aria-expanded")).toBe("false")
+    expect(screen.queryByRole("button", { name: "移除上下文 需要保留的引用" })).toBeNull()
+    fireEvent.click(toggle)
+    expect(screen.getByRole("button", { name: "移除上下文 需要保留的引用" })).toBeTruthy()
+    expect(toggle.getAttribute("aria-expanded")).toBe("true")
+    fireEvent.click(toggle)
+    expect(screen.getByRole("textbox", { name: "消息" }).getAttribute("aria-label")).toBe("消息")
+    expect((screen.getByRole("textbox", { name: "消息" }) as HTMLTextAreaElement).value).toBe(props.draft)
+    expect(buildComposerMessageContext(context).contextItems).toHaveLength(1)
+  })
+})
 
 const contextMessage: ChatMessage = {
   contentMd: "请基于这个登录需求继续完善。",

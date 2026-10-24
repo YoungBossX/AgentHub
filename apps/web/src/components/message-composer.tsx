@@ -1,7 +1,8 @@
 "use client"
 
-import { useRef, useState, type Ref, type FormEvent, type ReactNode } from "react"
-import { ArrowDown, ArrowUp, FileText, MessageSquare, Paperclip, Send, X } from "lucide-react"
+import { useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref, type FormEvent, type ReactNode } from "react"
+import { ArrowDown, ArrowUp, ChevronRight, FileText, MessageSquare, Paperclip, Send, X } from "lucide-react"
+import { useCompactInput } from "./use-workbench-viewport"
 import type { DraftAttachment } from "./use-message-attachments"
 import { attachmentReadLabel } from "./message-attachments"
 import { FileName } from "./file-name"
@@ -56,11 +57,54 @@ export function MessageComposer({
 }: MessageComposerProps) {
   const hasContext = contextItems.length > 0
   const fileInput = useRef<HTMLInputElement>(null)
+  const textarea = useRef<HTMLTextAreaElement>(null)
   const composition = useRef({ active: false, endedAt: -Infinity })
   const [attachmentNotice, setAttachmentNotice] = useState("")
+  const compactInput = useCompactInput()
+  const [referencesExpanded, setReferencesExpanded] = useState(false)
+  const referencesId = useId()
+  const referencesOpen = !compactInput || referencesExpanded
+  useImperativeHandle(inputRef, () => textarea.current!, [])
+  const resizeInput = useCallback(() => {
+    const node = textarea.current
+    if (!node) return
+    node.style.height = "0px"
+    node.style.height = `${node.scrollHeight}px`
+  }, [])
+  useLayoutEffect(resizeInput, [draft, resizeInput])
+  useEffect(() => {
+    const node = textarea.current
+    if (!node) return
+    let width = node.clientWidth
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(([entry]) => {
+      if (!entry || entry.contentRect.width === width) return
+      width = entry.contentRect.width
+      resizeInput()
+    })
+    observer?.observe(node)
+    window.addEventListener("resize", resizeInput)
+    let active = true
+    document.fonts?.ready.then(() => { if (active) resizeInput() })
+    return () => {
+      active = false
+      observer?.disconnect()
+      window.removeEventListener("resize", resizeInput)
+    }
+  }, [resizeInput])
 
   return (
-    <div className="mx-auto grid min-w-0 w-full max-w-3xl shrink-0 grid-cols-1 gap-2">
+    <div className="composer-stack mx-auto flex min-h-0 min-w-0 w-full max-w-3xl flex-col gap-2" data-compact={compactInput} data-references-open={referencesOpen}>
+      {skillSelector || attachments.length > 0 || hasContext ? <div className="composer-references disclosure flex min-h-0 flex-col gap-2" data-open={referencesOpen}>
+      {compactInput ? <button type="button" aria-label="上下文与附件" aria-expanded={referencesOpen} aria-controls={referencesId}
+        className="disclosure-trigger composer-reference-toggle shrink-0 rounded-lg px-2 text-sm"
+        onClick={() => setReferencesExpanded(open => !open)}>
+        <ChevronRight aria-hidden="true" size={14} className="disclosure-chevron" />
+        <span>上下文与附件</span>
+        <span className="ml-auto text-xs text-[var(--muted-foreground)]">{contextItems.length} 引用，{attachments.length} 附件</span>
+        {attachmentsBlocked ? <span role="status" className="text-xs text-[var(--status-warning)]">附件{attachments.some(item => item.state === "error") ? "需处理" : "处理中"}</span> : null}
+      </button> : null}
+      <div id={referencesId} className="disclosure-grid min-h-0" inert={!referencesOpen} aria-hidden={!referencesOpen}>
+      <div className="disclosure-clip composer-reference-clip"><div className="disclosure-content grid gap-2">
       {skillSelector}
       {attachments.length ? <ul className="chat-outline composer-attachments grid max-h-44 gap-1 overflow-y-auto bg-[var(--surface)]" aria-label="待发送附件">
         {attachments.map((item) => <li key={item.key} className="flex min-w-0 items-start gap-2 rounded-lg bg-[var(--surface-muted)] p-2 text-xs">
@@ -145,13 +189,14 @@ export function MessageComposer({
           </ol>
         </div>
       ) : null}
+      </div></div></div></div> : null}
       <form
         className="composer-surface grid gap-2"
         data-region="composer"
         onSubmit={onSubmit}
       >
         <textarea
-          ref={inputRef}
+          ref={textarea}
           aria-label="消息"
           rows={2}
           className="min-h-14 min-w-0 w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 outline-none placeholder:text-[var(--muted-foreground)]"
