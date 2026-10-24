@@ -776,20 +776,22 @@ def test_expired_same_holder_cannot_reacquire_without_release(
     with lock_db() as db:
         session, run = seed_lock_run(db, session_title="Expired holder")
         run = claim_task_run_for_worker(db, run.id, worker_id="worker:expired-holder")
+        # SQLite also checks real time; setup must not consume the initial lease.
+        clock["now"] = utc_now()
         first = acquire_target_lock(
             db,
             target_id=DEMO_FRONTEND_TARGET_ID,
             session_id=session.id,
             task_run_id=run.id,
             worker_id="worker:expired-holder",
-            lease_expires_at=clock["now"] + timedelta(seconds=1),
+            lease_expires_at=clock["now"] + timedelta(minutes=5),
         )
         assert first.acquired is True
         assert first.lock is not None
         first_lock_id = first.lock.id
         first_acquired_at = first.lock.acquired_at
         first_lease = first.lock.lease_expires_at
-        clock["now"] += timedelta(seconds=2)
+        clock["now"] = first_lease + timedelta(seconds=1)
 
         repeated = acquire_target_lock(
             db,

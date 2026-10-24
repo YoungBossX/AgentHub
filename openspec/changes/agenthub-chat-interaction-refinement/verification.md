@@ -41,6 +41,24 @@ the delivery directory; the diagnostic plugin and test DBs are excluded from
 Git. A new pushed commit must complete its own CI before claiming delivery is
 green; its SHA/run/result receipt is recorded in that external directory.
 
+The next commit `245840d734007f0006d63197bfece9922c0cd271` passed that
+supervisor-generation test but failed
+[CI run 40052345514](https://github.com/YoungBossX/AgentHub/actions/runs/40052345514)
+at `test_expired_same_holder_cannot_reacquire_without_release` on its initial
+acquisition, again with **1 failed, 2863 passed, 65 skipped** overall. This test
+froze application time before database/fixture setup and provided a one-second
+lease. SQLite's real-time insert guard correctly rejected it once setup outlived
+that second. An external plugin adding 1.1 seconds to real setup reproduced the
+same initial-acquisition failure. The fixture now starts its clock after setup,
+uses a five-minute initial lease and advances fake time to one second after the
+stored lease before checking rejection. All original generation/lease/holder
+assertions and production real-clock SQL guards are retained.
+The same delayed-setup reproduction passed after the fixture change; the full
+target-lock file passed **36/36**, including real SQLite expiry after a write-lock
+wait, concurrent acquisition and atomic recovery tests. API syntax checks,
+strict OpenSpec and whitespace checks also passed. Exact-commit CI remains the
+remote delivery gate.
+
 ## Requirement checks
 
 | Requirement | Implemented and verified |
