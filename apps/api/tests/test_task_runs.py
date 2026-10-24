@@ -11161,7 +11161,9 @@ async def test_execute_task_run_preserves_replacement_supervisor_generation(
     )
     replacement = None
     try:
-        await asyncio.wait_for(create_started.wait(), timeout=1)
+        # Real Git/DB preflight is not a one-second performance contract.
+        # Events define the race ordering; the timeout only bounds a stalled test.
+        await asyncio.wait_for(create_started.wait(), timeout=10)
         generation_a = supervisor.active(task_run_id)
         assert generation_a is not None
         assert generation_a.adapter_run_id is None
@@ -11232,7 +11234,7 @@ async def test_execute_task_run_preserves_replacement_supervisor_generation(
             is unrelated
         )
         release_create.set()
-        await asyncio.wait_for(stream_started.wait(), timeout=1)
+        await asyncio.wait_for(stream_started.wait(), timeout=10)
         generation_a = supervisor.active(task_run_id)
         assert generation_a is not None
         assert generation_a.adapter_run_id == adapter_run_id

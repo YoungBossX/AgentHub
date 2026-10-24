@@ -18,6 +18,29 @@ Delivery audit/logs and the exact-commit GitHub CI receipt are kept outside the
 checkout at `E:/Docker/AgentHub/chat-delivery-20261024-01`. CI must be checked for
 the pushed SHA; previous successful runs do not establish this commit's result.
 
+## CI follow-up
+
+The first pushed commit `0de284c0dd3384aee6c2aed815e5e1254fcff20e` failed
+[CI run 40050956905](https://github.com/YoungBossX/AgentHub/actions/runs/40050956905)
+only at `test_execute_task_run_preserves_replacement_supervisor_generation[False]`:
+the one-second `create_started` synchronization wait timed out, with the event
+already set in the traceback. Backend totals were **1 failed, 2863 passed,
+65 skipped**; root checks had passed.
+
+An external diagnostic plugin delays the real synchronous request preflight by
+1.1 seconds. The unchanged test passed **2/2** without the delay and reproduced
+the same startup timeout in **2/2** delayed cases. Giving only this test's two
+startup barriers a ten-second bound passed **2/2** with the identical delay.
+Events still control the race; every ownership, stale-write rejection,
+replacement-generation survival and cleanup assertion is retained. There is no
+runtime timeout, lease-policy or product-source change.
+
+Normal related supervisor/execution-lease regressions: **16 passed**.
+`pnpm check:api` passed. Red/green logs and the original CI log are retained in
+the delivery directory; the diagnostic plugin and test DBs are excluded from
+Git. A new pushed commit must complete its own CI before claiming delivery is
+green; its SHA/run/result receipt is recorded in that external directory.
+
 ## Requirement checks
 
 | Requirement | Implemented and verified |
