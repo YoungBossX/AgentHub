@@ -8,15 +8,20 @@ from app.worktrees import repo_root
 LEGACY = "contacts-create-v1"
 RESILIENCE = "contacts-resilience-v2"
 BOUNDARIES = "contacts-boundaries-v3"
+REVIEW = "contacts-review-v4"
 CONTRACTS = {LEGACY: ("agenthub.workflow_contacts.v1", ("initial", "create", "persist", "layout", "runtime")),
     RESILIENCE: ("agenthub.workflow_contacts.v2", ("initial", "create", "duplicate", "invalid", "server_failure", "retry", "persist", "layout", "runtime")),
     BOUNDARIES: ("agenthub.workflow_contacts.v3", ("initial", "create", "duplicate", "invalid", "server_failure", "retry", "persist",
-        "same_local_distinct_domain", "case_insensitive_duplicate", "saved_refresh_failure", "whitespace_name", "layout", "runtime"))}
+        "same_local_distinct_domain", "case_insensitive_duplicate", "saved_refresh_failure", "whitespace_name", "layout", "runtime")),
+    REVIEW: ("agenthub.workflow_contacts.v4", ("initial", "create", "duplicate", "invalid", "server_failure", "retry", "persist",
+        "same_local_distinct_domain", "case_insensitive_duplicate", "saved_refresh_failure", "whitespace_name",
+        "initial_load_failure", "saved_invalid_response", "saved_invalid_response_refresh_failure",
+        "initial_save_race", "initial_save_failure_race", "layout", "runtime"))}
 
 
 def check_ids(contract):
     return [f"{view}.{name}" for view in ("desktop", "narrow") for name in CONTRACTS[contract][1]] + (
-        ["api.whitespace_ascii", "api.whitespace_unicode"] if contract == BOUNDARIES else [])
+        ["api.whitespace_ascii", "api.whitespace_unicode"] if contract in {BOUNDARIES, REVIEW} else [])
 
 
 def policy(contract, frontend, backend):

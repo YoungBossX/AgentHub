@@ -2634,6 +2634,8 @@ def _dirty_worktree_decision(
     unsafe_files = [
         path for path in dirty_files if path not in safe_files
     ]
+    preserved = _unchanged_execution_baseline_paths(previous, unsafe_files)
+    unsafe_files = [path for path in unsafe_files if path not in preserved]
     if unsafe_files:
         return {
             "status": "unsafe",
@@ -2643,10 +2645,38 @@ def _dirty_worktree_decision(
         }
     return {
         "status": "safe",
-        "reason": "Dirty files are limited to the previous checkpoint and planned safe paths.",
+        "reason": (
+            "Dirty files are limited to the previous checkpoint, planned safe paths "
+            "or unchanged execution-baseline entries."
+        ),
         "dirtyFiles": dirty_files,
         "unsafeFiles": [],
+        "executionBaselinePreservedFiles": sorted(preserved),
     }
+
+
+def _unchanged_execution_baseline_paths(
+    previous: TaskRun, paths: list[str],
+) -> set[str]:
+    if not paths:
+        return set()
+    binding = _scope_baseline_binding(previous)
+    if binding is None:
+        return set()
+    try:
+        current = capture_worktree_scope_snapshot(
+            previous.worktree_path, control_key=new_scope_control_key(),
+        )
+    except (OSError, ValueError):
+        return set()
+    if not isinstance(current, ScopeSnapshot) or not current.available:
+        return set()
+    # A queued run's creation checkpoint can predate prerequisite writes.
+    # Accept only exact file/tree/index evidence from its owned execution
+    # baseline; names alone never make newly changed files safe to retry.
+    baseline = {entry.path: entry for entry in binding["snapshot"].entries}
+    observed = {entry.path: entry for entry in current.entries}
+    return {path for path in paths if path in baseline and observed.get(path) == baseline[path]}
 
 
 def _platform_approval_payload(task: Task) -> Optional[dict[str, Any]]:

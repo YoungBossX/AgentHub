@@ -11,7 +11,8 @@ import { chromium } from "playwright"
 const output = resolve(process.env.AGENTHUB_VALIDATION_OUTPUT)
 const origin = "http://agenthub-workflow.invalid"
 const contract = process.env.AGENTHUB_CONTACTS_CONTRACT ?? "contacts-create-v1"
-const boundaries = contract === "contacts-boundaries-v3"
+const review = contract === "contacts-review-v4"
+const boundaries = contract === "contacts-boundaries-v3" || review
 const resilience = contract === "contacts-resilience-v2" || boundaries
 const labels = boundaries ? { list: "联系人列表", name: "姓名", email: "邮箱", submit: "新增联系人" }
   : { list: "Contacts", name: "Name", email: "Email", submit: "Create contact" }
@@ -39,7 +40,7 @@ function request(method, path, body) {
   })
 }
 try {
-  assert.ok(["contacts-create-v1", "contacts-resilience-v2", "contacts-boundaries-v3"].includes(contract))
+  assert.ok(["contacts-create-v1", "contacts-resilience-v2", "contacts-boundaries-v3", "contacts-review-v4"].includes(contract))
   const channel = process.env.AGENTHUB_VALIDATION_BROWSER_CHANNEL ?? (process.platform === "win32" ? "msedge" : "chromium")
   assert.ok(["msedge", "chrome", "chromium"].includes(channel))
   child = spawn(process.env.AGENTHUB_WORKFLOW_PYTHON, ["-I", "-B", fileURLToPath(new URL("./workflow-api-bridge.py", import.meta.url)),
@@ -72,9 +73,19 @@ try {
     missingUi = false
     const context = await browser.newContext({ viewport: { width, height: 850 }, serviceWorkers: "block", acceptDownloads: false, permissions: [] })
     const errors = [], activity = []
-    let failNextPost = false, failNextGet = false
+    let failNextPost = false, failNextGet = false, corruptNextPost = false, heldInitial = null
     let blocked = 0
+    const settleInitial = req => {
+      const held = heldInitial
+      if (!held || held.request !== req) return
+      const error = req.failure()?.errorText
+      held.cancelled = error === "net::ERR_ABORTED"
+      held.markSettled({ error })
+    }
+    context.on("requestfinished", settleInitial)
+    context.on("requestfailed", settleInitial)
     await context.route("**/*", async route => {
+      let fixedInitial
       try {
         const req = route.request(), url = new URL(req.url())
         assert.equal(url.origin, origin)
@@ -85,13 +96,30 @@ try {
           if (injected) failNextPost = false
           const injectedGet = req.method() === "GET" && failNextGet
           if (injectedGet) failNextGet = false
-          const result = (injected || injectedGet) ? { status: 503, body: { detail: "Temporary evaluation failure" } }
+          const held = req.method() === "GET" && heldInitial && !heldInitial.captured ? heldInitial : null
+          if (held) { held.captured = true; held.request = req; fixedInitial = held }
+          let result = (injected || injectedGet) ? { status: 503, body: { detail: "Temporary evaluation failure" } }
             : await request(req.method(), "/contacts", req.method() === "POST" ? req.postDataJSON() : undefined)
+          const backendStatus = result.status
+          if (held) {
+            held.observed()
+            await held.barrier
+            if (held.failure) result = { status: 503, body: { detail: "Delayed initial evaluation failure" } }
+          }
           assert.ok(Number.isInteger(result.status))
-          activity.push({ method: req.method(), status: result.status, body: result.body })
-          requests.push({ view, method: req.method(), status: result.status, ...(injected ? { injected: "fixed_503" } : {}),
-            ...(injectedGet ? { injected: "fixed_get_503" } : {}) })
-          return await route.fulfill({ status: result.status, contentType: "application/json", body: JSON.stringify(result.body) })
+          // Corrupt only delivery after a real successful backend write, never
+          // manufacture a saved record or bypass backend duplicate validation.
+          const corrupted = req.method() === "POST" && corruptNextPost
+          if (corrupted) { corruptNextPost = false; assert.equal(result.status, 201) }
+          activity.push({ method: req.method(), status: held?.cancelled ? null : result.status, body: held?.cancelled ? null : result.body })
+          requests.push({ view, method: req.method(), status: held?.cancelled ? null : result.status,
+            ...(held ? { backendStatus } : {}), ...(held?.cancelled ? { cancelled: true } : {}), ...(injected ? { injected: "fixed_503" } : {}),
+            ...(injectedGet ? { injected: "fixed_get_503" } : {}), ...(corrupted ? { injected: "fixed_201_invalid_json" } : {}),
+            ...(held ? { injected: held.failure ? "fixed_delayed_initial_503" : "fixed_delayed_initial_snapshot" } : {}) })
+          if (held?.cancelled) return
+          return await route.fulfill({ status: result.status, contentType: "application/json",
+            ...(held ? { headers: { "x-agenthub-fixed-initial": "delayed" } } : {}),
+            body: corrupted ? '{"id":' : JSON.stringify(result.body) })
         }
         assert.equal(req.method(), "GET")
         const decoded = decodeURIComponent(url.pathname)
@@ -109,7 +137,13 @@ try {
         assert.ok(info.isFile() && info.size < 5 * 1024 * 1024)
         const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" }
         await route.fulfill({ status: 200, contentType: types[extname(path)] ?? "application/octet-stream", body: await readFile(path) })
-      } catch { blocked++; await route.abort().catch(() => {}) }
+      } catch {
+        // Only the exact intentionally held initial GET may be safely cancelled.
+        // Unexpected requests, transport errors and all other aborts stay guarded.
+        if (fixedInitial?.request.failure()?.errorText !== "net::ERR_ABORTED") {
+          blocked++; await route.abort().catch(() => {})
+        }
+      }
     })
     await context.routeWebSocket("**/*", socket => { blocked++; socket.close() })
     const page = await context.newPage()
@@ -275,6 +309,118 @@ try {
           assert.ok((await page.getByRole("alert").allTextContents()).every(text => !text.trim()))
         })
       }
+      if (review) {
+        await check(`${view}.initial_load_failure`, async () => {
+          const start = activity.length
+          failNextGet = true
+          try {
+            await page.reload({ waitUntil: "load" })
+            const alert = page.getByRole("alert").first()
+            await alert.waitFor({ state: "visible" })
+            assert.match(await alert.innerText(), /加载|读取|获取/)
+            assert.ok(activity.slice(start).some(r => r.method === "GET" && r.status === 503))
+            for (const empty of await page.getByText(/暂无联系人|还没有联系人|没有联系人/).all()) {
+              assert.equal(await empty.isVisible(), false, "A failed GET does not establish an empty list")
+            }
+          } finally { failNextGet = false }
+        })
+        for (const refreshFailure of [false, true]) {
+          const suffix = refreshFailure ? "saved_invalid_response_refresh_failure" : "saved_invalid_response"
+          await check(`${view}.${suffix}`, async () => {
+            await page.reload({ waitUntil: "load" })
+            await list.getByText(name, { exact: true }).waitFor()
+            const knownNames = await list.getByRole("listitem").allTextContents()
+            const savedName = `响应损坏联系人${randomUUID().slice(0, 8)}`, savedEmail = `${randomUUID()}@example.invalid`
+            await nameInput.fill(savedName); await emailInput.fill(savedEmail)
+            const start = activity.length
+            corruptNextPost = true; failNextGet = refreshFailure
+            try {
+              await Promise.all([
+                page.waitForResponse(response => response.url() === origin + "/api/contacts"
+                  && response.request().method() === "GET" && response.status() === (refreshFailure ? 503 : 200)),
+                submit.click(),
+              ])
+              if (refreshFailure) {
+                const notice = page.getByRole("status").filter({ hasText: /已保存|已创建/ }).first()
+                await notice.waitFor({ state: "visible" })
+                assert.match(await notice.innerText(), /刷新|确认|响应/)
+                assert.deepEqual(await list.getByRole("listitem").allTextContents(), knownNames,
+                  "Unknown response must not discard known contacts or invent a saved row")
+                assert.equal(await list.getByText(savedName, { exact: true }).count(), 0)
+              } else {
+                await list.getByText(savedName, { exact: true }).waitFor()
+              }
+              for (const notice of await page.getByRole("status").all()) {
+                if (!await notice.isVisible()) continue
+                assert.doesNotMatch(await notice.innerText(), /(?:保存|创建)(?:操作)?(?:失败|未成功)/)
+                assert.doesNotMatch(await notice.getAttribute("class") ?? "", /\b(?:form-error|error|danger|destructive)\b/)
+              }
+              assert.ok((await page.getByRole("alert").allTextContents()).every(text => !text.trim()), "Confirmed 201 was reported as a failed save")
+              assert.equal(await nameInput.inputValue(), ""); assert.equal(await emailInput.inputValue(), "")
+              assert.ok(activity.slice(start).some(r => r.method === "GET" && r.status === (refreshFailure ? 503 : 200)))
+              const stored = (await request("GET", "/contacts")).body
+              assert.equal(stored.filter(c => c.name === savedName && c.email === savedEmail).length, 1)
+              await page.reload({ waitUntil: "load" })
+              await list.getByText(savedName, { exact: true }).waitFor()
+              assert.equal(activity.slice(start).filter(r => r.method === "POST").length, 1, "A confirmed save must not be repeated")
+            } finally { corruptNextPost = false; failNextGet = false }
+          })
+        }
+        for (const failure of [false, true]) {
+          await check(`${view}.${failure ? "initial_save_failure_race" : "initial_save_race"}`, async () => {
+            const held = { failure, captured: false }
+            held.barrier = new Promise(resolve => { held.release = resolve })
+            held.settled = new Promise(resolve => { held.markSettled = resolve })
+            const observed = new Promise(resolve => { held.observed = resolve })
+            heldInitial = held
+            let timer
+            const releaseInitial = async () => {
+              held.release()
+              let settleTimer
+              try {
+                const result = await Promise.race([held.settled, new Promise((_, reject) => {
+                  settleTimer = setTimeout(() => reject(new Error("Held initial GET did not settle")), 3500)
+                })])
+                assert.ok(!result.error || result.error === "net::ERR_ABORTED", "Unexpected initial GET transport failure")
+              } finally { clearTimeout(settleTimer) }
+              // Flush asynchronous React work after the deliberately late reply.
+              await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+            }
+            const savedName = `并发保存联系人${randomUUID().slice(0, 8)}`, savedEmail = `${randomUUID()}@example.invalid`
+            const start = activity.length
+            try {
+              await page.reload({ waitUntil: "load" })
+              await Promise.race([observed, new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error("Initial GET was not observed")), 3500)
+              })])
+              clearTimeout(timer)
+              await submit.waitFor({ state: "visible" })
+              if (!await submit.isEnabled() || !await nameInput.isEnabled() || !await emailInput.isEnabled()) {
+                // Blocking edits until initial loading settles is a valid race
+                // protection strategy; then prove normal editing still works.
+                await releaseInitial()
+                if (failure) await page.reload({ waitUntil: "load" })
+                await list.getByText("Ada Lovelace", { exact: true }).waitFor()
+                await nameInput.fill(savedName); await emailInput.fill(savedEmail)
+                await submit.click()
+                await list.getByText(savedName, { exact: true }).waitFor()
+              } else {
+                await nameInput.fill(savedName); await emailInput.fill(savedEmail)
+                await Promise.all([
+                  page.waitForResponse(r => r.url() === origin + "/api/contacts" && r.request().method() === "GET" && r.status() === 200),
+                  submit.click(),
+                ])
+                await list.getByText(savedName, { exact: true }).waitFor()
+                await releaseInitial()
+              }
+              assert.equal(await list.getByText(savedName, { exact: true }).isVisible(), true, "Late initial GET overwrote a confirmed save")
+              assert.ok((await page.getByRole("alert").allTextContents()).every(text => !text.trim()), "Late initial GET restored an obsolete error")
+              assert.equal(activity.slice(start).filter(r => r.method === "POST").length, 1)
+              assert.equal((await request("GET", "/contacts")).body.filter(c => c.name === savedName && c.email === savedEmail).length, 1)
+            } finally { clearTimeout(timer); held.release(); heldInitial = null }
+          })
+        }
+      }
       await check(`${view}.layout`, async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)))
       await check(`${view}.runtime`, async () => { assert.equal(errors.length, 0, errors.join("; ")); assert.equal(blocked, 0) })
     } finally { await context.close() }
@@ -302,7 +448,7 @@ finally {
     }
   }
 }
-const status = unavailable ? "unavailable" : checks.length === (boundaries ? 28 : resilience ? 18 : 10) && checks.every(c => c.status === "passed") ? "passed" : "failed"
-console.log(JSON.stringify({ schemaVersion: boundaries ? "agenthub.workflow_contacts.v3" : resilience ? "agenthub.workflow_contacts.v2" : "agenthub.workflow_contacts.v1", contract, status, checks, browserVersion, requests,
+const status = unavailable ? "unavailable" : checks.length === (review ? 38 : boundaries ? 28 : resilience ? 18 : 10) && checks.every(c => c.status === "passed") ? "passed" : "failed"
+console.log(JSON.stringify({ schemaVersion: review ? "agenthub.workflow_contacts.v4" : boundaries ? "agenthub.workflow_contacts.v3" : resilience ? "agenthub.workflow_contacts.v2" : "agenthub.workflow_contacts.v1", contract, status, checks, browserVersion, requests,
   diagnosticCode: unavailable ? "workflow_transport_or_browser_unavailable" : null }))
 process.exitCode = status === "passed" ? 0 : status === "unavailable" ? 2 : 1

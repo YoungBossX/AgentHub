@@ -17,7 +17,7 @@ python -m venv .venv
 pnpm demo:setup
 ```
 
-统一启动时自动初始化/增量升级数据库，不需要先运行 `db:init`。
+统一启动只初始化空数据库并校验已有数据库版本。旧库需先停止服务、备份并离线迁移，见 [数据库迁移说明](database-migrations.md)，不在启动时静默升级已有数据。
 
 检查并统一启动（无需 Bash）：
 
@@ -25,6 +25,14 @@ pnpm demo:setup
 pnpm doctor:local
 pnpm dev:local
 ```
+
+Windows 若提示默认 8000 属于系统保留区间，按 doctor 实际探测结果选择端口，例如
+`pnpm doctor:local --api-port 18000`、`pnpm dev:local --api-port 18000`。
+默认端口不自动切换，不修改系统保留规则。
+
+2026-10-25 当前版本另有真实 HTTP 单例验收，包含原生编码/QA、真实 Diff 和 Vite
+iframe/桌面/窄屏预览。复现入口、十项中文实测及失败边界见
+[工作流验收说明](workflow-evaluation.md)；截图是完成记录的实际回看，预览在采集时真实启动。
 
 打开：
 
@@ -52,7 +60,7 @@ http://127.0.0.1:3000
 
 1. 打开 `http://127.0.0.1:3000`。
 2. 指向左侧 Session 列表，说明这是 IM 式多会话。
-3. 指向 Agent 联系人，说明支持 `orchestrator`、`frontend`、`backend`、`qa` 等角色。
+3. 指向协作 Agent 列表，说明支持 `orchestrator`、`frontend`、`backend`、`qa` 等角色；原生 QA 还需核对所选 Profile 和适配器。
 4. 指向右侧产物面板，说明 Agent 回复不只是一段文本，还会生成可检查制品。
 
 讲解要点：

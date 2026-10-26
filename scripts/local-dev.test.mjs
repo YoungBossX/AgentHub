@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { mkdtemp, mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
@@ -66,10 +67,131 @@ test("occupied port detection retains the original listener", async () => {
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   const port = server.address().port;
   try {
-    await assert.rejects(checkPort(port, "API"), /occupied or unavailable/);
+    await assert.rejects(checkPort(port, "API"), error => {
+      assert.equal(error.code, "EADDRINUSE");
+      assert.match(error.message, /EADDRINUSE/);
+      return true;
+    });
     assert.equal(server.listening, true);
   } finally { await new Promise(resolve => server.close(resolve)); }
   await checkPort(port, "API");
+});
+
+function simulatePortBindings(context, failures) {
+  const attempted = [];
+  context.mock.method(net, "createServer", () => {
+    const server = new EventEmitter();
+    server.listen = ({ port }, ready) => {
+      attempted.push(port);
+      queueMicrotask(() => {
+        const code = failures.get(port);
+        if (code) server.emit("error", Object.assign(new Error("bind failed"), { code }));
+        else ready();
+      });
+      return server;
+    };
+    server.close = done => done();
+    return server;
+  });
+  return attempted;
+}
+
+test("Windows excluded ports report the real cause and only a probed full restart command", async context => {
+  const attempted = simulatePortBindings(context, new Map([[8000, "EACCES"], [18000, "EADDRINUSE"]]));
+  let queries = 0;
+  await assert.rejects(checkPort(8000, "API", {
+    platform: "win32", launchOptions: { apiPort: 8000, webPort: 3000, demoApi: true },
+    readExcludedPorts: async () => { queries++; return "协议 tcp\n 起始端口 结束端口\n 7963 8062 *\n"; },
+  }), error => {
+    assert.equal(error.code, "EACCES");
+    assert.equal(error.cause.code, "EACCES");
+    assert.match(error.message, /7963–8062/);
+    assert.match(error.message, /pnpm dev:local --api-port 18001 --web-port 3000 --demo-api/);
+    return true;
+  });
+  assert.equal(queries, 1);
+  assert.deepEqual(attempted, [8000, 18000, 18001]);
+});
+
+test("a restart suggestion never reuses the selected peer port", async context => {
+  const attempted = simulatePortBindings(context, new Map([[8000, "EACCES"]]));
+  await assert.rejects(checkPort(8000, "API", {
+    platform: "win32", launchOptions: { apiPort: 8000, webPort: 18000 },
+    readExcludedPorts: async () => " 7963 8062\n",
+  }), /--api-port 18001 --web-port 18000/);
+  assert.deepEqual(attempted, [8000, 18001]);
+});
+
+for (const unavailable of ["failed", "malformed"]) {
+  test(`unconfirmed Windows exclusions remain unknown: ${unavailable}`, async context => {
+    simulatePortBindings(context, new Map([[8000, "EACCES"]]));
+    await assert.rejects(checkPort(8000, "API", {
+      platform: "win32", launchOptions: { apiPort: 8000, webPort: 3000 },
+      readExcludedPorts: async () => {
+        if (unavailable === "failed") throw new Error("diagnostic unavailable");
+        return "error 7963 8062 trailing text\n 8062 7963\n 0 99999\n";
+      },
+    }), error => {
+      assert.equal(error.code, "EACCES");
+      assert.match(error.message, /未能确认.*保留端口/);
+      assert.doesNotMatch(error.message, /7963–8062/);
+      return true;
+    });
+  });
+}
+
+test("non-Windows permission errors and other bind failures retain their own cause", async context => {
+  simulatePortBindings(context, new Map([[8000, "EACCES"], [8002, "EADDRNOTAVAIL"]]));
+  const readExcludedPorts = async () => { assert.fail("Windows command must not run"); };
+  for (const [port, code] of [[8000, "EACCES"], [8002, "EADDRNOTAVAIL"]]) {
+    await assert.rejects(checkPort(port, "API", { platform: "linux", readExcludedPorts }), error => {
+      assert.equal(error.code, code);
+      assert.match(error.message, new RegExp(code));
+      assert.doesNotMatch(error.message, /Windows.*保留/);
+      return true;
+    });
+  }
+});
+
+test("no unavailable alternative is presented as a usable command", async context => {
+  simulatePortBindings(context, new Map([8000, 18000, 18001, 19000, 28000].map(port => [port, "EACCES"])));
+  await assert.rejects(checkPort(8000, "API", {
+    platform: "win32", launchOptions: { apiPort: 8000, webPort: 3000 },
+    readExcludedPorts: async () => "7963 8062",
+  }), error => {
+    assert.match(error.message, /未找到已确认可用的替代端口/);
+    assert.doesNotMatch(error.message, /pnpm dev:local --api-port/);
+    return true;
+  });
+});
+
+test("the optional demo API stays fixed instead of suggesting an unsupported override", async context => {
+  const attempted = simulatePortBindings(context, new Map([[5174, "EADDRINUSE"]]));
+  await assert.rejects(checkPort(5174, "Demo API", {
+    launchOptions: { apiPort: 8000, webPort: 3000, demoApi: true },
+  }), error => {
+    assert.match(error.message, /固定.*5174|5174.*固定/);
+    assert.doesNotMatch(error.message, /--api-port|--demo-port/);
+    return true;
+  });
+  assert.deepEqual(attempted, [5174]);
+});
+
+test("Web alternatives preserve the selected API and demo mode", async context => {
+  const attempted = simulatePortBindings(context, new Map([[3000, "EADDRINUSE"]]));
+  await assert.rejects(checkPort(3000, "Web", {
+    platform: "win32", launchOptions: { apiPort: 18000, webPort: 3000, demoApi: true },
+    readExcludedPorts: async () => { assert.fail("An occupied port needs no Windows exclusion query"); },
+  }), /pnpm dev:local --api-port 18000 --web-port 3001 --demo-api/);
+  assert.deepEqual(attempted, [3000, 3001]);
+});
+
+test("Windows occupied API ports do not invoke the permission diagnostic", async context => {
+  simulatePortBindings(context, new Map([[8000, "EADDRINUSE"]]));
+  await assert.rejects(checkPort(8000, "API", {
+    platform: "win32", launchOptions: { apiPort: 8000, webPort: 3000 },
+    readExcludedPorts: async () => { assert.fail("EADDRINUSE must not query Windows exclusions"); },
+  }), error => error.code === "EADDRINUSE");
 });
 
 const fixture = `

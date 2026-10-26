@@ -1,5 +1,84 @@
 # Representative local workflow evaluation
 
+## 中文原生验收入口
+
+在仓库根目录使用已有虚拟环境，模型连接信息读取本机
+`C:\Users\XCC\.claude\settings.json` 的传输配置；不会把密钥复制到证据目录。
+`ANTHROPIC_MODEL` 可省略，CLI 此时使用已配置的角色模型映射。
+
+```powershell
+# 只准备五类负向基线，不调用模型；输出目录必须尚不存在。
+& .\.venv\Scripts\python.exe -X utf8 -B scripts/evaluate-chinese-workflows.py --output E:\Docker\zh-prepare-new --repetitions 1 --prepare-only
+
+# 五类自然场景各两次，共十次；需先确认真实接口可用。
+& .\.venv\Scripts\python.exe -X utf8 -B scripts/evaluate-chinese-workflows.py --output E:\Docker\zh-live-new --repetitions 2 --timeout 900 --max-retries 1
+```
+
+五类场景为后端修复、多文件修改、联系人边界、同会话追问和单轮标题修改；
+联系人使用 `contacts-boundaries-v3` 的 28 项独立业务检查，故障注入不计入该批次。
+`--timeout` 是每个消息阶段的上限，追问包含两个阶段；失败/中断执行可显式重试一次，
+已完成的 QA 警告不会被重试抹去。准备、连通性探测、自然任务与后续修复分别统计。
+
+入口将临时文件、运行数据库和源码快照放在新的外部输出目录，校验原产品数据库、
+本地配置及冻结源码未变。必须同时核对 `execution-state.json`、`preserved-after.json`
+和 `cohort/report.json`；中断或保全失败不能发布整轮成功率。Token 缺失保持未知，
+CLI 费用估算不是账单。该入口直接调用生产消息路由及调度逻辑，HTTP、工作台截图、
+真实 Vite 预览仍需另行验收，不把测试准备或历史回看算成新任务成功。
+
+### 2026-10-25 独立实测与当前 HTTP 验收
+
+使用本机新配置的 `deepseek-flash`，五类固定中文场景各两次，冻结批次
+`d00ce229b5e9c0858431259e4a8ec4b282e74ac9bdfcbc157b77644853c39327`：
+
+| 记录对象 | 结果与边界 |
+| --- | --- |
+| 自然任务首次/最终严格验收 | 8/10；两项联系人前端超时，实际重试被旧创建检查点误拦，失败保留 |
+| 独立业务验收 | 8/10；同会话追问包含两个阶段，共 12 个阶段 |
+| 调用及 Token | 12 条 Planner + 24 次执行尝试；34 条完整回执已知 890826 Token，2 条未知，完整总量为空 |
+| 流程耗时 | 最近秩 P50/P95 为 66.656/726.469 秒，包含规划、执行、审查和固定检查，不是纯模型推理 |
+| 持久化核对 | 41225 条事件编号、22 个 Diff 产物哈希、SQLite quick/FK 检查均通过；Diff 产物可引用同一代码差异，不代表 22 次独立修改 |
+| 后续联系人副本复验 | 编码重试及业务 28/28 通过；澄清读取清单后两项原生审查均有有效回执，后端 passed、前端 warning，3 条低风险建议，未算严格恢复通过 |
+| 修复后当前 HTTP 单例 | 新会话实际 HTTP 发消息，原生 Planner/编码/QA、当前版本固定检查与独立契约通过；实际工作台、Diff、原生报告和 Vite iframe/桌面/390px 预览通过，另计不并入十项 |
+
+原始十项位于 `E:\Docker\zh25-02`；三个后续副本复验分别位于
+`E:\Docker\zretry25-01`、`E:\Docker\zqa25-01`、`E:\Docker\zqa25-02`。
+当前 HTTP 单例、原始 SSE/游标核对、Git Diff、冻结源码及七张实际截图位于
+`E:\Docker\rd25`，入口说明为该目录的 `delivery.md`。
+先前上游 500 中断批次、过期历史回看及选错内置 QA 的 HTTP 失败均另存，未删除或改成通过。
+
+原生评测明确绑定 `@workflow-frontend` / `@workflow-qa` 自定义 Profile；
+不能只看角色名称判断调用了模型，必须核对 `providerAssignment.adapterType` 和原生回执。
+普通 `@qa` 使用工作区实际配置的适配器，不自动等同于原生模型审查。
+本轮修复包括重试按真实执行基线核对、过滤非语义 CLI 进度状态、明确原生审查的穷尽
+Read 清单；不放宽工具/文件权限，也不把警告改判通过。
+版本、模型和联系人契约与历史 50 次不同，不能合并或计算前后性能提升。
+
+### 2026-10-26 联系人 QA 纠正复验
+
+上表是当时结果。后续针对生成案例的三条建议，在新 E 盘副本中真实修复并审查；
+第一次 QA 又检出初次 GET 晚到覆盖保存状态的竞态，保留 warning。第二次修复增加
+加载期输入/提交保护和请求序号，原生 QA passed、0 条问题，独立复核回执当前有效。
+新源码与 Diff 均保存在副本，不会把主演示改成联系人应用或删除主演示使用的登录样式。
+
+新增开发者显式选择的 `contacts-review-v4`，由现有 `contacts_acceptance` 接收契约名，
+在可信副本中构建并用真实 ASGI/沙箱浏览器验证。最终 38 项保留 v3 的 28 个标识，
+加两视口各五种反馈/时序检查。POST 损坏 JSON 仅在真实后端确认 201 后注入；延迟
+初次 GET 可以真实返回旧快照、合成 503 或被应用取消，记录区分后端状态与实际交付。
+成功 GET 用实际记录即可确认保存，GET 失败才要求中性已保存提示；不会强迫多余 UI。
+阻止加载期间编辑、请求版本保护及取消旧请求均可作为正确策略。
+
+最终原契约 28/28、新契约 38/38 通过；这属于纠正复验，不能把旧十项改为 10/10。
+`scripts/evaluate-chinese-workflows.py` 五类默认场景仍用 v3，历史 v1-v3 没有重新标记。
+初版 34 项检查、校验器误判、第一次真实修复的 warning 和全部对照失败均保留。
+两次真实修复各自有源码冻结、独立 Session/SQLite、Planner/执行调用与 Token/阶段
+回执；不把两轮或故障注入合成一组自然任务成功率。最后一轮 3 条逻辑调用完整回执
+合计 275699 Token（包含 216704 缓存读取），不是账单或真实物理计算量；缺失阶段值
+仍为空。单个纠正流程不能支持性能提升或生产分位数结论。
+
+证据索引：`E:\Docker\AgentHub\contacts-qa-20261026-01\delivery.md`。最后一次原生
+结果位于 `E:\Docker\cqfix26-02\repair-report.json`，只读核验及原始 Diff 导出位于
+`E:\Docker\cqverify26-01`。没有新 HTTP/完整工作台验收或生产部署声明。
+
 ## Native QA extension (2026-10-16)
 
 The current v2 runner binds explicit coding profiles and a Claude read-only QA

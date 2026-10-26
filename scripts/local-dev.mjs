@@ -2,18 +2,15 @@ import { spawn, execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { access, constants } from "node:fs/promises";
 import { createRequire } from "node:module";
-import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
+import { browserBlockedPorts, checkLocalPort as checkPort } from "./local-port-check.mjs";
+
+export { checkPort };
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const host = "127.0.0.1";
-// Ports >=1024 from Chromium's net/base/port_util.cc (checked 2026-10-08).
-const browserBlockedPorts = new Set([
-  1719, 1720, 1723, 2049, 3659, 4045, 5060, 5061, 6000, 6566,
-  6665, 6666, 6667, 6668, 6669, 6697, 10080,
-]);
 const systemKeys = new Set([
   "APPDATA", "CI", "COLORTERM", "COMSPEC", "COREPACK_HOME", "FORCE_COLOR",
   "HOME", "HOMEDRIVE", "HOMEPATH", "LANG", "LC_ALL", "LC_CTYPE", "LOCALAPPDATA",
@@ -102,14 +99,6 @@ export async function resolvePython(root, env = process.env) {
   throw new Error("Missing Python environment. Create .venv, activate Conda, or set AGENTHUB_PYTHON_BIN; see docs/local-usage.md.");
 }
 
-export async function checkPort(port, label) {
-  await new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.once("error", () => reject(new Error(`${label} port ${port} is occupied or unavailable. Stop its owner yourself or choose another port; existing listeners are untouched.`)));
-    server.listen({ host, port, exclusive: true }, () => server.close(error => error ? reject(error) : resolve()));
-  });
-}
-
 export async function preflight(options, root = repoRoot, env = process.env) {
   const [major, minor] = process.versions.node.split(".").map(Number);
   if (!((major === 20 && minor >= 19) || (major === 22 && minor >= 12) || major >= 24)) {
@@ -131,9 +120,9 @@ export async function preflight(options, root = repoRoot, env = process.env) {
     version = await commandOutput(python, ["-c", "import sys; assert sys.version_info >= (3, 11); import fastapi, uvicorn, sqlmodel, pydantic_settings, httpx; from pypdf import apply_configuration; from PIL import Image, ImageOps; print('.'.join(map(str, sys.version_info[:3])))"], { cwd: root, env });
   } catch { throw new Error("Python must be 3.11+ with apps/api/requirements.txt installed in the selected environment. No packages were installed."); }
   // Do not import app.main: doctor must not create SQLite or run startup workers.
-  await checkPort(options.apiPort, "API");
-  await checkPort(options.webPort, "Web");
-  if (options.demoApi) await checkPort(5174, "Demo API");
+  await checkPort(options.apiPort, "API", { launchOptions: options });
+  await checkPort(options.webPort, "Web", { launchOptions: options });
+  if (options.demoApi) await checkPort(5174, "Demo API", { launchOptions: options });
   return { python, nextCli, pythonVersion: version };
 }
 

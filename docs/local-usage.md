@@ -233,17 +233,25 @@ SQLite、不访问模型。启动器启动 API，再启动 Web；日志中的 `[
 | 可选 demo API | http://127.0.0.1:5174 | 仓库内置 FastAPI 示例服务 |
 | Session Preview | 界面返回的本地端口 | 实际 Session 工作树中的 Vite 页面 |
 
-端口占用时启动器会失败，不接管或关闭其他监听服务。产品端口可改：
+选定端口不可用时启动器会失败，保留现有监听服务。提示会区分 `EADDRINUSE`
+占用和 `EACCES` 权限拒绝；Windows 权限拒绝时只读查询系统保留端口范围。
+无法查询或确认时明确保留未知，不能据此认定其他程序占用端口。
+启动器会探测少量替代端口，给出保留 API/Web/可选 demo 参数的完整命令；
+探测结果只反映当时状态，正式启动仍重新检查，不会自动换端口。
+内置 demo API 仍固定为 5174。产品端口可改，例如：
 
 ```powershell
-pnpm doctor:local --api-port 8001 --web-port 3001
-pnpm dev:local --api-port 8001 --web-port 3001
+pnpm doctor:local --api-port 18000 --web-port 3001
+pnpm dev:local --api-port 18000 --web-port 3001
 ```
 
 也支持启动终端的 `AGENTHUB_API_PORT`、`AGENTHUB_WEB_PORT`；命令行参数优先。
 启动器同步设置 Web 的 `BACKEND_URL` 和产品 API 的
 `AGENTHUB_FRONTEND_ORIGIN`。端口必须在 1024–65535、互不相同，并避开已知浏览器
-受限端口；建议使用 8000/8001 和 3000/3001。所有服务只绑定 `127.0.0.1`。
+受限端口。默认仍为 8000/3000，所选其他端口需通过 doctor；所有服务只绑定 `127.0.0.1`。
+Windows 系统保留范围可能包含 8000 和 8001，单纯把端口加一未必有效。
+可以用 `netsh interface ipv4 show excludedportrange protocol=tcp` 只读核对；
+无需为启动项目删除系统保留范围或关闭不明进程。
 
 ```powershell
 pnpm dev:local --demo-api

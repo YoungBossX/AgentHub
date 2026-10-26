@@ -29,6 +29,27 @@ from test_claude_code_adapter import FakeClaudeCodeProcess
 SOURCE = "apps/demo/src/App.tsx"
 
 
+def test_native_review_instruction_exports_exhaustive_read_manifest():
+    from app.native_reviews import native_review_instruction
+    binding = {"root": "E:/private-review-root", "taskRunId": "bound-run",
+               "inputFingerprint": "a" * 64,
+               "files": {SOURCE: {"textSha256": "b" * 64},
+                         "apps/demo/README.md": {"textSha256": "c" * 64},
+                         "apps/demo/public/icon.png": {"sha256": "d" * 64}}}
+    instruction = native_review_instruction(binding)
+    manifest = next(line for line in instruction.splitlines()
+                    if line.startswith("allowedReadPaths (exhaustive): "))
+    assert json.loads(manifest.split(": ", 1)[1]) == ["apps/demo/README.md", SOURCE]
+    assert "including context" in instruction
+    assert "historical absolute paths" in instruction
+    assert binding["root"] not in instruction
+    evidence = NativeReadEvidence(binding, require_structured=True)
+    evidence.observe({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Read", "id": "unlisted",
+         "input": {"file_path": "README.md"}}]}})
+    assert evidence.scope_violation
+
+
 @pytest.fixture
 def fixture(tmp_path):
     root = tmp_path / "review-root"

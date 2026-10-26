@@ -18545,3 +18545,76 @@ def test_direct_ui_start_scripted_mock_background_execution_persists_events(
     assert stored.state != "queued", (
         f"Background execution did not transition past queued: {stored.state}"
     )
+
+
+@pytest.mark.parametrize("mutation", [
+    "unchanged", "backend_changed", "backend_staged", "new_file",
+    "protected_file", "wrong_binding", "invalid_snapshot", "capture_unavailable",
+])
+def test_retry_uses_exact_execution_baseline_for_prior_role_changes(
+    client, tmp_path, monkeypatch, mutation,
+):
+    root = tmp_path / "queued-retry"
+    (root / "apps/demo/src").mkdir(parents=True)
+    (root / "apps/demo-api/app").mkdir(parents=True)
+    front = root / "apps/demo/src/App.tsx"
+    backend = root / "apps/demo-api/app/main.py"
+    front.write_text('export default function App() { return <h1>Base</h1> }\n', encoding="utf-8")
+    backend.write_text('status = "broken"\n', encoding="utf-8")
+    (root / "README.md").write_text("base\n", encoding="utf-8")
+    def git(*args):
+        subprocess.run(["git", "-c", "core.hooksPath=NUL", *args], cwd=root,
+                       check=True, capture_output=True)
+    git("init", "--template=", "-b", "main")
+    git("add", ".")
+    git("-c", "user.name=Retry Fixture", "-c", "user.email=retry@example.invalid",
+        "commit", "-m", "fixture baseline")
+
+    with db_from_override() as db:
+        task = db.get(Task, task_id())
+        session = db.get(Session, task.session_id)
+        session.worktree_path = str(root)
+        task.plan_json = json.dumps({"targetId": DEMO_FRONTEND_TARGET_ID,
+            "safeTarget": "apps/demo/src", "files": ["apps/demo/src/App.tsx"]})
+        db.add(session); db.add(task); db.commit()
+        previous = create_task_run(db, task.id)
+        assert json.loads(previous.metrics_json)["preRunCheckpoint"]["dirtyFiles"] == []
+        # An earlier role finishes after this run was queued, before it starts.
+        backend.write_text('status = "ok"\n', encoding="utf-8")
+        previous = claim_task_run_for_worker(db, previous.id, worker_id="worker:queued-retry")
+        _acquire_scope_lock(db, previous)
+        previous = task_runs_module.capture_task_run_scope_baseline(db, previous.id)
+        assert task_runs_module._scope_baseline_binding(previous) is not None
+        transition_task_run(db, previous.id, "failed", error_code="TASK_RUN_TIMEOUT")
+        db.refresh(previous)
+        if mutation == "backend_changed":
+            backend.write_text('status = "unexpected"\n', encoding="utf-8")
+        elif mutation == "backend_staged":
+            git("add", "apps/demo-api/app/main.py")
+        elif mutation == "new_file":
+            (root / "notes.md").write_text("unexpected\n", encoding="utf-8")
+        elif mutation == "protected_file":
+            (root / ".env").write_text("FIXTURE=example\n", encoding="utf-8")
+        elif mutation in {"wrong_binding", "invalid_snapshot"}:
+            metrics = json.loads(previous.metrics_json)
+            checkpoint = metrics["preRunCheckpoint"]
+            if mutation == "wrong_binding":
+                checkpoint["scopeBaselineTaskRunId"] = "different-run"
+            else:
+                checkpoint["scopeBaseline"]["entries"][0]["fingerprint"] = "invalid"
+            previous.metrics_json = json.dumps(metrics)
+            db.add(previous); db.commit()
+        elif mutation == "capture_unavailable":
+            def unavailable(*args, **kwargs):
+                raise OSError("fixture capture unavailable")
+            monkeypatch.setattr(task_runs_module, "capture_worktree_scope_snapshot", unavailable)
+        if mutation == "unchanged":
+            retried = task_runs_module.retry_task_run(db, previous.id)
+            assert retried.id != previous.id
+            assert retried.task_id == previous.task_id
+            assert json.loads(retried.metrics_json)["retryOfRunId"] == previous.id
+            assert backend.read_text(encoding="utf-8") == 'status = "ok"\n'
+        else:
+            with pytest.raises(TaskRunLifecycleError, match="Unsafe retry blocked"):
+                task_runs_module.retry_task_run(db, previous.id)
+            assert len(db.exec(select(TaskRun).where(TaskRun.task_id == previous.task_id)).all()) == 1

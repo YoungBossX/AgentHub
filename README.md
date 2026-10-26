@@ -109,6 +109,8 @@ TaskRunEvent → SSE → Web Workspace
 
 这些结果不代表当前版本的任意任务成功率，也不是生产 HTTP 压测。截图选取通过样本用于展示，完整统计保留全部失败；后续修复另存记录。详见[评测定义与完整结果](docs/chinese-usage-latency-validation-20261020.md)及[后续修复记录](docs/real-api-stability-validation-20261022.md)。
 
+2026-10-25 另做五类中文场景各两次的独立复验，严格通过 **8/10**，两项联系人前端超时。修复实测发现的平台问题后，另用新会话完成当前版本的真实 HTTP、原生编码/QA、Diff 与 Vite 预览验收；两批结果分别保留，不合并分母。见[本轮实测与复现说明](docs/workflow-evaluation.md)。
+
 </details>
 
 ---

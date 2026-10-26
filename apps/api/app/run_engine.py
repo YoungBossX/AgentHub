@@ -25,6 +25,8 @@ from app.adapters import (
     run_adapter_event_stream,
 )
 from app import execution_ownership as _ownership
+from app import run_pipeline as _pipeline
+from app import run_provider_selection as _providers
 from app.execution_ownership import (
     _ExecutionLeaseToken, _RecoveredTaskRunState, _RequestLaunchSnapshot,
     _PrepareFailureOwnershipSnapshot, _execution_lease_ownership_error,
@@ -68,20 +70,14 @@ from app.models import Session as AgentHubSession
 from app.models import utc_now
 from app.previews import PreviewError, PreviewService
 from app.provider_gateway import (
-    CodingRunContext,
     ProviderConcurrencyLimiter,
     ProviderHealthProbe,
     ProviderResolver,
-    record_provider_capacity_event,
-    record_provider_health_check,
-    record_provider_resolution,
 )
-from app.repositories import list_session_tasks
 from app.reviews import (
     ReviewError,
     create_scripted_review_for_task_run,
     stage_native_review_for_task_run,
-    list_task_run_reviews,
     record_review_collection_failure,
 )
 from app.run_supervisor import (
@@ -141,10 +137,8 @@ _provider_health_probe = ProviderHealthProbe()
 _provider_capacity_limiter = ProviderConcurrencyLimiter()
 DEFAULT_RUN_WORKER_ID_PREFIX = "worker"
 DEFAULT_DISPATCH_CONCURRENCY = 2
-AUTO_PIPELINE_PLANNERS = {"contract_first_v1", "orchestrator_external_target_v1", "dynamic_manager_v1"}
-GENERATED_REVIEW_PLANNERS = {
-    "contract_first_v1", "llm_v1", "deterministic_login_v1", "dynamic_manager_v1",
-}
+AUTO_PIPELINE_PLANNERS = _pipeline.AUTO_PIPELINE_PLANNERS
+GENERATED_REVIEW_PLANNERS = _pipeline.GENERATED_REVIEW_PLANNERS
 EXECUTION_LEASE_RENEWAL_INTERVAL_SECONDS = DEFAULT_LEASE_SECONDS / 3
 _SyncResult = TypeVar("_SyncResult")
 
@@ -1587,12 +1581,7 @@ def _request_launch_snapshot_matches(
     )
 
 
-def plan_json_for_task(task: Task) -> dict[str, Any]:
-    try:
-        plan = json.loads(task.plan_json)
-    except json.JSONDecodeError:
-        return {}
-    return plan if isinstance(plan, dict) else {}
+plan_json_for_task = _pipeline.plan_json_for_task
 
 
 def adapter_for_type(
@@ -3203,36 +3192,10 @@ def _record_scope_validation_event(
     )
 
 
-async def _auto_start_next_pipeline_task(
-    db: DbSession,
-    completed_task_id: str,
-) -> Optional[TaskRun]:
-    completed_task = db.get(Task, completed_task_id)
-    if completed_task is None:
-        return None
-    for task in list_session_tasks(db, completed_task.session_id):
-        if task.id == completed_task_id:
-            continue
-        # Group continuation belongs to the dispatcher. Recursive execution here
-        # would retain the upstream provider slot until all descendants finish.
-        if plan_json_for_task(task).get("planner") == "explicit_group_v1":
-            continue
-        if not _is_auto_pipeline_task(task):
-            continue
-        if _has_task_run(db, task.id):
-            continue
-        decision = evaluate_and_apply_scheduler_readiness(db, task)
-        if not decision.runnable:
-            continue
-        task_run = create_task_run(db, task.id)
-        adapter_type = adapter_type_for_run(db, task_run)
-        await execute_task_run_background(
-            db,
-            task_run.id,
-            adapter_type,
-        )
-        return db.get(TaskRun, task_run.id)
-    return None
+async def _auto_start_next_pipeline_task(db: DbSession, completed_task_id: str) -> Optional[TaskRun]:
+    return await _pipeline._auto_start_next_pipeline_task(
+        db, completed_task_id, start_run=execute_task_run_background,
+    )
 
 
 def _complete_ready_pipeline_review_tasks(
@@ -3246,137 +3209,24 @@ def _complete_ready_pipeline_review_tasks(
 
 
 def complete_ready_session_review_tasks(db: DbSession, session_id: str) -> list[Task]:
-    completed: list[Task] = []
-    for task in list_session_tasks(db, session_id):
-        if task.intent_type not in {"review", "qa_review"}:
-            continue
-        if task.status not in {"pending", "waiting_dependency", "blocked"}:
-            continue
-        plan = plan_json_for_task(task)
-        if plan.get("planner") not in GENERATED_REVIEW_PLANNERS:
-            continue
-        if _has_task_run(db, task.id):
-            continue
-        review_evidence = _dependency_review_evidence(db, task)
-        if not review_evidence:
-            continue
-        decision = evaluate_and_apply_scheduler_readiness(db, task)
-        if not decision.runnable:
-            continue
-        plan = plan_json_for_task(task)
-        scheduler = dict(plan.get("scheduler") or {})
-        scheduler.update(
-            {
-                "state": "completed",
-                "runnable": False,
-                "reason": "Planned review was satisfied by the generated review artifact.",
-            }
-        )
-        plan["scheduler"] = scheduler
-        plan["reviewSatisfaction"] = {
-            "source": "generated_review_artifacts",
-            "reports": review_evidence,
-        }
-        task.plan_json = json.dumps(plan, separators=(",", ":"))
-        task.status = "completed"
-        task.updated_at = utc_now()
-        db.add(task)
-        db.commit()
-        db.refresh(task)
-        completed.append(task)
-    return completed
+    return _pipeline.complete_ready_session_review_tasks(
+        db, session_id, review_evidence_for_task=_dependency_review_evidence,
+    )
 
 
-def _dependency_review_evidence(db: DbSession, task: Task) -> list[dict[str, Any]]:
-    try:
-        dependency_ids = json.loads(task.depends_on_task_ids)
-    except json.JSONDecodeError:
-        return []
-    if not isinstance(dependency_ids, list) or not dependency_ids:
-        return []
-
-    evidence: list[dict[str, Any]] = []
-    for dependency_id in dependency_ids:
-        if not isinstance(dependency_id, str):
-            return []
-        dependency = db.get(Task, dependency_id)
-        if dependency is None or dependency.session_id != task.session_id:
-            return []
-        dependency_runs = list_task_runs(db, dependency_id)
-        if not dependency_runs or dependency_runs[-1].state != "completed":
-            return []
-        run = dependency_runs[-1]
-        reviews = list_task_run_reviews(db, run.id)
-        if not reviews:
-            return []
-        review = reviews[-1]
-        diff_artifact = db.get(Artifact, review.reviewed_diff_artifact_id)
-        if (
-            diff_artifact is None
-            or diff_artifact.artifact_type != "diff"
-            or diff_artifact.task_run_id != run.id
-        ):
-            return []
-        # Advisory report completion is independent of its passed/warning/failed verdict.
-        evidence.append({
-            "taskId": dependency_id, "taskRunId": run.id,
-            "reviewArtifactId": review.artifact_id,
-            "reviewedDiffArtifactId": diff_artifact.id,
-            "status": review.status, "adapterType": review.adapter_type,
-            **({"qaAssessment": review.qa_assessment} if review.qa_assessment is not None else {}),
-        })
-    return evidence
+_dependency_review_evidence = _pipeline._dependency_review_evidence
 
 
 def _maybe_auto_preview_and_mock_deploy(db: DbSession, task_run: TaskRun) -> None:
-    from app.dag_integration import IntegrationError, delivery_worktree_path
-
-    try:
-        delivery_path = delivery_worktree_path(db, task_run)
-    except IntegrationError:
-        return
-    task = db.get(Task, task_run.task_id)
-    if task is None or task.intent_type != "frontend_change":
-        return
-    plan = plan_json_for_task(task)
-    if plan.get("planner") != "contract_first_v1":
-        return
-    demo_root = Path(delivery_path) / "apps/demo"
-    if not demo_root.exists():
-        return
-    from app.preview_deploy_jobs import (
-        enqueue_deploy_job,
-        enqueue_preview_job,
-        run_deploy_job,
-        run_preview_job,
-    )
-
-    preview_job = enqueue_preview_job(db, task_run)
-    if preview_job is None:
-        return
-    preview_job = run_preview_job(db, preview_job, preview_service=_preview_service)
-    if preview_job.state != "completed":
-        return
-    evidence = json.loads(preview_job.evidence_json)
-    preview_id = evidence.get("previewId")
-    if not isinstance(preview_id, str):
-        return
-    deploy_job = enqueue_deploy_job(db, task_run.id, preview_id)
-    run_deploy_job(db, deploy_job, deploy_service=_deploy_service)
-    refresh_session_ledger_for_task_run(db, task_run.id)
-
-
-def _is_auto_pipeline_task(task: Task) -> bool:
-    plan = plan_json_for_task(task)
-    return (
-        plan.get("planner") in AUTO_PIPELINE_PLANNERS
-        and plan.get("autoStart") is True
-        and task.intent_type in {"backend_change", "frontend_change"}
+    _pipeline._maybe_auto_preview_and_mock_deploy(
+        db, task_run, preview_service=_preview_service, deploy_service=_deploy_service,
     )
 
 
-def _has_task_run(db: DbSession, task_id: str) -> bool:
-    return bool(list_task_runs(db, task_id))
+_is_auto_pipeline_task = _pipeline._is_auto_pipeline_task
+
+
+_has_task_run = _pipeline._has_task_run
 
 
 async def _background_execute_task_run(
@@ -3633,97 +3483,17 @@ def _scope_baseline_required_for_run(
 
 
 def _resolve_provider_gateway_for_run(
-    db: DbSession,
-    task_run: TaskRun,
-    fallback_adapter_type: str,
+    db: DbSession, task_run: TaskRun, fallback_adapter_type: str,
 ) -> dict[str, str]:
-    task = db.get(Task, task_run.task_id)
-    if task is None:
-        raise TaskRunLifecycleError(f"Task not found: {task_run.task_id}")
-    session = db.get(AgentHubSession, task.session_id)
-    if session is None:
-        raise TaskRunLifecycleError(f"Session not found: {task.session_id}")
-    target_id = target_id_for_task(task, db)
-    metrics = metrics_for_run(task_run)
-    runtime_resolution = metrics.get("runtimeConfigResolution")
-    provider_assignment = metrics.get("providerAssignment")
-    runtime_provider_id = None
-    if isinstance(runtime_resolution, dict):
-        candidate_provider_id = runtime_resolution.get("providerId")
-        if isinstance(candidate_provider_id, str) and candidate_provider_id:
-            runtime_provider_id = candidate_provider_id
-    if runtime_provider_id is None and isinstance(provider_assignment, dict):
-        candidate_provider_id = provider_assignment.get("providerId")
-        if isinstance(candidate_provider_id, str) and candidate_provider_id:
-            runtime_provider_id = candidate_provider_id
-    selection = metrics.get("agentSelection")
-    custom = selection.get("customProfile") if isinstance(selection, dict) else None
-    read_only_custom = isinstance(custom, dict) and custom.get("toolPolicy") == "claude_read_only"
-    required_capabilities = () if read_only_custom else (
-        ("file_edit",) if write_lock_required_for_task(task) else ("review",)
+    return _providers._resolve_provider_gateway_for_run(
+        db, task_run, fallback_adapter_type, resolver=_provider_resolver,
+        health_probe=_provider_health_probe, capacity_limiter=_provider_capacity_limiter,
+        role_for_run=_role_for_task_run,
     )
-    context = CodingRunContext(
-        workspace_id=session.workspace_id,
-        session_id=session.id,
-        task_id=task.id,
-        task_run_id=task_run.id,
-        role=custom["role"] if isinstance(custom, dict) else _role_for_task_run(db, task_run),
-        target_id=target_id,
-        mode="write" if write_lock_required_for_task(task) else "review",
-        required_capabilities=required_capabilities,
-        worktree_path=task_run.worktree_path,
-        runtime_provider_id=runtime_provider_id,
-        runtime_adapter_type=fallback_adapter_type,
-        fallback_policy="scripted_mock",
-    )
-    plan = _provider_resolver.resolve(context)
-    record_provider_resolution(db, task_run_id=task_run.id, plan=plan)
-    if plan.selected_provider_id is None or plan.selected_adapter_type is None:
-        transition_task_run(
-            db,
-            task_run.id,
-            "failed",
-            error_code="PROVIDER_RESOLUTION_FAILED",
-            error_message=plan.selection_reason,
-        )
-        raise TaskRunLifecycleError(plan.selection_reason)
-    provider = _provider_resolver.registry.get(plan.selected_provider_id)
-    if provider is not None:
-        health = _provider_health_probe.check_provider(provider, context=context)
-        record_provider_health_check(db, task_run_id=task_run.id, health=health)
-        if not health.available and provider.is_real_provider:
-            transition_task_run(
-                db,
-                task_run.id,
-                "failed",
-                error_code="PROVIDER_UNAVAILABLE",
-                error_message=health.reason,
-            )
-            raise TaskRunLifecycleError(health.reason)
-    capacity = _provider_capacity_limiter.acquire(plan.selected_provider_id, task_run.id)
-    record_provider_capacity_event(db, task_run_id=task_run.id, capacity=capacity)
-    if not capacity.acquired:
-        transition_task_run(
-            db,
-            task_run.id,
-            "failed",
-            error_code="PROVIDER_CAPACITY_EXHAUSTED",
-            error_message=capacity.reason or "Provider capacity is exhausted.",
-        )
-        raise TaskRunLifecycleError(capacity.reason or "Provider capacity is exhausted.")
-    return {"adapter_type": plan.selected_adapter_type}
 
 
 def _release_provider_capacity(db: DbSession, task_run_id: str) -> None:
-    release = _provider_capacity_limiter.release(task_run_id)
-    if release.provider_id == "unknown":
-        return
-    record_provider_capacity_event(
-        db,
-        task_run_id=task_run_id,
-        capacity=release,
-        released=True,
-    )
+    _providers._release_provider_capacity(db, task_run_id, capacity_limiter=_provider_capacity_limiter)
 
 
 def _role_for_task_run(db: DbSession, task_run: TaskRun) -> str:

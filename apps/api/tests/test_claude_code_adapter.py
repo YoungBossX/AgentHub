@@ -588,3 +588,37 @@ async def test_claude_success_requires_result_and_clean_exit(db, tmp_path, stdou
     assert process.waited is True
     db.refresh(task_run)
     assert task_run.state == "failed"
+
+
+@pytest.mark.parametrize("subtype,ignored", [
+    ("thinking_tokens", True), ("ui_invalidate", True),
+    ("init", False), ("compact_boundary", False), ("future_state", False),
+])
+def test_claude_transport_progress_is_not_a_task_state(subtype, ignored):
+    event = claude_code_adapter_module._map_claude_json_event(
+        {"type": "system", "subtype": subtype, "session_id": "native-session"},
+        "run", "", ["claude"])
+    if ignored:
+        assert event is None
+    else:
+        assert event.type == "task.state"
+        assert event.payload["sessionId"] == "native-session"
+
+
+@pytest.mark.anyio
+async def test_claude_progress_flood_keeps_semantic_text_usage_and_terminal(db, tmp_path):
+    session, task_run = create_task_run(db, str(tmp_path))
+    rows = [{"type": "system", "subtype": "init", "session_id": "native-session"}]
+    rows += [{"type": "system", "subtype": subtype, "tokens": index}
+             for index in range(50) for subtype in ("thinking_tokens", "ui_invalidate")]
+    rows += [{"type": "assistant", "text": "已完成"},
+             {"type": "result", "subtype": "success", "is_error": False,
+              "result": "已完成", "usage": {"input_tokens": 2, "output_tokens": 3}}]
+    process = FakeClaudeCodeProcess(stdout="\n".join(json.dumps(r) for r in rows) + "\n")
+    adapter = ClaudeCodeAdapter(process_runner=FakeClaudeCodeRunner(process), claude_binary="claude.exe")
+    stored = await run_adapter_event_stream(db, adapter, request_for(task_run, session))
+    assert [event.event_type for event in stored] == ["task.state", "message.delta", "completed"]
+    assert [event.sequence for event in stored] == [1, 2, 3]
+    assert json.loads(stored[1].payload_json)["text"] == "已完成"
+    assert json.loads(stored[-1].payload_json)["providerUsage"]["inputTokens"] == 2
+    assert process.waited

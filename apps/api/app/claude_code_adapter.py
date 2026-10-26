@@ -469,6 +469,13 @@ def _map_claude_json_event(
 ) -> Optional[AgentEvent]:
     event_type = str(raw_event.get("type") or "")
 
+    if event_type == "system" and raw_event.get("subtype") in (
+        "thinking_tokens", "ui_invalidate",
+    ):
+        # CLI rendering/progress notifications are not execution transitions.
+        # Keep init, unknown system events and terminal/usage handling intact.
+        return None
+
     if event_type in {"system", "session.started", "thread.started"}:
         return _event(
             "task.state",
