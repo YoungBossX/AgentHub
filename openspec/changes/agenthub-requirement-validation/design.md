@@ -39,3 +39,12 @@ path has the host's AppArmor profile, and runs a sandboxed launch/render probe
 before the full suite. Do not disable the browser sandbox or global host policy.
 Runtime failures expose only allowlisted diagnostic categories (missing browser,
 sandbox, configuration, launch or execution failure), not raw launch logs or paths.
+
+CI-only startup resilience: use the existing installed system-browser channel
+with its sandbox enabled. Each launch has a 60-second limit; retry exactly once
+only for Playwright's launch TimeoutError. Do not retry missing executables,
+sandbox/configuration failures or failed page readiness, and do not change the
+runtime validation harnesses. Verify the fixed local HTML text and close every
+successfully returned browser in finally. A three-minute CI step limit bounds
+the whole probe; final failures remain nonzero. No browser installation, global
+host-policy change, skipped validation or fallback channel is introduced.

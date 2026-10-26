@@ -1,5 +1,16 @@
 # AgentHub 变更日志
 
+## CI 浏览器启动超时恢复
+
+2026-10-26：定位 `ffd4ca4` 的 dev CI 在沙箱 Chrome 启动时超出 30 秒；同源码 main
+CI 完整通过。将 CI 专用探针提取为可测试脚本，每次启动限 60 秒，仅针对 Playwright
+启动 TimeoutError 重试一次，整个步骤限 3 分钟。缺失浏览器、沙箱/配置错误、页面
+就绪失败和清理错误仍使 CI 失败，不禁用沙箱、不跳过检查、不改变产品验收超时。
+原失败日志与对照日志保留在 `E:\Docker\AgentHub\ci-browser-startup-20261026-01`。
+对应 `agenthub-requirement-validation` 1.3；远程修复结果以新提交 CI 为准。
+本地 64 项工具回归、真实 Edge 沙箱探针、无效 channel 非零退出及严格 OpenSpec 通过；
+不以本地结果替代新提交的 Ubuntu CI 核验。
+
 ## 前端与预览安全维护：源码交付
 
 2026-10-26：用户授权将本轮安全维护提交到 `dev`、推送远程，并将同一提交快进同步
