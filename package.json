@@ -40,17 +40,18 @@
   "pnpm": {
     "overrides": {
       "@babel/core": "7.29.6",
-      "@vitest/mocker@4.1.11>vite": "8.0.16",
+      "@vitest/mocker@^4.1.12>vite": "8.1.6",
       "baseline-browser-mapping@<2.11.0": "2.11.0",
       "brace-expansion@>=1.0.0 <1.1.21": "1.1.21",
       "brace-expansion@>=5.0.0 <5.0.12": "5.0.12",
       "browserslist@<=4.28.6": "4.28.7",
-      "dompurify": "3.4.16",
+      "dompurify": "3.4.17",
       "nanoid@3.3.12": "3.3.18",
       "postcss@8.5.14": "8.5.26",
       "sharp@>=0.35.0 <0.35.5": "0.35.5",
       "source-map-js@>=1.0.0 <1.2.2": "1.2.2",
-      "vitest@4.1.11>vite": "8.0.16"
+      "vitest@^4.1.12>vite": "8.1.6",
+      "zod@>=4.0.0 <4.6.6": "4.6.6"
     },
     "patchedDependencies": {
       "braces@3.0.3": "patches/braces@3.0.3.patch",

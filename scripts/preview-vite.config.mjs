@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { previewFileId as fileId } from "./preview-serving-paths.mjs";
+import { previewFileId as fileId, previewRequestPath } from "./preview-serving-paths.mjs";
 
 const platform = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const requireDemo = createRequire(path.join(platform, "apps/demo/package.json"));
@@ -95,8 +95,13 @@ const guard = {
   configureServer(server) {
     server.middlewares.use((request, response, next) => {
       let pathname;
-      try { pathname = decodeURIComponent((request.url ?? "/").split("?")[0]); }
+      try { pathname = previewRequestPath(request.url ?? "/"); }
       catch { response.statusCode = 400; response.end("Invalid preview path."); return; }
+      // Connect's reserved route is case-insensitive and accepts / or . suffixes.
+      // A view-only preview never grants access to the host's editor process.
+      if (/^\/__open-in-editor(?:[/.]|$)/i.test(pathname)) {
+        response.statusCode = 403; response.end("Preview editor access is not allowed."); return;
+      }
       if (pathname.includes("\0") || protectedPath(pathname)) { response.statusCode = 403; response.end("Preview path is not allowed."); return; }
       if (pathname.startsWith("/@vite/") || pathname === "/@react-refresh" || pathname.startsWith("/@id/")) { next(); return; }
       const filename = pathname.startsWith("/@fs/") ? fileId(pathname) : path.resolve(root, "." + pathname);

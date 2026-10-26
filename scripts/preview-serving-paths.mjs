@@ -1,3 +1,12 @@
+import { parse as parseUrl } from "node:url";
+
+// Match Connect/parseurl's legacy parser, including nonstandard protocol forms.
+// WHATWG URL would normalize these differently before the downstream route.
+// With slashesDenoteHost left false, origin-form // paths remain paths.
+export function previewRequestPath(url = "/") {
+  return decodeURIComponent(parseUrl(url).pathname ?? "/");
+}
+
 // Decode the filesystem ID syntax used by Vite, before applying path policy.
 export function previewFileId(id) {
   let value = id.split("?")[0].split("#")[0];

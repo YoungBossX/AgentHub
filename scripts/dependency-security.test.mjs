@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { createRequire } from "node:module";
+import path from "node:path";
 import test from "node:test";
 
 // Resolve through the real ESLint importer chain. A stale or unapplied pnpm
@@ -13,6 +15,64 @@ const micromatch = globRequire("micromatch");
 const braces = createRequire(globRequire.resolve("micromatch"))("braces");
 const depthError = { name: "RangeError", message: "braces AST depth exceeds local limit (128)" };
 const nested = (depth, open = "{", close = "}") => open.repeat(depth) + "a" + close.repeat(depth);
+
+function installedPackage(importer, name) {
+  // Some packages deliberately do not export package.json. Start at the real
+  // consumer's entry point, then locate that package's own manifest.
+  let directory = path.dirname(importer.resolve(name));
+  while (path.dirname(directory) !== directory) {
+    const filename = path.join(directory, "package.json");
+    if (fs.existsSync(filename)) {
+      const manifest = JSON.parse(fs.readFileSync(filename, "utf8"));
+      if (manifest.name === name) return { ...manifest, filename };
+    }
+    directory = path.dirname(directory);
+  }
+  throw new Error(`Cannot locate the actual ${name} package manifest`);
+}
+
+function securityFloor(version, major, minor, patch) {
+  assert.match(version, /^\d+\.\d+\.\d+$/, "Only stable versions establish the security floor");
+  const actual = version.split(".").map(Number);
+  assert.equal(actual[0], major, "Preserve the reviewed compatible major branch");
+  assert(actual[1] > minor || actual[1] === minor && actual[2] >= patch,
+    `Installed ${version} is below ${major}.${minor}.${patch}`);
+}
+
+test("actual Next and ESLint config resolve the matching patched 16.x release", () => {
+  const next = installedPackage(web, "next"), eslintConfig = installedPackage(web, "eslint-config-next");
+  securityFloor(next.version, 16, 4, 1);
+  assert.equal(eslintConfig.version, next.version);
+});
+
+test("Demo and both actual test importers retain distinct patched Vite branches", () => {
+  const demo = createRequire(new URL("../apps/demo/package.json", import.meta.url));
+  securityFloor(installedPackage(demo, "vite").version, 7, 3, 7);
+  const vitest = installedPackage(web, "vitest"), vitestRequire = createRequire(vitest.filename);
+  const mocker = installedPackage(vitestRequire, "@vitest/mocker");
+  securityFloor(vitest.version, 4, 1, 12);
+  securityFloor(mocker.version, 4, 1, 12);
+  securityFloor(installedPackage(vitestRequire, "vite").version, 8, 1, 6);
+  securityFloor(installedPackage(createRequire(mocker.filename), "vite").version, 8, 1, 6);
+});
+
+test("Monaco's actual patched sanitizer importer binds patched DOMPurify", () => {
+  const monaco = installedPackage(web, "monaco-editor");
+  assert.equal(monaco.version, "0.56.0");
+  const sanitizer = path.join(path.dirname(monaco.filename), "esm/vs/base/browser/domSanitize.js");
+  const source = fs.readFileSync(sanitizer, "utf8");
+  assert.match(source, /import purify from ['"]dompurify['"]/);
+  assert.doesNotMatch(source, /from ['"]\.\/dompurify\/dompurify\.js['"]/);
+  const purifier = createRequire(sanitizer)("dompurify");
+  securityFloor(purifier.version, 3, 4, 17);
+});
+
+test("the actual ESLint hooks consumer resolves patched Zod without a new app dependency", () => {
+  const hooks = createRequire(config.resolve("eslint-plugin-react-hooks/package.json"));
+  securityFloor(installedPackage(hooks, "zod").version, 4, 6, 6);
+  const manifest = web("./package.json");
+  assert.equal(manifest.dependencies.zod, undefined);
+});
 
 test("braces preserves ordinary file globs, ranges, escaping and incomplete input", () => {
   const cases = [

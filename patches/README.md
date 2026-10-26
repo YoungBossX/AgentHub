@@ -2,7 +2,7 @@
 
 `monaco-editor@0.56.0.patch` changes the ESM sanitizer import from its embedded
 DOMPurify 3.4.8 copy to the declared `dompurify` dependency, resolved by our
-override to 3.4.16. The Web Diff component lazily supplies this local ESM editor
+override to 3.4.17. The Web Diff component lazily supplies this local ESM editor
 and its workers to the React loader; its default CDN and AMD bundles are not
 used. This patch alone does not change Monaco's unused AMD/prebundled copies.
 Keep the runtime import and browser-network verification when upgrading Monaco.
